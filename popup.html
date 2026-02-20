@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>🦈 BiteGuard</header>
+
+    <button id="add-btn">+ Add a rule</button>
+
+    <div id="add-form">
+      <input id="form-target" type="text" placeholder="reddit.com" />
+      <div class="form-row">
+        <input id="form-limit" type="number" value="10" min="1" />
+        <select id="form-unit">
+          <option value="minutes">min</option>
+          <option value="hours">hours</option>
+          <option value="days">days</option>
+        </select>
+        <span>per</span>
+        <select id="form-period">
+          <option value="day">day</option>
+          <option value="hour">hour</option>
+          <option value="week">week</option>
+        </select>
+      </div>
+      <button id="save-btn" class="btn-primary">Save</button>
+    </div>
+
+    <ul id="rules-list"></ul>
+    <script src="popup.js"></script>
+  </body>
+</html>
