@@ -1,3 +1,5 @@
+import { formatMs } from './utils.js';
+
 console.log('BiteGuard: background started');
 
 let activeSession = null; // { hostname, startedAt }
@@ -50,10 +52,11 @@ chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
 async function flushSession() {
   if (!activeSession) return;
   const elapsed = Date.now() - activeSession.startedAt;
-  const { timeRecords = {} } = await chrome.storage.local.get('timeRecords');
-  timeRecords[activeSession.hostname] = (timeRecords[activeSession.hostname] ?? 0) + elapsed;
-  await chrome.storage.local.set({ timeRecords });
-  console.log(`flushed: ${activeSession.hostname}`);
+  const { timeRecords = {}, dailyRecords = {} } = await chrome.storage.local.get(['timeRecords', 'dailyRecords']);
+  const h = activeSession.hostname;
+  timeRecords[h] = (timeRecords[h] ?? 0) + elapsed;
+  dailyRecords[h] = (dailyRecords[h] ?? 0) + elapsed;
+  await chrome.storage.local.set({ timeRecords, dailyRecords });
   activeSession = null;
 }
 
@@ -71,17 +74,6 @@ async function handleTabChange(url) {
   await updateBadge(hostname);
   await checkAndBlock(hostname);
   console.log(`tracking: ${hostname}`);
-}
-
-function formatMs(ms) {
-  const totalMinutes = Math.floor(ms / 60000);
-  const hours = ms / 3600000;
-  const days = ms / 86400000;
-
-  if (ms < 3600000)  return `${totalMinutes}m`;
-  if (ms < 36000000) return `${Math.floor(hours)}h${totalMinutes % 60}m`;
-  if (ms < 86400000) return `${hours.toFixed(1)}h`;
-  return `${days.toFixed(1)}d`;
 }
 
 async function updateBadge(hostname) {
@@ -123,13 +115,15 @@ async function scheduleResetAlarms() {
 async function resetPeriod(period) {
   const { rules = [], timeRecords = {} } = await chrome.storage.local.get(['rules', 'timeRecords']);
   const targets = rules.filter(r => r.enabled && r.period === period).map(r => r.target);
-  if (!targets.length) return;
 
   for (const target of targets) {
     timeRecords[target] = 0;
     await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [hostnameToRuleId(target)] });
   }
-  await chrome.storage.local.set({ timeRecords });
+
+  const update = { timeRecords };
+  if (period === 'day') update.dailyRecords = {};
+  await chrome.storage.local.set(update);
 
   if (activeSession && targets.includes(activeSession.hostname)) {
     activeSession.startedAt = Date.now();
