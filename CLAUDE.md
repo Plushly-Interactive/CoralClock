@@ -18,6 +18,7 @@
 ## JavaScript / HTML
 - Every interactive DOM element must have an `id`. Always select with `querySelector('#id')` in JavaScript, never `getElementById`.
 - Use classes for CSS styling (shared styles across elements). Use ids for JS selection. An element can have both.
+- Always prefix unused parameters with _
 
 ## Communication
 - Explain each step as if I'm learning, not just following along.

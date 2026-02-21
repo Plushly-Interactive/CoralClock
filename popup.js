@@ -2,8 +2,18 @@ const addBtn = document.querySelector('#add-btn');
 const addForm = document.querySelector('#add-form');
 const rulesList = document.querySelector('#rules-list');
 
-addBtn.addEventListener('click', () => {
+addBtn.addEventListener('click', async () => {
   addForm.classList.toggle('visible');
+
+  if (addForm.classList.contains('visible')) {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const input = document.querySelector('#form-target');
+    if (tab?.url?.startsWith('http')) {
+      input.value = new URL(tab.url).hostname;
+    }
+    input.focus();
+    input.select();
+  }
 });
 
 document.querySelector('#save-btn').addEventListener('click', async () => {
