@@ -25,5 +25,11 @@
     }
   },
 
-  "permissions": ["storage", "alarms", "tabs"]
+  "permissions": ["storage", "alarms", "tabs", "declarativeNetRequest"],
+  "host_permissions": ["<all_urls>"],
+
+  "web_accessible_resources": [{
+    "resources": ["blocked.html"],
+    "matches": ["<all_urls>"]
+  }]
 }

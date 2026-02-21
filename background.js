@@ -14,6 +14,21 @@ chrome.alarms.onAlarm.addListener(async () => {
   await flushSession();
   activeSession = { hostname, startedAt: Date.now() };
   await updateBadge(hostname);
+  await checkAndBlock(hostname);
+});
+
+chrome.storage.onChanged.addListener(async ({ rules }) => {
+  if (!rules) return;
+  const oldRules = rules.oldValue ?? [];
+  const newRules = rules.newValue ?? [];
+  for (const old of oldRules) {
+    const updated = newRules.find(r => r.id === old.id);
+    if (!updated || !updated.enabled) {
+      await chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: [hostnameToRuleId(old.target)]
+      });
+    }
+  }
 });
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
@@ -46,6 +61,7 @@ async function handleTabChange(url) {
   const hostname = new URL(url).hostname;
   activeSession = { hostname, startedAt: Date.now() };
   await updateBadge(hostname);
+  await checkAndBlock(hostname);
   console.log(`tracking: ${hostname}`);
 }
 
@@ -63,4 +79,40 @@ function formatMs(ms) {
 async function updateBadge(hostname) {
   const { timeRecords = {} } = await chrome.storage.local.get('timeRecords');
   chrome.action.setBadgeText({ text: formatMs(timeRecords[hostname] ?? 0) });
+}
+
+function toLimitMs(rule) {
+  const multipliers = { minutes: 60000, hours: 3600000, days: 86400000 };
+  return rule.limit * (multipliers[rule.limitUnit] ?? 60000);
+}
+
+function hostnameToRuleId(hostname) {
+  let hash = 0;
+  for (const char of hostname) hash = (hash * 31 + char.charCodeAt(0)) & 0x7fffffff;
+  return hash || 1;
+}
+
+async function checkAndBlock(hostname) {
+  const { rules = [], timeRecords = {} } = await chrome.storage.local.get(['rules', 'timeRecords']);
+  const rule = rules.find(r => r.enabled && r.target === hostname);
+  if (!rule) return;
+
+  const accumulated = timeRecords[hostname] ?? 0;
+  if (accumulated < toLimitMs(rule)) return;
+
+  const ruleId = hostnameToRuleId(hostname);
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: [ruleId],
+    addRules: [{
+      id: ruleId,
+      priority: 1,
+      action: { type: 'redirect', redirect: { extensionPath: `/blocked.html?host=${hostname}` } },
+      condition: { urlFilter: `||${hostname}^`, resourceTypes: ['main_frame'] }
+    }]
+  });
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.url?.includes(hostname)) {
+    chrome.tabs.update(tab.id, { url: chrome.runtime.getURL(`blocked.html?host=${hostname}`) });
+  }
 }

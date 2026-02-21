@@ -22,5 +22,6 @@
 
 ## Communication
 - Explain each step as if I'm learning, not just following along.
+- Explain each new function or code block you add.
 - Short answers. No walls of text.
 - If I push back on something, reconsider — don't just justify the original choice.
