@@ -3,12 +3,17 @@ console.log('BiteGuard: background started');
 let activeSession = null; // { hostname, startedAt }
 
 chrome.alarms.create('flush', { periodInMinutes: 1 });
+scheduleResetAlarms();
 
 chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
   if (tab?.url) handleTabChange(tab.url);
 });
 
-chrome.alarms.onAlarm.addListener(async () => {
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'reset-hour') { await resetPeriod('hour'); return; }
+  if (alarm.name === 'reset-day')  { await resetPeriod('day');  return; }
+  if (alarm.name === 'reset-week') { await resetPeriod('week'); return; }
+
   if (!activeSession) return;
   const hostname = activeSession.hostname;
   await flushSession();
@@ -90,6 +95,42 @@ function hostnameToRuleId(hostname) {
   let hash = 0;
   for (const char of hostname) hash = (hash * 31 + char.charCodeAt(0)) & 0x7fffffff;
   return hash || 1;
+}
+
+async function scheduleResetAlarms() {
+  const now = new Date();
+
+  const nextHour = new Date(now);
+  nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+
+  const nextDay = new Date(now);
+  nextDay.setDate(nextDay.getDate() + 1);
+  nextDay.setHours(0, 0, 0, 0);
+
+  const nextWeek = new Date(now);
+  const daysUntilSunday = (7 - nextWeek.getDay()) % 7 || 7;
+  nextWeek.setDate(nextWeek.getDate() + daysUntilSunday);
+  nextWeek.setHours(0, 0, 0, 0);
+
+  if (!await chrome.alarms.get('reset-hour')) chrome.alarms.create('reset-hour', { when: nextHour.getTime(), periodInMinutes: 60 });
+  if (!await chrome.alarms.get('reset-day'))  chrome.alarms.create('reset-day',  { when: nextDay.getTime(),  periodInMinutes: 1440 });
+  if (!await chrome.alarms.get('reset-week')) chrome.alarms.create('reset-week', { when: nextWeek.getTime(), periodInMinutes: 10080 });
+}
+
+async function resetPeriod(period) {
+  const { rules = [], timeRecords = {} } = await chrome.storage.local.get(['rules', 'timeRecords']);
+  const targets = rules.filter(r => r.enabled && r.period === period).map(r => r.target);
+  if (!targets.length) return;
+
+  for (const target of targets) {
+    timeRecords[target] = 0;
+    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [hostnameToRuleId(target)] });
+  }
+  await chrome.storage.local.set({ timeRecords });
+
+  if (activeSession && targets.includes(activeSession.hostname)) {
+    activeSession.startedAt = Date.now();
+  }
 }
 
 async function checkAndBlock(hostname) {
