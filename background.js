@@ -63,7 +63,10 @@ async function handleTabChange(url) {
     chrome.action.setBadgeText({ text: '' });
     return;
   }
-  const hostname = new URL(url).hostname;
+  const raw = new URL(url).hostname;
+  const { rules = [] } = await chrome.storage.local.get('rules');
+  const rule = rules.find(r => r.enabled && (r.target === raw || raw.endsWith('.' + r.target)));
+  const hostname = rule ? rule.target : raw;
   activeSession = { hostname, startedAt: Date.now() };
   await updateBadge(hostname);
   await checkAndBlock(hostname);
