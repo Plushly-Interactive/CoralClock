@@ -23,9 +23,16 @@
       </select>
     </header>
 
-    <div id="chart-container">
-      <svg id="chart"></svg>
-      <div id="tooltip"></div>
+    <div id="time-chart-container" class="chart-container">
+      <h2 class="chart-heading">Time spent</h2>
+      <svg id="time-chart"></svg>
+      <div id="time-tooltip" class="tooltip"></div>
+    </div>
+
+    <div id="visits-chart-container" class="chart-container">
+      <h2 class="chart-heading">Visits</h2>
+      <svg id="visits-chart"></svg>
+      <div id="visits-tooltip" class="tooltip"></div>
     </div>
 
     <p id="empty-msg">No data for this period.</p>

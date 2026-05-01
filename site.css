@@ -25,11 +25,21 @@
   font-weight: 400;
 }
 
-#chart-container {
+.chart-container {
   position: relative;
+  padding: 20px 20px 0;
 }
 
-#tooltip {
+.chart-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tooltip {
   display: none;
   position: absolute;
   background: #1a1a1a;
@@ -41,11 +51,8 @@
   white-space: nowrap;
 }
 
-#chart-container {
-  padding: 20px 20px 0;
-}
-
-#chart {
+#time-chart,
+#visits-chart {
   display: block;
   width: 100%;
 }
