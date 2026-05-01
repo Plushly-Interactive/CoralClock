@@ -56,7 +56,27 @@ async function render() {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       });
     }
-    data = dayKeys.map(day => ({ label: day.slice(5), range: day.slice(5), ms: analytics.byDay[day]?.[siteId]?.ms ?? 0 }));
+    if (range === 'all' || parseInt(range) > 90) {
+      let monthKeys;
+      if (range === 'all') {
+        monthKeys = [...new Set(dayKeys.map(day => day.slice(0, 7)))].sort();
+      } else {
+        const numMonths = Math.round(parseInt(range) / 30);
+        const now = new Date();
+        monthKeys = Array.from({ length: numMonths }, (_, i) => {
+          const d = new Date(now.getFullYear(), now.getMonth() - (numMonths - 1 - i), 1);
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        });
+      }
+      data = monthKeys.map(month => {
+        const ms = dayKeys.filter(day => day.startsWith(month))
+          .reduce((sum, day) => sum + (analytics.byDay[day]?.[siteId]?.ms ?? 0), 0);
+        return { label: month, range: month, ms };
+      });
+    } else {
+      const shortLabel = parseInt(range) <= 30;
+      data = dayKeys.map(day => ({ label: shortLabel ? day.slice(5) : day, range: day, ms: analytics.byDay[day]?.[siteId]?.ms ?? 0 }));
+    }
   }
 
   const hasData = data.some(d => d.ms > 0);

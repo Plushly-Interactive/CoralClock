@@ -21,7 +21,7 @@ document.querySelector('#seed-btn').addEventListener('click', async () => {
   const now = new Date();
   const analytics = { byDay: {}, byHour: {} };
 
-  for (let d = 0; d < 30; d++) {
+  for (let d = 0; d < 365 * 3; d++) {
     const day = new Date(now);
     day.setDate(day.getDate() - d);
     const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;

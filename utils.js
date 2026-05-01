@@ -4,6 +4,6 @@ export function formatMs(ms) {
   const days = ms / 86400000;
   if (ms < 3600000)  return `${totalMinutes}m`;
   if (ms < 36000000) { const m = totalMinutes % 60; return m ? `${Math.floor(hours)}h${m}m` : `${Math.floor(hours)}h`; }
-  if (ms < 86400000) return `${hours.toFixed(1)}h`;
-  return `${days.toFixed(1)}d`;
+  if (ms < 86400000) { const h = hours.toFixed(1); return `${h.endsWith('.0') ? Math.floor(hours) : h}h`; }
+  const d = days.toFixed(1); return `${d.endsWith('.0') ? Math.floor(days) : d}d`;
 }
