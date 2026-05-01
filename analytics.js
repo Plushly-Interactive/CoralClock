@@ -5,7 +5,13 @@ const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#analytics-body');
 const emptyMsg = document.querySelector('#empty-msg');
 
-rangeSelect.addEventListener('change', render);
+const savedRange = sessionStorage.getItem('analyticsRange');
+if (savedRange) rangeSelect.value = savedRange;
+
+rangeSelect.addEventListener('change', () => {
+  sessionStorage.setItem('analyticsRange', rangeSelect.value);
+  render();
+});
 render();
 
 document.querySelector('#seed-btn').addEventListener('click', async () => {
@@ -22,18 +28,20 @@ document.querySelector('#seed-btn').addEventListener('click', async () => {
     analytics.byDay[dayKey] = {};
 
     for (const siteId of sites) {
-      const ms = Math.floor(Math.random() * 3600000);
-      const visits = Math.floor(Math.random() * 10) + 1;
-      analytics.byDay[dayKey][siteId] = { ms, visits };
+      let totalMs = 0;
+      let totalVisits = 0;
 
-      for (let h = 8; h < 22; h++) {
+      for (let h = 0; h < 24; h++) {
         const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
         analytics.byHour[hourKey] ??= {};
-        analytics.byHour[hourKey][siteId] = {
-          ms: Math.floor(ms * Math.random() * 0.3),
-          visits: Math.random() > 0.6 ? 1 : 0,
-        };
+        const ms = Math.random() > 0.4 ? Math.floor(Math.random() * 9000000) : 0;
+        const visits = ms > 0 ? Math.floor(Math.random() * 3) + 1 : 0;
+        analytics.byHour[hourKey][siteId] = { ms, visits };
+        totalMs += ms;
+        totalVisits += visits;
       }
+
+      analytics.byDay[dayKey][siteId] = { ms: totalMs, visits: totalVisits };
     }
   }
 
@@ -82,10 +90,15 @@ async function render() {
   emptyMsg.style.display = 'none';
   tbody.innerHTML = rows.map(([siteId, { ms, visits }]) => {
     const { siteLabel } = resolveSite(siteId);
-    return `<tr>
+    const href = `site.html?id=${encodeURIComponent(siteId)}`;
+    return `<tr class="clickable" data-href="${href}">
       <td><span class="site-label">${siteLabel}</span><span class="site-id">${siteId}</span></td>
       <td>${formatMs(ms)}</td>
       <td>${visits}</td>
     </tr>`;
   }).join('');
+
+  tbody.querySelectorAll('tr.clickable').forEach(row => {
+    row.addEventListener('click', () => { location.href = row.dataset.href; });
+  });
 }

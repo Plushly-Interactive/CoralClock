@@ -85,6 +85,14 @@ footer {
   background: #f5f5f5;
 }
 
+tr.clickable {
+  cursor: pointer;
+}
+
+tr.clickable:hover td {
+  background: #f5f5f5;
+}
+
 #empty-msg {
   display: none;
   text-align: center;
