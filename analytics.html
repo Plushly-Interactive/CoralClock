@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard Analytics</title>
+    <link rel="stylesheet" href="analytics.css" />
+  </head>
+  <body>
+    <header>
+      <span>🦈 BiteGuard — Analytics</span>
+      <select id="range-select">
+        <option value="today">Today</option>
+        <option value="7" selected>Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="all">All time</option>
+      </select>
+    </header>
+
+    <table id="analytics-table">
+      <thead>
+        <tr>
+          <th>Site</th>
+          <th>Time</th>
+          <th>Visits</th>
+        </tr>
+      </thead>
+      <tbody id="analytics-body"></tbody>
+    </table>
+
+    <p id="empty-msg">No data for this period.</p>
+
+    <script type="module" src="analytics.js"></script>
+  </body>
+</html>

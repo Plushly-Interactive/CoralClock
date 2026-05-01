@@ -1,6 +1,11 @@
 import { formatMs } from './utils.js';
 
 const addBtn = document.querySelector('#add-btn');
+
+document.querySelector('#analytics-btn').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('analytics.html') });
+});
+
 const addForm = document.querySelector('#add-form');
 const rulesList = document.querySelector('#rules-list');
 

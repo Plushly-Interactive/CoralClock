@@ -17,7 +17,8 @@ header {
   border-bottom: 1px solid #e5e5e5;
 }
 
-#add-btn {
+#add-btn,
+#analytics-btn {
   width: 100%;
   padding: 10px 16px;
   text-align: left;
@@ -29,7 +30,8 @@ header {
   color: #2563eb;
 }
 
-#add-btn:hover {
+#add-btn:hover,
+#analytics-btn:hover {
   background: #f5f5f5;
 }
 
