@@ -103,7 +103,7 @@ Goal: user can **download everything** the extension has collected for analytics
 **Scope of “all the data”**  
 
 - **Minimum**: all `analytics` bucket keys (`byDay`, `byHour`) with ms per `siteId`.  
-- **Optional second checkbox**: include `**rules`**, `**timeRecords**`, `**dailyRecords**` (limit state) in the same zip or a separate JSON — clearly labeled so users know those are not the same as long-term analytics.  
+- **Optional second checkbox**: include `**rules`**, `**timeRecords`**, `**dailyRecords**` (limit state) in the same zip or a separate JSON — clearly labeled so users know those are not the same as long-term analytics.  
 - If **IndexedDB archive** exists later, export must **merge** archive + `storage.local` before writing files.
 
 **Implementation (extension page)**  

@@ -1,8 +1,9 @@
 import { formatMs } from './utils.js';
+import { resolveSite } from './siteResolution.js';
 
 console.log('BiteGuard: background started');
 
-let activeSession = null; // { hostname, startedAt }
+let activeVisit = null; // { hostname, startedAt }
 
 chrome.alarms.create('flush', { periodInMinutes: 1 });
 scheduleResetAlarms();
@@ -16,10 +17,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === 'reset-day')  { await resetPeriod('day');  return; }
   if (alarm.name === 'reset-week') { await resetPeriod('week'); return; }
 
-  if (!activeSession) return;
-  const hostname = activeSession.hostname;
+  if (!activeVisit) return;
+  const hostname = activeVisit.hostname;
   await flushSession();
-  activeSession = { hostname, startedAt: Date.now() };
+  activeVisit = { hostname, startedAt: Date.now() };
   await updateBadge(hostname);
   await checkAndBlock(hostname);
 });
@@ -49,15 +50,35 @@ chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   }
 });
 
+function localDayKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function localHourKey(ts) {
+  return `${localDayKey(ts)}T${String(new Date(ts).getHours()).padStart(2, '0')}`;
+}
+
 async function flushSession() {
-  if (!activeSession) return;
-  const elapsed = Date.now() - activeSession.startedAt;
-  const { timeRecords = {}, dailyRecords = {} } = await chrome.storage.local.get(['timeRecords', 'dailyRecords']);
-  const h = activeSession.hostname;
+  if (!activeVisit) return;
+  const elapsed = Date.now() - activeVisit.startedAt;
+  const { timeRecords = {}, dailyRecords = {}, analytics = { byDay: {}, byHour: {} } } = await chrome.storage.local.get(['timeRecords', 'dailyRecords', 'analytics']);
+  const h = activeVisit.hostname;
   timeRecords[h] = (timeRecords[h] ?? 0) + elapsed;
   dailyRecords[h] = (dailyRecords[h] ?? 0) + elapsed;
-  await chrome.storage.local.set({ timeRecords, dailyRecords });
-  activeSession = null;
+
+  const { siteId } = resolveSite(h);
+  const day = localDayKey(Date.now());
+  const hour = localHourKey(Date.now());
+  analytics.byDay[day] ??= {};
+  analytics.byDay[day][siteId] ??= { ms: 0, visits: 0 };
+  analytics.byDay[day][siteId].ms += elapsed;
+  analytics.byHour[hour] ??= {};
+  analytics.byHour[hour][siteId] ??= { ms: 0, visits: 0 };
+  analytics.byHour[hour][siteId].ms += elapsed;
+
+  await chrome.storage.local.set({ timeRecords, dailyRecords, analytics });
+  activeVisit = null;
 }
 
 async function handleTabChange(url) {
@@ -70,7 +91,20 @@ async function handleTabChange(url) {
   const { rules = [] } = await chrome.storage.local.get('rules');
   const rule = rules.find(r => r.enabled && (r.target === raw || raw.endsWith('.' + r.target)));
   const hostname = rule ? rule.target : raw;
-  activeSession = { hostname, startedAt: Date.now() };
+  activeVisit = { hostname, startedAt: Date.now() };
+
+  const { siteId: newSiteId } = resolveSite(hostname);
+  const { analytics: newAnalytics = { byDay: {}, byHour: {} } } = await chrome.storage.local.get('analytics');
+  const newDay = localDayKey(Date.now());
+  const newHour = localHourKey(Date.now());
+  newAnalytics.byDay[newDay] ??= {};
+  newAnalytics.byDay[newDay][newSiteId] ??= { ms: 0, visits: 0 };
+  newAnalytics.byDay[newDay][newSiteId].visits += 1;
+  newAnalytics.byHour[newHour] ??= {};
+  newAnalytics.byHour[newHour][newSiteId] ??= { ms: 0, visits: 0 };
+  newAnalytics.byHour[newHour][newSiteId].visits += 1;
+  await chrome.storage.local.set({ analytics: newAnalytics });
+
   await updateBadge(hostname);
   await checkAndBlock(hostname);
   console.log(`tracking: ${hostname}`);
@@ -128,8 +162,8 @@ async function resetPeriod(period) {
   if (period === 'day') update.dailyRecords = {};
   await chrome.storage.local.set(update);
 
-  if (activeSession && allTargets.includes(activeSession.hostname)) {
-    activeSession.startedAt = Date.now();
+  if (activeVisit && allTargets.includes(activeVisit.hostname)) {
+    activeVisit.startedAt = Date.now();
   }
 }
 
