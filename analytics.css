@@ -29,6 +29,37 @@ header select {
   font-size: 13px;
 }
 
+.chart-container {
+  position: relative;
+  padding: 20px 20px 0;
+}
+
+.chart-heading {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tooltip {
+  display: none;
+  position: absolute;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#top-chart {
+  display: block;
+  width: 100%;
+}
+
 #analytics-table {
   width: 100%;
   border-collapse: collapse;

@@ -1,9 +1,12 @@
-import { formatMs } from './utils.js';
+import { formatMs, drawBarChart } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 
 const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#analytics-body');
 const emptyMsg = document.querySelector('#empty-msg');
+const topChart = document.querySelector('#top-chart');
+const topTooltip = document.querySelector('#top-tooltip');
+const topChartContainer = document.querySelector('#top-chart-container');
 
 let byDayCache = null;
 
@@ -93,10 +96,27 @@ function render() {
   if (rows.length === 0) {
     tbody.innerHTML = '';
     emptyMsg.style.display = 'block';
+    topChartContainer.style.display = 'none';
     return;
   }
 
   emptyMsg.style.display = 'none';
+  topChartContainer.style.display = 'block';
+
+  const top = rows.slice(0, 5).map(([siteId, { ms }]) => {
+    const { siteLabel } = resolveSite(siteId);
+    return { label: siteLabel, range: siteId, ms };
+  });
+  drawBarChart({
+    svgEl: topChart,
+    tooltipEl: topTooltip,
+    data: top,
+    maxVal: Math.max(...top.map(d => d.ms)),
+    getValue: d => d.ms,
+    formatVal: ms => formatMs(ms),
+    color: '#2563eb',
+  });
+
   tbody.innerHTML = rows.map(([siteId, { ms, visits }]) => {
     const { siteLabel } = resolveSite(siteId);
     const href = `site.html?id=${encodeURIComponent(siteId)}`;
