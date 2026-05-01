@@ -151,11 +151,12 @@ After you approve direction, add **one** focused doc (per your repo rule: do not
 
 1. **Site resolution module**: URL → `siteId` + `siteLabel` (tldts or equivalent); unit-test tricky hostnames (`bbc.co.uk`, `foo.github.io`, `com.cn` cases).
 2. **Write path**: extend `[flushSession](d:\GitHub\Personal Repositories\BiteGuard\background.js)` (and any other flush points) to add elapsed ms into `analytics.byDay` and `analytics.byHour` (split segments at local hour boundaries). Never touch this store from `resetPeriod`.
-3. **Analytics page**: read storage, apply range filter, render **table** (siteLabel, siteId, ms, % of total).
-4. **Graphs v1**: top‑K bar chart; **average per local clock hour** for selected `siteId` or group (requires `byHour`). Optional “compare this week vs last week” later.
-5. **Export**: buttons to download **CSV** (and **JSON** dump); optional ZIP bundle; merge IndexedDB archive when that exists.
-6. **Groups**: CRUD UI + aggregated series.
-7. **Scale-up**: IndexedDB archive + compaction + settings for max retention.
+3. **Analytics page**: read storage, apply range filter, render **table** (siteLabel, siteId, ms, % of total). Clicking a row opens the site detail page for that `siteId`.
+4. **Site detail page** (`site.html?id=youtube.com`): dedicated page for one site showing an over-time usage chart (daily bars for the selected range, same range selector as the analytics page). Back link returns to the analytics page.
+5. **Graphs v1**: top‑K bar chart; **average per local clock hour** for selected `siteId` or group (requires `byHour`). Optional “compare this week vs last week” later.
+6. **Export**: buttons to download **CSV** (and **JSON** dump); optional ZIP bundle; merge IndexedDB archive when that exists.
+7. **Groups**: CRUD UI + aggregated series.
+8. **Scale-up**: IndexedDB archive + compaction + settings for max retention.
 
 ```mermaid
 flowchart LR

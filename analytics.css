@@ -66,6 +66,25 @@ header select {
   color: #888;
 }
 
+footer {
+  padding: 20px;
+  text-align: center;
+}
+
+#seed-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #888;
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#seed-btn:hover {
+  background: #f5f5f5;
+}
+
 #empty-msg {
   display: none;
   text-align: center;
