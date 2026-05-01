@@ -5,6 +5,8 @@ const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#analytics-body');
 const emptyMsg = document.querySelector('#empty-msg');
 
+let analyticsCache = null;
+
 const savedRange = sessionStorage.getItem('analyticsRange');
 if (savedRange) rangeSelect.value = savedRange;
 
@@ -12,7 +14,14 @@ rangeSelect.addEventListener('change', () => {
   sessionStorage.setItem('analyticsRange', rangeSelect.value);
   render();
 });
-render();
+
+loadAndRender();
+
+async function loadAndRender() {
+  const { analytics = { byDay: {} } } = await chrome.storage.local.get('analytics');
+  analyticsCache = analytics;
+  render();
+}
 
 document.querySelector('#seed-btn').addEventListener('click', async () => {
   const sites = [
@@ -46,6 +55,7 @@ document.querySelector('#seed-btn').addEventListener('click', async () => {
   }
 
   await chrome.storage.local.set({ analytics });
+  analyticsCache = analytics;
   render();
 });
 
@@ -63,9 +73,9 @@ function dayKeys(range) {
   return keys;
 }
 
-async function render() {
+function render() {
   const range = rangeSelect.value;
-  const { analytics = { byDay: {} } } = await chrome.storage.local.get('analytics');
+  const analytics = analyticsCache ?? { byDay: {} };
 
   const allowed = dayKeys(range);
   const totals = {};

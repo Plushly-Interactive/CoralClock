@@ -13,6 +13,8 @@ if (siteId) {
   document.title = `BiteGuard — ${siteLabel}`;
 }
 
+let analyticsCache = null;
+
 const savedRange = sessionStorage.getItem('analyticsRange');
 if (savedRange) rangeSelect.value = savedRange;
 
@@ -20,16 +22,23 @@ rangeSelect.addEventListener('change', () => {
   sessionStorage.setItem('analyticsRange', rangeSelect.value);
   render();
 });
-render();
+
+loadAndRender();
+
+async function loadAndRender() {
+  const { analytics = { byDay: {}, byHour: {} } } = await chrome.storage.local.get('analytics');
+  analyticsCache = analytics;
+  render();
+}
 
 function todayDayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-async function render() {
+function render() {
   const range = rangeSelect.value;
-  const { analytics = { byDay: {}, byHour: {} } } = await chrome.storage.local.get('analytics');
+  const analytics = analyticsCache ?? { byDay: {}, byHour: {} };
 
   let data;
   if (range === 'today') {
