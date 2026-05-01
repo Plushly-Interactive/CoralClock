@@ -6,3 +6,5 @@
 - Validate the target format before saving a rule (e.g. reject invalid URLs/hostnames, ideally test that the target is reachable)
 - Handle empty rules list with a nice "No rules"-like message
 - Block url/page title keywords
+- analytics site page: daily/weekly average, time and visits
+- browsing trends algorithms
