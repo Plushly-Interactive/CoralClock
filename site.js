@@ -13,7 +13,8 @@ if (siteId) {
   document.title = `BiteGuard — ${siteLabel}`;
 }
 
-let analyticsCache = null;
+let byDayCache = null;
+let byHourCache = null;
 
 const savedRange = sessionStorage.getItem('analyticsRange');
 if (savedRange) rangeSelect.value = savedRange;
@@ -26,9 +27,14 @@ rangeSelect.addEventListener('change', () => {
 loadAndRender();
 
 async function loadAndRender() {
-  const { analytics = { byDay: {}, byHour: {} } } = await chrome.storage.local.get('analytics');
-  analyticsCache = analytics;
+  byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
+  if (rangeSelect.value === 'today') await loadByHour();
   render();
+}
+
+async function loadByHour() {
+  if (byHourCache) return;
+  byHourCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourToday' });
 }
 
 function todayDayKey() {
@@ -38,10 +44,10 @@ function todayDayKey() {
 
 function render() {
   const range = rangeSelect.value;
-  const analytics = analyticsCache ?? { byDay: {}, byHour: {} };
 
   let data;
   if (range === 'today') {
+    if (!byHourCache) { loadByHour().then(render); return; }
     const dayKey = todayDayKey();
     data = Array.from({ length: 24 }, (_, h) => {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
@@ -50,13 +56,13 @@ function render() {
       return {
         label: `${hStr}:00`,
         range: `${hStr}:00 - ${hNext}:00`,
-        ms: analytics.byHour[hourKey]?.[siteId]?.ms ?? 0,
+        ms: byHourCache[hourKey]?.[siteId]?.ms ?? 0,
       };
     });
   } else {
     let dayKeys;
     if (range === 'all') {
-      dayKeys = Object.keys(analytics.byDay).sort();
+      dayKeys = Object.keys(byDayCache ?? {}).sort();
     } else {
       const now = new Date();
       dayKeys = Array.from({ length: parseInt(range) }, (_, i) => {
@@ -79,12 +85,12 @@ function render() {
       }
       data = monthKeys.map(month => {
         const ms = dayKeys.filter(day => day.startsWith(month))
-          .reduce((sum, day) => sum + (analytics.byDay[day]?.[siteId]?.ms ?? 0), 0);
+          .reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.ms ?? 0), 0);
         return { label: month, range: month, ms };
       });
     } else {
       const shortLabel = parseInt(range) <= 30;
-      data = dayKeys.map(day => ({ label: shortLabel ? day.slice(5) : day, range: day, ms: analytics.byDay[day]?.[siteId]?.ms ?? 0 }));
+      data = dayKeys.map(day => ({ label: shortLabel ? day.slice(5) : day, range: day, ms: byDayCache?.[day]?.[siteId]?.ms ?? 0 }));
     }
   }
 

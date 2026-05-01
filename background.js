@@ -3,7 +3,42 @@ import { resolveSite } from './siteResolution.js';
 
 console.log('BiteGuard: background started');
 
-let activeVisit = null; // { hostname, startedAt }
+let activeVisit = null;
+let cachedByDay = null;
+let cachedByHour = null;
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.type === 'getAnalyticsByDay') {
+    getByDay().then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'getAnalyticsByHourToday') {
+    getByHourToday().then(sendResponse);
+    return true;
+  }
+});
+
+async function getByDay() {
+  if (!cachedByDay) {
+    const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
+    cachedByDay = analyticsByDay;
+  }
+  return cachedByDay;
+}
+
+async function getByHourToday() {
+  if (!cachedByHour) {
+    const { analyticsByHour = {} } = await chrome.storage.local.get('analyticsByHour');
+    cachedByHour = analyticsByHour;
+  }
+  const todayKey = localDayKey(Date.now());
+  const result = {};
+  for (let h = 0; h < 24; h++) {
+    const hourKey = `${todayKey}T${String(h).padStart(2, '0')}`;
+    if (cachedByHour[hourKey]) result[hourKey] = cachedByHour[hourKey];
+  }
+  return result;
+}
 
 chrome.alarms.create('flush', { periodInMinutes: 1 });
 scheduleResetAlarms();
@@ -62,7 +97,7 @@ function localHourKey(ts) {
 async function flushSession() {
   if (!activeVisit) return;
   const elapsed = Date.now() - activeVisit.startedAt;
-  const { timeRecords = {}, dailyRecords = {}, analytics = { byDay: {}, byHour: {} } } = await chrome.storage.local.get(['timeRecords', 'dailyRecords', 'analytics']);
+  const { timeRecords = {}, dailyRecords = {}, analyticsByDay = {}, analyticsByHour = {} } = await chrome.storage.local.get(['timeRecords', 'dailyRecords', 'analyticsByDay', 'analyticsByHour']);
   const h = activeVisit.hostname;
   timeRecords[h] = (timeRecords[h] ?? 0) + elapsed;
   dailyRecords[h] = (dailyRecords[h] ?? 0) + elapsed;
@@ -70,14 +105,16 @@ async function flushSession() {
   const { siteId } = resolveSite(h);
   const day = localDayKey(Date.now());
   const hour = localHourKey(Date.now());
-  analytics.byDay[day] ??= {};
-  analytics.byDay[day][siteId] ??= { ms: 0, visits: 0 };
-  analytics.byDay[day][siteId].ms += elapsed;
-  analytics.byHour[hour] ??= {};
-  analytics.byHour[hour][siteId] ??= { ms: 0, visits: 0 };
-  analytics.byHour[hour][siteId].ms += elapsed;
+  analyticsByDay[day] ??= {};
+  analyticsByDay[day][siteId] ??= { ms: 0, visits: 0 };
+  analyticsByDay[day][siteId].ms += elapsed;
+  analyticsByHour[hour] ??= {};
+  analyticsByHour[hour][siteId] ??= { ms: 0, visits: 0 };
+  analyticsByHour[hour][siteId].ms += elapsed;
 
-  await chrome.storage.local.set({ timeRecords, dailyRecords, analytics });
+  await chrome.storage.local.set({ timeRecords, dailyRecords, analyticsByDay, analyticsByHour });
+  cachedByDay = null;
+  cachedByHour = null;
   activeVisit = null;
 }
 
@@ -94,16 +131,18 @@ async function handleTabChange(url) {
   activeVisit = { hostname, startedAt: Date.now() };
 
   const { siteId: newSiteId } = resolveSite(hostname);
-  const { analytics: newAnalytics = { byDay: {}, byHour: {} } } = await chrome.storage.local.get('analytics');
+  const { analyticsByDay: newByDay = {}, analyticsByHour: newByHour = {} } = await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
   const newDay = localDayKey(Date.now());
   const newHour = localHourKey(Date.now());
-  newAnalytics.byDay[newDay] ??= {};
-  newAnalytics.byDay[newDay][newSiteId] ??= { ms: 0, visits: 0 };
-  newAnalytics.byDay[newDay][newSiteId].visits += 1;
-  newAnalytics.byHour[newHour] ??= {};
-  newAnalytics.byHour[newHour][newSiteId] ??= { ms: 0, visits: 0 };
-  newAnalytics.byHour[newHour][newSiteId].visits += 1;
-  await chrome.storage.local.set({ analytics: newAnalytics });
+  newByDay[newDay] ??= {};
+  newByDay[newDay][newSiteId] ??= { ms: 0, visits: 0 };
+  newByDay[newDay][newSiteId].visits += 1;
+  newByHour[newHour] ??= {};
+  newByHour[newHour][newSiteId] ??= { ms: 0, visits: 0 };
+  newByHour[newHour][newSiteId].visits += 1;
+  await chrome.storage.local.set({ analyticsByDay: newByDay, analyticsByHour: newByHour });
+  cachedByDay = null;
+  cachedByHour = null;
 
   await updateBadge(hostname);
   await checkAndBlock(hostname);

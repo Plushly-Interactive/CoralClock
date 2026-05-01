@@ -5,7 +5,7 @@ const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#analytics-body');
 const emptyMsg = document.querySelector('#empty-msg');
 
-let analyticsCache = null;
+let byDayCache = null;
 
 const savedRange = sessionStorage.getItem('analyticsRange');
 if (savedRange) rangeSelect.value = savedRange;
@@ -18,8 +18,7 @@ rangeSelect.addEventListener('change', () => {
 loadAndRender();
 
 async function loadAndRender() {
-  const { analytics = { byDay: {} } } = await chrome.storage.local.get('analytics');
-  analyticsCache = analytics;
+  byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
   render();
 }
 
@@ -28,13 +27,13 @@ document.querySelector('#seed-btn').addEventListener('click', async () => {
     'youtube.com', 'github.com', 'reddit.com', 'news.ycombinator.com', 'bbc.co.uk'
   ];
   const now = new Date();
-  const analytics = { byDay: {}, byHour: {} };
+  const analyticsByDay = {}, analyticsByHour = {};
 
   for (let d = 0; d < 365 * 3; d++) {
     const day = new Date(now);
     day.setDate(day.getDate() - d);
     const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-    analytics.byDay[dayKey] = {};
+    analyticsByDay[dayKey] = {};
 
     for (const siteId of sites) {
       let totalMs = 0;
@@ -42,20 +41,20 @@ document.querySelector('#seed-btn').addEventListener('click', async () => {
 
       for (let h = 0; h < 24; h++) {
         const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
-        analytics.byHour[hourKey] ??= {};
+        analyticsByHour[hourKey] ??= {};
         const ms = Math.random() > 0.4 ? Math.floor(Math.random() * 9000000) : 0;
         const visits = ms > 0 ? Math.floor(Math.random() * 3) + 1 : 0;
-        analytics.byHour[hourKey][siteId] = { ms, visits };
+        analyticsByHour[hourKey][siteId] = { ms, visits };
         totalMs += ms;
         totalVisits += visits;
       }
 
-      analytics.byDay[dayKey][siteId] = { ms: totalMs, visits: totalVisits };
+      analyticsByDay[dayKey][siteId] = { ms: totalMs, visits: totalVisits };
     }
   }
 
-  await chrome.storage.local.set({ analytics });
-  analyticsCache = analytics;
+  await chrome.storage.local.set({ analyticsByDay, analyticsByHour });
+  byDayCache = analyticsByDay;
   render();
 });
 
@@ -75,12 +74,12 @@ function dayKeys(range) {
 
 function render() {
   const range = rangeSelect.value;
-  const analytics = analyticsCache ?? { byDay: {} };
+  const byDay = byDayCache ?? {};
 
   const allowed = dayKeys(range);
   const totals = {};
 
-  for (const [day, sites] of Object.entries(analytics.byDay)) {
+  for (const [day, sites] of Object.entries(byDay)) {
     if (allowed && !allowed.includes(day)) continue;
     for (const [siteId, entry] of Object.entries(sites)) {
       totals[siteId] ??= { ms: 0, visits: 0 };
