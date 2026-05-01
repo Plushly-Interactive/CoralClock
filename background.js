@@ -77,8 +77,10 @@ async function handleTabChange(url) {
 }
 
 async function updateBadge(hostname) {
-  const { timeRecords = {} } = await chrome.storage.local.get('timeRecords');
-  chrome.action.setBadgeText({ text: formatMs(timeRecords[hostname] ?? 0) });
+  const { timeRecords = {}, rules = [] } = await chrome.storage.local.get(['timeRecords', 'rules']);
+  const hasActiveRule = rules.some(r => r.enabled && r.target === hostname);
+  const text = hasActiveRule ? formatMs(timeRecords[hostname] ?? 0) : '';
+  chrome.action.setBadgeText({ text });
 }
 
 function toLimitMs(rule) {
@@ -114,10 +116,11 @@ async function scheduleResetAlarms() {
 
 async function resetPeriod(period) {
   const { rules = [], timeRecords = {} } = await chrome.storage.local.get(['rules', 'timeRecords']);
-  const targets = rules.filter(r => r.enabled && r.period === period).map(r => r.target);
+  const allTargets     = rules.filter(r => r.period === period).map(r => r.target);
+  const enabledTargets = rules.filter(r => r.period === period && r.enabled).map(r => r.target);
 
-  for (const target of targets) {
-    timeRecords[target] = 0;
+  for (const target of allTargets) timeRecords[target] = 0;
+  for (const target of enabledTargets) {
     await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [hostnameToRuleId(target)] });
   }
 
@@ -125,7 +128,7 @@ async function resetPeriod(period) {
   if (period === 'day') update.dailyRecords = {};
   await chrome.storage.local.set(update);
 
-  if (activeSession && targets.includes(activeSession.hostname)) {
+  if (activeSession && allTargets.includes(activeSession.hostname)) {
     activeSession.startedAt = Date.now();
   }
 }
