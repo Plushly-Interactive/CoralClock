@@ -8,3 +8,8 @@
 - Block url/page title keywords
 - analytics site page: daily/weekly average, time and visits
 - browsing trends algorithms
+- Three blocking rule modes (per-rule choice):
+  - Active browsing mode: counts time based on window visibility / active tab (current approach, refactored)
+  - Audio mode: counts time any tab on that site is producing audio, regardless of focus/minimize/window state
+  - Active + audio mode: counts time when the site is either active OR audible (union of both)
+  - Analytics to track both `ms` (active) and `audioMs` (audio) per site per hour/day
