@@ -4,6 +4,7 @@ import {
   siteIdFromUrl,
   setWindowSite, removeWindowSite,
   flushToStorage, reconcileWindows, initTracking,
+  saveSnapshot, recoverFromSnapshot,
 } from './tracking.js';
 
 console.log('BiteGuard: background started');
@@ -81,8 +82,10 @@ chrome.windows.onRemoved.addListener((windowId) => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'flush') return;
+  await recoverFromSnapshot();
   await reconcileWindows();
   await flushToStorage();
+  await saveSnapshot();
   cachedByDay = null;
   cachedByHour = null;
 });

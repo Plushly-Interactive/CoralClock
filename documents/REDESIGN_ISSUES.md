@@ -62,10 +62,13 @@ Flush uses `localHourKey(Date.now())` at the moment of flushing and attributes t
 
 ## Operational
 
-### #11 – Service worker restart silently drops in-flight elapsed time
+### #11 – Service worker restart silently drops in-flight elapsed time ✓ Resolved
 `siteStates` is in-memory only. The service worker idle-timeout is ~30 seconds; the minute alarm wakes it back up. Time elapsed between the last `startedAt` and the kill is lost with no indication. In the new design this affects N sites simultaneously instead of one.
 
-Mitigations: persist `startedAt` per site to storage, or flush on `chrome.runtime.onSuspend`.
+**Resolution:** After each flush the alarm handler saves a snapshot `{ sites, at }` to storage. On the next alarm wake, if `siteStates` is empty (SW was killed), the handler attributes `Date.now() - snap.at` to each snapshotted site before reconciling. All active `startedAt`s are reset to approximately the same value during `flushToStorage`, so a single `at` timestamp covers all sites. See #19 for a known edge case.
+
+### #19 – Snapshot over-counts if a tab closes while the SW is dead
+When the SW is killed after saving a snapshot and a tracked tab is closed before the next alarm: the tab-close event wakes the SW, but `siteStates` is empty so `removeWindowSite` is a no-op. On the next alarm, `recoverFromSnapshot` attributes the full interval since the snapshot to that site, even though it was only open for part of it. The error is bounded by one alarm cycle (~60s). Accepted — same class of skew as Issue #10.
 
 ### #12 – Non-atomic storage read-modify-write ✓ Resolved
 Every flush does `storage.local.get` → mutate → `storage.local.set`. Concurrent flushes (e.g., `onActivated` fires while the minute alarm is mid-flush) can read the same stale value and one write silently overwrites the other.

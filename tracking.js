@@ -86,6 +86,25 @@ export async function reconcileWindows() {
   }
 }
 
+export async function saveSnapshot() {
+  const sites = [...new Set(windowToSite.values())].filter(Boolean);
+  if (sites.length > 0) {
+    await chrome.storage.local.set({ _trackingSnapshot: { sites, at: Date.now() } });
+  } else {
+    await chrome.storage.local.remove('_trackingSnapshot');
+  }
+}
+
+export async function recoverFromSnapshot() {
+  if (siteStates.size > 0) return;
+  const { _trackingSnapshot: snap } = await chrome.storage.local.get('_trackingSnapshot');
+  if (!snap) return;
+  const elapsed = Date.now() - snap.at;
+  for (const siteId of snap.sites) {
+    pending.set(siteId, (pending.get(siteId) ?? 0) + elapsed);
+  }
+}
+
 export async function flushToStorage() {
   for (const siteId of siteStates.keys()) recordElapsed(siteId);
   if (pending.size === 0 && pendingVisits.size === 0) return;
