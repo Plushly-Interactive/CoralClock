@@ -27,7 +27,7 @@ The redesign changes `timeRecords[hostname]` from a plain number to `{ ms, audio
 
 **Fix:** The minute alarm flush must call `checkAndBlock` for every currently tracked site, not just the one that was most recently navigated to.
 
-**Resolution:** The flush alarm handler now calls `checkAndBlock` for every key in `siteStates` after `flushToStorage`.
+**Resolution:** Moot — `checkAndBlock` and the rule/blocking system have been removed pending a full rework. `siteStates` is private to `tracking.js`.
 
 ---
 

@@ -1,5 +1,4 @@
 import { formatMs } from './utils.js';
-import { resolveSite } from './siteResolution.js';
 
 const addBtn = document.querySelector('#add-btn');
 
@@ -69,19 +68,16 @@ rulesList.addEventListener('click', async (e) => {
 });
 
 async function renderRules() {
-  const { rules = [], timeRecords = {}, dailyRecords = {} } = await chrome.storage.local.get(['rules', 'timeRecords', 'dailyRecords']);
+  const { rules = [] } = await chrome.storage.local.get('rules');
   const multipliers = { minutes: 60000, hours: 3600000, days: 86400000 };
 
   rulesList.innerHTML = rules.map(rule => {
-    const { siteId } = resolveSite(rule.target);
-    const used = timeRecords[siteId] ?? 0;
-    const today = dailyRecords[siteId] ?? 0;
     const limitMs = rule.limit * (multipliers[rule.limitUnit] ?? 60000);
     return `
     <li class="${rule.enabled ? '' : 'disabled'}">
       <div class="rule-info">
         <strong>${rule.target}</strong>
-        <span>Today: ${formatMs(today)} · ${formatMs(used)} / ${formatMs(limitMs)} per ${rule.period}</span>
+        <span>${formatMs(limitMs)} per ${rule.period}</span>
       </div>
       <button class="toggle-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
       <button class="delete-btn" data-id="${rule.id}">✕</button>

@@ -1,7 +1,7 @@
 import { resolveSite } from './siteResolution.js';
 import { localDayKey, localHourKey } from './utils.js';
 
-export const siteStates = new Map();
+const siteStates = new Map();
 const windowToSite = new Map();
 const pending = new Map();
 const pendingVisits = new Map();
@@ -59,11 +59,6 @@ export function setWindowSite(windowId, newSiteId) {
   return newSiteId;
 }
 
-// Drain in-flight elapsed time into pending then discard — used at period reset.
-export function discardPending() {
-  for (const siteId of siteStates.keys()) recordElapsed(siteId);
-  pending.clear();
-}
 
 export async function initTracking() {
   const windows = await chrome.windows.getAll({ populate: true });
@@ -94,15 +89,13 @@ export async function reconcileWindows() {
 export async function flushToStorage() {
   for (const siteId of siteStates.keys()) recordElapsed(siteId);
   if (pending.size === 0 && pendingVisits.size === 0) return;
-  const { timeRecords = {}, dailyRecords = {}, analyticsByDay = {}, analyticsByHour = {} } =
-    await chrome.storage.local.get(['timeRecords', 'dailyRecords', 'analyticsByDay', 'analyticsByHour']);
+  const { analyticsByDay = {}, analyticsByHour = {} } =
+    await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
   const day = localDayKey(Date.now());
   const hour = localHourKey(Date.now());
   analyticsByDay[day] ??= {};
   analyticsByHour[hour] ??= {};
   for (const [siteId, ms] of pending) {
-    timeRecords[siteId] = (timeRecords[siteId] ?? 0) + ms;
-    dailyRecords[siteId] = (dailyRecords[siteId] ?? 0) + ms;
     analyticsByDay[day][siteId] ??= { ms: 0, visits: 0 };
     analyticsByDay[day][siteId].ms += ms;
     analyticsByHour[hour][siteId] ??= { ms: 0, visits: 0 };
@@ -116,5 +109,5 @@ export async function flushToStorage() {
   }
   pending.clear();
   pendingVisits.clear();
-  await chrome.storage.local.set({ timeRecords, dailyRecords, analyticsByDay, analyticsByHour });
+  await chrome.storage.local.set({ analyticsByDay, analyticsByHour });
 }
