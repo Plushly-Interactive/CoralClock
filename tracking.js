@@ -59,7 +59,6 @@ export function setWindowSite(windowId, newSiteId) {
   return newSiteId;
 }
 
-
 export async function initTracking() {
   const windows = await chrome.windows.getAll({ populate: true });
   for (const w of windows) {
@@ -95,8 +94,10 @@ export async function saveSnapshot() {
   }
 }
 
+let _recovered = false;
 export async function recoverFromSnapshot() {
-  if (siteStates.size > 0) return;
+  if (_recovered) return;
+  _recovered = true;
   const { _trackingSnapshot: snap } = await chrome.storage.local.get('_trackingSnapshot');
   if (!snap) return;
   const elapsed = Date.now() - snap.at;

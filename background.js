@@ -12,7 +12,9 @@ console.log('BiteGuard: background started');
 let cachedByDay = null;
 let cachedByHour = null;
 
-chrome.alarms.create('flush', { periodInMinutes: 1 });
+chrome.alarms.get('flush').then(existing => {
+  if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
+});
 bootstrap();
 
 async function bootstrap() {
