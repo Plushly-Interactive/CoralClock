@@ -1,4 +1,5 @@
 import { formatMs } from './utils.js';
+import { resolveSite } from './siteResolution.js';
 
 const addBtn = document.querySelector('#add-btn');
 
@@ -72,8 +73,9 @@ async function renderRules() {
   const multipliers = { minutes: 60000, hours: 3600000, days: 86400000 };
 
   rulesList.innerHTML = rules.map(rule => {
-    const used = timeRecords[rule.target] ?? 0;
-    const today = dailyRecords[rule.target] ?? 0;
+    const { siteId } = resolveSite(rule.target);
+    const used = timeRecords[siteId] ?? 0;
+    const today = dailyRecords[siteId] ?? 0;
     const limitMs = rule.limit * (multipliers[rule.limitUnit] ?? 60000);
     return `
     <li class="${rule.enabled ? '' : 'disabled'}">

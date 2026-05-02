@@ -53,22 +53,26 @@ siteStates: Map<hostname, {
 
 When either set changes for a site, elapsed time since `startedAt` is flushed into the correct accumulators based on the *previous* `wasActive`/`wasAudible` state, then the state is updated and `startedAt` is reset.
 
-| wasActive | wasAudible | Adds elapsed to |
-|---|---|---|
-| true | false | `activeMs` only |
-| false | true | `audioMs` only |
-| true | true | `activeMs`, `audioMs`, `overlapMs` |
-| false | false | nothing (site was not being tracked) |
+
+| wasActive | wasAudible | Adds elapsed to                      |
+| --------- | ---------- | ------------------------------------ |
+| true      | false      | `activeMs` only                      |
+| false     | true       | `audioMs` only                       |
+| true      | true       | `activeMs`, `audioMs`, `overlapMs`   |
+| false     | false      | nothing (site was not being tracked) |
+
 
 ### Three accumulators per site
 
 From `activeMs`, `audioMs`, `overlapMs`, all future blocking modes are derivable:
 
-| Blocking mode | Formula |
-|---|---|
-| Active only | `activeMs` |
-| Audio only | `audioMs` |
+
+| Blocking mode                           | Formula                          |
+| --------------------------------------- | -------------------------------- |
+| Active only                             | `activeMs`                       |
+| Audio only                              | `audioMs`                        |
 | Active + audio (union, no double-count) | `activeMs + audioMs - overlapMs` |
+
 
 ---
 
@@ -116,16 +120,18 @@ Used for limit checking. Reset by period alarms (hour/day/week) as today.
 
 ## Event sources
 
-| Event | Action |
-|---|---|
-| Startup | Query all windows → populate `activeWindowIds`; query all audible tabs → populate `audibleTabIds` |
-| `chrome.tabs.onActivated` | Update `activeWindowIds` for that window (remove old hostname, add new) |
-| `chrome.tabs.onUpdated` (status=complete, tab.active) | Same as onActivated for that window |
-| `chrome.tabs.onUpdated` (changeInfo.audible) | Add/remove tab from `audibleTabIds` for its hostname |
-| `chrome.tabs.onRemoved` | Remove tab from `audibleTabIds` if present |
-| `chrome.windows.onCreated` | Query new window's active tab, add to `activeWindowIds` |
-| `chrome.windows.onRemoved` | Remove window from all `activeWindowIds` |
-| Minute alarm | Flush all sites, re-query all windows to detect minimize/restore, restart; call `checkAndBlock` for every tracked site (issue #5) |
+
+| Event                                                 | Action                                                                                                                            |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Startup                                               | Query all windows → populate `activeWindowIds`; query all audible tabs → populate `audibleTabIds`                                 |
+| `chrome.tabs.onActivated`                             | Update `activeWindowIds` for that window (remove old hostname, add new)                                                           |
+| `chrome.tabs.onUpdated` (status=complete, tab.active) | Same as onActivated for that window                                                                                               |
+| `chrome.tabs.onUpdated` (changeInfo.audible)          | Add/remove tab from `audibleTabIds` for its hostname                                                                              |
+| `chrome.tabs.onRemoved`                               | Remove tab from `audibleTabIds` if present                                                                                        |
+| `chrome.windows.onCreated`                            | Query new window's active tab, add to `activeWindowIds`                                                                           |
+| `chrome.windows.onRemoved`                            | Remove window from all `activeWindowIds`                                                                                          |
+| Minute alarm                                          | Flush all sites, re-query all windows to detect minimize/restore, restart; call `checkAndBlock` for every tracked site (issue #5) |
+
 
 `chrome.windows.onFocusChanged` is **not used** — focus is irrelevant to tracking decisions.
 

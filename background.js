@@ -3,7 +3,11 @@ import { resolveSite } from './siteResolution.js';
 
 console.log('BiteGuard: background started');
 
-let activeVisit = null;
+const siteStates = new Map();
+const windowToSite = new Map();
+const pending = new Map();
+const pendingVisits = new Map();
+
 let cachedByDay = null;
 let cachedByHour = null;
 
@@ -42,23 +46,156 @@ async function getByHourToday() {
 
 chrome.alarms.create('flush', { periodInMinutes: 1 });
 scheduleResetAlarms();
+bootstrap();
 
-chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-  if (tab?.url) handleTabChange(tab.url);
+async function bootstrap() {
+  const windows = await chrome.windows.getAll({ populate: true });
+  for (const w of windows) {
+    if (w.state === 'minimized') continue;
+    const tab = w.tabs?.find(t => t.active);
+    const siteId = siteIdFromUrl(tab?.url);
+    if (siteId) addWindowSite(w.id, siteId);
+  }
+}
+
+function siteIdFromUrl(url) {
+  if (!url?.startsWith('http')) return null;
+  return resolveSite(new URL(url).hostname).siteId;
+}
+
+function addWindowSite(windowId, siteId) {
+  let s = siteStates.get(siteId);
+  if (!s) {
+    s = { activeWindowIds: new Set(), startedAt: 0, wasActive: false };
+    siteStates.set(siteId, s);
+  }
+  s.activeWindowIds.add(windowId);
+  windowToSite.set(windowId, siteId);
+  if (!s.wasActive) {
+    s.startedAt = Date.now();
+    s.wasActive = true;
+  }
+}
+
+function removeWindowSite(windowId) {
+  const siteId = windowToSite.get(windowId);
+  if (!siteId) return;
+  windowToSite.delete(windowId);
+  const s = siteStates.get(siteId);
+  if (!s) return;
+  s.activeWindowIds.delete(windowId);
+  if (s.activeWindowIds.size === 0 && s.wasActive) {
+    recordElapsed(siteId);
+    s.wasActive = false;
+  }
+}
+
+function recordElapsed(siteId) {
+  const s = siteStates.get(siteId);
+  if (!s || !s.wasActive) return;
+  const elapsed = Date.now() - s.startedAt;
+  if (elapsed > 0) pending.set(siteId, (pending.get(siteId) ?? 0) + elapsed);
+  s.startedAt = Date.now();
+}
+
+async function setWindowSite(windowId, newSiteId) {
+  const oldSiteId = windowToSite.get(windowId);
+  if (oldSiteId === newSiteId) return;
+  if (oldSiteId !== undefined) removeWindowSite(windowId);
+  if (newSiteId) {
+    addWindowSite(windowId, newSiteId);
+    pendingVisits.set(newSiteId, (pendingVisits.get(newSiteId) ?? 0) + 1);
+    await updateBadge(newSiteId);
+    await checkAndBlock(newSiteId);
+  } else {
+    chrome.action.setBadgeText({ text: '' });
+  }
+}
+
+chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
+  const tab = await chrome.tabs.get(tabId);
+  await setWindowSite(windowId, siteIdFromUrl(tab.url));
+});
+
+chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.active) {
+    await setWindowSite(tab.windowId, siteIdFromUrl(tab.url));
+  }
+});
+
+chrome.windows.onCreated.addListener(async (window) => {
+  if (window.state === 'minimized') return;
+  const [tab] = await chrome.tabs.query({ windowId: window.id, active: true });
+  await setWindowSite(window.id, siteIdFromUrl(tab?.url));
+});
+
+chrome.windows.onRemoved.addListener((windowId) => {
+  removeWindowSite(windowId);
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === 'reset-hour') { await resetPeriod('hour'); return; }
   if (alarm.name === 'reset-day')  { await resetPeriod('day');  return; }
   if (alarm.name === 'reset-week') { await resetPeriod('week'); return; }
-
-  if (!activeVisit) return;
-  const hostname = activeVisit.hostname;
-  await flushSession();
-  activeVisit = { hostname, startedAt: Date.now() };
-  await updateBadge(hostname);
-  await checkAndBlock(hostname);
+  await reconcileWindows();
+  await flushToStorage();
+  for (const siteId of siteStates.keys()) await checkAndBlock(siteId);
 });
+
+async function reconcileWindows() {
+  const windows = await chrome.windows.getAll();
+  const liveById = new Map(windows.map(w => [w.id, w]));
+  for (const id of [...windowToSite.keys()]) {
+    const w = liveById.get(id);
+    if (!w || w.state === 'minimized') removeWindowSite(id);
+  }
+  for (const w of windows) {
+    if (w.state === 'minimized') continue;
+    if (windowToSite.has(w.id)) continue;
+    const [tab] = await chrome.tabs.query({ windowId: w.id, active: true });
+    const siteId = siteIdFromUrl(tab?.url);
+    if (siteId) addWindowSite(w.id, siteId);
+  }
+}
+
+async function flushToStorage() {
+  for (const siteId of siteStates.keys()) recordElapsed(siteId);
+  if (pending.size === 0 && pendingVisits.size === 0) return;
+  const { timeRecords = {}, dailyRecords = {}, analyticsByDay = {}, analyticsByHour = {} } =
+    await chrome.storage.local.get(['timeRecords', 'dailyRecords', 'analyticsByDay', 'analyticsByHour']);
+  const day = localDayKey(Date.now());
+  const hour = localHourKey(Date.now());
+  analyticsByDay[day] ??= {};
+  analyticsByHour[hour] ??= {};
+  for (const [siteId, ms] of pending) {
+    timeRecords[siteId] = (timeRecords[siteId] ?? 0) + ms;
+    dailyRecords[siteId] = (dailyRecords[siteId] ?? 0) + ms;
+    analyticsByDay[day][siteId] ??= { ms: 0, visits: 0 };
+    analyticsByDay[day][siteId].ms += ms;
+    analyticsByHour[hour][siteId] ??= { ms: 0, visits: 0 };
+    analyticsByHour[hour][siteId].ms += ms;
+  }
+  for (const [siteId, count] of pendingVisits) {
+    analyticsByDay[day][siteId] ??= { ms: 0, visits: 0 };
+    analyticsByDay[day][siteId].visits += count;
+    analyticsByHour[hour][siteId] ??= { ms: 0, visits: 0 };
+    analyticsByHour[hour][siteId].visits += count;
+  }
+  pending.clear();
+  pendingVisits.clear();
+  await chrome.storage.local.set({ timeRecords, dailyRecords, analyticsByDay, analyticsByHour });
+  cachedByDay = null;
+  cachedByHour = null;
+}
+
+function localDayKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function localHourKey(ts) {
+  return `${localDayKey(ts)}T${String(new Date(ts).getHours()).padStart(2, '0')}`;
+}
 
 chrome.storage.onChanged.addListener(async ({ rules }) => {
   if (!rules) return;
@@ -74,85 +211,11 @@ chrome.storage.onChanged.addListener(async ({ rules }) => {
   }
 });
 
-chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  const tab = await chrome.tabs.get(tabId);
-  await handleTabChange(tab.url);
-});
-
-chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.active) {
-    await handleTabChange(tab.url);
-  }
-});
-
-function localDayKey(ts) {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function localHourKey(ts) {
-  return `${localDayKey(ts)}T${String(new Date(ts).getHours()).padStart(2, '0')}`;
-}
-
-async function flushSession() {
-  if (!activeVisit) return;
-  const elapsed = Date.now() - activeVisit.startedAt;
-  const { timeRecords = {}, dailyRecords = {}, analyticsByDay = {}, analyticsByHour = {} } = await chrome.storage.local.get(['timeRecords', 'dailyRecords', 'analyticsByDay', 'analyticsByHour']);
-  const h = activeVisit.hostname;
-  timeRecords[h] = (timeRecords[h] ?? 0) + elapsed;
-  dailyRecords[h] = (dailyRecords[h] ?? 0) + elapsed;
-
-  const { siteId } = resolveSite(h);
-  const day = localDayKey(Date.now());
-  const hour = localHourKey(Date.now());
-  analyticsByDay[day] ??= {};
-  analyticsByDay[day][siteId] ??= { ms: 0, visits: 0 };
-  analyticsByDay[day][siteId].ms += elapsed;
-  analyticsByHour[hour] ??= {};
-  analyticsByHour[hour][siteId] ??= { ms: 0, visits: 0 };
-  analyticsByHour[hour][siteId].ms += elapsed;
-
-  await chrome.storage.local.set({ timeRecords, dailyRecords, analyticsByDay, analyticsByHour });
-  cachedByDay = null;
-  cachedByHour = null;
-  activeVisit = null;
-}
-
-async function handleTabChange(url) {
-  await flushSession();
-  if (!url?.startsWith('http')) {
-    chrome.action.setBadgeText({ text: '' });
-    return;
-  }
-  const raw = new URL(url).hostname;
-  const { rules = [] } = await chrome.storage.local.get('rules');
-  const rule = rules.find(r => r.enabled && (r.target === raw || raw.endsWith('.' + r.target)));
-  const hostname = rule ? rule.target : raw;
-  activeVisit = { hostname, startedAt: Date.now() };
-
-  const { siteId: newSiteId } = resolveSite(hostname);
-  const { analyticsByDay: newByDay = {}, analyticsByHour: newByHour = {} } = await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
-  const newDay = localDayKey(Date.now());
-  const newHour = localHourKey(Date.now());
-  newByDay[newDay] ??= {};
-  newByDay[newDay][newSiteId] ??= { ms: 0, visits: 0 };
-  newByDay[newDay][newSiteId].visits += 1;
-  newByHour[newHour] ??= {};
-  newByHour[newHour][newSiteId] ??= { ms: 0, visits: 0 };
-  newByHour[newHour][newSiteId].visits += 1;
-  await chrome.storage.local.set({ analyticsByDay: newByDay, analyticsByHour: newByHour });
-  cachedByDay = null;
-  cachedByHour = null;
-
-  await updateBadge(hostname);
-  await checkAndBlock(hostname);
-  console.log(`tracking: ${hostname}`);
-}
-
-async function updateBadge(hostname) {
+async function updateBadge(siteId) {
+  if (!siteId) { chrome.action.setBadgeText({ text: '' }); return; }
   const { timeRecords = {}, rules = [] } = await chrome.storage.local.get(['timeRecords', 'rules']);
-  const hasActiveRule = rules.some(r => r.enabled && r.target === hostname);
-  const text = hasActiveRule ? formatMs(timeRecords[hostname] ?? 0) : '';
+  const hasRule = rules.some(r => r.enabled && resolveSite(r.target).siteId === siteId);
+  const text = hasRule ? formatMs(timeRecords[siteId] ?? 0) : '';
   chrome.action.setBadgeText({ text });
 }
 
@@ -192,7 +255,10 @@ async function resetPeriod(period) {
   const allTargets     = rules.filter(r => r.period === period).map(r => r.target);
   const enabledTargets = rules.filter(r => r.period === period && r.enabled).map(r => r.target);
 
-  for (const target of allTargets) timeRecords[target] = 0;
+  for (const target of allTargets) {
+    const { siteId } = resolveSite(target);
+    timeRecords[siteId] = 0;
+  }
   for (const target of enabledTargets) {
     await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [hostnameToRuleId(target)] });
   }
@@ -201,32 +267,31 @@ async function resetPeriod(period) {
   if (period === 'day') update.dailyRecords = {};
   await chrome.storage.local.set(update);
 
-  if (activeVisit && allTargets.includes(activeVisit.hostname)) {
-    activeVisit.startedAt = Date.now();
-  }
+  for (const siteId of siteStates.keys()) recordElapsed(siteId);
+  pending.clear();
 }
 
-async function checkAndBlock(hostname) {
+async function checkAndBlock(siteId) {
   const { rules = [], timeRecords = {} } = await chrome.storage.local.get(['rules', 'timeRecords']);
-  const rule = rules.find(r => r.enabled && r.target === hostname);
+  const rule = rules.find(r => r.enabled && resolveSite(r.target).siteId === siteId);
   if (!rule) return;
 
-  const accumulated = timeRecords[hostname] ?? 0;
+  const accumulated = timeRecords[siteId] ?? 0;
   if (accumulated < toLimitMs(rule)) return;
 
-  const ruleId = hostnameToRuleId(hostname);
+  const ruleId = hostnameToRuleId(rule.target);
   await chrome.declarativeNetRequest.updateDynamicRules({
     removeRuleIds: [ruleId],
     addRules: [{
       id: ruleId,
       priority: 1,
-      action: { type: 'redirect', redirect: { extensionPath: `/blocked.html?host=${hostname}` } },
-      condition: { urlFilter: `||${hostname}^`, resourceTypes: ['main_frame'] }
+      action: { type: 'redirect', redirect: { extensionPath: `/blocked.html?host=${rule.target}` } },
+      condition: { urlFilter: `||${rule.target}^`, resourceTypes: ['main_frame'] }
     }]
   });
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab?.url?.includes(hostname)) {
-    chrome.tabs.update(tab.id, { url: chrome.runtime.getURL(`blocked.html?host=${hostname}`) });
+  if (tab?.url?.includes(rule.target)) {
+    chrome.tabs.update(tab.id, { url: chrome.runtime.getURL(`blocked.html?host=${rule.target}`) });
   }
 }
