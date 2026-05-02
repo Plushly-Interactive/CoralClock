@@ -1,5 +1,6 @@
 import { formatMs } from './utils.js';
 import { resolveSite } from './siteResolution.js';
+import { ensureStorageVersion } from './migrations.js';
 
 console.log('BiteGuard: background started');
 
@@ -49,6 +50,7 @@ scheduleResetAlarms();
 bootstrap();
 
 async function bootstrap() {
+  await ensureStorageVersion();
   const windows = await chrome.windows.getAll({ populate: true });
   for (const w of windows) {
     if (w.state === 'minimized') continue;
