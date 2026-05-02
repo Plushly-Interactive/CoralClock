@@ -7,7 +7,8 @@
 - Handle empty rules list with a nice "No rules"-like message
 - Block url/page title keywords
 - analytics site page: daily/weekly average, time and visits
-- browsing trends algorithms
+- browsing trends algorithms, user habits, improvement sugegstions, etc.
+- Groups, labels, etc. (can serve as filters in analytics)
 - Three blocking rule modes (per-rule choice):
   - Active browsing mode: counts time based on window visibility / active tab (current approach, refactored)
   - Audio mode: counts time any tab on that site is producing audio, regardless of focus/minimize/window state
