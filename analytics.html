@@ -8,14 +8,18 @@
   <body>
     <header>
       <span>🦈 BiteGuard — Analytics</span>
-      <select id="range-select">
-        <option value="today">Today</option>
-        <option value="7" selected>Last 7 days</option>
-        <option value="30">Last 30 days</option>
-        <option value="180">Last 6 months</option>
-        <option value="365">Last year</option>
-        <option value="all">All time</option>
-      </select>
+      <div id="header-controls">
+        <input type="file" id="import-input" accept=".json" style="display:none">
+        <button id="import-btn">Import</button>
+        <select id="range-select">
+          <option value="today">Today</option>
+          <option value="7" selected>Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="180">Last 6 months</option>
+          <option value="365">Last year</option>
+          <option value="all">All time</option>
+        </select>
+      </div>
     </header>
 
     <div class="chart-container" id="top-chart-container">
@@ -47,6 +51,7 @@
 
     <p id="empty-msg">No data for this period.</p>
 
+    <script type="module" src="importData.js"></script>
     <script type="module" src="analytics.js"></script>
   </body>
 </html>

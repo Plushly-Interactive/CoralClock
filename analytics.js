@@ -78,8 +78,14 @@ async function loadAndRender() {
   render();
 }
 
-document.querySelector('#seed-btn').addEventListener('click', async () => {
+document.querySelector('#seed-btn')?.addEventListener('click', async () => {
   await seedTestData();
+  byDayCache = null;
+  Object.keys(avgPerHourCache).forEach(k => delete avgPerHourCache[k]);
+  await loadAndRender();
+});
+
+window.addEventListener('importcomplete', async () => {
   byDayCache = null;
   Object.keys(avgPerHourCache).forEach(k => delete avgPerHourCache[k]);
   await loadAndRender();
