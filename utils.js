@@ -1,5 +1,5 @@
 export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series }) {
-  const W = 600, H = 260, padLeft = 52, padRight = 8, padTop = 10, padBottom = 28;
+  const W = 600, H = 260, padLeft = 52, padRight = 8, padTop = 10, padBottom = 40;
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
   const gap = Math.floor(innerW / data.length);
@@ -69,7 +69,11 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
     });
     rect.addEventListener('mousemove', (e) => {
       const box = svgEl.getBoundingClientRect();
-      tooltipEl.style.left = `${e.clientX - box.left + 10}px`;
+      const ttW = tooltipEl.offsetWidth;
+      const flipLeft = e.clientX + 10 + ttW > window.innerWidth;
+      tooltipEl.style.left = flipLeft
+        ? `${e.clientX - box.left - ttW - 10}px`
+        : `${e.clientX - box.left + 10}px`;
       tooltipEl.style.top = `${e.clientY - box.top - 28}px`;
     });
     rect.addEventListener('mouseleave', () => {

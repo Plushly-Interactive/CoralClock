@@ -8,6 +8,12 @@
   <body>
     <header>
       <span>🦈 BiteGuard — Analytics</span>
+      <div id="storage-bar-container">
+        <div id="storage-bar-track">
+          <div id="storage-bar-fill"></div>
+        </div>
+        <span id="storage-bar-label"></span>
+      </div>
       <div id="header-controls">
         <input type="file" id="import-input" accept=".json" style="display:none">
         <button id="import-btn">Import</button>
@@ -22,43 +28,40 @@
       </div>
     </header>
 
-    <div class="chart-container" id="top-chart-container">
-      <h2 class="chart-heading">Top 5 sites</h2>
-      <svg id="top-chart"></svg>
-      <div class="tooltip" id="top-tooltip"></div>
-    </div>
-
-    <div class="chart-container" id="hourly-chart-container">
-      <h2 class="chart-heading">
-        Average per clock hour
-        <span id="hourly-subheading" class="chart-subheading"></span>
-      </h2>
-      <svg id="hourly-chart"></svg>
-      <div class="tooltip" id="hourly-tooltip"></div>
-      <p id="hourly-not-relevant" class="chart-note" style="display:none">Not relevant for "Today".</p>
-    </div>
-
-    <table id="analytics-table">
-      <thead>
-        <tr>
-          <th>Site</th>
-          <th>Time</th>
-          <th>Visits</th>
-        </tr>
-      </thead>
-      <tbody id="analytics-body"></tbody>
-    </table>
-
-    <p id="empty-msg">No data for this period.</p>
-
-    <footer>
-      <div id="storage-bar-container">
-        <div id="storage-bar-track">
-          <div id="storage-bar-fill"></div>
+    <div id="analytics-grid">
+      <div id="analytics-charts-col">
+        <div class="chart-container" id="top-chart-container">
+          <h2 class="chart-heading">Top 5 sites</h2>
+          <svg id="top-chart"></svg>
+          <div class="tooltip" id="top-tooltip"></div>
         </div>
-        <span id="storage-bar-label"></span>
+
+        <div class="chart-container" id="hourly-chart-container">
+          <h2 class="chart-heading">
+            Average per clock hour
+            <span id="hourly-subheading" class="chart-subheading"></span>
+          </h2>
+          <svg id="hourly-chart"></svg>
+          <div class="tooltip" id="hourly-tooltip"></div>
+          <p id="hourly-not-relevant" class="chart-note" style="display:none">Not relevant for "Today".</p>
+        </div>
       </div>
-    </footer>
+
+      <div id="analytics-table-col">
+        <h2 class="chart-heading" id="analytics-table-heading">All browsed sites</h2>
+        <table id="analytics-table">
+          <thead>
+            <tr>
+              <th id="th-name">Site</th>
+              <th id="th-time">Time</th>
+              <th id="th-visits">Visits</th>
+            </tr>
+          </thead>
+          <tbody id="analytics-body"></tbody>
+        </table>
+        <p id="empty-msg">No data for this period.</p>
+      </div>
+    </div>
 
     <script type="module" src="importData.js"></script>
     <script type="module" src="analytics.js"></script>

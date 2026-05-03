@@ -16,6 +16,61 @@ const hourlySubheading = document.querySelector('#hourly-subheading');
 
 const avgPerHourCache = {};
 
+let sortCol = 'time';
+let sortDir = 'desc';
+let currentRows = [];
+
+const thName = document.querySelector('#th-name');
+const thTime = document.querySelector('#th-time');
+const thVisits = document.querySelector('#th-visits');
+
+const TH_LABELS = { name: 'Site', time: 'Time', visits: 'Visits' };
+
+function updateHeaders() {
+  for (const [col, th] of [['name', thName], ['time', thTime], ['visits', thVisits]]) {
+    const arrow = sortCol === col ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
+    th.textContent = TH_LABELS[col] + arrow;
+  }
+}
+
+[['name', thName], ['time', thTime], ['visits', thVisits]].forEach(([col, th]) => {
+  th.style.cursor = 'pointer';
+  th.addEventListener('click', () => {
+    if (sortCol === col) {
+      sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+      sortCol = col;
+      sortDir = col === 'name' ? 'asc' : 'desc';
+    }
+    renderTable(sortedRows());
+  });
+});
+
+function sortedRows() {
+  return [...currentRows].sort((a, b) => {
+    let cmp;
+    if (sortCol === 'name') cmp = a.siteLabel.localeCompare(b.siteLabel);
+    else if (sortCol === 'time') cmp = a.activeMs - b.activeMs;
+    else cmp = a.visits - b.visits;
+    return sortDir === 'desc' ? -cmp : cmp;
+  });
+}
+
+function renderTable(rows) {
+  tbody.innerHTML = rows.map(({ siteId, siteLabel, activeMs, visits }) => {
+    const href = `site.html?id=${encodeURIComponent(siteId)}`;
+    return `<tr class="clickable" data-href="${href}">
+      <td><span class="site-label">${siteLabel}</span><span class="site-id">${siteId}</span></td>
+      <td>${formatMs(activeMs)}</td>
+      <td>${visits}</td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('tr.clickable').forEach(row => {
+    row.addEventListener('click', () => { location.href = row.dataset.href; });
+  });
+  updateHeaders();
+}
+
 function hourlySubheadingText(range) {
   if (range === 'all') return '(all days, excluding today)';
   return `(past ${parseInt(range)} days, excluding today)`;
@@ -139,9 +194,12 @@ function render() {
     }
   }
 
-  const rows = Object.entries(totals).sort((a, b) => b[1].activeMs - a[1].activeMs);
+  currentRows = Object.entries(totals).map(([siteId, { activeMs, visits }]) => {
+    const { siteLabel } = resolveSite(siteId);
+    return { siteId, siteLabel, activeMs, visits };
+  });
 
-  if (rows.length === 0) {
+  if (currentRows.length === 0) {
     tbody.innerHTML = '';
     emptyMsg.style.display = 'block';
     topChartContainer.style.display = 'none';
@@ -153,10 +211,9 @@ function render() {
   topChartContainer.style.display = 'block';
   renderHourly(range);
 
-  const top = rows.slice(0, 5).map(([siteId, { activeMs }]) => {
-    const { siteLabel } = resolveSite(siteId);
-    return { label: siteLabel, range: siteId, activeMs };
-  });
+  const top = [...currentRows].sort((a, b) => b.activeMs - a.activeMs).slice(0, 5).map(({ siteLabel, siteId, activeMs }) => ({
+    label: siteLabel, range: siteId, activeMs,
+  }));
   drawBarChart({
     svgEl: topChart,
     tooltipEl: topTooltip,
@@ -164,20 +221,8 @@ function render() {
     maxVal: Math.max(...top.map(d => d.activeMs)),
     getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
-    color: '#2563eb',
+    color: '#7c3aed',
   });
 
-  tbody.innerHTML = rows.map(([siteId, { activeMs, visits }]) => {
-    const { siteLabel } = resolveSite(siteId);
-    const href = `site.html?id=${encodeURIComponent(siteId)}`;
-    return `<tr class="clickable" data-href="${href}">
-      <td><span class="site-label">${siteLabel}</span><span class="site-id">${siteId}</span></td>
-      <td>${formatMs(activeMs)}</td>
-      <td>${visits}</td>
-    </tr>`;
-  }).join('');
-
-  tbody.querySelectorAll('tr.clickable').forEach(row => {
-    row.addEventListener('click', () => { location.href = row.dataset.href; });
-  });
+  renderTable(sortedRows());
 }

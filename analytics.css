@@ -8,16 +8,64 @@ body {
   font-family: system-ui, sans-serif;
   font-size: 14px;
   color: #1a1a1a;
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 0 0 32px;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  flex-shrink: 0;
+}
+
+#analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+#analytics-table-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#analytics-charts-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 0;
+}
+
+#analytics-charts-col .chart-container {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+#top-chart,
+#hourly-chart {
+  display: block;
+  width: 100%;
+  height: calc(100% - 16px);
+  margin-bottom: 16px;
 }
 
 header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 0 20px;
+  height: 56px;
   border-bottom: 1px solid #e5e5e5;
   font-weight: 600;
   position: sticky;
@@ -41,7 +89,6 @@ header select {
 
 .chart-container {
   position: relative;
-  padding: 20px 20px 0;
 }
 
 .chart-heading {
@@ -65,12 +112,6 @@ header select {
   white-space: nowrap;
 }
 
-#top-chart,
-#hourly-chart {
-  display: block;
-  width: 100%;
-  height: auto;
-}
 
 .chart-subheading {
   font-size: 11px;
@@ -87,11 +128,55 @@ header select {
   margin: 8px 0 0;
 }
 
+#analytics-table-heading {
+  padding: 0 20px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  flex-shrink: 0;
+}
+
 #analytics-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 8px;
 }
+
+#analytics-table {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+#analytics-table thead {
+  display: block;
+  flex-shrink: 0;
+}
+
+#analytics-table tbody {
+  display: block;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+#analytics-table thead tr,
+#analytics-table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+#analytics-table th:nth-child(1),
+#analytics-table td:nth-child(1) { width: 60%; }
+#analytics-table th:nth-child(2),
+#analytics-table td:nth-child(2) { width: 20%; }
+#analytics-table th:nth-child(3),
+#analytics-table td:nth-child(3) { width: 20%; }
 
 #analytics-table th {
   text-align: left;
@@ -99,6 +184,12 @@ header select {
   font-size: 12px;
   color: #666;
   border-bottom: 1px solid #e5e5e5;
+  cursor: pointer;
+  user-select: none;
+}
+
+#analytics-table th:hover {
+  color: #333;
 }
 
 #analytics-table td {
@@ -124,18 +215,11 @@ header select {
   color: #888;
 }
 
-footer {
-  padding: 20px;
-  position: sticky;
-  bottom: 0;
-  background: #fff;
-  border-top: 1px solid #e5e5e5;
-}
-
 #storage-bar-container {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 160px;
 }
 
 #storage-bar-track {
