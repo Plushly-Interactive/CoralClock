@@ -8,6 +8,7 @@ const timeChart = document.querySelector('#time-chart');
 const visitsChart = document.querySelector('#visits-chart');
 const timeChartContainer = document.querySelector('#time-chart-container');
 const visitsChartContainer = document.querySelector('#visits-chart-container');
+const audioChartContainer = document.querySelector('#audio-chart-container');
 
 if (siteId) {
   const { siteLabel } = resolveSite(siteId);
@@ -77,6 +78,7 @@ function render() {
         label: `${hStr}:00`,
         range: `${hStr}:00 - ${hNext}:00`,
         activeMs: byHourCache[hourKey]?.[siteId]?.activeMs ?? 0,
+        audioMs: byHourCache[hourKey]?.[siteId]?.audioMs ?? 0,
         visits: byHourCache[hourKey]?.[siteId]?.visits ?? 0,
       };
     });
@@ -107,8 +109,9 @@ function render() {
       data = monthKeys.map(month => {
         const days = dayKeys.filter(day => day.startsWith(month));
         const activeMs = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.activeMs ?? 0), 0);
+        const audioMs = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.audioMs ?? 0), 0);
         const visits = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.visits ?? 0), 0);
-        return { label: month, range: month, activeMs, visits };
+        return { label: month, range: month, activeMs, audioMs, visits };
       });
     } else {
       const shortLabel = parseInt(range) <= 30;
@@ -116,6 +119,7 @@ function render() {
         label: shortLabel ? day.slice(5) : day,
         range: day,
         activeMs: byDayCache?.[day]?.[siteId]?.activeMs ?? 0,
+        audioMs: byDayCache?.[day]?.[siteId]?.audioMs ?? 0,
         visits: byDayCache?.[day]?.[siteId]?.visits ?? 0,
       }));
     }
@@ -125,6 +129,8 @@ function render() {
   emptyMsg.style.display = hasData ? 'none' : 'block';
   timeChartContainer.style.display = hasData ? 'block' : 'none';
   visitsChartContainer.style.display = hasData ? 'block' : 'none';
+  const hasAudio = data.some(d => d.audioMs > 0);
+  audioChartContainer.style.display = hasAudio ? 'block' : 'none';
   if (hasData) drawChart(data);
   renderHourly(range);
 }
@@ -191,5 +197,16 @@ function drawChart(data) {
     hideMidTicks: maxVal => maxVal < 3,
     color: '#ea580c',
   });
+  if (data.some(d => d.audioMs > 0)) {
+    drawBarChart({
+      svgEl: document.querySelector('#audio-chart'),
+      tooltipEl: document.querySelector('#audio-tooltip'),
+      data,
+      maxVal: Math.max(...data.map(d => d.audioMs)),
+      getValue: d => d.audioMs,
+      formatVal: ms => formatMs(ms),
+      color: '#7c3aed',
+    });
+  }
 }
 

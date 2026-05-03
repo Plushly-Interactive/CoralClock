@@ -53,6 +53,7 @@
 
 #time-chart,
 #visits-chart,
+#audio-chart,
 #hourly-chart {
   display: block;
   width: 100%;
