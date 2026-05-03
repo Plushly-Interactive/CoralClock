@@ -40,12 +40,48 @@
         </div>
         <svg id="time-chart"></svg>
         <div id="time-tooltip" class="tooltip"></div>
+        <p id="time-no-data" class="chart-note" style="display:none">No data for this period.</p>
+      </div>
+
+      <div id="stats-container" class="chart-container">
+        <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading"></span></h2>
+        <div id="stats-list">
+          <div class="stat-item">
+            <span class="stat-label">Today</span>
+            <span class="stat-value" id="stat-today"></span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Daily avg</span>
+            <span class="stat-value" id="stat-daily-avg"></span>
+          </div>
+          <div class="stat-item" id="stat-peak-item">
+            <span class="stat-label">Peak day</span>
+            <span class="stat-value-row">
+              <span class="stat-value" id="stat-peak"></span><span id="stat-peak-info" class="stat-info" style="display:none" title="">ⓘ</span>
+            </span>
+          </div>
+          <hr id="stats-divider">
+          <div class="stat-item">
+            <span class="stat-label">Total time</span>
+            <span class="stat-value" id="stat-total-time"></span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Visits</span>
+            <span class="stat-value" id="stat-visits"></span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Avg session</span>
+            <span class="stat-value" id="stat-avg-session"></span>
+          </div>
+        </div>
+        <div class="tooltip" id="peak-tooltip"></div>
       </div>
 
       <div id="visits-chart-container" class="chart-container">
         <h2 class="chart-heading">Visits</h2>
         <svg id="visits-chart"></svg>
         <div id="visits-tooltip" class="tooltip"></div>
+        <p id="visits-no-data" class="chart-note" style="display:none">No data for this period.</p>
       </div>
 
       <div id="hourly-chart-container" class="chart-container">

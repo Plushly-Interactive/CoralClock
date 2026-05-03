@@ -84,6 +84,86 @@ header {
   min-height: 0;
 }
 
+#stats-container {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+#hourly-chart-container {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+#visits-chart-container {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+#stats-list {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 0 48px;
+  place-self: center;
+}
+
+#stats-list .stat-item {
+  padding: 20px 0;
+}
+
+#stats-divider {
+  grid-column: 1 / -1;
+  border: none;
+  border-top: 1px solid #e5e5e5;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: #888;
+  vertical-align: middle;
+}
+
+.stat-value-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#stat-peak-item {
+  cursor: help;
+}
+
+.stat-info {
+  font-size: 13px;
+  font-weight: 700;
+  color: #aaa;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 #time-chart,
 #visits-chart,
 #hourly-chart {

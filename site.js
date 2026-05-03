@@ -3,11 +3,30 @@ import { resolveSite } from './siteResolution.js';
 
 const siteId = new URLSearchParams(location.search).get('id');
 const rangeSelect = document.querySelector('#range-select');
-const emptyMsg = document.querySelector('#empty-msg');
 const timeChart = document.querySelector('#time-chart');
 const visitsChart = document.querySelector('#visits-chart');
-const timeChartContainer = document.querySelector('#time-chart-container');
-const visitsChartContainer = document.querySelector('#visits-chart-container');
+const timeNoData = document.querySelector('#time-no-data');
+const visitsNoData = document.querySelector('#visits-no-data');
+const peakTooltip = document.querySelector('#peak-tooltip');
+const statsContainer = document.querySelector('#stats-container');
+
+const peakItem = document.querySelector('#stat-peak-item');
+const peakInfo = document.querySelector('#stat-peak-info');
+
+peakItem.addEventListener('mouseenter', () => {
+  if (!peakInfo.dataset.date) return;
+  peakTooltip.textContent = peakInfo.dataset.date;
+  peakTooltip.style.display = 'block';
+});
+peakItem.addEventListener('mousemove', (e) => {
+  if (!peakInfo.dataset.date) return;
+  const box = statsContainer.getBoundingClientRect();
+  peakTooltip.style.left = `${e.clientX - box.left + 10}px`;
+  peakTooltip.style.top = `${e.clientY - box.top - 28}px`;
+});
+peakItem.addEventListener('mouseleave', () => {
+  peakTooltip.style.display = 'none';
+});
 
 if (siteId) {
   const { siteLabel } = resolveSite(siteId);
@@ -125,11 +144,69 @@ function render() {
   }
 
   const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
-  emptyMsg.style.display = hasData ? 'none' : 'block';
-  timeChartContainer.style.display = hasData ? 'block' : 'none';
-  visitsChartContainer.style.display = hasData ? 'block' : 'none';
+  timeChart.style.display = hasData ? 'block' : 'none';
+  visitsChart.style.display = hasData ? 'block' : 'none';
+  timeNoData.style.display = hasData ? 'none' : 'block';
+  visitsNoData.style.display = hasData ? 'none' : 'block';
   if (hasData) drawChart(data);
   renderHourly(range);
+  renderStats(data, range);
+}
+
+function formatTotalTime(ms) {
+  if (ms < 3600000) return `${Math.floor(ms / 60000)}m`;
+  const h = ms / 3600000;
+  const hStr = `${h < 10 ? h.toFixed(1).replace(/\.0$/, '') : Math.round(h)}h`;
+  if (ms < 86400000) return hStr;
+  const d = ms / 86400000;
+  const dStr = `${d < 10 ? d.toFixed(1).replace(/\.0$/, '') : Math.round(d)}d`;
+  return `${hStr} (${dStr})`;
+}
+
+function renderStats(data, range) {
+  const todayKey = todayDayKey();
+  const todayMs = byDayCache?.[todayKey]?.[siteId]?.activeMs ?? 0;
+
+  const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
+  const totalVisits = data.reduce((s, d) => s + d.visits, 0);
+  const activeDays = range !== 'today' ? data.filter(d => d.activeMs > 0).length : 0;
+  const avgMs = activeDays > 0 ? totalMs / activeDays : 0;
+
+  let peakMs = 0, peakLabel = '';
+  if (range !== 'today' && byDayCache) {
+    const cutoff = range === 'all' ? null : (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - (parseInt(range) - 1));
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
+    for (const [day, sites] of Object.entries(byDayCache)) {
+      if (cutoff && day < cutoff) continue;
+      const ms = sites[siteId]?.activeMs ?? 0;
+      if (ms > peakMs) { peakMs = ms; peakLabel = day; }
+    }
+  }
+
+  document.querySelector('#stat-today').textContent = formatMs(todayMs) || '0m';
+  document.querySelector('#stat-daily-avg').textContent = activeDays > 0 ? formatMs(avgMs) : '—';
+  const peakEl = document.querySelector('#stat-peak');
+  peakEl.textContent = peakMs > 0 ? formatMs(peakMs) : '—';
+  peakEl.classList.remove('has-tooltip');
+  peakInfo.style.display = peakMs > 0 ? 'inline' : 'none';
+  peakInfo.dataset.date = peakMs > 0 ? peakLabel : '';
+  peakInfo.title = '';
+  const totalTimeEl = document.querySelector('#stat-total-time');
+  if (totalMs > 0) {
+    const full = formatTotalTime(totalMs);
+    const match = full.match(/^(.+?)(\s*\(.+\))?$/);
+    totalTimeEl.innerHTML = match[2] ? `${match[1]}<span class="stat-sub"> ${match[2]}</span>` : full;
+  } else {
+    totalTimeEl.textContent = '—';
+  }
+  document.querySelector('#stat-visits').textContent = totalVisits > 0 ? totalVisits : '—';
+  document.querySelector('#stat-avg-session').textContent = totalVisits > 0 ? formatMs(totalMs / totalVisits) : '—';
+
+  const subheadings = { today: '(today)', '7': '(last 7 days)', '30': '(last 30 days)', '180': '(last 6 months)', '365': '(last year)', all: '(all time)' };
+  document.querySelector('#overview-subheading').textContent = subheadings[range] ?? '';
 }
 
 function renderHourly(range) {
