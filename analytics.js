@@ -47,12 +47,12 @@ document.querySelector('#seed-btn').addEventListener('click', async () => {
         analyticsByHour[hourKey] ??= {};
         const ms = Math.random() > 0.4 ? Math.floor(Math.random() * 9000000) : 0;
         const visits = ms > 0 ? Math.floor(Math.random() * 3) + 1 : 0;
-        analyticsByHour[hourKey][siteId] = { ms, visits };
+        analyticsByHour[hourKey][siteId] = { activeMs: ms, visits };
         totalMs += ms;
         totalVisits += visits;
       }
 
-      analyticsByDay[dayKey][siteId] = { ms: totalMs, visits: totalVisits };
+      analyticsByDay[dayKey][siteId] = { activeMs: totalMs, visits: totalVisits };
     }
   }
 
@@ -85,13 +85,13 @@ function render() {
   for (const [day, sites] of Object.entries(byDay)) {
     if (allowed && !allowed.includes(day)) continue;
     for (const [siteId, entry] of Object.entries(sites)) {
-      totals[siteId] ??= { ms: 0, visits: 0 };
-      totals[siteId].ms += entry.ms;
+      totals[siteId] ??= { activeMs: 0, visits: 0 };
+      totals[siteId].activeMs += entry.activeMs;
       totals[siteId].visits += entry.visits;
     }
   }
 
-  const rows = Object.entries(totals).sort((a, b) => b[1].ms - a[1].ms);
+  const rows = Object.entries(totals).sort((a, b) => b[1].activeMs - a[1].activeMs);
 
   if (rows.length === 0) {
     tbody.innerHTML = '';
@@ -103,26 +103,26 @@ function render() {
   emptyMsg.style.display = 'none';
   topChartContainer.style.display = 'block';
 
-  const top = rows.slice(0, 5).map(([siteId, { ms }]) => {
+  const top = rows.slice(0, 5).map(([siteId, { activeMs }]) => {
     const { siteLabel } = resolveSite(siteId);
-    return { label: siteLabel, range: siteId, ms };
+    return { label: siteLabel, range: siteId, activeMs };
   });
   drawBarChart({
     svgEl: topChart,
     tooltipEl: topTooltip,
     data: top,
-    maxVal: Math.max(...top.map(d => d.ms)),
-    getValue: d => d.ms,
+    maxVal: Math.max(...top.map(d => d.activeMs)),
+    getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
     color: '#2563eb',
   });
 
-  tbody.innerHTML = rows.map(([siteId, { ms, visits }]) => {
+  tbody.innerHTML = rows.map(([siteId, { activeMs, visits }]) => {
     const { siteLabel } = resolveSite(siteId);
     const href = `site.html?id=${encodeURIComponent(siteId)}`;
     return `<tr class="clickable" data-href="${href}">
       <td><span class="site-label">${siteLabel}</span><span class="site-id">${siteId}</span></td>
-      <td>${formatMs(ms)}</td>
+      <td>${formatMs(activeMs)}</td>
       <td>${visits}</td>
     </tr>`;
   }).join('');

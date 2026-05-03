@@ -5,23 +5,20 @@ const migrations = [
   // timeRecords[siteId]           = number (active ms)
   async () => {},
 
-  // v1 → v2: add audio tracking fields
-  // analyticsByDay[day][siteId]   = { ms, visits, audioMs, overlapMs }
-  // analyticsByHour[hour][siteId] = { ms, visits, audioMs, overlapMs }
-  // timeRecords[siteId]           = { ms, audioMs, overlapMs }
-  // async () => {
-  //   const { analyticsByDay = {}, analyticsByHour = {}, timeRecords = {} } =
-  //     await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour', 'timeRecords']);
-  //   for (const sites of Object.values(analyticsByDay))
-  //     for (const [id, d] of Object.entries(sites))
-  //       if (!('audioMs' in d)) sites[id] = { ...d, audioMs: 0, overlapMs: 0 };
-  //   for (const sites of Object.values(analyticsByHour))
-  //     for (const [id, d] of Object.entries(sites))
-  //       if (!('audioMs' in d)) sites[id] = { ...d, audioMs: 0, overlapMs: 0 };
-  //   for (const [id, val] of Object.entries(timeRecords))
-  //     if (typeof val === 'number') timeRecords[id] = { ms: val, audioMs: 0, overlapMs: 0 };
-  //   await chrome.storage.local.set({ analyticsByDay, analyticsByHour, timeRecords });
-  // },
+  // v1 → v2: add audio tracking fields, rename ms → activeMs
+  // analyticsByDay[day][siteId]   = { activeMs, visits, audioMs, overlapMs }
+  // analyticsByHour[hour][siteId] = { activeMs, visits, audioMs, overlapMs }
+  async () => {
+    const { analyticsByDay = {}, analyticsByHour = {} } =
+      await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
+    for (const sites of Object.values(analyticsByDay))
+      for (const [id, d] of Object.entries(sites))
+        sites[id] = { activeMs: d.ms ?? d.activeMs ?? 0, audioMs: d.audioMs ?? 0, overlapMs: d.overlapMs ?? 0, visits: d.visits ?? 0 };
+    for (const sites of Object.values(analyticsByHour))
+      for (const [id, d] of Object.entries(sites))
+        sites[id] = { activeMs: d.ms ?? d.activeMs ?? 0, audioMs: d.audioMs ?? 0, overlapMs: d.overlapMs ?? 0, visits: d.visits ?? 0 };
+    await chrome.storage.local.set({ analyticsByDay, analyticsByHour });
+  },
 ];
 
 export async function ensureStorageVersion() {

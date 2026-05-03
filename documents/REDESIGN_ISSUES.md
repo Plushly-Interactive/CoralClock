@@ -9,15 +9,15 @@ Issues identified against the design in `TRACKING_REDESIGN.md`. Where relevant, 
 ### #1 – Tracking while another app has focus (resolved by design choice)
 A non-minimized window with focus on another app is **intentionally tracked**. There is no Chrome API for per-window occlusion. Minimize is the only reliable per-window visibility signal. This was removed from the problems list in TRACKING_REDESIGN.md.
 
-### #2 – Audible tab navigating between sites goes undetected
+### #2 – Audible tab navigating between sites goes undetected ✓ Resolved
 When a tab plays audio and then navigates from site A to site B without going silent, `changeInfo.audible` does not fire (audible state didn't change). The tab stays in site A's `audibleTabIds` indefinitely.
 
-**Fix:** Maintain a `tabId → hostname` reverse map. On `onUpdated` with `status: complete`, check whether the tab's hostname changed and move it between sets.
+**Resolution:** `audibleTabToSite` reverse map (tabId → siteId) maintained in `tracking.js`. On `onUpdated` with `status: complete`, `background.js` checks `tab.audible` and calls `addAudibleTab(tab.id, newSiteId)`, which detects the siteId change, removes from old site, and adds to new site.
 
-### #3 – Audible tabs not re-verified on minute alarm
+### #3 – Audible tabs not re-verified on minute alarm ✓ Resolved
 The minute alarm re-queries all windows to reconcile minimize state but does not re-query audible tabs. If an `audible: false` event fires while the service worker is asleep, the event is dropped and the tab stays in `audibleTabIds` until something else evicts it.
 
-**Fix:** Add `chrome.tabs.query({ audible: true })` to the minute reconciliation alongside the window state query.
+**Resolution:** `reconcileWindows()` now also calls `chrome.tabs.query({ audible: true })`, diffs the result against `audibleTabToSite`, removes stale entries, and adds any missing ones.
 
 ### #4 – `timeRecords` shape change not reflected in existing code
 The redesign changes `timeRecords[hostname]` from a plain number to `{ ms, audioMs, overlapMs }`. `checkAndBlock` and `resetPeriod` in background.js currently read it as a number. Both must be updated.

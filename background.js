@@ -3,6 +3,7 @@ import { ensureStorageVersion } from './migrations.js';
 import {
   siteIdFromUrl,
   setWindowSite, removeWindowSite,
+  addAudibleTab, removeAudibleTab,
   flushToStorage, reconcileWindows, initTracking,
   saveSnapshot, recoverFromSnapshot,
 } from './tracking.js';
@@ -72,6 +73,25 @@ chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.active) {
     setWindowSite(tab.windowId, siteIdFromUrl(tab.url));
   }
+  if (changeInfo.status === 'complete') {
+    // Catches audible tab navigating between sites without going silent (changeInfo.audible won't fire)
+    if (tab.audible && !tab.mutedInfo?.muted) {
+      addAudibleTab(tab.id, siteIdFromUrl(tab.url));
+    } else {
+      removeAudibleTab(tab.id);
+    }
+  }
+  if ('audible' in changeInfo) {
+    if (changeInfo.audible && !tab.mutedInfo?.muted) {
+      addAudibleTab(tab.id, siteIdFromUrl(tab.url));
+    } else {
+      removeAudibleTab(tab.id);
+    }
+  }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  removeAudibleTab(tabId);
 });
 
 chrome.windows.onCreated.addListener(async (window) => {
