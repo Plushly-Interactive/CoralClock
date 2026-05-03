@@ -133,15 +133,16 @@ function render() {
 }
 
 function renderHourly(range) {
+  hourlyChartContainer.style.display = 'block';
+
   if (range === 'today') {
     hourlyChart.style.display = 'none';
-    hourlyTooltip.style.display = 'none';
+    hourlyNotRelevant.textContent = 'Not relevant for "Today".';
     hourlyNotRelevant.style.display = 'block';
-    hourlyChartContainer.style.display = 'block';
+    hourlySubheading.textContent = '';
     return;
   }
-  hourlyNotRelevant.style.display = 'none';
-  hourlyChart.style.display = 'block';
+
   hourlySubheading.textContent = hourlySubheadingText(range);
 
   if (!avgPerHourCache[range]) {
@@ -157,10 +158,14 @@ function renderHourly(range) {
 
   const hasData = data.some(d => d.activeMs > 0);
   if (!hasData) {
-    hourlyChartContainer.style.display = 'none';
+    hourlyChart.style.display = 'none';
+    hourlyNotRelevant.textContent = 'No data for past days yet.';
+    hourlyNotRelevant.style.display = 'block';
     return;
   }
-  hourlyChartContainer.style.display = 'block';
+
+  hourlyChart.style.display = 'block';
+  hourlyNotRelevant.style.display = 'none';
 
   drawBarChart({
     svgEl: hourlyChart,
