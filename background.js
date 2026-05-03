@@ -17,6 +17,10 @@ chrome.alarms.get('flush').then(existing => {
 });
 bootstrap();
 
+chrome.runtime.onStartup.addListener(() => {
+  chrome.storage.local.remove('_trackingSnapshot');
+});
+
 async function bootstrap() {
   await ensureStorageVersion();
   await initTracking();

@@ -111,6 +111,8 @@ export async function saveSnapshot() {
   }
 }
 
+const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
+
 let _recovered = false;
 export async function recoverFromSnapshot() {
   if (_recovered) return;
@@ -118,6 +120,10 @@ export async function recoverFromSnapshot() {
   const { _trackingSnapshot: snap } = await chrome.storage.local.get('_trackingSnapshot');
   if (!snap) return;
   const now = Date.now();
+  if (now - snap.at > SNAPSHOT_MAX_GAP_MS) {
+    await chrome.storage.local.remove('_trackingSnapshot');
+    return;
+  }
   for (const siteId of snap.sites) {
     const ranges = pending.get(siteId) ?? [];
     ranges.push([snap.at, now]);
