@@ -73,9 +73,27 @@ rangeSelect.addEventListener('change', () => {
 
 loadAndRender();
 
+function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+async function renderStorageBar() {
+  const used = await chrome.storage.local.getBytesInUse(null);
+  const quota = chrome.storage.local.QUOTA_BYTES;
+  document.querySelector('#storage-bar-fill').style.width = `${(used / quota) * 100}%`;
+  document.querySelector('#storage-bar-label').textContent = `${formatBytes(used)} / ${formatBytes(quota)}`;
+}
+
 async function loadAndRender() {
+  if (new URL(location.href).searchParams.has('seed')) {
+    history.replaceState(null, '', location.pathname);
+    await seedTestData();
+  }
   byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
   render();
+  renderStorageBar();
 }
 
 document.querySelector('#seed-btn')?.addEventListener('click', async () => {

@@ -20,6 +20,10 @@ header {
   padding: 14px 20px;
   border-bottom: 1px solid #e5e5e5;
   font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
 }
 
 #header-controls {
@@ -121,7 +125,36 @@ header select {
 
 footer {
   padding: 20px;
-  text-align: center;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #e5e5e5;
+}
+
+#storage-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#storage-bar-track {
+  flex: 1;
+  height: 4px;
+  background: #e5e5e5;
+  border-radius: 2px;
+}
+
+#storage-bar-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 2px;
+  width: 0%;
+}
+
+#storage-bar-label {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
 }
 
 #seed-btn {
