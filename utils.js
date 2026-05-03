@@ -53,6 +53,15 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   });
 }
 
+export function localDayKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function localHourKey(ts) {
+  return `${localDayKey(ts)}T${String(new Date(ts).getHours()).padStart(2, '0')}`;
+}
+
 export function formatMs(ms) {
   const totalMinutes = Math.floor(ms / 60000);
   const hours = ms / 3600000;
