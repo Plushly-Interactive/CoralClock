@@ -226,12 +226,15 @@ export async function flushToStorage() {
     for (const [siteId, ranges] of map) {
       for (const [from, to] of ranges) {
         for (const { hourKey, dayKey, ms } of splitByHour(from, to)) {
-          analyticsByDay[dayKey] ??= {};
-          analyticsByDay[dayKey][siteId] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
-          analyticsByDay[dayKey][siteId][field] += ms;
           analyticsByHour[hourKey] ??= {};
           analyticsByHour[hourKey][siteId] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
-          analyticsByHour[hourKey][siteId][field] += ms;
+          const hourSite = analyticsByHour[hourKey][siteId];
+          const before = hourSite[field];
+          hourSite[field] = Math.min(before + ms, 3600000);
+          const added = hourSite[field] - before;
+          analyticsByDay[dayKey] ??= {};
+          analyticsByDay[dayKey][siteId] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
+          analyticsByDay[dayKey][siteId][field] += added;
         }
       }
     }
