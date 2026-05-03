@@ -8,7 +8,6 @@ const timeChart = document.querySelector('#time-chart');
 const visitsChart = document.querySelector('#visits-chart');
 const timeChartContainer = document.querySelector('#time-chart-container');
 const visitsChartContainer = document.querySelector('#visits-chart-container');
-const audioChartContainer = document.querySelector('#audio-chart-container');
 
 if (siteId) {
   const { siteLabel } = resolveSite(siteId);
@@ -129,8 +128,6 @@ function render() {
   emptyMsg.style.display = hasData ? 'none' : 'block';
   timeChartContainer.style.display = hasData ? 'block' : 'none';
   visitsChartContainer.style.display = hasData ? 'block' : 'none';
-  const hasAudio = data.some(d => d.audioMs > 0);
-  audioChartContainer.style.display = hasAudio ? 'block' : 'none';
   if (hasData) drawChart(data);
   renderHourly(range);
 }
@@ -177,15 +174,25 @@ function renderHourly(range) {
 }
 
 function drawChart(data) {
+  const hasAudio = data.some(d => d.audioMs > 0);
+  const timeSeriesData = hasAudio
+    ? [
+        { label: 'Active', getValue: d => d.activeMs, color: '#2563eb', formatVal: formatMs },
+        { label: 'Audio', getValue: d => d.audioMs, color: '#7c3aed', formatVal: formatMs },
+      ]
+    : undefined;
+
   drawBarChart({
     svgEl: timeChart,
     tooltipEl: document.querySelector('#time-tooltip'),
     data,
-    maxVal: Math.max(...data.map(d => d.activeMs)),
+    maxVal: Math.max(...data.map(d => Math.max(d.activeMs, d.audioMs || 0))),
     getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
     color: '#2563eb',
+    series: timeSeriesData,
   });
+
   drawBarChart({
     svgEl: visitsChart,
     tooltipEl: document.querySelector('#visits-tooltip'),
@@ -197,16 +204,5 @@ function drawChart(data) {
     hideMidTicks: maxVal => maxVal < 3,
     color: '#ea580c',
   });
-  if (data.some(d => d.audioMs > 0)) {
-    drawBarChart({
-      svgEl: document.querySelector('#audio-chart'),
-      tooltipEl: document.querySelector('#audio-tooltip'),
-      data,
-      maxVal: Math.max(...data.map(d => d.audioMs)),
-      getValue: d => d.audioMs,
-      formatVal: ms => formatMs(ms),
-      color: '#7c3aed',
-    });
-  }
 }
 
