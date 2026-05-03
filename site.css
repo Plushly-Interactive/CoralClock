@@ -1,3 +1,16 @@
+body {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  flex-shrink: 0;
+}
+
 #back-btn {
   font-size: 13px;
   color: #2563eb;
@@ -25,9 +38,23 @@
   font-weight: 400;
 }
 
+#charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 24px;
+  padding: 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+
+
 .chart-container {
   position: relative;
-  padding: 20px 20px 0;
+  padding: 16px;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
 }
 
 .chart-heading {
@@ -51,12 +78,21 @@
   white-space: nowrap;
 }
 
+.chart-container {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
 #time-chart,
 #visits-chart,
 #hourly-chart {
   display: block;
   width: 100%;
+  height: calc(100% - 16px);
+  margin-bottom: 16px;
 }
+
 
 .chart-subheading {
   font-size: 11px;

@@ -23,23 +23,37 @@
       </select>
     </header>
 
-    <div id="time-chart-container" class="chart-container">
-      <h2 class="chart-heading">Time spent</h2>
-      <svg id="time-chart"></svg>
-      <div id="time-tooltip" class="tooltip"></div>
-    </div>
+    <div id="charts-grid">
+      <div id="time-chart-container" class="chart-container">
+        <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
+          <h2 class="chart-heading" style="margin: 0;">Time spent</h2>
+          <div id="time-legend" style="display: none; font-size: 11px; color: #888; margin-left: auto;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 8px;">
+              <span style="width: 10px; height: 10px; background: #2563eb; border-radius: 2px;"></span>
+              Active browsing
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 4px;">
+              <span style="width: 10px; height: 10px; background: #7c3aed; border-radius: 2px;"></span>
+              Audio playback
+            </span>
+          </div>
+        </div>
+        <svg id="time-chart"></svg>
+        <div id="time-tooltip" class="tooltip"></div>
+      </div>
 
-    <div id="visits-chart-container" class="chart-container">
-      <h2 class="chart-heading">Visits</h2>
-      <svg id="visits-chart"></svg>
-      <div id="visits-tooltip" class="tooltip"></div>
-    </div>
+      <div id="visits-chart-container" class="chart-container">
+        <h2 class="chart-heading">Visits</h2>
+        <svg id="visits-chart"></svg>
+        <div id="visits-tooltip" class="tooltip"></div>
+      </div>
 
-    <div id="hourly-chart-container" class="chart-container">
-      <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading"></span></h2>
-      <svg id="hourly-chart"></svg>
-      <div id="hourly-tooltip" class="tooltip"></div>
-      <p id="hourly-not-relevant" class="chart-note" style="display:none">Not relevant for "Today".</p>
+      <div id="hourly-chart-container" class="chart-container">
+        <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading"></span></h2>
+        <svg id="hourly-chart"></svg>
+        <div id="hourly-tooltip" class="tooltip"></div>
+        <p id="hourly-not-relevant" class="chart-note" style="display:none">Not relevant for "Today".</p>
+      </div>
     </div>
 
     <p id="empty-msg">No data for this period.</p>

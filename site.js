@@ -175,6 +175,8 @@ function renderHourly(range) {
 
 function drawChart(data) {
   const hasAudio = data.some(d => d.audioMs > 0);
+  document.querySelector('#time-legend').style.display = hasAudio ? 'block' : 'none';
+
   const timeSeriesData = hasAudio
     ? [
         { label: 'Active', getValue: d => d.activeMs, color: '#2563eb', formatVal: formatMs },
