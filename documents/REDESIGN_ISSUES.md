@@ -80,9 +80,11 @@ Flush uses `localHourKey(Date.now())` at the moment of flushing and attributes t
 
 **Resolution:** After each flush the alarm handler saves a snapshot `{ sites, at }` to storage. On the next alarm wake, if `siteStates` is empty (SW was killed), the handler attributes `Date.now() - snap.at` to each snapshotted site before reconciling. All active `startedAt`s are reset to approximately the same value during `flushToStorage`, so a single `at` timestamp covers all sites. See #19 for a known edge case.
 
-### #19 – Snapshot over-counts if a tab closes while the SW is dead
+### #19 – Snapshot over-counts if a tab closes while the SW is dead (accepted)
 
-When the SW is killed after saving a snapshot and a tracked tab is closed before the next alarm: the tab-close event wakes the SW, but `siteStates` is empty so `removeWindowSite` is a no-op. On the next alarm, `recoverFromSnapshot` attributes the full interval since the snapshot to that site, even though it was only open for part of it. The error is bounded by one alarm cycle (~60s).
+When the SW is killed after saving a snapshot and a tracked tab is closed before the next alarm: the tab-close event wakes the SW, but `siteStates` is empty so `removeWindowSite` is a no-op. On the next alarm, `recoverFromSnapshot` attributes the full interval since the snapshot to that site, even though it was only open for part of it.
+
+The alternative — filtering recovery by currently-open sites — produces an under-count of up to `SNAPSHOT_MAX_GAP_MS` (5 min) when a tab was open for most of the gap before closing. The current over-count is bounded by one alarm cycle (~60s). Accepted as the lesser error.
 
 ### #12 – Non-atomic storage read-modify-write ✓ Resolved
 
@@ -97,10 +99,6 @@ Every flush does `storage.local.get` → mutate → `storage.local.set`. Concurr
 Every set change triggers a flush and a `storage.local.set`. Audio pause/play/ad-break events can fire many times per minute. With the in-memory accumulator from #12, this is resolved — writes only happen on alarm and on suspend.
 
 **Resolution:** Implemented with #12. Tab/window events and visit increments are accumulated in-memory; a single `storage.local.set` happens per minute.
-
-### #18 – `flushToStorage` / other concurrent alarm race
-
-`flushToStorage` (flush alarm) and other alarms that potentially access `pending` can fire in the same minute. Both are async and interleave at `await` points.
 
 ### #14 – Spurious flushes when set size changes but tracking state does not ✓ Resolved
 
