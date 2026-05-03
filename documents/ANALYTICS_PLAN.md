@@ -2,7 +2,7 @@
 
 ## Context from the codebase
 
-Today, `[background.js](d:\GitHub\Personal Repositories\BiteGuard\background.js)` writes `**timeRecords**` (per hostname/rule target) and `**dailyRecords**` for **limit enforcement**; those maps are **reset** by `resetPeriod()` and must **not** be reused as the sole analytics source. Analytics needs a **parallel store** updated in the same places you already persist elapsed time (`flushSession`, and optionally when the service worker starts a new session).
+The tracking system is implemented in `[tracking.js](d:\GitHub\Personal Repositories\BiteGuard\tracking.js)`. `flushToStorage()` (called once per minute by the flush alarm) writes elapsed ms and visit counts into `analyticsByDay` and `analyticsByHour` in `chrome.storage.local`. `timeRecords` and `dailyRecords` are also written but are legacy keys left over from the old blocking system — they will be removed or repurposed when the rule/blocking system is reworked.
 
 ## Your choices (locked in for this plan)
 
@@ -22,9 +22,9 @@ UI can show `**siteLabel`** as primary text and `**siteId`** (or TLD) as seconda
 
 ## Recommended data structures
 
-### 1) Session / flush path (unchanged conceptually)
+### 1) Flush path (implemented)
 
-Keep existing `timeRecords` / `dailyRecords` for blocking; add analytics writes alongside `flushSession()` when you have a resolved `siteId` + elapsed ms.
+`flushToStorage()` in `tracking.js` already writes elapsed ms and visit counts into `analyticsByDay[day][siteId]` and `analyticsByHour[hour][siteId]` once per minute. The shape is `{ ms, visits }` (v1). Future fields (`audioMs`, `overlapMs`) will be added via a migration in `migrations.js`.
 
 ### 2) Analytics buckets (primary on-disk shape)
 
@@ -150,7 +150,7 @@ After you approve direction, add **one** focused doc (per your repo rule: do not
 ## Implementation phases
 
 1. **Site resolution module**: URL → `siteId` + `siteLabel` (tldts or equivalent); unit-test tricky hostnames (`bbc.co.uk`, `foo.github.io`, `com.cn` cases).
-2. **Write path**: extend `[flushSession](d:\GitHub\Personal Repositories\BiteGuard\background.js)` (and any other flush points) to add elapsed ms into `analytics.byDay` and `analytics.byHour` (split segments at local hour boundaries). Never touch this store from `resetPeriod`.
+2. **Write path**: ✓ Done — `flushToStorage()` writes into `analyticsByDay` and `analyticsByHour` per minute.
 3. **Analytics page**: read storage, apply range filter, render **table** (siteLabel, siteId, ms, % of total). Clicking a row opens the site detail page for that `siteId`.
 4. **Site detail page** (`site.html?id=youtube.com`): dedicated page for one site showing an over-time usage chart (daily bars for the selected range, same range selector as the analytics page). Back link returns to the analytics page.
 5. **Graphs v1**: top‑K bar chart; **average per local clock hour** for selected `siteId` or group (requires `byHour`). Optional “compare this week vs last week” later.
@@ -161,11 +161,9 @@ After you approve direction, add **one** focused doc (per your repo rule: do not
 ```mermaid
 flowchart LR
   tabEvents[tabs_onUpdated_activated]
-  flush[flushSession]
-  limits[timeRecords_dailyRecords]
-  analytics[analytics_byDay_byHour]
+  flush[flushToStorage]
+  analytics[analyticsByDay_analyticsByHour]
   tabEvents --> flush
-  flush --> limits
   flush --> analytics
   ui[analytics_page]
   analytics --> ui

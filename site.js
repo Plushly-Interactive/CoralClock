@@ -59,7 +59,7 @@ function render() {
       return {
         label: `${hStr}:00`,
         range: `${hStr}:00 - ${hNext}:00`,
-        ms: byHourCache[hourKey]?.[siteId]?.ms ?? 0,
+        activeMs: byHourCache[hourKey]?.[siteId]?.activeMs ?? 0,
         visits: byHourCache[hourKey]?.[siteId]?.visits ?? 0,
       };
     });
@@ -89,22 +89,22 @@ function render() {
       }
       data = monthKeys.map(month => {
         const days = dayKeys.filter(day => day.startsWith(month));
-        const ms = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.ms ?? 0), 0);
+        const activeMs = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.activeMs ?? 0), 0);
         const visits = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.visits ?? 0), 0);
-        return { label: month, range: month, ms, visits };
+        return { label: month, range: month, activeMs, visits };
       });
     } else {
       const shortLabel = parseInt(range) <= 30;
       data = dayKeys.map(day => ({
         label: shortLabel ? day.slice(5) : day,
         range: day,
-        ms: byDayCache?.[day]?.[siteId]?.ms ?? 0,
+        activeMs: byDayCache?.[day]?.[siteId]?.activeMs ?? 0,
         visits: byDayCache?.[day]?.[siteId]?.visits ?? 0,
       }));
     }
   }
 
-  const hasData = data.some(d => d.ms > 0 || d.visits > 0);
+  const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
   emptyMsg.style.display = hasData ? 'none' : 'block';
   timeChartContainer.style.display = hasData ? 'block' : 'none';
   visitsChartContainer.style.display = hasData ? 'block' : 'none';
@@ -118,8 +118,8 @@ function drawChart(data) {
     svgEl: timeChart,
     tooltipEl: document.querySelector('#time-tooltip'),
     data,
-    maxVal: Math.max(...data.map(d => d.ms)),
-    getValue: d => d.ms,
+    maxVal: Math.max(...data.map(d => d.activeMs)),
+    getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
     color: '#2563eb',
   });

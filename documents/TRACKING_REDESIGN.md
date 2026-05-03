@@ -53,22 +53,26 @@ siteStates: Map<hostname, {
 
 When either set changes for a site, elapsed time since `startedAt` is flushed into the correct accumulators based on the *previous* `wasActive`/`wasAudible` state, then the state is updated and `startedAt` is reset.
 
-| wasActive | wasAudible | Adds elapsed to |
-|---|---|---|
-| true | false | `activeMs` only |
-| false | true | `audioMs` only |
-| true | true | `activeMs`, `audioMs`, `overlapMs` |
-| false | false | nothing (site was not being tracked) |
+
+| wasActive | wasAudible | Adds elapsed to                      |
+| --------- | ---------- | ------------------------------------ |
+| true      | false      | `activeMs` only                      |
+| false     | true       | `audioMs` only                       |
+| true      | true       | `activeMs`, `audioMs`, `overlapMs`   |
+| false     | false      | nothing (site was not being tracked) |
+
 
 ### Three accumulators per site
 
 From `activeMs`, `audioMs`, `overlapMs`, all future blocking modes are derivable:
 
-| Blocking mode | Formula |
-|---|---|
-| Active only | `activeMs` |
-| Audio only | `audioMs` |
+
+| Blocking mode                           | Formula                          |
+| --------------------------------------- | -------------------------------- |
+| Active only                             | `activeMs`                       |
+| Audio only                              | `audioMs`                        |
 | Active + audio (union, no double-count) | `activeMs + audioMs - overlapMs` |
+
 
 ---
 
@@ -87,45 +91,31 @@ Rebuilt on service worker startup by querying all windows and all audible tabs.
 > **Issues #12, #13** — every set change triggers a `storage.local.set`; concurrent flush calls race on a non-atomic read-modify-write. Use an in-memory accumulator as source of truth and write only on alarm and on suspend.  
 > See `REDESIGN_ISSUES.md` for details.
 
-### `timeRecords` (persisted, reset each period)
-
-```js
-{ [hostname]: { ms, audioMs, overlapMs } }
-```
-
-Used for limit checking. Reset by period alarms (hour/day/week) as today.
-
-> **Issue #4** — current `background.js` reads `timeRecords[hostname]` as a plain number; `checkAndBlock` and `resetPeriod` must be updated for the new object shape.  
-> **Issue #5** — `checkAndBlock` is only called on tab change; limits for sites tracked in background windows are never enforced until the next navigation. The minute alarm must call it for every tracked site.  
-> See `REDESIGN_ISSUES.md` for details.
-
 ### `analyticsByDay` / `analyticsByHour` (persisted, long-term)
 
 ```js
-{ [dayKey]:  { [siteId]: { ms, audioMs, overlapMs, visits } } }
-{ [hourKey]: { [siteId]: { ms, audioMs, overlapMs, visits } } }
+{ [dayKey]:  { [siteId]: { activeMs, audioMs, overlapMs, visits } } }
+{ [hourKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }
 ```
 
-`ms` = active time (including overlap). `audioMs` = audio time (including overlap). `overlapMs` = both simultaneously. `visits` = navigation count (unchanged).
-
-> **Issue #10** — elapsed is attributed to the flush-time hour/day key; sessions crossing hour or day boundaries are skewed by up to one flush interval.  
-> **Issue #15** — `visits` is navigation-only; a site that only ever plays audio will accumulate `audioMs` with `visits = 0`, under-representing it in visit-based charts.  
-> See `REDESIGN_ISSUES.md` for details.
+`activeMs` = time with a non-minimized window open (including overlap). `audioMs` = time with an audible tab (including overlap). `overlapMs` = both simultaneously. `visits` = navigation count plus first audio entry if no window was open.
 
 ---
 
 ## Event sources
 
-| Event | Action |
-|---|---|
-| Startup | Query all windows → populate `activeWindowIds`; query all audible tabs → populate `audibleTabIds` |
-| `chrome.tabs.onActivated` | Update `activeWindowIds` for that window (remove old hostname, add new) |
-| `chrome.tabs.onUpdated` (status=complete, tab.active) | Same as onActivated for that window |
-| `chrome.tabs.onUpdated` (changeInfo.audible) | Add/remove tab from `audibleTabIds` for its hostname |
-| `chrome.tabs.onRemoved` | Remove tab from `audibleTabIds` if present |
-| `chrome.windows.onCreated` | Query new window's active tab, add to `activeWindowIds` |
-| `chrome.windows.onRemoved` | Remove window from all `activeWindowIds` |
-| Minute alarm | Flush all sites, re-query all windows to detect minimize/restore, restart; call `checkAndBlock` for every tracked site (issue #5) |
+
+| Event                                                 | Action                                                                                                                            |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Startup                                               | Query all windows → populate `activeWindowIds`; query all audible tabs → populate `audibleTabIds`                                 |
+| `chrome.tabs.onActivated`                             | Update `activeWindowIds` for that window (remove old hostname, add new)                                                           |
+| `chrome.tabs.onUpdated` (status=complete, tab.active) | Same as onActivated for that window                                                                                               |
+| `chrome.tabs.onUpdated` (changeInfo.audible)          | Add/remove tab from `audibleTabIds` for its hostname                                                                              |
+| `chrome.tabs.onRemoved`                               | Remove tab from `audibleTabIds` if present                                                                                        |
+| `chrome.windows.onCreated`                            | Query new window's active tab, add to `activeWindowIds`                                                                           |
+| `chrome.windows.onRemoved`                            | Remove window from all `activeWindowIds`                                                                                          |
+| Minute alarm                                          | Flush all sites, re-query all windows to detect minimize/restore, re-query audible tabs to evict stale entries                    |
+
 
 `chrome.windows.onFocusChanged` is **not used** — focus is irrelevant to tracking decisions.
 
@@ -133,9 +123,7 @@ Used for limit checking. Reset by period alarms (hour/day/week) as today.
 
 ## Storage pruning
 
-No `unlimitedStorage` manifest permission. Pruning runs on the daily reset alarm.
+No `unlimitedStorage` manifest permission. Retention defaults TBD — see `STORAGE_SIMULATION.md` for size projections.
 
-- `analyticsByHour`: prune entries older than N months (default TBD)
-- `analyticsByDay`: prune entries older than N years (default TBD)
-
-Retention defaults to be decided. See `STORAGE_SIMULATION.md` for size projections.
+- `analyticsByHour`: prune entries older than N months
+- `analyticsByDay`: prune entries older than N years
