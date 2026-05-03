@@ -16,7 +16,7 @@ let cachedByHour = null;
 chrome.alarms.get('flush').then(existing => {
   if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
 });
-bootstrap();
+const bootstrapDone = bootstrap();
 
 chrome.runtime.onStartup.addListener(() => {
   chrome.storage.local.remove('_trackingSnapshot');
@@ -108,6 +108,7 @@ chrome.windows.onRemoved.addListener((windowId) => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'flush') return;
+  await bootstrapDone;
   await recoverFromSnapshot();
   await reconcileWindows();
   await flushToStorage();
