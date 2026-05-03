@@ -42,6 +42,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     getAvgPerClockHour(msg.siteId, msg.range).then(sendResponse);
     return true;
   }
+  if (msg.type === 'invalidateAnalyticsCache') {
+    cachedByDay = null;
+    cachedByHour = null;
+    sendResponse(true);
+    return true;
+  }
 });
 
 async function getByDay() {

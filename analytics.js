@@ -1,5 +1,6 @@
 import { formatMs, drawBarChart } from './utils.js';
 import { resolveSite } from './siteResolution.js';
+import { seedTestData } from './seedTestData.js';
 
 const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#analytics-body');
@@ -78,39 +79,10 @@ async function loadAndRender() {
 }
 
 document.querySelector('#seed-btn').addEventListener('click', async () => {
-  const sites = [
-    'youtube.com', 'github.com', 'reddit.com', 'news.ycombinator.com', 'bbc.co.uk'
-  ];
-  const now = new Date();
-  const analyticsByDay = {}, analyticsByHour = {};
-
-  for (let d = 0; d < 365 * 3; d++) {
-    const day = new Date(now);
-    day.setDate(day.getDate() - d);
-    const dayKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-    analyticsByDay[dayKey] = {};
-
-    for (const siteId of sites) {
-      let totalMs = 0;
-      let totalVisits = 0;
-
-      for (let h = 0; h < 24; h++) {
-        const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
-        analyticsByHour[hourKey] ??= {};
-        const ms = Math.random() > 0.4 ? Math.floor(Math.random() * 9000000) : 0;
-        const visits = ms > 0 ? Math.floor(Math.random() * 3) + 1 : 0;
-        analyticsByHour[hourKey][siteId] = { activeMs: ms, visits };
-        totalMs += ms;
-        totalVisits += visits;
-      }
-
-      analyticsByDay[dayKey][siteId] = { activeMs: totalMs, visits: totalVisits };
-    }
-  }
-
-  await chrome.storage.local.set({ analyticsByDay, analyticsByHour });
-  byDayCache = analyticsByDay;
-  render();
+  await seedTestData();
+  byDayCache = null;
+  Object.keys(avgPerHourCache).forEach(k => delete avgPerHourCache[k]);
+  await loadAndRender();
 });
 
 function dayKeys(range) {
