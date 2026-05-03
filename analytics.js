@@ -7,6 +7,58 @@ const emptyMsg = document.querySelector('#empty-msg');
 const topChart = document.querySelector('#top-chart');
 const topTooltip = document.querySelector('#top-tooltip');
 const topChartContainer = document.querySelector('#top-chart-container');
+const hourlyChart = document.querySelector('#hourly-chart');
+const hourlyTooltip = document.querySelector('#hourly-tooltip');
+const hourlyChartContainer = document.querySelector('#hourly-chart-container');
+const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
+const hourlySubheading = document.querySelector('#hourly-subheading');
+
+const avgPerHourCache = {};
+
+function hourlySubheadingText(range) {
+  if (range === 'all') return '(all days, excluding today)';
+  return `(past ${parseInt(range)} days, excluding today)`;
+}
+
+async function loadAvgPerHour(range) {
+  if (avgPerHourCache[range]) return;
+  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId: null, range });
+}
+
+function renderHourly(range) {
+  hourlyChartContainer.style.display = 'block';
+
+  if (range === 'today') {
+    hourlyChart.style.display = 'none';
+    hourlySubheading.textContent = '';
+    hourlyNotRelevant.style.display = 'block';
+    return;
+  }
+  hourlyNotRelevant.style.display = 'none';
+  hourlyChart.style.display = 'block';
+  hourlySubheading.textContent = hourlySubheadingText(range);
+
+  if (!avgPerHourCache[range]) {
+    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.value));
+    return;
+  }
+
+  const data = avgPerHourCache[range].map((avgMs, h) => {
+    const hStr = String(h).padStart(2, '0');
+    const hNext = String(h + 1).padStart(2, '0');
+    return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, activeMs: avgMs };
+  });
+
+  drawBarChart({
+    svgEl: hourlyChart,
+    tooltipEl: hourlyTooltip,
+    data,
+    maxVal: Math.max(...data.map(d => d.activeMs), 1),
+    getValue: d => d.activeMs,
+    formatVal: ms => formatMs(ms),
+    color: '#0891b2',
+  });
+}
 
 let byDayCache = null;
 
@@ -97,11 +149,13 @@ function render() {
     tbody.innerHTML = '';
     emptyMsg.style.display = 'block';
     topChartContainer.style.display = 'none';
+    hourlyChartContainer.style.display = 'none';
     return;
   }
 
   emptyMsg.style.display = 'none';
   topChartContainer.style.display = 'block';
+  renderHourly(range);
 
   const top = rows.slice(0, 5).map(([siteId, { activeMs }]) => {
     const { siteLabel } = resolveSite(siteId);

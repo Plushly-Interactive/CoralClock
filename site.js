@@ -18,6 +18,18 @@ if (siteId) {
 
 let byDayCache = null;
 let byHourCache = null;
+const avgPerHourCache = {};
+
+const hourlyChart = document.querySelector('#hourly-chart');
+const hourlyTooltip = document.querySelector('#hourly-tooltip');
+const hourlyChartContainer = document.querySelector('#hourly-chart-container');
+const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
+const hourlySubheading = document.querySelector('#hourly-subheading');
+
+function hourlySubheadingText(range) {
+  if (range === 'all') return '(all days, excluding today)';
+  return `(past ${parseInt(range)} days, excluding today)`;
+}
 
 const savedRange = sessionStorage.getItem('analyticsRange');
 if (savedRange) rangeSelect.value = savedRange;
@@ -38,6 +50,11 @@ async function loadAndRender() {
 async function loadByHour() {
   if (byHourCache) return;
   byHourCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourToday' });
+}
+
+async function loadAvgPerHour(range) {
+  if (avgPerHourCache[range]) return;
+  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId, range });
 }
 
 function todayDayKey() {
@@ -108,9 +125,49 @@ function render() {
   emptyMsg.style.display = hasData ? 'none' : 'block';
   timeChartContainer.style.display = hasData ? 'block' : 'none';
   visitsChartContainer.style.display = hasData ? 'block' : 'none';
-  if (!hasData) return;
+  if (hasData) drawChart(data);
+  renderHourly(range);
+}
 
-  drawChart(data);
+function renderHourly(range) {
+  if (range === 'today') {
+    hourlyChart.style.display = 'none';
+    hourlyTooltip.style.display = 'none';
+    hourlyNotRelevant.style.display = 'block';
+    hourlyChartContainer.style.display = 'block';
+    return;
+  }
+  hourlyNotRelevant.style.display = 'none';
+  hourlyChart.style.display = 'block';
+  hourlySubheading.textContent = hourlySubheadingText(range);
+
+  if (!avgPerHourCache[range]) {
+    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.value));
+    return;
+  }
+
+  const data = avgPerHourCache[range].map((avgMs, h) => {
+    const hStr = String(h).padStart(2, '0');
+    const hNext = String(h + 1).padStart(2, '0');
+    return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, activeMs: avgMs };
+  });
+
+  const hasData = data.some(d => d.activeMs > 0);
+  if (!hasData) {
+    hourlyChartContainer.style.display = 'none';
+    return;
+  }
+  hourlyChartContainer.style.display = 'block';
+
+  drawBarChart({
+    svgEl: hourlyChart,
+    tooltipEl: hourlyTooltip,
+    data,
+    maxVal: Math.max(...data.map(d => d.activeMs)),
+    getValue: d => d.activeMs,
+    formatVal: ms => formatMs(ms),
+    color: '#0891b2',
+  });
 }
 
 function drawChart(data) {

@@ -38,6 +38,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     getByHourToday().then(sendResponse);
     return true;
   }
+  if (msg.type === 'getAvgPerClockHour') {
+    getAvgPerClockHour(msg.siteId, msg.range).then(sendResponse);
+    return true;
+  }
 });
 
 async function getByDay() {
@@ -60,6 +64,49 @@ async function getByHourToday() {
     if (cachedByHour[hourKey]) result[hourKey] = cachedByHour[hourKey];
   }
   return result;
+}
+
+async function getAvgPerClockHour(siteId, range) {
+  if (!cachedByHour) {
+    const { analyticsByHour = {} } = await chrome.storage.local.get('analyticsByHour');
+    cachedByHour = analyticsByHour;
+  }
+  const now = new Date();
+  const todayKey = localDayKey(now.getTime());
+
+  let dayKeys;
+  if (range === 'all') {
+    const all = new Set();
+    for (const hourKey of Object.keys(cachedByHour)) all.add(hourKey.slice(0, 10));
+    all.delete(todayKey);
+    dayKeys = [...all];
+  } else {
+    const days = parseInt(range);
+    dayKeys = [];
+    for (let d = 1; d <= days; d++) {
+      const day = new Date(now);
+      day.setDate(day.getDate() - d);
+      dayKeys.push(localDayKey(day.getTime()));
+    }
+  }
+
+  const D = dayKeys.length;
+  if (D === 0) return new Array(24).fill(0);
+
+  const sums = new Array(24).fill(0);
+  for (const dayKey of dayKeys) {
+    for (let h = 0; h < 24; h++) {
+      const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
+      const bucket = cachedByHour[hourKey];
+      if (!bucket) continue;
+      if (siteId) {
+        sums[h] += bucket[siteId]?.activeMs ?? 0;
+      } else {
+        for (const entry of Object.values(bucket)) sums[h] += entry.activeMs ?? 0;
+      }
+    }
+  }
+  return sums.map(s => s / D);
 }
 
 // --- Tab / window events ---
