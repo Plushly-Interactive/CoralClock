@@ -41,9 +41,26 @@ export function removeWindowSite(windowId) {
 function recordElapsed(siteId) {
   const s = siteStates.get(siteId);
   if (!s || !s.wasActive) return;
-  const elapsed = Date.now() - s.startedAt;
-  if (elapsed > 0) pending.set(siteId, (pending.get(siteId) ?? 0) + elapsed);
+  const now = Date.now();
+  if (now > s.startedAt) {
+    const ranges = pending.get(siteId) ?? [];
+    ranges.push([s.startedAt, now]);
+    pending.set(siteId, ranges);
+  }
   s.startedAt = Date.now();
+}
+
+function splitByHour(from, to) {
+  const segs = [];
+  let t = from;
+  while (t < to) {
+    const nextHour = new Date(t);
+    nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+    const end = Math.min(nextHour.getTime(), to);
+    segs.push({ hourKey: localHourKey(t), dayKey: localDayKey(t), ms: end - t });
+    t = end;
+  }
+  return segs;
 }
 
 // Returns newSiteId if the site changed, undefined if nothing changed.
@@ -100,9 +117,11 @@ export async function recoverFromSnapshot() {
   _recovered = true;
   const { _trackingSnapshot: snap } = await chrome.storage.local.get('_trackingSnapshot');
   if (!snap) return;
-  const elapsed = Date.now() - snap.at;
+  const now = Date.now();
   for (const siteId of snap.sites) {
-    pending.set(siteId, (pending.get(siteId) ?? 0) + elapsed);
+    const ranges = pending.get(siteId) ?? [];
+    ranges.push([snap.at, now]);
+    pending.set(siteId, ranges);
   }
 }
 
@@ -111,19 +130,26 @@ export async function flushToStorage() {
   if (pending.size === 0 && pendingVisits.size === 0) return;
   const { analyticsByDay = {}, analyticsByHour = {} } =
     await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
-  const day = localDayKey(Date.now());
-  const hour = localHourKey(Date.now());
-  analyticsByDay[day] ??= {};
-  analyticsByHour[hour] ??= {};
-  for (const [siteId, ms] of pending) {
-    analyticsByDay[day][siteId] ??= { ms: 0, visits: 0 };
-    analyticsByDay[day][siteId].ms += ms;
-    analyticsByHour[hour][siteId] ??= { ms: 0, visits: 0 };
-    analyticsByHour[hour][siteId].ms += ms;
+  for (const [siteId, ranges] of pending) {
+    for (const [from, to] of ranges) {
+      for (const { hourKey, dayKey, ms } of splitByHour(from, to)) {
+        analyticsByDay[dayKey] ??= {};
+        analyticsByDay[dayKey][siteId] ??= { ms: 0, visits: 0 };
+        analyticsByDay[dayKey][siteId].ms += ms;
+        analyticsByHour[hourKey] ??= {};
+        analyticsByHour[hourKey][siteId] ??= { ms: 0, visits: 0 };
+        analyticsByHour[hourKey][siteId].ms += ms;
+      }
+    }
   }
+  const now = Date.now();
+  const day = localDayKey(now);
+  const hour = localHourKey(now);
   for (const [siteId, count] of pendingVisits) {
+    analyticsByDay[day] ??= {};
     analyticsByDay[day][siteId] ??= { ms: 0, visits: 0 };
     analyticsByDay[day][siteId].visits += count;
+    analyticsByHour[hour] ??= {};
     analyticsByHour[hour][siteId] ??= { ms: 0, visits: 0 };
     analyticsByHour[hour][siteId].visits += count;
   }

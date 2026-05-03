@@ -56,7 +56,7 @@ When a window is created, the active tab may still be `about:blank`. The event t
 ### #10 – Hour/day boundary crossing on flush ✓ Resolved
 Flush uses `localHourKey(Date.now())` at the moment of flushing and attributes the entire elapsed slice to that key. A site active across midnight, flushed by the minute alarm at 00:00:30, has all its elapsed time credited to the new day. Decide: split at boundary, or accept ≤1-minute skew and document it.
 
-**Resolution:** Decided to accept the ≤1-minute skew. At 1-minute flush granularity the error is negligible.
+**Resolution:** Implemented exact boundary splitting. `pending` now stores time ranges `[from, to]` instead of ms totals. `recordElapsed` and `recoverFromSnapshot` push ranges; `flushToStorage` splits each range at hour boundaries via `splitByHour` and credits each segment to the correct hour/day key. No skew.
 
 ---
 
