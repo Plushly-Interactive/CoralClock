@@ -57,7 +57,10 @@ export function addAudibleTab(tabId, siteId) {
   recordElapsed(siteId); // flush active-only period if any, reset startedAt
   s.audibleTabIds.add(tabId);
   s.wasAudible = true;
-  if (!wasTracked) s.startedAt = Date.now();
+  if (!wasTracked) {
+    s.startedAt = Date.now();
+    pendingVisits.set(siteId, (pendingVisits.get(siteId) ?? 0) + 1);
+  }
 }
 
 export function removeAudibleTab(tabId) {

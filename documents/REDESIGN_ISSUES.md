@@ -19,8 +19,10 @@ The minute alarm re-queries all windows to reconcile minimize state but does not
 
 **Resolution:** `reconcileWindows()` now also calls `chrome.tabs.query({ audible: true })`, diffs the result against `audibleTabToSite`, removes stale entries, and adds any missing ones.
 
-### #4 – `timeRecords` shape change not reflected in existing code
+### #4 – `timeRecords` shape change not reflected in existing code ✓ Resolved
 The redesign changes `timeRecords[hostname]` from a plain number to `{ ms, audioMs, overlapMs }`. `checkAndBlock` and `resetPeriod` in background.js currently read it as a number. Both must be updated.
+
+**Resolution:** Moot — `timeRecords`, `checkAndBlock`, and `resetPeriod` were all removed with the rule/blocking system.
 
 ### #5 – `checkAndBlock` is never called for non-foreground tracked sites ✓ Resolved
 `checkAndBlock` is only invoked from `handleTabChange`. With N sites tracking in parallel, a site active in a background window can cross its limit between navigations and never trigger a block.
@@ -82,10 +84,10 @@ Every set change triggers a flush and a `storage.local.set`. Audio pause/play/ad
 
 **Resolution:** Implemented with #12. Tab/window events and visit increments are accumulated in-memory; a single `storage.local.set` happens per minute.
 
-### #18 – `flushToStorage` / `resetPeriod` concurrent alarm race
+### #18 – `flushToStorage` / `resetPeriod` concurrent alarm race ✓ Resolved
 `flushToStorage` (flush alarm) and `resetPeriod` (reset-hour/day/week alarm) can fire in the same minute. Both are async and interleave at `await` points. If `resetPeriod`'s terminal `pending.clear()` runs between `flushToStorage`'s synchronous `recordElapsed` loop and its iterate-then-drain block, the accumulated data is silently dropped.
 
-**Expected resolution:** once limit checking is redesigned to read directly from analytics (making `timeRecords` and `resetPeriod` obsolete), this race disappears. If `resetPeriod` is retained, apply an atomic swap at the top of `flushToStorage` (capture `pending`/`pendingVisits` into local vars and replace them with fresh maps before the first `await`).
+**Resolution:** Moot — `resetPeriod` and `timeRecords` were removed with the rule/blocking system. `flushToStorage` is the only writer to the pending maps.
 
 ### #14 – Spurious flushes when set size changes but tracking state does not ✓ Resolved
 If two windows are showing the same site and one closes, `activeWindowIds` changes (2 → 1) but `wasActive` remains true. A flush still runs, adds zero useful data, and resets `startedAt`. Consider flushing only when the boolean `wasActive` or `wasAudible` actually transitions, not on every set-size change.
@@ -96,8 +98,10 @@ If two windows are showing the same site and one closes, `activeWindowIds` chang
 
 ## UX / Analytics
 
-### #15 – Visits decouple from audio time
+### #15 – Visits decouple from audio time ✓ Resolved
 `visits` is incremented only on navigation. A site that only ever plays audio in a background tab will accumulate `audioMs` with `visits = 0`. The top-sites bar chart will under-represent audio-heavy sites. Decide: increment visits on first audio entry per session, or document the semantic difference.
+
+**Resolution:** `addAudibleTab` increments `pendingVisits` when the site transitions from completely untracked to audible (`!wasActive && !wasAudible`). If a window is already open for the site, no visit is added — the window navigation already counted it.
 
 ### #16 – Picture-in-picture windows are treated as regular windows ✓ Resolved
 Chrome exposes PiP as a normal window; it will be included in `activeWindowIds`. This is probably desirable (user is watching something) but should be an explicit decision.
