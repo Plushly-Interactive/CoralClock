@@ -158,13 +158,11 @@ function render() {
 }
 
 function formatTotalTime(ms) {
-  if (ms < 3600000) return `${Math.floor(ms / 60000)}m`;
-  const h = ms / 3600000;
-  const hStr = `${h < 10 ? h.toFixed(1).replace(/\.0$/, '') : Math.round(h)}h`;
-  if (ms < 86400000) return hStr;
+  const main = formatMs(ms);
+  if (ms < 86400000) return main;
   const d = ms / 86400000;
   const dStr = `${d < 10 ? d.toFixed(1).replace(/\.0$/, '') : Math.round(d)}d`;
-  return `${hStr} (${dStr})`;
+  return `${main} (${dStr})`;
 }
 
 function renderStats(data, range) {
