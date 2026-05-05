@@ -7,7 +7,7 @@
 body {
   font-family: system-ui, sans-serif;
   font-size: 14px;
-  color: #1a1a1a;
+  color: var(--color-text);
   margin: 0;
   padding: 0;
   height: 100vh;
@@ -47,7 +47,7 @@ header {
   min-height: 0;
   display: grid;
   grid-template-rows: auto 1fr;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 16px;
 }
@@ -66,11 +66,11 @@ header {
   justify-content: space-between;
   padding: 0 20px;
   height: 56px;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--color-border);
   font-weight: 600;
   position: sticky;
   top: 0;
-  background: #fff;
+  background: var(--color-bg);
   z-index: 10;
 }
 
@@ -82,9 +82,11 @@ header {
 
 header select {
   padding: 5px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-input);
   border-radius: 4px;
   font-size: 13px;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .chart-container {
@@ -94,7 +96,7 @@ header select {
 .chart-heading {
   font-size: 13px;
   font-weight: 600;
-  color: #555;
+  color: var(--color-text-dim);
   margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -103,8 +105,8 @@ header select {
 .tooltip {
   display: none;
   position: absolute;
-  background: #1a1a1a;
-  color: #fff;
+  background: var(--color-tooltip-bg);
+  color: var(--color-tooltip-text);
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 4px;
@@ -112,11 +114,10 @@ header select {
   white-space: nowrap;
 }
 
-
 .chart-subheading {
   font-size: 11px;
   font-weight: 400;
-  color: #888;
+  color: var(--color-text-muted);
   text-transform: none;
   letter-spacing: 0;
   margin-left: 6px;
@@ -124,7 +125,7 @@ header select {
 
 .chart-note {
   font-size: 13px;
-  color: #888;
+  color: var(--color-text-muted);
   margin: 8px 0 0;
 }
 
@@ -182,26 +183,26 @@ header select {
   text-align: left;
   padding: 8px 20px;
   font-size: 12px;
-  color: #666;
-  border-bottom: 1px solid #e5e5e5;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   user-select: none;
 }
 
 #analytics-table th:hover {
-  color: #333;
+  color: var(--color-text-strong);
 }
 
 #analytics-table td {
   padding: 10px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-bg-subtle);
   vertical-align: middle;
 }
 
 #analytics-table td:nth-child(2),
 #analytics-table td:nth-child(3) {
   white-space: nowrap;
-  color: #444;
+  color: var(--color-text-medium);
 }
 
 .site-label {
@@ -212,7 +213,7 @@ header select {
 .site-id {
   display: block;
   font-size: 12px;
-  color: #888;
+  color: var(--color-text-muted);
 }
 
 #storage-bar-container {
@@ -225,49 +226,49 @@ header select {
 #storage-bar-track {
   flex: 1;
   height: 4px;
-  background: #e5e5e5;
+  background: var(--color-border);
   border-radius: 2px;
 }
 
 #storage-bar-fill {
   height: 100%;
-  background: #2563eb;
+  background: var(--color-accent);
   border-radius: 2px;
   width: 0%;
 }
 
 #storage-bar-label {
   font-size: 11px;
-  color: #888;
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 #seed-btn {
   padding: 6px 12px;
   font-size: 12px;
-  color: #888;
+  color: var(--color-text-muted);
   background: none;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border-faint);
   border-radius: 4px;
   cursor: pointer;
 }
 
 #seed-btn:hover {
-  background: #f5f5f5;
+  background: var(--color-bg-hover);
 }
 
 #import-btn {
   padding: 5px 10px;
   font-size: 13px;
-  color: #555;
+  color: var(--color-text-dim);
   background: none;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-input);
   border-radius: 4px;
   cursor: pointer;
 }
 
 #import-btn:hover {
-  background: #f5f5f5;
+  background: var(--color-bg-hover);
 }
 
 tr.clickable {
@@ -275,12 +276,12 @@ tr.clickable {
 }
 
 tr.clickable:hover td {
-  background: #f5f5f5;
+  background: var(--color-bg-hover);
 }
 
 #empty-msg {
   display: none;
   text-align: center;
-  color: #888;
+  color: var(--color-text-muted);
   padding: 40px 20px;
 }

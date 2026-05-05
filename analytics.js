@@ -126,6 +126,10 @@ rangeSelect.addEventListener('change', () => {
   render();
 });
 
+window.addEventListener('storage', (e) => {
+  if (e.key === 'theme') render();
+});
+
 loadAndRender();
 
 function formatBytes(bytes) {

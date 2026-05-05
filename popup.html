@@ -3,10 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <title>BiteGuard</title>
+    <script src="theme.js"></script>
+    <link rel="stylesheet" href="theme.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <header>🦈 BiteGuard</header>
+    <header>
+      <span>🦈 BiteGuard</span>
+      <select id="theme-select">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </header>
 
     <button id="add-btn">+ Add a rule</button>
     <button id="analytics-btn">Analytics</button>

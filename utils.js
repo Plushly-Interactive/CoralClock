@@ -5,6 +5,10 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   const gap = Math.floor(innerW / data.length);
   const labelEvery = data.length === 24 ? 3 : Math.ceil(data.length / 10);
 
+  const rootStyle = getComputedStyle(document.documentElement);
+  const axisColor = rootStyle.getPropertyValue('--color-chart-axis').trim() || '#888';
+  const gridColor = rootStyle.getPropertyValue('--color-chart-grid').trim() || '#f0f0f0';
+
   const yTicks = [0, 0.33, 0.66, 1].map(t => ({
     val: maxVal * t,
     y: padTop + innerH - Math.round(t * innerH),
@@ -13,8 +17,8 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   const hideMid = hideMidTicks(maxVal);
   const gridlines = yTicks.map(({ y, val }, i) => {
     const isMid = i === 1 || i === 2;
-    const label = hideMid && isMid ? '' : `<text x="${padLeft - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="#888">${formatVal(val)}</text>`;
-    return `<line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="#f0f0f0" stroke-width="1"/>${label}`;
+    const label = hideMid && isMid ? '' : `<text x="${padLeft - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="${axisColor}">${formatVal(val)}</text>`;
+    return `<line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="${gridColor}" stroke-width="1"/>${label}`;
   }).join('');
 
   let rects;
@@ -23,7 +27,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
     const barW = Math.max(2, Math.floor((gap - 2) / numSeries) - 1);
     rects = data.map((d, i) => {
       const showLabel = i % labelEvery === 0 || i === data.length - 1;
-      const labelHtml = showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="#888">${d.label}</text>` : '';
+      const labelHtml = showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="${axisColor}">${d.label}</text>` : '';
       const bars = series.map((s, j) => {
         const val = s.getValue(d);
         const barH = maxVal > 0 ? Math.round((val / maxVal) * innerH) : 0;
@@ -49,7 +53,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
         <rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="2"></rect>
         <rect x="${x}" y="${padTop}" width="${barW}" height="${innerH}" fill="transparent"
           data-range="${d.range}" data-val="${val}"></rect>
-        ${showLabel ? `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="#888">${d.label}</text>` : ''}
+        ${showLabel ? `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="${axisColor}">${d.label}</text>` : ''}
       `;
     }).join('');
   }

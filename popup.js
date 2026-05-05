@@ -86,3 +86,12 @@ async function renderRules() {
 }
 
 renderRules();
+
+const themeSelect = document.querySelector('#theme-select');
+themeSelect.value = localStorage.getItem('theme') ?? 'system';
+themeSelect.addEventListener('change', () => {
+  const val = themeSelect.value;
+  if (val === 'system') localStorage.removeItem('theme');
+  else localStorage.setItem('theme', val);
+  window.applyTheme();
+});

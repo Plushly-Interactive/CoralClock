@@ -8,13 +8,26 @@ body {
   width: 300px;
   font-family: system-ui, sans-serif;
   font-size: 14px;
-  color: #1a1a1a;
+  color: var(--color-text);
 }
 
 header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 12px 16px;
   font-weight: 600;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--color-border);
+}
+
+#theme-select {
+  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid var(--color-border-input);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-weight: 400;
 }
 
 #add-btn,
@@ -24,15 +37,15 @@ header {
   text-align: left;
   background: none;
   border: none;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--color-border);
   cursor: pointer;
   font-size: 14px;
-  color: #2563eb;
+  color: var(--color-accent);
 }
 
 #add-btn:hover,
 #analytics-btn:hover {
-  background: #f5f5f5;
+  background: var(--color-bg-hover);
 }
 
 #add-form {
@@ -41,7 +54,7 @@ header {
 
 #add-form.visible {
   padding: 12px 16px;
-  border-bottom: 1px solid #e5e5e5;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -50,9 +63,11 @@ header {
 #add-form input[type="text"] {
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-input);
   border-radius: 4px;
   font-size: 14px;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .form-row {
@@ -64,21 +79,25 @@ header {
 .form-row input[type="number"] {
   width: 56px;
   padding: 6px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-input);
   border-radius: 4px;
   font-size: 14px;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .form-row select {
   padding: 6px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-input);
   border-radius: 4px;
   font-size: 14px;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .btn-primary {
   padding: 7px;
-  background: #2563eb;
+  background: var(--color-accent);
   color: white;
   border: none;
   border-radius: 4px;
@@ -87,7 +106,7 @@ header {
 }
 
 .btn-primary:hover {
-  background: #1d4ed8;
+  background: var(--color-accent-hover);
 }
 
 #rules-list {
@@ -98,7 +117,7 @@ header {
   display: flex;
   align-items: center;
   padding: 10px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-bg-subtle);
   gap: 8px;
 }
 
@@ -115,7 +134,7 @@ header {
 
 .rule-info span {
   font-size: 12px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .toggle-btn,
@@ -125,11 +144,11 @@ header {
   cursor: pointer;
   font-size: 16px;
   padding: 4px;
-  color: #666;
+  color: var(--color-text-secondary);
   border-radius: 4px;
 }
 
 .toggle-btn:hover,
 .delete-btn:hover {
-  background: #f0f0f0;
+  background: var(--color-bg-subtle);
 }
