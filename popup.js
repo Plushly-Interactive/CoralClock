@@ -87,11 +87,24 @@ async function renderRules() {
 
 renderRules();
 
-const themeSelect = document.querySelector('#theme-select');
-themeSelect.value = localStorage.getItem('theme') ?? 'system';
-themeSelect.addEventListener('change', () => {
-  const val = themeSelect.value;
-  if (val === 'system') localStorage.removeItem('theme');
-  else localStorage.setItem('theme', val);
-  window.applyTheme();
+const themeBtn = document.querySelector('#theme-btn');
+const themeDropdown = document.querySelector('#theme-dropdown');
+
+themeBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  themeDropdown.classList.toggle('open');
+});
+
+document.addEventListener('click', () => {
+  themeDropdown.classList.remove('open');
+});
+
+themeDropdown.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const val = btn.getAttribute('value');
+    if (val === 'system') localStorage.removeItem('theme');
+    else localStorage.setItem('theme', val);
+    window.applyTheme();
+    themeDropdown.classList.remove('open');
+  });
 });

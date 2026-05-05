@@ -20,14 +20,87 @@ header {
   border-bottom: 1px solid var(--color-border);
 }
 
-#theme-select {
-  font-size: 12px;
-  padding: 3px 6px;
+#theme-menu {
+  position: relative;
+}
+
+#theme-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: 1px solid var(--color-border-input);
   border-radius: 4px;
   background: var(--color-bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent);
+}
+
+#theme-btn svg {
+  stroke: currentColor;
+}
+
+#moon-icon {
+  display: block;
+}
+
+html.dark #moon-icon {
+  display: none;
+}
+
+#sun-icon {
+  display: none;
+  color: #fbbf24;
+}
+
+html.dark #sun-icon {
+  display: block;
+}
+
+#theme-btn:hover {
+  background-color: var(--color-bg-hover);
+}
+
+#theme-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-input);
+  border-radius: 4px;
+  min-width: 100px;
+  z-index: 1000;
+}
+
+#theme-dropdown.open {
+  display: flex;
+  flex-direction: column;
+}
+
+#theme-dropdown button {
+  padding: 8px 12px;
+  border: none;
+  background: none;
   color: var(--color-text);
-  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#theme-dropdown button:hover {
+  background: var(--color-bg-hover);
+}
+
+#theme-dropdown button:first-child {
+  border-radius: 4px 4px 0 0;
+}
+
+#theme-dropdown button:last-child {
+  border-radius: 0 0 4px 4px;
 }
 
 #add-btn,
