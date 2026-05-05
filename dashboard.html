@@ -10,23 +10,23 @@
   <body>
     <header>
       <span>🦈 BiteGuard — Dashboard</span>
-      <div id="storage-bar-container">
-        <div id="storage-bar-track">
-          <div id="storage-bar-fill"></div>
-        </div>
-        <span id="storage-bar-label"></span>
-      </div>
-      <div id="header-controls">
+      <select id="range-select">
+        <option value="today">Today</option>
+        <option value="7" selected>Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="180">Last 6 months</option>
+        <option value="365">Last year</option>
+        <option value="all">All time</option>
+      </select>
+      <div id="header-right">
         <input type="file" id="import-input" accept=".json" style="display:none">
         <button id="import-btn">Import</button>
-        <select id="range-select">
-          <option value="today">Today</option>
-          <option value="7" selected>Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="180">Last 6 months</option>
-          <option value="365">Last year</option>
-          <option value="all">All time</option>
-        </select>
+        <div id="storage-bar-container">
+          <div id="storage-bar-track">
+            <div id="storage-bar-fill"></div>
+          </div>
+          <span id="storage-bar-label"></span>
+        </div>
       </div>
     </header>
 

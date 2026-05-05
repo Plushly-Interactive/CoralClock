@@ -10,19 +10,28 @@
   </head>
   <body>
     <header>
-      <a id="back-btn" href="dashboard.html">← Dashboard</a>
-      <div id="site-title">
-        <span id="site-label"></span>
-        <span id="site-id"></span>
+      <a id="back-btn" href="dashboard.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </a>
+      <div id="header-center">
+        <div id="site-title">
+          <span id="site-label"></span>
+          <span id="site-id"></span>
+        </div>
+        <select id="range-select">
+          <option value="today">Today</option>
+          <option value="7" selected>Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="180">Last 6 months</option>
+          <option value="365">Last year</option>
+          <option value="all">All time</option>
+        </select>
       </div>
-      <select id="range-select">
-        <option value="today">Today</option>
-        <option value="7" selected>Last 7 days</option>
-        <option value="30">Last 30 days</option>
-        <option value="180">Last 6 months</option>
-        <option value="365">Last year</option>
-        <option value="all">All time</option>
-      </select>
     </header>
 
     <div id="charts-grid">
