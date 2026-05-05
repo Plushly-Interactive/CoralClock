@@ -460,3 +460,42 @@ tr.clickable:hover td {
   margin-top: 8px;
   min-height: 16px;
 }
+
+#io-conflict-view {
+  margin-top: 20px;
+}
+
+#io-conflict-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+#io-conflict-warning-symbol {
+  color: #d32f2f;
+  margin-right: 6px;
+}
+
+#io-conflict-desc {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+#io-conflict-list {
+  list-style: none;
+  padding: 8px 12px;
+  margin: 0 0 16px 0;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-subtle);
+  font-size: 13px;
+  font-family: ui-monospace, monospace;
+}
+
+#io-conflict-list li {
+  padding: 2px 0;
+}

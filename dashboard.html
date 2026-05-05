@@ -77,6 +77,21 @@
               <p class="io-status" id="tt-status"></p>
             </section>
           </div>
+          <div id="io-conflict-view" hidden>
+            <h3 id="io-conflict-title">
+              <span id="io-conflict-warning-symbol" aria-hidden="true">⚠</span>Conflicting days
+            </h3>
+            <p id="io-conflict-desc">
+              The following days exist both in your current data and the imported file.
+              Choose what to do — the choice applies to all listed days.
+            </p>
+            <ul id="io-conflict-list"></ul>
+            <div class="io-actions" id="io-conflict-actions">
+              <button id="io-conflict-cancel" class="io-btn">Cancel</button>
+              <button id="io-conflict-keep" class="io-btn">Keep existing</button>
+              <button id="io-conflict-replace" class="io-btn">Replace with imported</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

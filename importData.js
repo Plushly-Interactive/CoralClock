@@ -10,7 +10,14 @@ const ttStatus = document.querySelector('#tt-status');
 
 document.querySelector('#tt-version').textContent = TT_VERSION;
 const bgExportBtn = document.querySelector('#bg-export-btn');
+const bgImportBtn = document.querySelector('#bg-import-btn');
 const bgStatus = document.querySelector('#bg-status');
+const ioColumns = document.querySelector('#io-columns');
+const conflictView = document.querySelector('#io-conflict-view');
+const conflictList = document.querySelector('#io-conflict-list');
+const conflictCancel = document.querySelector('#io-conflict-cancel');
+const conflictKeep = document.querySelector('#io-conflict-keep');
+const conflictReplace = document.querySelector('#io-conflict-replace');
 
 function openModal() {
   modalOverlay.hidden = false;
@@ -102,6 +109,12 @@ ttImportBtn.addEventListener('click', () => {
   importInput.click();
 });
 
+bgImportBtn.addEventListener('click', () => {
+  activeStatusEl = bgStatus;
+  bgStatus.textContent = '';
+  importInput.click();
+});
+
 importInput.addEventListener('change', async () => {
   const file = importInput.files[0];
   if (!file) return;
@@ -110,15 +123,22 @@ importInput.addEventListener('change', async () => {
   try {
     json = JSON.parse(await file.text());
   } catch {
+    importInput.value = '';
     setStatus(activeStatusEl, 'Invalid file');
     return;
   }
+  importInput.value = '';
 
-  if (!Array.isArray(json.__stat__)) {
+  if (json.format === 'biteguard') {
+    await handleBgImport(json);
+  } else if (Array.isArray(json.__stat__)) {
+    await handleTtImport(json);
+  } else {
     setStatus(activeStatusEl, 'Unrecognized format');
-    return;
   }
+});
 
+async function handleTtImport(json) {
   const data = {};
   for (const { host, date, focus, time } of json.__stat__) {
     if (!host || !date || focus == null) continue;
@@ -143,7 +163,90 @@ importInput.addEventListener('change', async () => {
   }
   await chrome.storage.local.set({ analyticsByDay });
   await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
-  importInput.value = '';
   setStatus(activeStatusEl, 'Imported!');
   window.dispatchEvent(new CustomEvent('importcomplete'));
+}
+
+let pendingImport = null;
+
+async function handleBgImport(json) {
+  if (json.version !== 1 || !json.data || typeof json.data !== 'object') {
+    setStatus(activeStatusEl, 'Unrecognized BiteGuard format');
+    return;
+  }
+  const importByDay = json.data.analyticsByDay || {};
+  const importByHour = json.data.analyticsByHour || {};
+
+  const { analyticsByDay = {}, analyticsByHour = {} } =
+    await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
+
+  const conflicts = Object.keys(importByDay).filter((d) => analyticsByDay[d]).sort();
+
+  if (conflicts.length === 0) {
+    await applyBgImport(importByDay, importByHour, analyticsByDay, analyticsByHour, new Set());
+    return;
+  }
+
+  pendingImport = { importByDay, importByHour, currentByDay: analyticsByDay, currentByHour: analyticsByHour, conflicts };
+  showConflictView(conflicts);
+}
+
+async function applyBgImport(importByDay, importByHour, currentByDay, currentByHour, daysToReplace) {
+  const daysToTake = new Set();
+  for (const d of Object.keys(importByDay)) {
+    if (!currentByDay[d] || daysToReplace.has(d)) daysToTake.add(d);
+  }
+
+  for (const d of daysToTake) {
+    currentByDay[d] = importByDay[d];
+  }
+
+  for (const d of daysToTake) {
+    const prefix = `${d}T`;
+    for (const hk of Object.keys(currentByHour)) {
+      if (hk.startsWith(prefix)) delete currentByHour[hk];
+    }
+    for (const [hk, sites] of Object.entries(importByHour)) {
+      if (hk.startsWith(prefix)) currentByHour[hk] = sites;
+    }
+  }
+
+  await chrome.storage.local.set({ analyticsByDay: currentByDay, analyticsByHour: currentByHour });
+  await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
+  setStatus(activeStatusEl, `Imported ${daysToTake.size} day(s)`);
+  window.dispatchEvent(new CustomEvent('importcomplete'));
+}
+
+function showConflictView(conflicts) {
+  conflictList.replaceChildren();
+  for (const day of conflicts) {
+    const li = document.createElement('li');
+    li.textContent = day;
+    conflictList.appendChild(li);
+  }
+  ioColumns.hidden = true;
+  conflictView.hidden = false;
+}
+
+function hideConflictView() {
+  conflictView.hidden = true;
+  ioColumns.hidden = false;
+  pendingImport = null;
+}
+
+conflictCancel.addEventListener('click', () => {
+  hideConflictView();
+  setStatus(bgStatus, 'Import cancelled');
+});
+
+conflictKeep.addEventListener('click', async () => {
+  const { importByDay, importByHour, currentByDay, currentByHour } = pendingImport;
+  hideConflictView();
+  await applyBgImport(importByDay, importByHour, currentByDay, currentByHour, new Set());
+});
+
+conflictReplace.addEventListener('click', async () => {
+  const { importByDay, importByHour, currentByDay, currentByHour, conflicts } = pendingImport;
+  hideConflictView();
+  await applyBgImport(importByDay, importByHour, currentByDay, currentByHour, new Set(conflicts));
 });
