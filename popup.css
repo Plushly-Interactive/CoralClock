@@ -103,8 +103,51 @@ html.dark #sun-icon {
   border-radius: 0 0 4px 4px;
 }
 
-#add-btn,
-#analytics-btn {
+#dashboard-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border-input);
+  border-radius: 4px;
+  background: var(--color-bg);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+#dashboard-btn:hover {
+  background-color: var(--color-bg-hover);
+}
+
+#rules-title {
+  padding: 12px 16px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-dim);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#no-rules-message {
+  display: none;
+  padding: 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#no-rules-message.visible {
+  display: flex;
+}
+
+#add-btn {
   width: 100%;
   padding: 10px 16px;
   text-align: left;
@@ -116,26 +159,25 @@ html.dark #sun-icon {
   color: var(--color-accent);
 }
 
-#add-btn:hover,
-#analytics-btn:hover {
+#add-btn:hover {
   background: var(--color-bg-hover);
 }
 
 #add-form {
   display: none;
-}
-
-#add-form.visible {
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
-  display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
+#add-form.visible {
+  display: flex;
+}
+
 #add-form input[type="text"] {
   width: 100%;
-  padding: 6px 8px;
+  padding: 8px;
   border: 1px solid var(--color-border-input);
   border-radius: 4px;
   font-size: 14px;
@@ -150,7 +192,7 @@ html.dark #sun-icon {
 }
 
 .form-row input[type="number"] {
-  width: 56px;
+  width: 60px;
   padding: 6px 8px;
   border: 1px solid var(--color-border-input);
   border-radius: 4px;
@@ -165,6 +207,12 @@ html.dark #sun-icon {
   border-radius: 4px;
   font-size: 14px;
   background: var(--color-bg);
+  color: var(--color-text);
+  flex: 1;
+}
+
+.form-row span {
+  font-size: 14px;
   color: var(--color-text);
 }
 

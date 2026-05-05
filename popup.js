@@ -2,7 +2,7 @@ import { formatMs } from './utils.js';
 
 const addBtn = document.querySelector('#add-btn');
 
-document.querySelector('#analytics-btn').addEventListener('click', () => {
+document.querySelector('#dashboard-btn').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('analytics.html') });
 });
 
@@ -44,6 +44,7 @@ document.querySelector('#save-btn').addEventListener('click', async () => {
   await chrome.storage.local.set({ rules: [...rules, rule] });
 
   document.querySelector('#form-target').value = '';
+  document.querySelector('#form-limit').value = '10';
   addForm.classList.remove('visible');
   renderRules();
 });
@@ -70,6 +71,14 @@ rulesList.addEventListener('click', async (e) => {
 async function renderRules() {
   const { rules = [] } = await chrome.storage.local.get('rules');
   const multipliers = { minutes: 60000, hours: 3600000, days: 86400000 };
+  const noRulesMsg = document.querySelector('#no-rules-message');
+
+  if (rules.length === 0) {
+    noRulesMsg.textContent = 'No rules yet. Add one to get started!';
+    noRulesMsg.classList.add('visible');
+  } else {
+    noRulesMsg.classList.remove('visible');
+  }
 
   rulesList.innerHTML = rules.map(rule => {
     const limitMs = rule.limit * (multipliers[rule.limitUnit] ?? 60000);

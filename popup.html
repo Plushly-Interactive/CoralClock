@@ -10,6 +10,15 @@
   <body>
     <header>
       <span>🦈 BiteGuard</span>
+      <button id="dashboard-btn">
+        Dashboard
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+      </button>
       <div id="theme-menu">
         <button id="theme-btn">
           <svg id="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -35,8 +44,11 @@
       </div>
     </header>
 
+    <h2 id="rules-title">Rules</h2>
+    <div id="no-rules-message"></div>
+    <ul id="rules-list"></ul>
+
     <button id="add-btn">+ Add a rule</button>
-    <button id="analytics-btn">Analytics</button>
 
     <div id="add-form">
       <input id="form-target" type="text" placeholder="google.com" />
@@ -57,7 +69,6 @@
       <button id="save-btn" class="btn-primary">Save</button>
     </div>
 
-    <ul id="rules-list"></ul>
     <script type="module" src="popup.js"></script>
   </body>
 </html>
