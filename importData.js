@@ -1,7 +1,24 @@
 const importBtn = document.querySelector('#import-btn');
 const importInput = document.querySelector('#import-input');
+const modalOverlay = document.querySelector('#io-modal-overlay');
+const modalClose = document.querySelector('#io-modal-close');
 
-importBtn.addEventListener('click', () => importInput.click());
+function openModal() {
+  modalOverlay.hidden = false;
+}
+
+function closeModal() {
+  modalOverlay.hidden = true;
+}
+
+importBtn.addEventListener('click', openModal);
+modalClose.addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) closeModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !modalOverlay.hidden) closeModal();
+});
 
 importInput.addEventListener('change', async () => {
   const file = importInput.files[0];
@@ -51,5 +68,5 @@ importInput.addEventListener('change', async () => {
 
 function setImportStatus(text) {
   importBtn.textContent = text;
-  setTimeout(() => { importBtn.textContent = 'Import'; }, 2000);
+  setTimeout(() => { importBtn.textContent = 'Import/Export data'; }, 2000);
 }

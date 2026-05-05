@@ -19,8 +19,7 @@
         <option value="all">All time</option>
       </select>
       <div id="header-right">
-        <input type="file" id="import-input" accept=".json" style="display:none">
-        <button id="import-btn">Import</button>
+        <button id="import-btn">Import/Export data</button>
         <div id="storage-bar-container">
           <div id="storage-bar-track">
             <div id="storage-bar-fill"></div>
@@ -29,6 +28,18 @@
         </div>
       </div>
     </header>
+
+    <div id="io-modal-overlay" hidden>
+      <div id="io-modal" role="dialog" aria-labelledby="io-modal-title" aria-modal="true">
+        <div id="io-modal-header">
+          <h2 id="io-modal-title">Import / Export data</h2>
+          <button id="io-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div id="io-modal-body">
+          <input type="file" id="import-input" accept=".json" style="display:none">
+        </div>
+      </div>
+    </div>
 
     <div id="dashboard-grid">
       <div id="dashboard-charts-col">
