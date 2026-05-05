@@ -1,9 +1,14 @@
+const TT_VERSION = '4.2.1';
+
 const importBtn = document.querySelector('#import-btn');
 const importInput = document.querySelector('#import-input');
 const modalOverlay = document.querySelector('#io-modal-overlay');
 const modalClose = document.querySelector('#io-modal-close');
 const ttImportBtn = document.querySelector('#tt-import-btn');
+const ttExportBtn = document.querySelector('#tt-export-btn');
 const ttStatus = document.querySelector('#tt-status');
+
+document.querySelector('#tt-version').textContent = TT_VERSION;
 const bgExportBtn = document.querySelector('#bg-export-btn');
 const bgStatus = document.querySelector('#bg-status');
 
@@ -52,6 +57,43 @@ bgExportBtn.addEventListener('click', async () => {
   URL.revokeObjectURL(url);
 
   bgStatus.textContent = `Exported to "${filename}"`;
+});
+
+ttExportBtn.addEventListener('click', async () => {
+  ttStatus.textContent = '';
+  const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
+
+  const __stat__ = [];
+  for (const [day, sites] of Object.entries(analyticsByDay)) {
+    const date = day.replaceAll('-', '');
+    for (const [host, entry] of Object.entries(sites)) {
+      __stat__.push({
+        host,
+        date,
+        focus: entry.activeMs ?? 0,
+        time: entry.visits ?? 0,
+      });
+    }
+  }
+
+  const payload = {
+    __meta__: { version: TT_VERSION, ts: Date.now() },
+    __stat__,
+    __limit__: [],
+    __merge__: [],
+    __whitelist__: [],
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 4)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const filename = `time-tracker-export-${new Date().toISOString().slice(0, 10)}.json`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  ttStatus.textContent = `Exported to "${filename}"`;
 });
 
 ttImportBtn.addEventListener('click', () => {
