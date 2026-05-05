@@ -37,6 +37,46 @@
         </div>
         <div id="io-modal-body">
           <input type="file" id="import-input" accept=".json" style="display:none">
+          <div id="io-columns">
+            <section class="io-section" id="io-section-bg">
+              <h3 class="io-section-title">BiteGuard format</h3>
+              <p class="io-section-desc">
+                Back up your BiteGuard data or transfer it between installs. 
+                Includes all daily and hourly browsing stats and settings.</p>
+              <ul class="io-bullets">
+                <li class="io-yes">Active time per site</li>
+                <li class="io-yes">Visit counts per site</li>
+                <li class="io-yes">Audio time per site</li>
+                <li class="io-no">Site rules &amp; limits <span class="io-soon">(coming soon)</span></li>
+                <li class="io-no">Settings <span class="io-soon">(coming soon)</span></li>
+              </ul>
+              <div class="io-actions">
+                <button id="bg-export-btn" class="io-btn">Export</button>
+                <button id="bg-import-btn" class="io-btn">Import</button>
+              </div>
+              <p class="io-status" id="bg-status"></p>
+            </section>
+
+            <section class="io-section" id="io-section-tt">
+              <h3 class="io-section-title">Time Tracker compatibility</h3>
+              <p class="io-section-desc">
+                Exchange data with the "Time Tracker - Web Habit Builder" extension.
+                Not all data is compatible.
+              </p>
+              <ul class="io-bullets">
+                <li class="io-yes">Active time per site (daily only)</li>
+                <li class="io-yes">Visit counts per site (daily only)</li>
+                <li class="io-no">Audio time</li>
+                <li class="io-no">Site rules</li>
+                <li class="io-no">Settings</li>
+              </ul>
+              <div class="io-actions">
+                <button id="tt-export-btn" class="io-btn">Export</button>
+                <button id="tt-import-btn" class="io-btn">Import</button>
+              </div>
+              <p class="io-status" id="tt-status"></p>
+            </section>
+          </div>
         </div>
       </div>
     </div>

@@ -2,6 +2,10 @@ const importBtn = document.querySelector('#import-btn');
 const importInput = document.querySelector('#import-input');
 const modalOverlay = document.querySelector('#io-modal-overlay');
 const modalClose = document.querySelector('#io-modal-close');
+const ttImportBtn = document.querySelector('#tt-import-btn');
+const ttStatus = document.querySelector('#tt-status');
+const bgExportBtn = document.querySelector('#bg-export-btn');
+const bgStatus = document.querySelector('#bg-status');
 
 function openModal() {
   modalOverlay.hidden = false;
@@ -20,6 +24,42 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !modalOverlay.hidden) closeModal();
 });
 
+let activeStatusEl = null;
+function setStatus(el, text) {
+  activeStatusEl = el;
+  el.textContent = text;
+}
+
+bgExportBtn.addEventListener('click', async () => {
+  bgStatus.textContent = '';
+  const { analyticsByDay = {}, analyticsByHour = {} } =
+    await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
+
+  const payload = {
+    format: 'biteguard',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    data: { analyticsByDay, analyticsByHour },
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const filename = `biteguard-export-${new Date().toISOString().slice(0, 10)}.json`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  bgStatus.textContent = `Exported to "${filename}"`;
+});
+
+ttImportBtn.addEventListener('click', () => {
+  activeStatusEl = ttStatus;
+  ttStatus.textContent = '';
+  importInput.click();
+});
+
 importInput.addEventListener('change', async () => {
   const file = importInput.files[0];
   if (!file) return;
@@ -28,12 +68,12 @@ importInput.addEventListener('change', async () => {
   try {
     json = JSON.parse(await file.text());
   } catch {
-    setImportStatus('Invalid file');
+    setStatus(activeStatusEl, 'Invalid file');
     return;
   }
 
   if (!Array.isArray(json.__stat__)) {
-    setImportStatus('Unrecognized format');
+    setStatus(activeStatusEl, 'Unrecognized format');
     return;
   }
 
@@ -62,11 +102,6 @@ importInput.addEventListener('change', async () => {
   await chrome.storage.local.set({ analyticsByDay });
   await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
   importInput.value = '';
-  setImportStatus('Imported!');
+  setStatus(activeStatusEl, 'Imported!');
   window.dispatchEvent(new CustomEvent('importcomplete'));
 });
-
-function setImportStatus(text) {
-  importBtn.textContent = text;
-  setTimeout(() => { importBtn.textContent = 'Import/Export data'; }, 2000);
-}
