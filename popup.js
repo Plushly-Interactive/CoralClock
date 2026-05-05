@@ -3,7 +3,7 @@ import { formatMs } from './utils.js';
 const addBtn = document.querySelector('#add-btn');
 
 document.querySelector('#dashboard-btn').addEventListener('click', () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('analytics.html') });
+  chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
 });
 
 const addForm = document.querySelector('#add-form');

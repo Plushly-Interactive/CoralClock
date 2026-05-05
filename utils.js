@@ -23,15 +23,20 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
 
   let rects;
   if (series) {
-    const numSeries = series.length;
-    const barW = Math.max(2, Math.floor((gap - 2) / numSeries) - 1);
     rects = data.map((d, i) => {
       const showLabel = i % labelEvery === 0 || i === data.length - 1;
       const labelHtml = showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="${axisColor}">${d.label}</text>` : '';
-      const bars = series.map((s, j) => {
+
+      const nonZeroBars = series.filter(s => s.getValue(d) > 0);
+      const numBarsInColumn = nonZeroBars.length;
+      const barW = Math.max(2, Math.floor((gap - 2) / numBarsInColumn) - 1);
+
+      const bars = series.map((s) => {
         const val = s.getValue(d);
+        if (val === 0) return '';
+        const indexInNonZero = nonZeroBars.findIndex(b => b === s);
         const barH = maxVal > 0 ? Math.round((val / maxVal) * innerH) : 0;
-        const x = padLeft + i * gap + j * (barW + 1);
+        const x = padLeft + i * gap + indexInNonZero * (barW + 1);
         const y = padTop + innerH - barH;
         return `
           <rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${s.color}" rx="2"></rect>

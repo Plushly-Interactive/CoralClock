@@ -19,7 +19,7 @@ header {
   flex-shrink: 0;
 }
 
-#analytics-grid {
+#dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
@@ -28,21 +28,21 @@ header {
   min-height: 0;
 }
 
-#analytics-table-col {
+#dashboard-table-col {
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
 }
 
-#analytics-charts-col {
+#dashboard-charts-col {
   display: flex;
   flex-direction: column;
   gap: 24px;
   min-height: 0;
 }
 
-#analytics-charts-col .chart-container {
+#dashboard-charts-col .chart-container {
   flex: 1;
   min-height: 0;
   display: grid;
@@ -129,7 +129,7 @@ header select {
   margin: 8px 0 0;
 }
 
-#analytics-table-heading {
+#dashboard-table-heading {
   padding: 0 20px;
   height: 36px;
   display: flex;
@@ -138,13 +138,13 @@ header select {
   flex-shrink: 0;
 }
 
-#analytics-table {
+#dashboard-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 8px;
 }
 
-#analytics-table {
+#dashboard-table {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -153,33 +153,33 @@ header select {
   width: 100%;
 }
 
-#analytics-table thead {
+#dashboard-table thead {
   display: block;
   flex-shrink: 0;
 }
 
-#analytics-table tbody {
+#dashboard-table tbody {
   display: block;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
 }
 
-#analytics-table thead tr,
-#analytics-table tbody tr {
+#dashboard-table thead tr,
+#dashboard-table tbody tr {
   display: table;
   width: 100%;
   table-layout: fixed;
 }
 
-#analytics-table th:nth-child(1),
-#analytics-table td:nth-child(1) { width: 60%; }
-#analytics-table th:nth-child(2),
-#analytics-table td:nth-child(2) { width: 20%; }
-#analytics-table th:nth-child(3),
-#analytics-table td:nth-child(3) { width: 20%; }
+#dashboard-table th:nth-child(1),
+#dashboard-table td:nth-child(1) { width: 60%; }
+#dashboard-table th:nth-child(2),
+#dashboard-table td:nth-child(2) { width: 20%; }
+#dashboard-table th:nth-child(3),
+#dashboard-table td:nth-child(3) { width: 20%; }
 
-#analytics-table th {
+#dashboard-table th {
   text-align: left;
   padding: 8px 20px;
   font-size: 12px;
@@ -189,18 +189,18 @@ header select {
   user-select: none;
 }
 
-#analytics-table th:hover {
+#dashboard-table th:hover {
   color: var(--color-text-strong);
 }
 
-#analytics-table td {
+#dashboard-table td {
   padding: 10px 20px;
   border-bottom: 1px solid var(--color-bg-subtle);
   vertical-align: middle;
 }
 
-#analytics-table td:nth-child(2),
-#analytics-table td:nth-child(3) {
+#dashboard-table td:nth-child(2),
+#dashboard-table td:nth-child(3) {
   white-space: nowrap;
   color: var(--color-text-medium);
 }

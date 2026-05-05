@@ -3,7 +3,7 @@ import { resolveSite } from './siteResolution.js';
 import { seedTestData } from './seedTestData.js';
 
 const rangeSelect = document.querySelector('#range-select');
-const tbody = document.querySelector('#analytics-body');
+const tbody = document.querySelector('#dashboard-body');
 const emptyMsg = document.querySelector('#empty-msg');
 const topChart = document.querySelector('#top-chart');
 const topTooltip = document.querySelector('#top-tooltip');
