@@ -221,7 +221,7 @@ function render() {
     maxVal: Math.max(...top.map(d => d.activeMs)),
     getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
-    color: '#7c3aed',
+    color: '#10b981',
   });
 
   renderTable(sortedRows());
