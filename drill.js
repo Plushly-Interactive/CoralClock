@@ -67,15 +67,17 @@ export function isInDrillMode() {
   return drillPeriod !== null;
 }
 
-export function enterDrill(period, fromPeriod) {
+export function enterDrill(period, fromPeriod, metric = 'time') {
   drillPrevPeriod = fromPeriod ?? null;
   drillPeriod = period;
   drillDepth++;
+  drillMetric = metric;
   ctx.chartsGrid.style.display = 'none';
   ctx.drillView.style.display = 'flex';
   ctx.rangeSelect.style.display = 'none';
   ctx.navLabel.textContent = formatPeriodLabel(drillPeriod);
   history.pushState({ drill: true, period, prevPeriod: fromPeriod ?? null, depth: drillDepth }, '');
+  updateDrillButtons();
   renderDrillChart();
 }
 
@@ -91,6 +93,16 @@ function exitDrillCompletely() {
   if (depth > 0) {
     exitingDrill = true;
     history.go(-depth);
+  }
+}
+
+function updateDrillButtons() {
+  if (drillMetric === 'time') {
+    ctx.drillTimeBtn.classList.add('active');
+    ctx.drillVisitsBtn.classList.remove('active');
+  } else {
+    ctx.drillVisitsBtn.classList.add('active');
+    ctx.drillTimeBtn.classList.remove('active');
   }
 }
 
@@ -151,7 +163,7 @@ async function renderDrillChart() {
     const monthKey = drillPeriod.slice(0, 7);
     ctx.drillMonthLink.textContent = formatPeriodLabel(monthKey);
     ctx.drillMonthLink.style.display = 'block';
-    ctx.drillMonthLink.onclick = () => enterDrill(monthKey, null);
+    ctx.drillMonthLink.onclick = () => enterDrill(monthKey, null, drillMetric);
   }
 
   const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
@@ -160,7 +172,7 @@ async function renderDrillChart() {
   ctx.drillLegend.style.display = 'none';
   if (!hasData) return;
 
-  const onBarClick = isMonthDrill ? r => enterDrill(r, drillPeriod) : null;
+  const onBarClick = isMonthDrill ? r => enterDrill(r, drillPeriod, drillMetric) : null;
   const maxTimeMs = isMonthDrill ? 24 * 3600000 : 3600000;
 
   if (drillMetric === 'time') {

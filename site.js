@@ -308,7 +308,8 @@ function renderHourly(range) {
 }
 
 function drawChart(data, range) {
-  const onBarClick = range !== 'today' ? r => enterDrill(r, null) : null;
+  const timeOnClick = range !== 'today' ? r => enterDrill(r, null, 'time') : null;
+  const visitsOnClick = range !== 'today' ? r => enterDrill(r, null, 'visits') : null;
   const hasAudio = data.some(d => d.audioMs > 0);
   document.querySelector('#time-legend').style.display = hasAudio ? 'flex' : 'none';
 
@@ -328,7 +329,7 @@ function drawChart(data, range) {
     formatVal: ms => formatMs(ms),
     color: '#2563eb',
     series: timeSeriesData,
-    onBarClick,
+    onBarClick: timeOnClick,
   });
 
   drawBarChart({
@@ -341,7 +342,7 @@ function drawChart(data, range) {
     formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
     hideMidTicks: maxVal => maxVal < 3,
     color: '#ea580c',
-    onBarClick,
+    onBarClick: visitsOnClick,
   });
 }
 

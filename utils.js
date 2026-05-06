@@ -28,22 +28,40 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
       const labelHtml = showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" font-size="${fontSize}" fill="${axisColor}">${d.label}</text>` : '';
 
       const nonZeroBars = series.filter(s => s.getValue(d) > 0);
-      const numBarsInColumn = nonZeroBars.length;
-      const barW = Math.max(2, Math.floor((gap - 2) / numBarsInColumn) - 1);
+      const hasAnyData = nonZeroBars.length > 0;
 
-      const bars = series.map((s) => {
+      let bars = series.map((s, idx) => {
         const val = s.getValue(d);
         if (val === 0) return '';
-        const indexInNonZero = nonZeroBars.findIndex(b => b === s);
         const barH = maxVal > 0 ? Math.round((val / maxVal) * innerH) : 0;
-        const x = padLeft + i * gap + indexInNonZero * (barW + 1);
         const y = padTop + innerH - barH;
-        return `
-          <rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${s.color}" rx="2"></rect>
-          <rect x="${x}" y="${padTop}" width="${barW}" height="${innerH}" fill="transparent"
-            data-range="${d.range}" data-val="${val}" data-series="${s.label}" data-format="${s.formatVal ? s.formatVal(val) : formatVal(val)}"></rect>
-        `;
+
+        let x, barWidth;
+        if (idx === 0) {
+          x = padLeft + i * gap;
+          barWidth = gap - 2;
+          return `<rect x="${x}" y="${y}" width="${barWidth}" height="${barH}" fill="${s.color}" rx="2"></rect>`;
+        } else {
+          barWidth = Math.max(2, Math.floor((gap - 2) / 3));
+          x = padLeft + i * gap + (gap - 2) - barWidth;
+          const borderColor = rootStyle.getPropertyValue('--color-chart-grid').trim() || '#f0f0f0';
+          return `<rect x="${x}" y="${y}" width="${barWidth}" height="${barH}" fill="${s.color}" rx="2"></rect>
+            <path d="M ${x+2} ${y} L ${x+barWidth-2} ${y} A 2 2 0 0 1 ${x+barWidth} ${y+2} L ${x+barWidth} ${y+barH-2} A 2 2 0 0 1 ${x+barWidth-2} ${y+barH} L ${x+2} ${y+barH} A 2 2 0 0 1 ${x} ${y+barH-2} L ${x} ${y+2} A 2 2 0 0 1 ${x+2} ${y}" fill="none" stroke="${borderColor}" stroke-width="0.5"></path>`;
+        }
       }).join('');
+
+      if (hasAnyData) {
+        const seriesData = nonZeroBars.map(s => {
+          const val = s.getValue(d);
+          const formatted = s.formatVal ? s.formatVal(val) : formatVal(val);
+          return `${s.label}: ${formatted}`;
+        }).join('\n');
+        bars += `<rect x="${padLeft + i * gap}" y="${padTop}" width="${gap - 2}" height="${innerH}" fill="transparent"
+          data-range="${d.range}" data-all-series="true" data-series-list="${seriesData}"></rect>`;
+      } else {
+        bars += `<rect x="${padLeft + i * gap}" y="${padTop}" width="${gap - 2}" height="${innerH}" fill="transparent"
+          data-range="${d.range}" data-val="0"></rect>`;
+      }
       return bars + labelHtml;
     }).join('');
   } else {
@@ -68,17 +86,53 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   svgEl.removeAttribute('height');
   svgEl.innerHTML = gridlines + rects;
 
+  let hoverOverlay = null;
+
   svgEl.querySelectorAll('rect[data-range]').forEach(rect => {
     if (onBarClick) {
       rect.style.cursor = 'pointer';
       rect.addEventListener('click', () => onBarClick(rect.dataset.range));
     }
     rect.addEventListener('mouseenter', () => {
-      const text = rect.dataset.series
-        ? `${rect.dataset.series}: ${rect.dataset.format} / ${rect.dataset.range}`
-        : `${formatTooltip(Number(rect.dataset.val))} / ${rect.dataset.range}`;
-      tooltipEl.textContent = text;
+      let html;
+      if (rect.dataset.allSeries) {
+        const seriesLines = rect.dataset.seriesList.split('\n');
+        const seriesHtml = seriesLines.join('<br>');
+        html = `${seriesHtml}<br>${rect.dataset.range}`;
+        if (onBarClick) html += '<br>(click to open detailed chart)';
+        tooltipEl.innerHTML = html;
+      } else if (rect.dataset.series) {
+        const text = `${rect.dataset.series}: ${rect.dataset.format} / ${rect.dataset.range}`;
+        if (onBarClick) {
+          tooltipEl.innerHTML = `${text}<br>(click to open detailed chart)`;
+        } else {
+          tooltipEl.textContent = text;
+        }
+      } else {
+        const val = Number(rect.dataset.val);
+        if (val === 0) {
+          tooltipEl.textContent = rect.dataset.range;
+        } else {
+          const text = formatTooltip(val);
+          html = text + '<br>' + rect.dataset.range;
+          if (onBarClick) html += '<br>(click to open detailed chart)';
+          tooltipEl.innerHTML = html;
+        }
+      }
       tooltipEl.style.display = 'block';
+
+      if (hoverOverlay) hoverOverlay.remove();
+      hoverOverlay = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hoverOverlay.setAttribute('x', rect.getAttribute('x'));
+      hoverOverlay.setAttribute('y', rect.getAttribute('y'));
+      hoverOverlay.setAttribute('width', rect.getAttribute('width'));
+      hoverOverlay.setAttribute('height', rect.getAttribute('height'));
+      hoverOverlay.setAttribute('fill', 'white');
+      hoverOverlay.setAttribute('opacity', '0.15');
+      hoverOverlay.setAttribute('pointer-events', 'none');
+      hoverOverlay.setAttribute('rx', '2');
+      const firstRect = svgEl.querySelector('rect');
+      svgEl.insertBefore(hoverOverlay, firstRect);
     });
     rect.addEventListener('mousemove', (e) => {
       const box = svgEl.getBoundingClientRect();
@@ -91,6 +145,10 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
     });
     rect.addEventListener('mouseleave', () => {
       tooltipEl.style.display = 'none';
+      if (hoverOverlay) {
+        hoverOverlay.remove();
+        hoverOverlay = null;
+      }
     });
   });
 }
