@@ -1,17 +1,25 @@
 const TT_VERSION = '4.2.1';
 
+const notification = document.querySelector('#notification');
+
+function showNotification(message) {
+  notification.textContent = message;
+  notification.hidden = false;
+  setTimeout(() => {
+    notification.hidden = true;
+  }, 3000);
+}
+
 const importBtn = document.querySelector('#import-btn');
 const importInput = document.querySelector('#import-input');
 const modalOverlay = document.querySelector('#io-modal-overlay');
 const modalClose = document.querySelector('#io-modal-close');
 const ttImportBtn = document.querySelector('#tt-import-btn');
 const ttExportBtn = document.querySelector('#tt-export-btn');
-const ttStatus = document.querySelector('#tt-status');
 
 document.querySelector('#tt-version').textContent = TT_VERSION;
 const bgExportBtn = document.querySelector('#bg-export-btn');
 const bgImportBtn = document.querySelector('#bg-import-btn');
-const bgStatus = document.querySelector('#bg-status');
 const ioColumns = document.querySelector('#io-columns');
 const conflictView = document.querySelector('#io-conflict-view');
 const conflictList = document.querySelector('#io-conflict-list');
@@ -36,14 +44,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !modalOverlay.hidden) closeModal();
 });
 
-let activeStatusEl = null;
-function setStatus(el, text) {
-  activeStatusEl = el;
-  el.textContent = text;
-}
-
 bgExportBtn.addEventListener('click', async () => {
-  bgStatus.textContent = '';
   const { analyticsByDay = {}, analyticsByHour = {} } =
     await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
 
@@ -63,11 +64,10 @@ bgExportBtn.addEventListener('click', async () => {
   a.click();
   URL.revokeObjectURL(url);
 
-  bgStatus.textContent = `Exported to "${filename}"`;
+  showNotification(`Exported to "${filename}"`);
 });
 
 ttExportBtn.addEventListener('click', async () => {
-  ttStatus.textContent = '';
   const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
 
   const __stat__ = [];
@@ -100,18 +100,14 @@ ttExportBtn.addEventListener('click', async () => {
   a.click();
   URL.revokeObjectURL(url);
 
-  ttStatus.textContent = `Exported to "${filename}"`;
+  showNotification(`Exported to "${filename}"`);
 });
 
 ttImportBtn.addEventListener('click', () => {
-  activeStatusEl = ttStatus;
-  ttStatus.textContent = '';
   importInput.click();
 });
 
 bgImportBtn.addEventListener('click', () => {
-  activeStatusEl = bgStatus;
-  bgStatus.textContent = '';
   importInput.click();
 });
 
@@ -124,7 +120,7 @@ importInput.addEventListener('change', async () => {
     json = JSON.parse(await file.text());
   } catch {
     importInput.value = '';
-    setStatus(activeStatusEl, 'Invalid file');
+    showNotification('Invalid file');
     return;
   }
   importInput.value = '';
@@ -134,7 +130,7 @@ importInput.addEventListener('change', async () => {
   } else if (Array.isArray(json.__stat__)) {
     await handleTtImport(json);
   } else {
-    setStatus(activeStatusEl, 'Unrecognized format');
+    showNotification('Unrecognized format');
   }
 });
 
@@ -174,7 +170,7 @@ async function applyTtImport(importData, currentByDay, daysToReplace) {
 
   await chrome.storage.local.set({ analyticsByDay: currentByDay });
   await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
-  setStatus(activeStatusEl, `Imported ${daysToTake.size} day(s)`);
+  showNotification(`Imported ${daysToTake.size} day(s)`);
   window.dispatchEvent(new CustomEvent('importcomplete'));
 }
 
@@ -182,7 +178,7 @@ let pendingImport = null;
 
 async function handleBgImport(json) {
   if (json.version !== 1 || !json.data || typeof json.data !== 'object') {
-    setStatus(activeStatusEl, 'Unrecognized BiteGuard format');
+    showNotification('Unrecognized BiteGuard format');
     return;
   }
   const importByDay = json.data.analyticsByDay || {};
@@ -224,7 +220,7 @@ async function applyBgImport(importByDay, importByHour, currentByDay, currentByH
 
   await chrome.storage.local.set({ analyticsByDay: currentByDay, analyticsByHour: currentByHour });
   await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
-  setStatus(activeStatusEl, `Imported ${daysToTake.size} day(s)`);
+  showNotification(`Imported ${daysToTake.size} day(s)`);
   window.dispatchEvent(new CustomEvent('importcomplete'));
 }
 
@@ -247,7 +243,7 @@ function hideConflictView() {
 
 conflictCancel.addEventListener('click', () => {
   hideConflictView();
-  setStatus(bgStatus, 'Import cancelled');
+  showNotification('Import cancelled');
 });
 
 conflictKeep.addEventListener('click', async () => {

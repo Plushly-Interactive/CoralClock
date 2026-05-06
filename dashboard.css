@@ -454,13 +454,6 @@ tr.clickable:hover td {
   background: var(--color-bg-hover);
 }
 
-.io-status {
-  font-size: 12px;
-  color: var(--color-text-secondary);
-  margin-top: 8px;
-  min-height: 16px;
-}
-
 #io-conflict-view {
   margin-top: 20px;
 }
@@ -498,4 +491,25 @@ tr.clickable:hover td {
 
 #io-conflict-list li {
   padding: 2px 0;
+}
+
+#notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2563eb;
+  color: white;
+  border-radius: 6px;
+  padding: 14px 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 200;
+  max-width: 400px;
+  word-wrap: break-word;
+}
+
+#notification[hidden] {
+  display: none;
 }

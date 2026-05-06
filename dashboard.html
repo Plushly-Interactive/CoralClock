@@ -54,7 +54,6 @@
                 <button id="bg-export-btn" class="io-btn">Export</button>
                 <button id="bg-import-btn" class="io-btn">Import</button>
               </div>
-              <p class="io-status" id="bg-status"></p>
             </section>
 
             <section class="io-section" id="io-section-tt">
@@ -74,7 +73,6 @@
                 <button id="tt-export-btn" class="io-btn">Export</button>
                 <button id="tt-import-btn" class="io-btn">Import</button>
               </div>
-              <p class="io-status" id="tt-status"></p>
             </section>
           </div>
           <div id="io-conflict-view" hidden>
@@ -130,6 +128,8 @@
         <p id="empty-msg">No data for this period.</p>
       </div>
     </div>
+
+    <div id="notification" hidden></div>
 
     <script type="module" src="importData.js"></script>
     <script type="module" src="dashboard.js"></script>
