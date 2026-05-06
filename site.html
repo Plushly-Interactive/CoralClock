@@ -38,13 +38,13 @@
       <div id="time-chart-container" class="chart-container">
         <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
           <h2 class="chart-heading" style="margin: 0;">Time spent</h2>
-          <div id="time-legend" style="display: none; font-size: 11px; color: #888; margin-left: auto;">
-            <span style="display: inline-flex; align-items: center; gap: 4px; margin-right: 8px;">
-              <span style="width: 10px; height: 10px; background: #2563eb; border-radius: 2px;"></span>
+          <div id="time-legend" class="time-legend" style="display: none; margin-left: auto;">
+            <span>
+              <span style="background: #2563eb;"></span>
               Active browsing
             </span>
-            <span style="display: inline-flex; align-items: center; gap: 4px;">
-              <span style="width: 10px; height: 10px; background: #7c3aed; border-radius: 2px;"></span>
+            <span>
+              <span style="background: #7c3aed;"></span>
               Audio playback
             </span>
           </div>
@@ -116,6 +116,16 @@
           <button id="nav-prev">&#8592;</button>
           <span id="nav-label"></span>
           <button id="nav-next">&#8594;</button>
+        </div>
+        <div id="drill-legend" class="time-legend" style="display: none;">
+          <span>
+            <span style="background: #2563eb;"></span>
+            Active browsing
+          </span>
+          <span>
+            <span style="background: #7c3aed;"></span>
+            Audio playback
+          </span>
         </div>
         <div id="drill-toggle">
           <button id="drill-time-btn" class="drill-toggle-btn active">Time</button>

@@ -1,5 +1,6 @@
 import { formatMs, drawBarChart } from './utils.js';
 import { resolveSite } from './siteResolution.js';
+import { initDrill, isInDrillMode, enterDrill } from './drill.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -55,51 +56,21 @@ if (siteId || siteIds) {
 let byDayCache = null;
 let byHourCache = null;
 const avgPerHourCache = {};
-const byHourDayCache = {};
-
-let drillPeriod = null;
-let drillPrevPeriod = null;
-let drillDepth = 0;
-let drillMetric = 'time';
 
 const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
-const navStrip = document.querySelector('#nav-strip');
 const navLabel = document.querySelector('#nav-label');
 const navPrev = document.querySelector('#nav-prev');
 const navNext = document.querySelector('#nav-next');
 const navClose = document.querySelector('#nav-close');
 const drillChart = document.querySelector('#drill-chart');
 const drillTooltip = document.querySelector('#drill-tooltip');
+const drillLegend = document.querySelector('#drill-legend');
 const drillTimeBtn = document.querySelector('#drill-time-btn');
 const drillVisitsBtn = document.querySelector('#drill-visits-btn');
 const drillNoData = document.querySelector('#drill-no-data');
 const drillMonthLink = document.querySelector('#drill-month-link');
 const backBtn = document.querySelector('#back-btn');
-
-backBtn.addEventListener('click', (e) => {
-  if (!drillPeriod) return;
-  e.preventDefault();
-  exitDrillCompletely();
-});
-
-navPrev.addEventListener('click', () => navigatePeriod(-1));
-navNext.addEventListener('click', () => navigatePeriod(1));
-navClose.addEventListener('click', exitDrillCompletely);
-
-drillTimeBtn.addEventListener('click', () => {
-  drillMetric = 'time';
-  drillTimeBtn.classList.add('active');
-  drillVisitsBtn.classList.remove('active');
-  renderDrillChart();
-});
-
-drillVisitsBtn.addEventListener('click', () => {
-  drillMetric = 'visits';
-  drillVisitsBtn.classList.add('active');
-  drillTimeBtn.classList.remove('active');
-  renderDrillChart();
-});
 
 const hourlyChart = document.querySelector('#hourly-chart');
 const hourlyTooltip = document.querySelector('#hourly-tooltip');
@@ -122,6 +93,27 @@ rangeSelect.addEventListener('change', () => {
 
 window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
+});
+
+initDrill({
+  chartsGrid,
+  drillView,
+  rangeSelect,
+  backBtn,
+  navPrev,
+  navNext,
+  navClose,
+  drillTimeBtn,
+  drillVisitsBtn,
+  drillChart,
+  drillTooltip,
+  drillLegend,
+  drillNoData,
+  drillMonthLink,
+  navLabel,
+  entrySum,
+  get byDayCache() { return byDayCache; },
+  render,
 });
 
 loadAndRender();
@@ -153,7 +145,7 @@ function todayDayKey() {
 }
 
 function render() {
-  if (drillPeriod) { renderDrillChart(); return; }
+  if (isInDrillMode()) return;
   const range = rangeSelect.value;
 
   let data;
@@ -205,6 +197,7 @@ function render() {
   }
 
   const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
+  document.querySelector('#time-legend').style.display = 'none';
   timeChart.style.display = hasData ? 'block' : 'none';
   visitsChart.style.display = hasData ? 'block' : 'none';
   timeNoData.style.display = hasData ? 'none' : 'block';
@@ -314,150 +307,10 @@ function renderHourly(range) {
   });
 }
 
-function formatPeriodLabel(period) {
-  if (period.length === 7) {
-    const [y, m] = period.split('-');
-    return new Date(+y, +m - 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-  }
-  const [y, m, d] = period.split('-');
-  return new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function enterDrill(period, fromPeriod) {
-  drillPrevPeriod = fromPeriod ?? null;
-  drillPeriod = period;
-  drillDepth++;
-  chartsGrid.style.display = 'none';
-  drillView.style.display = 'flex';
-  rangeSelect.style.display = 'none';
-  navLabel.textContent = formatPeriodLabel(drillPeriod);
-  history.pushState({ drill: true, period, prevPeriod: fromPeriod ?? null, depth: drillDepth }, '');
-  renderDrillChart();
-}
-
-function exitDrillCompletely() {
-  const depth = drillDepth;
-  drillDepth = 0;
-  drillPeriod = null;
-  drillPrevPeriod = null;
-  chartsGrid.style.display = '';
-  drillView.style.display = 'none';
-  rangeSelect.style.display = '';
-  render();
-  if (depth > 0) history.go(-depth);
-}
-
-window.addEventListener('popstate', (e) => {
-  if (e.state?.drill) {
-    drillPeriod = e.state.period;
-    drillPrevPeriod = e.state.prevPeriod;
-    drillDepth = e.state.depth ?? 1;
-    chartsGrid.style.display = 'none';
-    drillView.style.display = 'flex';
-    rangeSelect.style.display = 'none';
-    navLabel.textContent = formatPeriodLabel(drillPeriod);
-    renderDrillChart();
-  } else if (drillPeriod) {
-    drillDepth = 0;
-    drillPeriod = null;
-    drillPrevPeriod = null;
-    chartsGrid.style.display = '';
-    drillView.style.display = 'none';
-    rangeSelect.style.display = '';
-    render();
-  }
-});
-
-function navigatePeriod(dir) {
-  if (drillPeriod.length === 7) {
-    const [y, m] = drillPeriod.split('-').map(Number);
-    const d = new Date(y, m - 1 + dir, 1);
-    drillPeriod = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  } else {
-    const [y, m, day] = drillPeriod.split('-').map(Number);
-    const d = new Date(y, m - 1, day + dir);
-    drillPeriod = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-  navLabel.textContent = formatPeriodLabel(drillPeriod);
-  renderDrillChart();
-}
-
-async function loadByHourForDay(dayKey) {
-  if (byHourDayCache[dayKey]) return byHourDayCache[dayKey];
-  const result = (await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourForDay', dayKey })) ?? {};
-  byHourDayCache[dayKey] = result;
-  return result;
-}
-
-async function renderDrillChart() {
-  const isMonthDrill = drillPeriod.length === 7;
-  let data;
-
-  if (isMonthDrill) {
-    const [y, m] = drillPeriod.split('-').map(Number);
-    const daysInMonth = new Date(y, m, 0).getDate();
-    data = Array.from({ length: daysInMonth }, (_, i) => {
-      const dayKey = `${drillPeriod}-${String(i + 1).padStart(2, '0')}`;
-      return { label: String(i + 1), range: dayKey, ...entrySum(byDayCache?.[dayKey]) };
-    });
-  } else {
-    const hourData = await loadByHourForDay(drillPeriod);
-    data = Array.from({ length: 24 }, (_, h) => {
-      const hourKey = `${drillPeriod}T${String(h).padStart(2, '0')}`;
-      const hStr = String(h).padStart(2, '0');
-      const hNext = String(h + 1).padStart(2, '0');
-      return { label: `${hStr}:00`, range: `${hStr}:00–${hNext}:00`, ...entrySum(hourData[hourKey]) };
-    });
-  }
-
-  if (isMonthDrill) {
-    drillMonthLink.style.display = 'none';
-  } else {
-    const monthKey = drillPeriod.slice(0, 7);
-    drillMonthLink.textContent = formatPeriodLabel(monthKey);
-    drillMonthLink.style.display = 'block';
-    drillMonthLink.onclick = () => enterDrill(monthKey, null);
-  }
-
-  const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
-  drillNoData.style.display = hasData ? 'none' : 'block';
-  drillChart.style.display = hasData ? 'block' : 'none';
-  if (!hasData) return;
-
-  const onBarClick = isMonthDrill ? r => enterDrill(r, drillPeriod) : null;
-  const maxTimeMs = isMonthDrill ? 24 * 3600000 : 3600000;
-
-  if (drillMetric === 'time') {
-    drawBarChart({
-      svgEl: drillChart,
-      tooltipEl: drillTooltip,
-      data,
-      maxVal: maxTimeMs,
-      getValue: d => d.activeMs,
-      formatVal: formatMs,
-      color: '#2563eb',
-      onBarClick,
-    });
-  } else {
-    drawBarChart({
-      svgEl: drillChart,
-      tooltipEl: drillTooltip,
-      data,
-      maxVal: Math.max(...data.map(d => d.visits), 1),
-      getValue: d => d.visits,
-      formatVal: v => `${Math.round(v)}`,
-      formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
-      hideMidTicks: maxVal => maxVal < 3,
-      color: '#ea580c',
-      onBarClick,
-    });
-  }
-}
-
 function drawChart(data, range) {
   const onBarClick = range !== 'today' ? r => enterDrill(r, null) : null;
   const hasAudio = data.some(d => d.audioMs > 0);
-  document.querySelector('#time-legend').style.display = hasAudio ? 'block' : 'none';
+  document.querySelector('#time-legend').style.display = hasAudio ? 'flex' : 'none';
 
   const timeSeriesData = hasAudio
     ? [

@@ -1,4 +1,4 @@
-export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick }) {
+export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick, fontSize = '10' }) {
   const W = 600, H = 260, padLeft = 52, padRight = 8, padTop = 10, padBottom = 40;
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
@@ -17,7 +17,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   const hideMid = hideMidTicks(maxVal);
   const gridlines = yTicks.map(({ y, val }, i) => {
     const isMid = i === 1 || i === 2;
-    const label = hideMid && isMid ? '' : `<text x="${padLeft - 6}" y="${y + 4}" text-anchor="end" font-size="10" fill="${axisColor}">${formatVal(val)}</text>`;
+    const label = hideMid && isMid ? '' : `<text x="${padLeft - 6}" y="${y + 4}" text-anchor="end" font-size="${fontSize}" fill="${axisColor}">${formatVal(val)}</text>`;
     return `<line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="${gridColor}" stroke-width="1"/>${label}`;
   }).join('');
 
@@ -25,7 +25,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   if (series) {
     rects = data.map((d, i) => {
       const showLabel = i % labelEvery === 0 || i === data.length - 1;
-      const labelHtml = showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="${axisColor}">${d.label}</text>` : '';
+      const labelHtml = showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" font-size="${fontSize}" fill="${axisColor}">${d.label}</text>` : '';
 
       const nonZeroBars = series.filter(s => s.getValue(d) > 0);
       const numBarsInColumn = nonZeroBars.length;
@@ -58,7 +58,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
         <rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="2"></rect>
         <rect x="${x}" y="${padTop}" width="${barW}" height="${innerH}" fill="transparent"
           data-range="${d.range}" data-val="${val}"></rect>
-        ${showLabel ? `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="${axisColor}">${d.label}</text>` : ''}
+        ${showLabel ? `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" font-size="${fontSize}" fill="${axisColor}">${d.label}</text>` : ''}
       `;
     }).join('');
   }
