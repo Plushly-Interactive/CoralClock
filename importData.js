@@ -150,20 +150,31 @@ async function handleTtImport(json) {
   }
 
   const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
-  for (const [day, sites] of Object.entries(data)) {
-    analyticsByDay[day] ??= {};
-    for (const [siteId, entry] of Object.entries(sites)) {
-      if (analyticsByDay[day][siteId]) {
-        analyticsByDay[day][siteId].activeMs += entry.activeMs;
-        analyticsByDay[day][siteId].visits += entry.visits;
-      } else {
-        analyticsByDay[day][siteId] = entry;
-      }
-    }
+
+  const conflicts = Object.keys(data).filter((d) => analyticsByDay[d]).sort();
+
+  if (conflicts.length === 0) {
+    await applyTtImport(data, analyticsByDay, new Set());
+    return;
   }
-  await chrome.storage.local.set({ analyticsByDay });
+
+  pendingImport = { importData: data, currentByDay: analyticsByDay, conflicts, isTt: true };
+  showConflictView(conflicts);
+}
+
+async function applyTtImport(importData, currentByDay, daysToReplace) {
+  const daysToTake = new Set();
+  for (const d of Object.keys(importData)) {
+    if (!currentByDay[d] || daysToReplace.has(d)) daysToTake.add(d);
+  }
+
+  for (const d of daysToTake) {
+    currentByDay[d] = importData[d];
+  }
+
+  await chrome.storage.local.set({ analyticsByDay: currentByDay });
   await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
-  setStatus(activeStatusEl, 'Imported!');
+  setStatus(activeStatusEl, `Imported ${daysToTake.size} day(s)`);
   window.dispatchEvent(new CustomEvent('importcomplete'));
 }
 
@@ -240,13 +251,25 @@ conflictCancel.addEventListener('click', () => {
 });
 
 conflictKeep.addEventListener('click', async () => {
-  const { importByDay, importByHour, currentByDay, currentByHour } = pendingImport;
-  hideConflictView();
-  await applyBgImport(importByDay, importByHour, currentByDay, currentByHour, new Set());
+  if (pendingImport.isTt) {
+    const { importData, currentByDay } = pendingImport;
+    hideConflictView();
+    await applyTtImport(importData, currentByDay, new Set());
+  } else {
+    const { importByDay, importByHour, currentByDay, currentByHour } = pendingImport;
+    hideConflictView();
+    await applyBgImport(importByDay, importByHour, currentByDay, currentByHour, new Set());
+  }
 });
 
 conflictReplace.addEventListener('click', async () => {
-  const { importByDay, importByHour, currentByDay, currentByHour, conflicts } = pendingImport;
-  hideConflictView();
-  await applyBgImport(importByDay, importByHour, currentByDay, currentByHour, new Set(conflicts));
+  if (pendingImport.isTt) {
+    const { importData, currentByDay, conflicts } = pendingImport;
+    hideConflictView();
+    await applyTtImport(importData, currentByDay, new Set(conflicts));
+  } else {
+    const { importByDay, importByHour, currentByDay, currentByHour, conflicts } = pendingImport;
+    hideConflictView();
+    await applyBgImport(importByDay, importByHour, currentByDay, currentByHour, new Set(conflicts));
+  }
 });
