@@ -1,7 +1,10 @@
 import { formatMs, drawBarChart } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 
-const siteId = new URLSearchParams(location.search).get('id');
+const params = new URLSearchParams(location.search);
+const siteId = params.get('id');
+const siteIds = params.get('ids')?.split(',') ?? null;
+const isMerged = !!siteIds;
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
 const visitsChart = document.querySelector('#visits-chart');
@@ -28,10 +31,24 @@ peakItem.addEventListener('mouseleave', () => {
   peakTooltip.style.display = 'none';
 });
 
-if (siteId) {
-  const { siteLabel } = resolveSite(siteId);
+function entrySum(obj) {
+  const zero = { activeMs: 0, audioMs: 0, visits: 0 };
+  if (!obj) return zero;
+  if (!isMerged) {
+    const e = obj[siteId];
+    return e ? { activeMs: e.activeMs ?? 0, audioMs: e.audioMs ?? 0, visits: e.visits ?? 0 } : zero;
+  }
+  return siteIds.reduce((acc, id) => {
+    const e = obj[id];
+    if (!e) return acc;
+    return { activeMs: acc.activeMs + (e.activeMs ?? 0), audioMs: acc.audioMs + (e.audioMs ?? 0), visits: acc.visits + (e.visits ?? 0) };
+  }, { ...zero });
+}
+
+if (siteId || siteIds) {
+  const { siteLabel } = resolveSite(siteId ?? siteIds[0]);
   document.querySelector('#site-label').textContent = siteLabel;
-  document.querySelector('#site-id').textContent = siteId;
+  document.querySelector('#site-id').textContent = isMerged ? siteIds.join(', ') : siteId;
   document.title = `BiteGuard — ${siteLabel}`;
 }
 
@@ -77,7 +94,12 @@ async function loadByHour() {
 
 async function loadAvgPerHour(range) {
   if (avgPerHourCache[range]) return;
-  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId, range });
+  if (!isMerged) {
+    avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId, range });
+  } else {
+    const results = await Promise.all(siteIds.map(id => chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId: id, range })));
+    avgPerHourCache[range] = results[0].map((_, h) => results.reduce((sum, r) => sum + r[h], 0));
+  }
 }
 
 function todayDayKey() {
@@ -96,13 +118,7 @@ function render() {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
       const hStr = String(h).padStart(2, '0');
       const hNext = String(h + 1).padStart(2, '0');
-      return {
-        label: `${hStr}:00`,
-        range: `${hStr}:00 - ${hNext}:00`,
-        activeMs: byHourCache[hourKey]?.[siteId]?.activeMs ?? 0,
-        audioMs: byHourCache[hourKey]?.[siteId]?.audioMs ?? 0,
-        visits: byHourCache[hourKey]?.[siteId]?.visits ?? 0,
-      };
+      return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, ...entrySum(byHourCache[hourKey]) };
     });
   } else {
     let dayKeys;
@@ -130,20 +146,15 @@ function render() {
       }
       data = monthKeys.map(month => {
         const days = dayKeys.filter(day => day.startsWith(month));
-        const activeMs = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.activeMs ?? 0), 0);
-        const audioMs = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.audioMs ?? 0), 0);
-        const visits = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.visits ?? 0), 0);
-        return { label: month, range: month, activeMs, audioMs, visits };
+        const totals = days.reduce((acc, day) => {
+          const e = entrySum(byDayCache?.[day]);
+          return { activeMs: acc.activeMs + e.activeMs, audioMs: acc.audioMs + e.audioMs, visits: acc.visits + e.visits };
+        }, { activeMs: 0, audioMs: 0, visits: 0 });
+        return { label: month, range: month, ...totals };
       });
     } else {
       const shortLabel = parseInt(range) <= 30;
-      data = dayKeys.map(day => ({
-        label: shortLabel ? day.slice(5) : day,
-        range: day,
-        activeMs: byDayCache?.[day]?.[siteId]?.activeMs ?? 0,
-        audioMs: byDayCache?.[day]?.[siteId]?.audioMs ?? 0,
-        visits: byDayCache?.[day]?.[siteId]?.visits ?? 0,
-      }));
+      data = dayKeys.map(day => ({ label: shortLabel ? day.slice(5) : day, range: day, ...entrySum(byDayCache?.[day]) }));
     }
   }
 
@@ -167,7 +178,7 @@ function formatTotalTime(ms) {
 
 function renderStats(data, range) {
   const todayKey = todayDayKey();
-  const todayMs = byDayCache?.[todayKey]?.[siteId]?.activeMs ?? 0;
+  const todayMs = entrySum(byDayCache?.[todayKey]).activeMs;
 
   const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
   const totalVisits = data.reduce((s, d) => s + d.visits, 0);
@@ -183,7 +194,7 @@ function renderStats(data, range) {
     })();
     for (const [day, sites] of Object.entries(byDayCache)) {
       if (cutoff && day < cutoff) continue;
-      const ms = sites[siteId]?.activeMs ?? 0;
+      const ms = entrySum(sites).activeMs;
       if (ms > peakMs) { peakMs = ms; peakLabel = day; }
     }
   }

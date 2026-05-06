@@ -150,8 +150,22 @@ header select {
   height: 36px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin: 0;
   flex-shrink: 0;
+}
+
+#merge-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
 }
 
 #dashboard-table {
