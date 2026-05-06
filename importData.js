@@ -1,3 +1,5 @@
+import { resolveSite } from './siteResolution.js';
+
 const TT_VERSION = '4.2.1';
 
 const notification = document.querySelector('#notification');
@@ -139,10 +141,11 @@ async function handleTtImport(json) {
   for (const { host, date, focus, time } of json.__stat__) {
     if (!host || !date || focus == null) continue;
     const dayKey = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
+    const siteId = resolveSite(host).siteId;
     data[dayKey] ??= {};
-    data[dayKey][host] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
-    data[dayKey][host].activeMs += focus;
-    data[dayKey][host].visits += time ?? 0;
+    data[dayKey][siteId] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
+    data[dayKey][siteId].activeMs += focus;
+    data[dayKey][siteId].visits += time ?? 0;
   }
 
   const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
