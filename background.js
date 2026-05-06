@@ -42,6 +42,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     getAvgPerClockHour(msg.siteId, msg.range).then(sendResponse);
     return true;
   }
+  if (msg.type === 'getAnalyticsByHourForDay') {
+    getByHourForDay(msg.dayKey).then(sendResponse);
+    return true;
+  }
   if (msg.type === 'invalidateAnalyticsCache') {
     cachedByDay = null;
     cachedByHour = null;
@@ -67,6 +71,19 @@ async function getByHourToday() {
   const result = {};
   for (let h = 0; h < 24; h++) {
     const hourKey = `${todayKey}T${String(h).padStart(2, '0')}`;
+    if (cachedByHour[hourKey]) result[hourKey] = cachedByHour[hourKey];
+  }
+  return result;
+}
+
+async function getByHourForDay(dayKey) {
+  if (!cachedByHour) {
+    const { analyticsByHour = {} } = await chrome.storage.local.get('analyticsByHour');
+    cachedByHour = analyticsByHour;
+  }
+  const result = {};
+  for (let h = 0; h < 24; h++) {
+    const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
     if (cachedByHour[hourKey]) result[hourKey] = cachedByHour[hourKey];
   }
   return result;

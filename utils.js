@@ -1,4 +1,4 @@
-export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series }) {
+export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick }) {
   const W = 600, H = 260, padLeft = 52, padRight = 8, padTop = 10, padBottom = 40;
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
@@ -9,7 +9,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   const axisColor = rootStyle.getPropertyValue('--color-chart-axis').trim() || '#888';
   const gridColor = rootStyle.getPropertyValue('--color-chart-grid').trim() || '#f0f0f0';
 
-  const yTicks = [0, 0.33, 0.66, 1].map(t => ({
+  const yTicks = [0, 1/3, 2/3, 1].map(t => ({
     val: maxVal * t,
     y: padTop + innerH - Math.round(t * innerH),
   }));
@@ -69,6 +69,10 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   svgEl.innerHTML = gridlines + rects;
 
   svgEl.querySelectorAll('rect[data-range]').forEach(rect => {
+    if (onBarClick) {
+      rect.style.cursor = 'pointer';
+      rect.addEventListener('click', () => onBarClick(rect.dataset.range));
+    }
     rect.addEventListener('mouseenter', () => {
       const text = rect.dataset.series
         ? `${rect.dataset.series}: ${rect.dataset.format} / ${rect.dataset.range}`

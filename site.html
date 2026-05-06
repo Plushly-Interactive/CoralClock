@@ -103,6 +103,32 @@
       </div>
     </div>
 
+    <div id="drill-view" style="display:none">
+      <div id="drill-top">
+        <button id="nav-close">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Overview
+        </button>
+        <button id="drill-month-link" style="display:none"></button>
+      </div>
+      <div id="drill-controls">
+        <div id="nav-strip">
+          <button id="nav-prev">&#8592;</button>
+          <span id="nav-label"></span>
+          <button id="nav-next">&#8594;</button>
+        </div>
+        <div id="drill-toggle">
+          <button id="drill-time-btn" class="drill-toggle-btn active">Time</button>
+          <button id="drill-visits-btn" class="drill-toggle-btn">Visits</button>
+        </div>
+      </div>
+      <div id="drill-chart-wrapper">
+        <svg id="drill-chart"></svg>
+        <div id="drill-tooltip" class="tooltip"></div>
+        <p id="drill-no-data" class="chart-note" style="display:none">No data for this period.</p>
+      </div>
+    </div>
+
     <p id="empty-msg">No data for this period.</p>
 
     <script type="module" src="site.js"></script>
