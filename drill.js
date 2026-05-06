@@ -183,7 +183,7 @@ async function renderDrillChart() {
       color: '#2563eb',
       series,
       onBarClick,
-      fontSize: '9',
+      fontSize: '8',
     });
   } else {
     ctx.drillLegend.style.display = 'none';
@@ -198,7 +198,7 @@ async function renderDrillChart() {
       hideMidTicks: maxVal => maxVal < 3,
       color: '#ea580c',
       onBarClick,
-      fontSize: '9',
+      fontSize: '8',
     });
   }
 }
