@@ -42,7 +42,7 @@ export function removeWindowSite(windowId) {
   }
 }
 
-export function addAudibleTab(tabId, siteId) {
+export function addAudibleTab(tabId, siteId, countVisit = true) {
   if (!siteId) return;
   const oldSiteId = audibleTabToSite.get(tabId);
   if (oldSiteId === siteId) return;
@@ -59,7 +59,7 @@ export function addAudibleTab(tabId, siteId) {
   s.wasAudible = true;
   if (!wasTracked) {
     s.startedAt = Date.now();
-    pendingVisits.set(siteId, (pendingVisits.get(siteId) ?? 0) + 1);
+    if (countVisit) pendingVisits.set(siteId, (pendingVisits.get(siteId) ?? 0) + 1);
   }
 }
 
@@ -139,7 +139,7 @@ export async function initTracking() {
   for (const tab of tabs) {
     if (tab.mutedInfo?.muted) continue;
     const siteId = siteIdFromUrl(tab.url);
-    if (siteId) addAudibleTab(tab.id, siteId);
+    if (siteId) addAudibleTab(tab.id, siteId, false);
   }
 }
 
@@ -168,7 +168,7 @@ export async function reconcileWindows() {
   for (const tab of audibleTabs) {
     if (tab.mutedInfo?.muted) continue;
     const siteId = siteIdFromUrl(tab.url);
-    if (siteId) addAudibleTab(tab.id, siteId);
+    if (siteId) addAudibleTab(tab.id, siteId, false);
   }
 }
 
