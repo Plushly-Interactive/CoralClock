@@ -1,10 +1,12 @@
 import { formatMs, drawBarChart } from './utils.js';
 import { resolveSite } from './siteResolution.js';
+import { initDrill, isInDrillMode, enterDrill } from './drill.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
 const siteIds = params.get('ids')?.split(',') ?? null;
 const isMerged = !!siteIds;
+const effectiveSiteIds = isMerged ? siteIds : [siteId];
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
 const visitsChart = document.querySelector('#visits-chart');
@@ -56,6 +58,26 @@ let byDayCache = null;
 let byHourCache = null;
 const avgPerHourCache = {};
 
+const chartsGrid = document.querySelector('#charts-grid');
+const drillView = document.querySelector('#drill-view');
+const navLabel = document.querySelector('#nav-label');
+const navPrev = document.querySelector('#nav-prev');
+const navNext = document.querySelector('#nav-next');
+const navClose = document.querySelector('#nav-close');
+const drillChart = document.querySelector('#drill-chart');
+const drillTooltip = document.querySelector('#drill-tooltip');
+const drillLegend = document.querySelector('#drill-legend');
+const drillTimeBtn = document.querySelector('#drill-time-btn');
+const drillVisitsBtn = document.querySelector('#drill-visits-btn');
+const drillHourBtn = document.querySelector('#drill-hour-btn');
+const drillNoData = document.querySelector('#drill-no-data');
+const drillMonthLink = document.querySelector('#drill-month-link');
+const drillStats = document.querySelector('#drill-stats');
+const drillScaleBtn = document.querySelector('#drill-scale-btn');
+const drillKeysBtn = document.querySelector('#drill-keys-btn');
+const drillKeysPopup = document.querySelector('#drill-keys-popup');
+const backBtn = document.querySelector('#back-btn');
+
 const hourlyChart = document.querySelector('#hourly-chart');
 const hourlyTooltip = document.querySelector('#hourly-tooltip');
 const hourlyChartContainer = document.querySelector('#hourly-chart-container');
@@ -63,7 +85,7 @@ const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
 const hourlySubheading = document.querySelector('#hourly-subheading');
 
 function hourlySubheadingText(range) {
-  if (range === 'all') return '(all days, excluding today)';
+  if (range === 'all') return '(all days from earliest data, excluding today)';
   return `(past ${parseInt(range)} days, excluding today)`;
 }
 
@@ -77,6 +99,33 @@ rangeSelect.addEventListener('change', () => {
 
 window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
+});
+
+initDrill({
+  chartsGrid,
+  drillView,
+  rangeSelect,
+  backBtn,
+  navPrev,
+  navNext,
+  navClose,
+  drillTimeBtn,
+  drillVisitsBtn,
+  drillHourBtn,
+  drillChart,
+  drillTooltip,
+  drillLegend,
+  drillNoData,
+  drillMonthLink,
+  drillStats,
+  drillScaleBtn,
+  drillKeysBtn,
+  drillKeysPopup,
+  navLabel,
+  entrySum,
+  get byDayCache() { return byDayCache; },
+  siteIds: effectiveSiteIds,
+  render,
 });
 
 loadAndRender();
@@ -94,12 +143,7 @@ async function loadByHour() {
 
 async function loadAvgPerHour(range) {
   if (avgPerHourCache[range]) return;
-  if (!isMerged) {
-    avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId, range });
-  } else {
-    const results = await Promise.all(siteIds.map(id => chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId: id, range })));
-    avgPerHourCache[range] = results[0].map((_, h) => results.reduce((sum, r) => sum + r[h], 0));
-  }
+  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range });
 }
 
 function todayDayKey() {
@@ -108,6 +152,7 @@ function todayDayKey() {
 }
 
 function render() {
+  if (isInDrillMode()) return;
   const range = rangeSelect.value;
 
   let data;
@@ -123,7 +168,23 @@ function render() {
   } else {
     let dayKeys;
     if (range === 'all') {
-      dayKeys = Object.keys(byDayCache ?? {}).sort();
+      const allDays = Object.keys(byDayCache ?? {}).sort();
+      const daysWithSiteData = allDays.filter(day => {
+        const entry = entrySum(byDayCache[day]);
+        return entry.activeMs > 0 || entry.visits > 0;
+      });
+      if (daysWithSiteData.length > 0) {
+        const firstDay = daysWithSiteData[0];
+        const [y1, m1, d1] = firstDay.split('-').map(Number);
+        const today = new Date();
+        const [y2, m2, d2] = [today.getFullYear(), today.getMonth() + 1, today.getDate()];
+        dayKeys = [];
+        for (let date = new Date(y1, m1 - 1, d1); date <= new Date(y2, m2 - 1, d2); date.setDate(date.getDate() + 1)) {
+          dayKeys.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`);
+        }
+      } else {
+        dayKeys = [];
+      }
     } else {
       const now = new Date();
       dayKeys = Array.from({ length: parseInt(range) }, (_, i) => {
@@ -159,11 +220,12 @@ function render() {
   }
 
   const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
+  document.querySelector('#time-legend').style.display = 'none';
   timeChart.style.display = hasData ? 'block' : 'none';
   visitsChart.style.display = hasData ? 'block' : 'none';
   timeNoData.style.display = hasData ? 'none' : 'block';
   visitsNoData.style.display = hasData ? 'none' : 'block';
-  if (hasData) drawChart(data);
+  if (hasData) drawChart(data, range);
   renderHourly(range);
   renderStats(data, range);
 }
@@ -218,7 +280,7 @@ function renderStats(data, range) {
   document.querySelector('#stat-visits').textContent = totalVisits > 0 ? totalVisits : '—';
   document.querySelector('#stat-avg-session').textContent = totalVisits > 0 ? formatMs(totalMs / totalVisits) : '—';
 
-  const subheadings = { today: '(today)', '7': '(last 7 days)', '30': '(last 30 days)', '180': '(last 6 months)', '365': '(last year)', all: '(all time)' };
+  const subheadings = { today: '(today)', '7': '(last 7 days)', '30': '(last 30 days)', '180': '(last 6 months)', '365': '(last year)', all: '(all time, from earliest data)' };
   document.querySelector('#overview-subheading').textContent = subheadings[range] ?? '';
 }
 
@@ -268,9 +330,11 @@ function renderHourly(range) {
   });
 }
 
-function drawChart(data) {
+function drawChart(data, range) {
+  const timeOnClick = range !== 'today' ? r => enterDrill(r, null, 'time') : null;
+  const visitsOnClick = range !== 'today' ? r => enterDrill(r, null, 'visits') : null;
   const hasAudio = data.some(d => d.audioMs > 0);
-  document.querySelector('#time-legend').style.display = hasAudio ? 'block' : 'none';
+  document.querySelector('#time-legend').style.display = hasAudio ? 'flex' : 'none';
 
   const timeSeriesData = hasAudio
     ? [
@@ -288,6 +352,7 @@ function drawChart(data) {
     formatVal: ms => formatMs(ms),
     color: '#2563eb',
     series: timeSeriesData,
+    onBarClick: timeOnClick,
   });
 
   drawBarChart({
@@ -300,6 +365,7 @@ function drawChart(data) {
     formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
     hideMidTicks: maxVal => maxVal < 3,
     color: '#ea580c',
+    onBarClick: visitsOnClick,
   });
 }
 

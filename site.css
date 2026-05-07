@@ -3,6 +3,7 @@ body {
   padding: 0;
   margin: 0;
   height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -199,4 +200,241 @@ header {
   font-size: 13px;
   color: var(--color-text-muted);
   margin: 8px 0 0;
+}
+
+.time-legend {
+  font-size: 11px;
+  color: #888;
+  gap: 16px;
+  align-items: center;
+}
+
+.time-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.time-legend span span {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+#drill-month-link {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-accent);
+  text-align: center;
+  padding: 0;
+}
+
+#drill-month-link:hover {
+  text-decoration: underline;
+}
+
+#nav-prev,
+#nav-next,
+#nav-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-accent);
+  font-size: 16px;
+  padding: 4px 6px;
+  line-height: 1;
+}
+
+#nav-prev:hover,
+#nav-next:hover {
+  opacity: 0.7;
+}
+
+#drill-top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
+#nav-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  justify-self: start;
+}
+
+#nav-close:hover {
+  color: var(--color-text);
+}
+
+#drill-keys-btn {
+  position: absolute;
+  right: 0;
+  top: 44%;
+  transform: translateY(-50%);
+  z-index: 11;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 15px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+#drill-keys-btn:hover {
+  color: var(--color-text);
+}
+
+#drill-keys-popup {
+  position: absolute;
+  right: 36px;
+  top: 44%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+#drill-keys-title {
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+#drill-keys-popup kbd {
+  background: var(--color-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 11px;
+  color: var(--color-text);
+}
+
+#nav-label {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 140px;
+  text-align: center;
+}
+
+#drill-view {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  padding: 24px;
+  gap: 8px;
+}
+
+#drill-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 8px 0;
+}
+
+#nav-strip {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+#drill-legend {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+
+#drill-toggle {
+  grid-column: 3;
+  grid-row: 2;
+  justify-self: end;
+  display: flex;
+  gap: 2px;
+  background: var(--color-border);
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.drill-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  width: 85px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.drill-toggle-btn.active {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+#drill-scale-label {
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: start;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#drill-stats {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+}
+
+#drill-chart-wrapper {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#drill-chart {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
 }

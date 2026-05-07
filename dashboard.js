@@ -106,7 +106,7 @@ function hourlySubheadingText(range) {
 
 async function loadAvgPerHour(range) {
   if (avgPerHourCache[range]) return;
-  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId: null, range });
+  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds: null, range });
 }
 
 function renderHourly(range) {
@@ -249,9 +249,14 @@ function render() {
   topChartContainer.style.display = 'block';
   renderHourly(range);
 
-  const top = [...getDisplayRows()].sort((a, b) => b.activeMs - a.activeMs).slice(0, 5).map(row => ({
-    label: row.siteLabel, range: row.siteIds ? row.siteIds.join(', ') : row.siteId, activeMs: row.activeMs,
-  }));
+  const top = [...getDisplayRows()].sort((a, b) => b.activeMs - a.activeMs).slice(0, 5).map(row => {
+    const ids = row.siteIds ?? [row.siteId];
+    const href = ids.length === 1
+      ? `site.html?id=${encodeURIComponent(ids[0])}`
+      : `site.html?ids=${encodeURIComponent(ids.join(','))}`;
+    return { label: row.siteLabel, range: ids.join(', '), activeMs: row.activeMs, href };
+  });
+  const hrefByRange = new Map(top.map(d => [d.range, d.href]));
   drawBarChart({
     svgEl: topChart,
     tooltipEl: topTooltip,
@@ -260,6 +265,7 @@ function render() {
     getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
     color: '#10b981',
+    onBarClick: r => { location.href = hrefByRange.get(r); },
   });
 
   renderTable(sortedRows());
