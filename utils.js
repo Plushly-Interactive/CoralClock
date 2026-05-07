@@ -1,5 +1,5 @@
 export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick, fontSize = '10', scale = 'linear' }) {
-  const W = 600, H = 260, padLeft = 52, padRight = 8, padTop = 10, padBottom = 40;
+  const W = 600, H = 260, padLeft = 38, padRight = 8, padTop = 10, padBottom = 40;
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
   const gap = Math.floor(innerW / data.length);

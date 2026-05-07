@@ -47,6 +47,51 @@ export function initDrill(context) {
     renderDrillChart();
   });
 
+  ctx.drillKeysBtn.addEventListener('click', () => {
+    const visible = ctx.drillKeysPopup.style.display !== 'none';
+    ctx.drillKeysPopup.style.display = visible ? 'none' : 'flex';
+    ctx.drillKeysBtn.textContent = visible ? '?' : '×';
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (!drillPeriod) return;
+    if (e.key === ' ') {
+      e.preventDefault();
+      const isMonthDrill = drillPeriod.length === 7;
+      const modes = isMonthDrill ? ['time', 'visits', 'hour'] : ['time', 'visits'];
+      const next = modes[(modes.indexOf(drillMetric) + 1) % modes.length];
+      drillMetric = next;
+      updateDrillButtons();
+      renderDrillChart();
+    } else if (e.key === 'ArrowLeft') { e.preventDefault(); navigatePeriod(-1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); navigatePeriod(1); }
+    else if (e.key === 'ArrowUp') {
+      if (drillPeriod.length !== 10) return;
+      e.preventDefault();
+      enterDrill(drillPeriod.slice(0, 7), null, drillMetric);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      exitDrillCompletely();
+    } else if (e.key === 'ArrowDown') {
+      if (drillPeriod.length !== 7) return;
+      e.preventDefault();
+      const [y, m] = drillPeriod.split('-').map(Number);
+      const daysInMonth = new Date(y, m, 0).getDate();
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dayKey = `${drillPeriod}-${String(i).padStart(2, '0')}`;
+        const entry = ctx.entrySum(ctx.byDayCache?.[dayKey]);
+        if (entry.activeMs > 0 || entry.visits > 0) {
+          enterDrill(dayKey, drillPeriod, drillMetric);
+          break;
+        }
+      }
+    }
+  });
+
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'theme' && drillPeriod) renderDrillChart();
+  });
+
   window.addEventListener('popstate', (e) => {
     if (exitingDrill) {
       exitingDrill = false;
