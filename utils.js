@@ -73,14 +73,14 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
     rects = data.map((d, i) => {
       const val = getValue(d);
       const barH = Math.round(toFrac(val) * innerH);
-      const x = padLeft + i * gap + (gap - barW) / 2;
+      const x = padLeft + i * gap;
       const y = padTop + innerH - barH;
       const showLabel = i % labelEvery === 0 || i === data.length - 1;
       return `
         <rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="2"></rect>
         <rect x="${x}" y="${padTop}" width="${barW}" height="${innerH}" fill="transparent"
           data-range="${d.range}" data-val="${val}"></rect>
-        ${showLabel ? `<text x="${x + barW / 2}" y="${H - 8}" text-anchor="middle" font-size="${fontSize}" fill="${axisColor}">${d.label}</text>` : ''}
+        ${showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" font-size="${fontSize}" fill="${axisColor}">${d.label}</text>` : ''}
       `;
     }).join('');
   }
