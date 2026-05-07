@@ -207,8 +207,9 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
   await recoverFromSnapshot(bootstrapAt);
   await reconcileWindows();
-  await flushToStorage();
-  await saveSnapshot();
+  const flushAt = Date.now();
+  await flushToStorage(flushAt);
+  await saveSnapshot(flushAt);
   cachedByDay = null;
   cachedByHour = null;
 });

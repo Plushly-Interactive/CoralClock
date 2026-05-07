@@ -76,10 +76,9 @@ export function removeAudibleTab(tabId) {
   }
 }
 
-function recordElapsed(siteId) {
+function recordElapsed(siteId, now = Date.now()) {
   const s = siteStates.get(siteId);
   if (!s || (!s.wasActive && !s.wasAudible)) return;
-  const now = Date.now();
   if (now > s.startedAt) {
     const range = [s.startedAt, now];
     if (s.wasActive) {
@@ -98,7 +97,7 @@ function recordElapsed(siteId) {
       pendingOverlap.set(siteId, ranges);
     }
   }
-  s.startedAt = Date.now();
+  s.startedAt = now;
 }
 
 function splitByHour(from, to) {
@@ -174,11 +173,11 @@ export async function reconcileWindows() {
   }
 }
 
-export async function saveSnapshot() {
+export async function saveSnapshot(now = Date.now()) {
   const activeSites = [...new Set(windowToSite.values())].filter(Boolean);
   const audioSites = [...new Set(audibleTabToSite.values())].filter(Boolean);
   if (activeSites.length > 0 || audioSites.length > 0) {
-    await chrome.storage.local.set({ _trackingSnapshot: { activeSites, audioSites, at: Date.now() } });
+    await chrome.storage.local.set({ _trackingSnapshot: { activeSites, audioSites, at: now } });
   } else {
     await chrome.storage.local.remove('_trackingSnapshot');
   }
@@ -219,8 +218,8 @@ export async function recoverFromSnapshot(clipAt) {
   }
 }
 
-export async function flushToStorage() {
-  for (const siteId of siteStates.keys()) recordElapsed(siteId);
+export async function flushToStorage(now = Date.now()) {
+  for (const siteId of siteStates.keys()) recordElapsed(siteId, now);
   if (pendingActive.size === 0 && pendingAudio.size === 0 && pendingOverlap.size === 0 && pendingVisits.size === 0) return;
   const { analyticsByDay = {}, analyticsByHour = {} } =
     await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
@@ -247,7 +246,6 @@ export async function flushToStorage() {
   addRanges(pendingAudio, 'audioMs');
   addRanges(pendingOverlap, 'overlapMs');
 
-  const now = Date.now();
   const day = localDayKey(now);
   const hour = localHourKey(now);
   for (const [siteId, count] of pendingVisits) {

@@ -10,6 +10,7 @@
 - browsing trends algorithms, audio vs active, user habits, improvement sugegstions, etc.
 - for browsing trends: if audio played on website and other sites were browsed during the same time slots, assume the audio playing website was not actively browsed but just an audio background/side window
 - Groups, labels, etc. (can serve as filters in analytics)
+- Settings: look for currently fixed, hardcoded values in code that could be user-defined in settings
 - Three blocking rule modes (per-rule choice):
   - Active browsing mode: counts time based on window visibility / active tab (current approach, refactored)
   - Audio mode: counts time any tab on that site is producing audio, regardless of focus/minimize/window state
