@@ -1,4 +1,4 @@
-export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick, fontSize = '10' }) {
+export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick, fontSize = '10', scale = 'linear' }) {
   const W = 600, H = 260, padLeft = 52, padRight = 8, padTop = 10, padBottom = 40;
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
@@ -9,9 +9,13 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   const axisColor = rootStyle.getPropertyValue('--color-chart-axis').trim() || '#888';
   const gridColor = rootStyle.getPropertyValue('--color-chart-grid').trim() || '#f0f0f0';
 
+  const toFrac = scale === 'sqrt'
+    ? v => maxVal > 0 ? Math.sqrt(v / maxVal) : 0
+    : v => maxVal > 0 ? v / maxVal : 0;
+
   const yTicks = [0, 1/3, 2/3, 1].map(t => ({
     val: maxVal * t,
-    y: padTop + innerH - Math.round(t * innerH),
+    y: padTop + innerH - Math.round(toFrac(maxVal * t) * innerH),
   }));
 
   const hideMid = hideMidTicks(maxVal);
@@ -33,7 +37,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
       let bars = series.map((s, idx) => {
         const val = s.getValue(d);
         if (val === 0) return '';
-        const barH = maxVal > 0 ? Math.round((val / maxVal) * innerH) : 0;
+        const barH = Math.round(toFrac(val) * innerH);
         const y = padTop + innerH - barH;
 
         let x, barWidth;
@@ -68,7 +72,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
     const barW = Math.max(2, Math.floor(gap) - 2);
     rects = data.map((d, i) => {
       const val = getValue(d);
-      const barH = maxVal > 0 ? Math.round((val / maxVal) * innerH) : 0;
+      const barH = Math.round(toFrac(val) * innerH);
       const x = padLeft + i * gap + (gap - barW) / 2;
       const y = padTop + innerH - barH;
       const showLabel = i % labelEvery === 0 || i === data.length - 1;
@@ -165,6 +169,7 @@ export function formatMs(ms) {
   const totalMinutes = Math.floor(ms / 60000);
   const hours = ms / 3600000;
   const days = ms / 86400000;
+  if (ms < 60000)    return `${Math.floor(ms / 1000)}s`;
   if (ms < 3600000)  return `${totalMinutes}m`;
   if (ms < 36000000) { const m = totalMinutes % 60; return m ? `${Math.floor(hours)}h${m}m` : `${Math.floor(hours)}h`; }
   if (ms < 86400000) { const h = hours.toFixed(1); return `${h.endsWith('.0') ? Math.floor(hours) : h}h`; }

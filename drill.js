@@ -4,6 +4,7 @@ let drillPeriod = null;
 let drillPrevPeriod = null;
 let drillDepth = 0;
 let drillMetric = 'time';
+let drillScale = 'sqrt';
 let exitingDrill = false;
 
 const byHourDayCache = {};
@@ -38,6 +39,11 @@ export function initDrill(context) {
   ctx.drillHourBtn.addEventListener('click', () => {
     drillMetric = 'hour';
     updateDrillButtons();
+    renderDrillChart();
+  });
+
+  ctx.drillScaleBtn.addEventListener('change', () => {
+    drillScale = ctx.drillScaleBtn.checked ? 'sqrt' : 'linear';
     renderDrillChart();
   });
 
@@ -210,6 +216,7 @@ async function renderDrillChart() {
       series,
       onBarClick,
       fontSize: '8',
+      scale: drillScale,
     });
   } else if (drillMetric === 'visits') {
     ctx.drillLegend.style.display = 'none';
@@ -225,6 +232,7 @@ async function renderDrillChart() {
       color: '#ea580c',
       onBarClick,
       fontSize: '8',
+      scale: drillScale,
     });
   } else if (drillMetric === 'hour') {
     ctx.drillLegend.style.display = 'none';
@@ -248,15 +256,21 @@ async function renderDrillChart() {
       return { label: `${hStr}:00`, range: `${hStr}:00–${hNext}:00`, activeMs: avgMs };
     });
 
+    const hasHourlyData = hourlyData.some(d => d.activeMs > 0);
+    ctx.drillNoData.style.display = hasHourlyData ? 'none' : 'block';
+    ctx.drillChart.style.display = hasHourlyData ? 'block' : 'none';
+    if (!hasHourlyData) return;
+
     drawBarChart({
       svgEl: ctx.drillChart,
       tooltipEl: ctx.drillTooltip,
       data: hourlyData,
-      maxVal: maxTimeMs,
+      maxVal: 3600000,
       getValue: d => d.activeMs,
       formatVal: formatMs,
       color: '#0891b2',
       fontSize: '8',
+      scale: drillScale,
     });
   }
 }
