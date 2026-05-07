@@ -13,7 +13,9 @@ const hourlyTooltip = document.querySelector('#hourly-tooltip');
 const hourlyChartContainer = document.querySelector('#hourly-chart-container');
 const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
 const hourlySubheading = document.querySelector('#hourly-subheading');
+const topSubheading = document.querySelector('#top-subheading');
 const mergeToggle = document.querySelector('#merge-toggle');
+const hideBriefToggle = document.querySelector('#hide-brief-toggle');
 
 const avgPerHourCache = {};
 
@@ -22,21 +24,24 @@ let sortDir = 'desc';
 let currentRows = [];
 let mergeMode = sessionStorage.getItem('mergeMode') !== 'false';
 mergeToggle.checked = mergeMode;
+let hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
+hideBriefToggle.checked = hideBrief;
 
 const thName = document.querySelector('#th-name');
 const thTime = document.querySelector('#th-time');
+const thAudio = document.querySelector('#th-audio');
 const thVisits = document.querySelector('#th-visits');
 
-const TH_LABELS = { name: 'Site', time: 'Time', visits: 'Visits' };
+const TH_LABELS = { name: 'Site', time: 'Active time', audio: 'Audio playback', visits: 'Visits' };
 
 function updateHeaders() {
-  for (const [col, th] of [['name', thName], ['time', thTime], ['visits', thVisits]]) {
+  for (const [col, th] of [['name', thName], ['time', thTime], ['audio', thAudio], ['visits', thVisits]]) {
     const arrow = sortCol === col ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
     th.textContent = TH_LABELS[col] + arrow;
   }
 }
 
-[['name', thName], ['time', thTime], ['visits', thVisits]].forEach(([col, th]) => {
+[['name', thName], ['time', thTime], ['audio', thAudio], ['visits', thVisits]].forEach(([col, th]) => {
   th.style.cursor = 'pointer';
   th.addEventListener('click', () => {
     if (sortCol === col) {
@@ -45,6 +50,7 @@ function updateHeaders() {
       sortCol = col;
       sortDir = col === 'name' ? 'asc' : 'desc';
     }
+    renderTopChart();
     renderTable(sortedRows());
   });
 });
@@ -53,16 +59,18 @@ function groupRows(rows) {
   const groups = {};
   for (const row of rows) {
     const key = row.siteLabel;
-    if (!groups[key]) groups[key] = { siteLabel: key, siteIds: [], activeMs: 0, visits: 0 };
+    if (!groups[key]) groups[key] = { siteLabel: key, siteIds: [], activeMs: 0, audioMs: 0, visits: 0 };
     groups[key].siteIds.push(row.siteId);
     groups[key].activeMs += row.activeMs;
+    groups[key].audioMs += row.audioMs;
     groups[key].visits += row.visits;
   }
   return Object.values(groups);
 }
 
 function getDisplayRows() {
-  return mergeMode ? groupRows(currentRows) : currentRows;
+  const rows = mergeMode ? groupRows(currentRows) : currentRows;
+  return hideBrief ? rows.filter(r => r.activeMs >= 60_000 || r.audioMs >= 60_000) : rows;
 }
 
 function sortedRows() {
@@ -70,6 +78,7 @@ function sortedRows() {
     let cmp;
     if (sortCol === 'name') cmp = a.siteLabel.localeCompare(b.siteLabel);
     else if (sortCol === 'time') cmp = a.activeMs - b.activeMs;
+    else if (sortCol === 'audio') cmp = a.audioMs - b.audioMs;
     else cmp = a.visits - b.visits;
     return sortDir === 'desc' ? -cmp : cmp;
   });
@@ -77,7 +86,7 @@ function sortedRows() {
 
 function renderTable(rows) {
   tbody.innerHTML = rows.map(row => {
-    const { siteLabel, activeMs, visits } = row;
+    const { siteLabel, activeMs, audioMs, visits } = row;
     const ids = row.siteIds;
     const href = ids
       ? (ids.length === 1
@@ -90,6 +99,7 @@ function renderTable(rows) {
     return `<tr class="clickable" data-href="${href}">
       <td><span class="site-label">${siteLabel}</span><span class="site-id">${subtitle}</span></td>
       <td>${formatMs(activeMs)}</td>
+      <td>${formatMs(audioMs)}</td>
       <td>${visits}</td>
     </tr>`;
   }).join('');
@@ -160,6 +170,12 @@ mergeToggle.addEventListener('change', () => {
   render();
 });
 
+hideBriefToggle.addEventListener('change', () => {
+  hideBrief = hideBriefToggle.checked;
+  sessionStorage.setItem('hideBrief', hideBrief);
+  render();
+});
+
 window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
 });
@@ -216,6 +232,35 @@ function dayKeys(range) {
   return keys;
 }
 
+const TOP_SUBHEADING = { time: '(active time)', audio: '(audio playback)', visits: '(visits)' };
+const TOP_COLOR = { time: '#2563eb', audio: '#7c3aed', visits: '#ea580c' };
+
+function renderTopChart() {
+  const col = sortCol === 'name' ? 'time' : sortCol;
+  topSubheading.textContent = TOP_SUBHEADING[col];
+  const getVal = col === 'audio' ? r => r.audioMs : col === 'visits' ? r => r.visits : r => r.activeMs;
+  const fmt = col === 'visits' ? v => String(Math.round(v)) : formatMs;
+
+  const top = [...getDisplayRows()].sort((a, b) => getVal(b) - getVal(a)).slice(0, 5).map(row => {
+    const ids = row.siteIds ?? [row.siteId];
+    const href = ids.length === 1
+      ? `site.html?id=${encodeURIComponent(ids[0])}`
+      : `site.html?ids=${encodeURIComponent(ids.join(','))}`;
+    return { label: row.siteLabel, range: ids.join(', '), val: getVal(row), href };
+  });
+  const hrefByRange = new Map(top.map(d => [d.range, d.href]));
+  drawBarChart({
+    svgEl: topChart,
+    tooltipEl: topTooltip,
+    data: top,
+    maxVal: Math.max(...top.map(d => d.val), 1),
+    getValue: d => d.val,
+    formatVal: fmt,
+    color: TOP_COLOR[col],
+    onBarClick: r => { location.href = hrefByRange.get(r); },
+  });
+}
+
 function render() {
   const range = rangeSelect.value;
   const byDay = byDayCache ?? {};
@@ -226,15 +271,16 @@ function render() {
   for (const [day, sites] of Object.entries(byDay)) {
     if (allowed && !allowed.includes(day)) continue;
     for (const [siteId, entry] of Object.entries(sites)) {
-      totals[siteId] ??= { activeMs: 0, visits: 0 };
+      totals[siteId] ??= { activeMs: 0, audioMs: 0, visits: 0 };
       totals[siteId].activeMs += entry.activeMs;
+      totals[siteId].audioMs += entry.audioMs ?? 0;
       totals[siteId].visits += entry.visits;
     }
   }
 
-  currentRows = Object.entries(totals).map(([siteId, { activeMs, visits }]) => {
+  currentRows = Object.entries(totals).map(([siteId, { activeMs, audioMs, visits }]) => {
     const { siteLabel } = resolveSite(siteId);
-    return { siteId, siteLabel, activeMs, visits };
+    return { siteId, siteLabel, activeMs, audioMs, visits };
   });
 
   if (currentRows.length === 0) {
@@ -249,24 +295,6 @@ function render() {
   topChartContainer.style.display = 'block';
   renderHourly(range);
 
-  const top = [...getDisplayRows()].sort((a, b) => b.activeMs - a.activeMs).slice(0, 5).map(row => {
-    const ids = row.siteIds ?? [row.siteId];
-    const href = ids.length === 1
-      ? `site.html?id=${encodeURIComponent(ids[0])}`
-      : `site.html?ids=${encodeURIComponent(ids.join(','))}`;
-    return { label: row.siteLabel, range: ids.join(', '), activeMs: row.activeMs, href };
-  });
-  const hrefByRange = new Map(top.map(d => [d.range, d.href]));
-  drawBarChart({
-    svgEl: topChart,
-    tooltipEl: topTooltip,
-    data: top,
-    maxVal: Math.max(...top.map(d => d.activeMs)),
-    getValue: d => d.activeMs,
-    formatVal: ms => formatMs(ms),
-    color: '#10b981',
-    onBarClick: r => { location.href = hrefByRange.get(r); },
-  });
-
+  renderTopChart();
   renderTable(sortedRows());
 }
