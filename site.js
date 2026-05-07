@@ -6,6 +6,7 @@ const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
 const siteIds = params.get('ids')?.split(',') ?? null;
 const isMerged = !!siteIds;
+const effectiveSiteIds = isMerged ? siteIds : [siteId];
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
 const visitsChart = document.querySelector('#visits-chart');
@@ -68,6 +69,7 @@ const drillTooltip = document.querySelector('#drill-tooltip');
 const drillLegend = document.querySelector('#drill-legend');
 const drillTimeBtn = document.querySelector('#drill-time-btn');
 const drillVisitsBtn = document.querySelector('#drill-visits-btn');
+const drillHourBtn = document.querySelector('#drill-hour-btn');
 const drillNoData = document.querySelector('#drill-no-data');
 const drillMonthLink = document.querySelector('#drill-month-link');
 const backBtn = document.querySelector('#back-btn');
@@ -79,7 +81,7 @@ const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
 const hourlySubheading = document.querySelector('#hourly-subheading');
 
 function hourlySubheadingText(range) {
-  if (range === 'all') return '(all days, excluding today)';
+  if (range === 'all') return '(all days from earliest data, excluding today)';
   return `(past ${parseInt(range)} days, excluding today)`;
 }
 
@@ -105,6 +107,7 @@ initDrill({
   navClose,
   drillTimeBtn,
   drillVisitsBtn,
+  drillHourBtn,
   drillChart,
   drillTooltip,
   drillLegend,
@@ -113,6 +116,7 @@ initDrill({
   navLabel,
   entrySum,
   get byDayCache() { return byDayCache; },
+  siteIds: effectiveSiteIds,
   render,
 });
 
@@ -131,12 +135,7 @@ async function loadByHour() {
 
 async function loadAvgPerHour(range) {
   if (avgPerHourCache[range]) return;
-  if (!isMerged) {
-    avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId, range });
-  } else {
-    const results = await Promise.all(siteIds.map(id => chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId: id, range })));
-    avgPerHourCache[range] = results[0].map((_, h) => results.reduce((sum, r) => sum + r[h], 0));
-  }
+  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range });
 }
 
 function todayDayKey() {
@@ -161,7 +160,23 @@ function render() {
   } else {
     let dayKeys;
     if (range === 'all') {
-      dayKeys = Object.keys(byDayCache ?? {}).sort();
+      const allDays = Object.keys(byDayCache ?? {}).sort();
+      const daysWithSiteData = allDays.filter(day => {
+        const entry = entrySum(byDayCache[day]);
+        return entry.activeMs > 0 || entry.visits > 0;
+      });
+      if (daysWithSiteData.length > 0) {
+        const firstDay = daysWithSiteData[0];
+        const [y1, m1, d1] = firstDay.split('-').map(Number);
+        const today = new Date();
+        const [y2, m2, d2] = [today.getFullYear(), today.getMonth() + 1, today.getDate()];
+        dayKeys = [];
+        for (let date = new Date(y1, m1 - 1, d1); date <= new Date(y2, m2 - 1, d2); date.setDate(date.getDate() + 1)) {
+          dayKeys.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`);
+        }
+      } else {
+        dayKeys = [];
+      }
     } else {
       const now = new Date();
       dayKeys = Array.from({ length: parseInt(range) }, (_, i) => {
@@ -257,7 +272,7 @@ function renderStats(data, range) {
   document.querySelector('#stat-visits').textContent = totalVisits > 0 ? totalVisits : '—';
   document.querySelector('#stat-avg-session').textContent = totalVisits > 0 ? formatMs(totalMs / totalVisits) : '—';
 
-  const subheadings = { today: '(today)', '7': '(last 7 days)', '30': '(last 30 days)', '180': '(last 6 months)', '365': '(last year)', all: '(all time)' };
+  const subheadings = { today: '(today)', '7': '(last 7 days)', '30': '(last 30 days)', '180': '(last 6 months)', '365': '(last year)', all: '(all time, from earliest data)' };
   document.querySelector('#overview-subheading').textContent = subheadings[range] ?? '';
 }
 

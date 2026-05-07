@@ -25,15 +25,19 @@ export function initDrill(context) {
 
   ctx.drillTimeBtn.addEventListener('click', () => {
     drillMetric = 'time';
-    ctx.drillTimeBtn.classList.add('active');
-    ctx.drillVisitsBtn.classList.remove('active');
+    updateDrillButtons();
     renderDrillChart();
   });
 
   ctx.drillVisitsBtn.addEventListener('click', () => {
     drillMetric = 'visits';
-    ctx.drillVisitsBtn.classList.add('active');
-    ctx.drillTimeBtn.classList.remove('active');
+    updateDrillButtons();
+    renderDrillChart();
+  });
+
+  ctx.drillHourBtn.addEventListener('click', () => {
+    drillMetric = 'hour';
+    updateDrillButtons();
     renderDrillChart();
   });
 
@@ -97,13 +101,9 @@ function exitDrillCompletely() {
 }
 
 function updateDrillButtons() {
-  if (drillMetric === 'time') {
-    ctx.drillTimeBtn.classList.add('active');
-    ctx.drillVisitsBtn.classList.remove('active');
-  } else {
-    ctx.drillVisitsBtn.classList.add('active');
-    ctx.drillTimeBtn.classList.remove('active');
-  }
+  ctx.drillTimeBtn.classList.toggle('active', drillMetric === 'time');
+  ctx.drillVisitsBtn.classList.toggle('active', drillMetric === 'visits');
+  ctx.drillHourBtn.classList.toggle('active', drillMetric === 'hour');
 }
 
 function formatPeriodLabel(period) {
@@ -138,6 +138,11 @@ async function loadByHourForDay(dayKey) {
 
 async function renderDrillChart() {
   const isMonthDrill = drillPeriod.length === 7;
+  ctx.drillHourBtn.style.display = isMonthDrill ? 'block' : 'none';
+  if (!isMonthDrill && drillMetric === 'hour') {
+    drillMetric = 'time';
+    updateDrillButtons();
+  }
   let data;
 
   if (isMonthDrill) {
@@ -197,7 +202,7 @@ async function renderDrillChart() {
       onBarClick,
       fontSize: '8',
     });
-  } else {
+  } else if (drillMetric === 'visits') {
     ctx.drillLegend.style.display = 'none';
     drawBarChart({
       svgEl: ctx.drillChart,
@@ -210,6 +215,38 @@ async function renderDrillChart() {
       hideMidTicks: maxVal => maxVal < 3,
       color: '#ea580c',
       onBarClick,
+      fontSize: '8',
+    });
+  } else if (drillMetric === 'hour') {
+    ctx.drillLegend.style.display = 'none';
+    let hourlyData;
+    let dayKeys;
+    if (isMonthDrill) {
+      const [y, m] = drillPeriod.split('-').map(Number);
+      const daysInMonth = new Date(y, m, 0).getDate();
+      dayKeys = [];
+      for (let i = 1; i <= daysInMonth; i++) {
+        dayKeys.push(`${drillPeriod}-${String(i).padStart(2, '0')}`);
+      }
+    } else {
+      dayKeys = [drillPeriod];
+    }
+
+    const avgPerHours = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds: ctx.siteIds, range: null, dayKeys });
+    hourlyData = avgPerHours.map((avgMs, h) => {
+      const hStr = String(h).padStart(2, '0');
+      const hNext = String(h + 1).padStart(2, '0');
+      return { label: `${hStr}:00`, range: `${hStr}:00–${hNext}:00`, activeMs: avgMs };
+    });
+
+    drawBarChart({
+      svgEl: ctx.drillChart,
+      tooltipEl: ctx.drillTooltip,
+      data: hourlyData,
+      maxVal: maxTimeMs,
+      getValue: d => d.activeMs,
+      formatVal: formatMs,
+      color: '#0891b2',
       fontSize: '8',
     });
   }

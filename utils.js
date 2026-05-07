@@ -110,13 +110,12 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
         }
       } else {
         const val = Number(rect.dataset.val);
-        if (val === 0) {
-          tooltipEl.textContent = rect.dataset.range;
+        let text = val === 0 ? rect.dataset.range : formatTooltip(val) + '<br>' + rect.dataset.range;
+        if (onBarClick) text += '<br>(click to open detailed chart)';
+        if (onBarClick || val > 0) {
+          tooltipEl.innerHTML = text;
         } else {
-          const text = formatTooltip(val);
-          html = text + '<br>' + rect.dataset.range;
-          if (onBarClick) html += '<br>(click to open detailed chart)';
-          tooltipEl.innerHTML = html;
+          tooltipEl.textContent = text;
         }
       }
       tooltipEl.style.display = 'block';

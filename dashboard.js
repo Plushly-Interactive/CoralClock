@@ -106,7 +106,7 @@ function hourlySubheadingText(range) {
 
 async function loadAvgPerHour(range) {
   if (avgPerHourCache[range]) return;
-  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId: null, range });
+  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds: null, range });
 }
 
 function renderHourly(range) {
