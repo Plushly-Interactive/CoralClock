@@ -72,6 +72,7 @@ const drillVisitsBtn = document.querySelector('#drill-visits-btn');
 const drillHourBtn = document.querySelector('#drill-hour-btn');
 const drillNoData = document.querySelector('#drill-no-data');
 const drillMonthLink = document.querySelector('#drill-month-link');
+const drillStats = document.querySelector('#drill-stats');
 const backBtn = document.querySelector('#back-btn');
 
 const hourlyChart = document.querySelector('#hourly-chart');
@@ -113,6 +114,7 @@ initDrill({
   drillLegend,
   drillNoData,
   drillMonthLink,
+  drillStats,
   navLabel,
   entrySum,
   get byDayCache() { return byDayCache; },

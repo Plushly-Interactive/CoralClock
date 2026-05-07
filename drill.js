@@ -175,6 +175,15 @@ async function renderDrillChart() {
   ctx.drillNoData.style.display = hasData ? 'none' : 'block';
   ctx.drillChart.style.display = hasData ? 'block' : 'none';
   ctx.drillLegend.style.display = 'none';
+
+  const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
+  const totalVisits = data.reduce((s, d) => s + d.visits, 0);
+  const stats = [];
+  if (totalMs > 0) stats.push(`Total: ${formatMs(totalMs)}`);
+  if (totalVisits > 0) stats.push(`Visits: ${totalVisits}`);
+  if (totalMs > 0 && totalVisits > 0) stats.push(`Avg/visit: ${formatMs(totalMs / totalVisits)}`);
+  ctx.drillStats.innerHTML = stats.map(s => `<span>${s}</span>`).join('');
+
   if (!hasData) return;
 
   const onBarClick = isMonthDrill ? r => enterDrill(r, drillPeriod, drillMetric) : null;
