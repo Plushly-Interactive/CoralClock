@@ -12,6 +12,8 @@ console.log('BiteGuard: background started');
 
 let cachedByDay = null;
 let cachedByHour = null;
+let bootstrapAt;
+let coldStart = false;
 
 chrome.alarms.get('flush').then(existing => {
   if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
@@ -19,11 +21,13 @@ chrome.alarms.get('flush').then(existing => {
 const bootstrapDone = bootstrap();
 
 chrome.runtime.onStartup.addListener(() => {
+  coldStart = true;
   chrome.storage.local.remove('_trackingSnapshot');
 });
 
 async function bootstrap() {
   await ensureStorageVersion();
+  bootstrapAt = Date.now();
   await initTracking();
 }
 
@@ -148,11 +152,13 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
 // --- Tab / window events ---
 
 chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
+  await bootstrapDone;
   const tab = await chrome.tabs.get(tabId);
   setWindowSite(windowId, siteIdFromUrl(tab.url));
 });
 
 chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
+  await bootstrapDone;
   if (changeInfo.status === 'complete' && tab.active) {
     setWindowSite(tab.windowId, siteIdFromUrl(tab.url));
   }
@@ -173,17 +179,20 @@ chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   }
 });
 
-chrome.tabs.onRemoved.addListener((tabId) => {
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  await bootstrapDone;
   removeAudibleTab(tabId);
 });
 
 chrome.windows.onCreated.addListener(async (window) => {
+  await bootstrapDone;
   if (window.state === 'minimized') return;
   const [tab] = await chrome.tabs.query({ windowId: window.id, active: true });
   setWindowSite(window.id, siteIdFromUrl(tab?.url));
 });
 
-chrome.windows.onRemoved.addListener((windowId) => {
+chrome.windows.onRemoved.addListener(async (windowId) => {
+  await bootstrapDone;
   removeWindowSite(windowId);
 });
 
@@ -192,7 +201,11 @@ chrome.windows.onRemoved.addListener((windowId) => {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'flush') return;
   await bootstrapDone;
-  await recoverFromSnapshot();
+  if (coldStart) {
+    await chrome.storage.local.remove('_trackingSnapshot');
+    coldStart = false;
+  }
+  await recoverFromSnapshot(bootstrapAt);
   await reconcileWindows();
   await flushToStorage();
   await saveSnapshot();

@@ -121,8 +121,10 @@ export function setWindowSite(windowId, newSiteId) {
   if (!oldSiteId && !newSiteId) return undefined;
   if (oldSiteId) removeWindowSite(windowId);
   if (newSiteId) {
+    const existing = siteStates.get(newSiteId);
+    const wasTracked = !!existing && (existing.wasActive || existing.wasAudible);
     addWindowSite(windowId, newSiteId);
-    pendingVisits.set(newSiteId, (pendingVisits.get(newSiteId) ?? 0) + 1);
+    if (!wasTracked) pendingVisits.set(newSiteId, (pendingVisits.get(newSiteId) ?? 0) + 1);
   }
   return newSiteId;
 }
@@ -185,7 +187,7 @@ export async function saveSnapshot() {
 const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
 
 let _recovered = false;
-export async function recoverFromSnapshot() {
+export async function recoverFromSnapshot(clipAt) {
   if (_recovered) return;
   _recovered = true;
   const { _trackingSnapshot: snap } = await chrome.storage.local.get('_trackingSnapshot');
@@ -195,22 +197,23 @@ export async function recoverFromSnapshot() {
     await chrome.storage.local.remove('_trackingSnapshot');
     return;
   }
+  const endAt = Math.min(clipAt ?? now, now);
   // backward compat: old snapshots used `sites` for active windows only
   const activeSites = snap.activeSites ?? snap.sites ?? [];
   const audioSites = snap.audioSites ?? [];
   const activeSiteSet = new Set(activeSites);
   for (const siteId of activeSites) {
     const ranges = pendingActive.get(siteId) ?? [];
-    ranges.push([snap.at, now]);
+    ranges.push([snap.at, endAt]);
     pendingActive.set(siteId, ranges);
   }
   for (const siteId of audioSites) {
     const ranges = pendingAudio.get(siteId) ?? [];
-    ranges.push([snap.at, now]);
+    ranges.push([snap.at, endAt]);
     pendingAudio.set(siteId, ranges);
     if (activeSiteSet.has(siteId)) {
       const overlapRanges = pendingOverlap.get(siteId) ?? [];
-      overlapRanges.push([snap.at, now]);
+      overlapRanges.push([snap.at, endAt]);
       pendingOverlap.set(siteId, overlapRanges);
     }
   }
