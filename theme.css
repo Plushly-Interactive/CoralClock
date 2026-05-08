@@ -18,6 +18,10 @@
   --color-tooltip-text: #ffffff;
   --color-chart-axis: #888;
   --color-chart-grid: #f0f0f0;
+
+  --color-brand-red: #74322a;
+  --color-brand-blue: #97aabe;
+  --color-brand-white: white;
 }
 
 html.dark {
@@ -62,4 +66,29 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-input);
+}
+
+#brand {
+  display: grid;
+  grid-auto-columns: min-content;
+  justify-items: right;
+  gap: 2.5px;
+}
+
+#brand-logo {
+  width: 100%;
+  max-width: 70.31px;
+}
+
+#brand-name {
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.brand-bite {
+  color: var(--color-brand-red);
+}
+
+.brand-guard {
+  color: var(--color-brand-blue);
 }
