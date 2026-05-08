@@ -178,7 +178,7 @@ header {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   color: var(--color-accent);
   text-align: center;
   padding: 0;
@@ -215,7 +215,7 @@ header {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   color: var(--color-text-muted);
   justify-self: start;
 }
@@ -329,7 +329,7 @@ header {
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   color: var(--color-text-muted);
   width: 85px;
   display: flex;
