@@ -260,7 +260,7 @@ async function renderDrillChart() {
       color: '#2563eb',
       series,
       onBarClick,
-      fontSize: '8',
+
       scale: drillScale,
     });
   } else if (drillMetric === 'visits') {
@@ -276,7 +276,7 @@ async function renderDrillChart() {
       hideMidTicks: maxVal => maxVal < 3,
       color: '#ea580c',
       onBarClick,
-      fontSize: '8',
+
       scale: drillScale,
     });
   } else if (drillMetric === 'hour') {
@@ -314,7 +314,7 @@ async function renderDrillChart() {
       getValue: d => d.activeMs,
       formatVal: formatMs,
       color: '#0891b2',
-      fontSize: '8',
+
       scale: drillScale,
     });
   }

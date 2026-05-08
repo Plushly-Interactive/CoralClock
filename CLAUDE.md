@@ -17,11 +17,12 @@
 - No abstractions or helpers until there is a concrete reason for them.
 - Do not write migration code along with functional code. Suggest it after you're done with the functional code.
 
-## JavaScript / HTML
+## JavaScript / HTML / CSS
 - Every interactive DOM element must have an `id`. Always select with `querySelector('#id')` in JavaScript, never `getElementById`.
 - Use classes for CSS styling (shared styles across elements). Use ids for JS selection. An element can have both.
 - Always prefix unused parameters with _.
 - SVG <title> tooltips are unreliable in Chromium, never use them.
+- Never duplicate CSS code, use shared classes as much as possible.
 
 ## Communication
 - Explain each step as if I'm learning, not just following along.

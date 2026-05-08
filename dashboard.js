@@ -97,7 +97,7 @@ function renderTable(rows) {
       ? (ids.length === 1 ? ids[0] : `${ids.length} sites`)
       : row.siteId;
     return `<tr class="clickable" data-href="${href}">
-      <td><span class="site-label">${siteLabel}</span><span class="site-id">${subtitle}</span></td>
+      <td><span class="site-label">${siteLabel}</span><span class="site-id text-meta">${subtitle}</span></td>
       <td>${formatMs(activeMs)}</td>
       <td>${formatMs(audioMs)}</td>
       <td>${visits}</td>

@@ -7,7 +7,7 @@
 body {
   width: 300px;
   font-family: system-ui, sans-serif;
-  font-size: 14px;
+  font-size: var(--font-md);
   color: var(--color-text);
 }
 
@@ -88,7 +88,7 @@ html.dark #sun-icon {
   color: var(--color-text);
   text-align: left;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-sm);
 }
 
 #theme-dropdown button:hover {
@@ -112,7 +112,7 @@ html.dark #sun-icon {
   border-radius: 4px;
   background: var(--color-bg);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-md);
   color: var(--color-accent);
   white-space: nowrap;
 }
@@ -123,7 +123,7 @@ html.dark #sun-icon {
 
 #rules-title {
   padding: 12px 16px 0;
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 600;
   color: var(--color-text-dim);
   margin: 0 0 8px;
@@ -136,7 +136,7 @@ html.dark #sun-icon {
   padding: 16px;
   text-align: center;
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--font-base);
   min-height: 40px;
   display: flex;
   align-items: center;
@@ -155,7 +155,7 @@ html.dark #sun-icon {
   border: none;
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-md);
   color: var(--color-accent);
 }
 
@@ -180,7 +180,7 @@ html.dark #sun-icon {
   padding: 8px;
   border: 1px solid var(--color-border-input);
   border-radius: 4px;
-  font-size: 14px;
+  font-size: var(--font-md);
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -196,7 +196,7 @@ html.dark #sun-icon {
   padding: 6px 8px;
   border: 1px solid var(--color-border-input);
   border-radius: 4px;
-  font-size: 14px;
+  font-size: var(--font-md);
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -205,14 +205,14 @@ html.dark #sun-icon {
   padding: 6px 8px;
   border: 1px solid var(--color-border-input);
   border-radius: 4px;
-  font-size: 14px;
+  font-size: var(--font-md);
   background: var(--color-bg);
   color: var(--color-text);
   flex: 1;
 }
 
 .form-row span {
-  font-size: 14px;
+  font-size: var(--font-md);
   color: var(--color-text);
 }
 
@@ -223,7 +223,7 @@ html.dark #sun-icon {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-md);
 }
 
 .btn-primary:hover {
@@ -254,7 +254,7 @@ html.dark #sun-icon {
 }
 
 .rule-info span {
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--color-text-secondary);
 }
 
@@ -263,7 +263,7 @@ html.dark #sun-icon {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--font-lg);
   padding: 4px;
   color: var(--color-text-secondary);
   border-radius: 4px;

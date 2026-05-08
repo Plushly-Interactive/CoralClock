@@ -27,7 +27,7 @@
           <div id="storage-bar-track">
             <div id="storage-bar-fill"></div>
           </div>
-          <span id="storage-bar-label"></span>
+          <span id="storage-bar-label" class="text-meta"></span>
         </div>
       </div>
     </header>
@@ -35,7 +35,7 @@
     <div id="io-modal-overlay" hidden>
       <div id="io-modal" role="dialog" aria-labelledby="io-modal-title" aria-modal="true">
         <div id="io-modal-header">
-          <h2 id="io-modal-title">Import / Export data</h2>
+          <h2 id="io-modal-title" class="dialog-title">Import / Export data</h2>
           <button id="io-modal-close" aria-label="Close">&times;</button>
         </div>
         <div id="io-modal-body">
@@ -79,10 +79,10 @@
             </section>
           </div>
           <div id="io-conflict-view" hidden>
-            <h3 id="io-conflict-title">
+            <h3 id="io-conflict-title" class="dialog-title">
               <span id="io-conflict-warning-symbol" aria-hidden="true">⚠</span>Conflicting days
             </h3>
-            <p id="io-conflict-desc">
+            <p id="io-conflict-desc" class="io-section-desc">
               The following days exist both in your current data and the imported file.
               Choose what to do — the choice applies to all listed days.
             </p>
@@ -100,18 +100,18 @@
     <div id="dashboard-grid">
       <div id="dashboard-charts-col">
         <div class="chart-container" id="top-chart-container">
-          <h2 class="chart-heading">Top 5 sites <span id="top-subheading" class="chart-subheading"></span></h2>
+          <h2 class="chart-heading">Top 5 sites <span id="top-subheading" class="chart-subheading text-meta"></span></h2>
           <svg id="top-chart"></svg>
-          <div class="tooltip" id="top-tooltip"></div>
+          <div class="tooltip text-meta" id="top-tooltip"></div>
         </div>
 
         <div class="chart-container" id="hourly-chart-container">
           <h2 class="chart-heading">
             Average per clock hour
-            <span id="hourly-subheading" class="chart-subheading"></span>
+            <span id="hourly-subheading" class="chart-subheading text-meta"></span>
           </h2>
           <svg id="hourly-chart"></svg>
-          <div class="tooltip" id="hourly-tooltip"></div>
+          <div class="tooltip text-meta" id="hourly-tooltip"></div>
           <p id="hourly-not-relevant" class="chart-note" style="display:none">Not relevant for "Today".</p>
         </div>
       </div>
@@ -119,8 +119,8 @@
       <div id="dashboard-table-col">
         <h2 class="chart-heading" id="dashboard-table-heading">
           All browsed sites
-          <label id="merge-label"><input type="checkbox" id="merge-toggle"> Merge by name</label>
-          <label id="hide-brief-label"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
+          <label id="merge-label" class="table-filter text-meta"><input type="checkbox" id="merge-toggle"> Merge by name</label>
+          <label id="hide-brief-label" class="table-filter text-meta"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
         </h2>
         <table id="dashboard-table">
           <thead>

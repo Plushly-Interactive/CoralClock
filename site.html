@@ -21,7 +21,7 @@
       <div id="header-center">
         <div id="site-title">
           <span id="site-label"></span>
-          <span id="site-id"></span>
+          <span id="site-id" class="text-meta"></span>
         </div>
         <select id="range-select">
           <option value="today">Today</option>
@@ -38,7 +38,7 @@
       <div id="time-chart-container" class="chart-container">
         <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
           <h2 class="chart-heading" style="margin: 0;">Time spent</h2>
-          <div id="time-legend" class="time-legend" style="display: none; margin-left: auto;">
+          <div id="time-legend" class="time-legend text-meta" style="display: none; margin-left: auto;">
             <span>
               <span style="background: #2563eb;"></span>
               Active browsing
@@ -50,12 +50,12 @@
           </div>
         </div>
         <svg id="time-chart"></svg>
-        <div id="time-tooltip" class="tooltip"></div>
+        <div id="time-tooltip" class="tooltip text-meta"></div>
         <p id="time-no-data" class="chart-note" style="display:none">No data for this period.</p>
       </div>
 
       <div id="stats-container" class="chart-container">
-        <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading"></span></h2>
+        <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading text-meta"></span></h2>
         <div id="stats-list">
           <div class="stat-item">
             <span class="stat-label">Today</span>
@@ -85,20 +85,20 @@
             <span class="stat-value" id="stat-avg-session"></span>
           </div>
         </div>
-        <div class="tooltip" id="peak-tooltip"></div>
+        <div class="tooltip text-meta" id="peak-tooltip"></div>
       </div>
 
       <div id="visits-chart-container" class="chart-container">
         <h2 class="chart-heading">Visits</h2>
         <svg id="visits-chart"></svg>
-        <div id="visits-tooltip" class="tooltip"></div>
+        <div id="visits-tooltip" class="tooltip text-meta"></div>
         <p id="visits-no-data" class="chart-note" style="display:none">No data for this period.</p>
       </div>
 
       <div id="hourly-chart-container" class="chart-container">
-        <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading"></span></h2>
+        <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading text-meta"></span></h2>
         <svg id="hourly-chart"></svg>
-        <div id="hourly-tooltip" class="tooltip"></div>
+        <div id="hourly-tooltip" class="tooltip text-meta"></div>
         <p id="hourly-not-relevant" class="chart-note" style="display:none">Not relevant for "Today".</p>
       </div>
     </div>
@@ -117,7 +117,7 @@
           <span id="nav-label"></span>
           <button id="nav-next">&#8594;</button>
         </div>
-        <div id="drill-legend" class="time-legend" style="display: none;">
+        <div id="drill-legend" class="time-legend text-meta" style="display: none;">
           <span>
             <span style="background: #2563eb;"></span>
             Active browsing
@@ -127,8 +127,8 @@
             Audio playback
           </span>
         </div>
-        <label id="drill-scale-label"><input type="checkbox" id="drill-scale-btn" checked> Enhance readbility (√x scale)</label>
-        <div id="drill-stats"></div>
+        <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn" checked> Enhance readbility (√x scale)</label>
+        <div id="drill-stats" class="text-meta"></div>
         <div id="drill-toggle">
           <button id="drill-time-btn" class="drill-toggle-btn active">Time</button>
           <button id="drill-visits-btn" class="drill-toggle-btn">Visits</button>
@@ -137,7 +137,7 @@
       </div>
       <div id="drill-chart-wrapper">
         <button id="drill-keys-btn">&#215;</button>
-        <div id="drill-keys-popup">
+        <div id="drill-keys-popup" class="tooltip text-meta">
           <div id="drill-keys-title">Keyboard shortcuts</div>
           <div><kbd>←</kbd><kbd>→</kbd> Navigate period</div>
           <div><kbd>↑</kbd> Go to month (day → month)</div>
@@ -146,7 +146,7 @@
           <div><kbd>Esc</kbd> Exit to overview</div>
         </div>
         <svg id="drill-chart"></svg>
-        <div id="drill-tooltip" class="tooltip"></div>
+        <div id="drill-tooltip" class="tooltip text-meta"></div>
         <p id="drill-no-data" class="chart-note" style="display:none">No data for this period.</p>
       </div>
     </div>

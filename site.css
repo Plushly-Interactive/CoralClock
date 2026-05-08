@@ -44,13 +44,11 @@ header {
 }
 
 #site-label {
-  font-size: 16px;
+  font-size: var(--font-lg);
   font-weight: 600;
 }
 
 #site-id {
-  font-size: 12px;
-  color: var(--color-text-muted);
   font-weight: 400;
 }
 
@@ -65,34 +63,9 @@ header {
 }
 
 .chart-container {
-  position: relative;
   padding: 16px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-}
-
-.chart-heading {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-dim);
-  margin: 0 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.tooltip {
-  display: none;
-  position: absolute;
-  background: var(--color-tooltip-bg);
-  color: var(--color-tooltip-text);
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  pointer-events: none;
-  white-space: nowrap;
-}
-
-.chart-container {
   min-height: 0;
 }
 
@@ -142,20 +115,15 @@ header {
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.stat-value {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--color-text);
-}
 
 .stat-sub {
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--color-text-muted);
   vertical-align: middle;
 }
@@ -171,7 +139,7 @@ header {
 }
 
 .stat-info {
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 700;
   color: var(--color-text-faint);
   margin-left: 4px;
@@ -187,24 +155,8 @@ header {
   margin-bottom: 16px;
 }
 
-.chart-subheading {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--color-text-muted);
-  text-transform: none;
-  letter-spacing: 0;
-  margin-left: 6px;
-}
-
-.chart-note {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin: 8px 0 0;
-}
 
 .time-legend {
-  font-size: 11px;
-  color: #888;
   gap: 16px;
   align-items: center;
 }
@@ -226,7 +178,7 @@ header {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--color-accent);
   text-align: center;
   padding: 0;
@@ -243,7 +195,7 @@ header {
   border: none;
   cursor: pointer;
   color: var(--color-accent);
-  font-size: 16px;
+  font-size: var(--font-lg);
   padding: 4px 6px;
   line-height: 1;
 }
@@ -263,7 +215,7 @@ header {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--color-text-muted);
   justify-self: start;
 }
@@ -283,7 +235,7 @@ header {
   border-radius: 50%;
   width: 28px;
   height: 28px;
-  font-size: 15px;
+  font-size: var(--font-lg);
   color: var(--color-text-muted);
   cursor: pointer;
   display: flex;
@@ -298,22 +250,14 @@ header {
 }
 
 #drill-keys-popup {
-  position: absolute;
   right: 36px;
   top: 44%;
   transform: translateY(-50%);
-  z-index: 10;
-  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 12px;
-  color: var(--color-text-muted);
   display: flex;
   flex-direction: column;
   gap: 4px;
-  white-space: nowrap;
+  pointer-events: auto;
+  color: var(--color-text-muted);
 }
 
 #drill-keys-title {
@@ -326,12 +270,12 @@ header {
   background: var(--color-border);
   border-radius: 3px;
   padding: 1px 5px;
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--color-text);
 }
 
 #nav-label {
-  font-size: 14px;
+  font-size: var(--font-md);
   font-weight: 500;
   min-width: 140px;
   text-align: center;
@@ -385,7 +329,7 @@ header {
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--color-text-muted);
   width: 85px;
   display: flex;
@@ -400,12 +344,11 @@ header {
   font-weight: 600;
 }
 
+
 #drill-scale-label {
   grid-column: 1;
   grid-row: 2;
   justify-self: start;
-  font-size: 12px;
-  color: var(--color-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -415,8 +358,6 @@ header {
 #drill-stats {
   grid-column: 2;
   grid-row: 2;
-  font-size: 12px;
-  color: var(--color-text-muted);
   display: flex;
   justify-content: center;
   gap: 24px;

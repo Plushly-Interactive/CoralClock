@@ -6,7 +6,6 @@
 
 body {
   font-family: system-ui, sans-serif;
-  font-size: 18px;
   color: var(--color-text);
   margin: 0;
   padding: 0;
@@ -96,50 +95,11 @@ header select {
   padding: 5px 8px;
   border: 1px solid var(--color-border-input);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--font-base);
   background: var(--color-bg);
   color: var(--color-text);
 }
 
-.chart-container {
-  position: relative;
-}
-
-.chart-heading {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-dim);
-  margin: 0 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.tooltip {
-  display: none;
-  position: absolute;
-  background: var(--color-tooltip-bg);
-  color: var(--color-tooltip-text);
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  pointer-events: none;
-  white-space: nowrap;
-}
-
-.chart-subheading {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--color-text-muted);
-  text-transform: none;
-  letter-spacing: 0;
-  margin-left: 6px;
-}
-
-.chart-note {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin: 8px 0 0;
-}
 
 #dashboard-table-heading {
   padding: 0 20px;
@@ -155,16 +115,13 @@ header select {
   margin-left: auto;
 }
 
-#merge-label,
-#hide-brief-label {
+.table-filter {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
   font-weight: 400;
   text-transform: none;
   letter-spacing: 0;
-  color: var(--color-text-muted);
   cursor: pointer;
   user-select: none;
 }
@@ -215,7 +172,7 @@ header select {
 #dashboard-table th {
   text-align: left;
   padding: 8px 20px;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
@@ -228,6 +185,7 @@ header select {
 
 #dashboard-table td {
   padding: 10px 20px;
+  font-size: var(--font-lg);
   border-bottom: 1px solid var(--color-bg-subtle);
   vertical-align: middle;
 }
@@ -236,18 +194,17 @@ header select {
 #dashboard-table td:nth-child(3),
 #dashboard-table td:nth-child(4) {
   white-space: nowrap;
-  color: var(--color-text-medium);
+  color: var(--color-text);
 }
 
 .site-label {
   display: block;
+  font-size: var(--font-lg);
   font-weight: 500;
 }
 
 .site-id {
   display: block;
-  font-size: 12px;
-  color: var(--color-text-muted);
 }
 
 #storage-bar-container {
@@ -272,14 +229,12 @@ header select {
 }
 
 #storage-bar-label {
-  font-size: 11px;
-  color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 #seed-btn {
   padding: 6px 12px;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--color-text-muted);
   background: none;
   border: 1px solid var(--color-border-faint);
@@ -293,7 +248,7 @@ header select {
 
 #import-btn {
   padding: 5px 10px;
-  font-size: 13px;
+  font-size: var(--font-base);
   color: var(--color-text-dim);
   background: none;
   border: 1px solid var(--color-border-input);
@@ -353,15 +308,15 @@ tr.clickable:hover td {
   border-bottom: 1px solid var(--color-border);
 }
 
-#io-modal-title {
-  font-size: 16px;
+.dialog-title {
+  font-size: var(--font-lg);
   font-weight: 600;
 }
 
 #io-modal-close {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: var(--font-lg);
   line-height: 1;
   cursor: pointer;
   color: var(--color-text-secondary);
@@ -397,13 +352,13 @@ tr.clickable:hover td {
 }
 
 .io-section-title {
-  font-size: 14px;
+  font-size: var(--font-md);
   font-weight: 600;
   margin-bottom: 6px;
 }
 
 .io-section-desc {
-  font-size: 13px;
+  font-size: var(--font-base);
   color: var(--color-text-secondary);
   margin-bottom: 12px;
   line-height: 1.4;
@@ -413,7 +368,7 @@ tr.clickable:hover td {
   list-style: none;
   padding: 0;
   margin: 0 0 16px 0;
-  font-size: 13px;
+  font-size: var(--font-base);
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -464,7 +419,7 @@ tr.clickable:hover td {
   background: var(--color-bg);
   color: var(--color-text);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 500;
 }
 
@@ -477,8 +432,6 @@ tr.clickable:hover td {
 }
 
 #io-conflict-title {
-  font-size: 15px;
-  font-weight: 600;
   margin-bottom: 8px;
 }
 
@@ -487,12 +440,6 @@ tr.clickable:hover td {
   margin-right: 6px;
 }
 
-#io-conflict-desc {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  margin-bottom: 12px;
-  line-height: 1.4;
-}
 
 #io-conflict-list {
   list-style: none;
@@ -503,7 +450,7 @@ tr.clickable:hover td {
   border: 1px solid var(--color-border);
   border-radius: 4px;
   background: var(--color-bg-subtle);
-  font-size: 13px;
+  font-size: var(--font-base);
   font-family: ui-monospace, monospace;
 }
 
@@ -521,7 +468,7 @@ tr.clickable:hover td {
   border-radius: 6px;
   padding: 14px 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  font-size: 14px;
+  font-size: var(--font-md);
   font-weight: 500;
   z-index: 200;
   max-width: 400px;

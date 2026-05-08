@@ -1,4 +1,9 @@
 :root {
+  --font-sm:   12px;
+  --font-base: 13px;
+  --font-md:   14px;
+  --font-lg:   16px;
+
   --color-bg: #ffffff;
   --color-bg-hover: #f5f5f5;
   --color-bg-subtle: #f0f0f0;
@@ -10,18 +15,14 @@
   --color-text-muted: #888;
   --color-text-faint: #aaa;
   --color-text-dim: #555;
-  --color-text-medium: #444;
   --color-text-strong: #333;
   --color-accent: #2563eb;
   --color-accent-hover: #1d4ed8;
-  --color-tooltip-bg: #1a1a1a;
-  --color-tooltip-text: #ffffff;
-  --color-chart-axis: #888;
+  --color-tooltip-text: #1a1a1a;
   --color-chart-grid: #f0f0f0;
 
   --color-brand-red: #74322a;
   --color-brand-blue: #97aabe;
-  --color-brand-white: white;
 }
 
 html.dark {
@@ -36,13 +37,10 @@ html.dark {
   --color-text-muted: #888;
   --color-text-faint: #666;
   --color-text-dim: #bbb;
-  --color-text-medium: #ccc;
   --color-text-strong: #ddd;
   --color-accent: #4f8fff;
   --color-accent-hover: #2563eb;
-  --color-tooltip-bg: #e8e8e8;
-  --color-tooltip-text: #1a1a1a;
-  --color-chart-axis: #777;
+  --color-tooltip-text: #ffffff;
   --color-chart-grid: #2c2c2c;
 }
 
@@ -91,4 +89,56 @@ body {
 
 .brand-guard {
   color: var(--color-brand-blue);
+}
+
+.stat-value {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.text-meta {
+  font-size: var(--font-sm);
+  color: var(--color-text-muted);
+  fill: var(--color-text-muted);
+}
+
+.chart-container {
+  position: relative;
+}
+
+.chart-heading {
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--color-text-dim);
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.chart-subheading {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 6px;
+}
+
+.chart-note {
+  font-size: var(--font-base);
+  color: var(--color-text-muted);
+  margin: 8px 0 0;
+}
+
+.tooltip {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  background: color-mix(in srgb, var(--color-bg) 80%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border);
+  color: var(--color-tooltip-text);
+  padding: 4px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
 }
