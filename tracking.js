@@ -42,7 +42,7 @@ export function removeWindowSite(windowId) {
   }
 }
 
-export function addAudibleTab(tabId, siteId) {
+export function addAudibleTab(tabId, siteId, countVisit = true) {
   if (!siteId) return;
   const oldSiteId = audibleTabToSite.get(tabId);
   if (oldSiteId === siteId) return;
@@ -59,7 +59,7 @@ export function addAudibleTab(tabId, siteId) {
   s.wasAudible = true;
   if (!wasTracked) {
     s.startedAt = Date.now();
-    pendingVisits.set(siteId, (pendingVisits.get(siteId) ?? 0) + 1);
+    if (countVisit) pendingVisits.set(siteId, (pendingVisits.get(siteId) ?? 0) + 1);
   }
 }
 
@@ -76,10 +76,9 @@ export function removeAudibleTab(tabId) {
   }
 }
 
-function recordElapsed(siteId) {
+function recordElapsed(siteId, now = Date.now()) {
   const s = siteStates.get(siteId);
   if (!s || (!s.wasActive && !s.wasAudible)) return;
-  const now = Date.now();
   if (now > s.startedAt) {
     const range = [s.startedAt, now];
     if (s.wasActive) {
@@ -98,7 +97,7 @@ function recordElapsed(siteId) {
       pendingOverlap.set(siteId, ranges);
     }
   }
-  s.startedAt = Date.now();
+  s.startedAt = now;
 }
 
 function splitByHour(from, to) {
@@ -121,8 +120,10 @@ export function setWindowSite(windowId, newSiteId) {
   if (!oldSiteId && !newSiteId) return undefined;
   if (oldSiteId) removeWindowSite(windowId);
   if (newSiteId) {
+    const existing = siteStates.get(newSiteId);
+    const wasTracked = !!existing && (existing.wasActive || existing.wasAudible);
     addWindowSite(windowId, newSiteId);
-    pendingVisits.set(newSiteId, (pendingVisits.get(newSiteId) ?? 0) + 1);
+    if (!wasTracked) pendingVisits.set(newSiteId, (pendingVisits.get(newSiteId) ?? 0) + 1);
   }
   return newSiteId;
 }
@@ -139,7 +140,7 @@ export async function initTracking() {
   for (const tab of tabs) {
     if (tab.mutedInfo?.muted) continue;
     const siteId = siteIdFromUrl(tab.url);
-    if (siteId) addAudibleTab(tab.id, siteId);
+    if (siteId) addAudibleTab(tab.id, siteId, false);
   }
 }
 
@@ -168,15 +169,15 @@ export async function reconcileWindows() {
   for (const tab of audibleTabs) {
     if (tab.mutedInfo?.muted) continue;
     const siteId = siteIdFromUrl(tab.url);
-    if (siteId) addAudibleTab(tab.id, siteId);
+    if (siteId) addAudibleTab(tab.id, siteId, false);
   }
 }
 
-export async function saveSnapshot() {
+export async function saveSnapshot(now = Date.now()) {
   const activeSites = [...new Set(windowToSite.values())].filter(Boolean);
   const audioSites = [...new Set(audibleTabToSite.values())].filter(Boolean);
   if (activeSites.length > 0 || audioSites.length > 0) {
-    await chrome.storage.local.set({ _trackingSnapshot: { activeSites, audioSites, at: Date.now() } });
+    await chrome.storage.local.set({ _trackingSnapshot: { activeSites, audioSites, at: now } });
   } else {
     await chrome.storage.local.remove('_trackingSnapshot');
   }
@@ -185,7 +186,7 @@ export async function saveSnapshot() {
 const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
 
 let _recovered = false;
-export async function recoverFromSnapshot() {
+export async function recoverFromSnapshot(clipAt) {
   if (_recovered) return;
   _recovered = true;
   const { _trackingSnapshot: snap } = await chrome.storage.local.get('_trackingSnapshot');
@@ -195,29 +196,30 @@ export async function recoverFromSnapshot() {
     await chrome.storage.local.remove('_trackingSnapshot');
     return;
   }
+  const endAt = Math.min(clipAt ?? now, now);
   // backward compat: old snapshots used `sites` for active windows only
   const activeSites = snap.activeSites ?? snap.sites ?? [];
   const audioSites = snap.audioSites ?? [];
   const activeSiteSet = new Set(activeSites);
   for (const siteId of activeSites) {
     const ranges = pendingActive.get(siteId) ?? [];
-    ranges.push([snap.at, now]);
+    ranges.push([snap.at, endAt]);
     pendingActive.set(siteId, ranges);
   }
   for (const siteId of audioSites) {
     const ranges = pendingAudio.get(siteId) ?? [];
-    ranges.push([snap.at, now]);
+    ranges.push([snap.at, endAt]);
     pendingAudio.set(siteId, ranges);
     if (activeSiteSet.has(siteId)) {
       const overlapRanges = pendingOverlap.get(siteId) ?? [];
-      overlapRanges.push([snap.at, now]);
+      overlapRanges.push([snap.at, endAt]);
       pendingOverlap.set(siteId, overlapRanges);
     }
   }
 }
 
-export async function flushToStorage() {
-  for (const siteId of siteStates.keys()) recordElapsed(siteId);
+export async function flushToStorage(now = Date.now()) {
+  for (const siteId of siteStates.keys()) recordElapsed(siteId, now);
   if (pendingActive.size === 0 && pendingAudio.size === 0 && pendingOverlap.size === 0 && pendingVisits.size === 0) return;
   const { analyticsByDay = {}, analyticsByHour = {} } =
     await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
@@ -244,7 +246,6 @@ export async function flushToStorage() {
   addRanges(pendingAudio, 'audioMs');
   addRanges(pendingOverlap, 'overlapMs');
 
-  const now = Date.now();
   const day = localDayKey(now);
   const hour = localHourKey(now);
   for (const [siteId, count] of pendingVisits) {

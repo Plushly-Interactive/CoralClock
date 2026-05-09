@@ -1,25 +1,121 @@
-import { formatMs, drawBarChart } from './utils.js';
+import { formatMs, drawBarChart, STAT_LABELS } from './utils.js';
 import { resolveSite } from './siteResolution.js';
+import { initDrill, isInDrillMode, enterDrill } from './drill.js';
 
-const siteId = new URLSearchParams(location.search).get('id');
+const params = new URLSearchParams(location.search);
+const siteId = params.get('id');
+const siteIds = params.get('ids')?.split(',') ?? null;
+const isMerged = !!siteIds;
+const effectiveSiteIds = isMerged ? siteIds : [siteId];
 const rangeSelect = document.querySelector('#range-select');
-const emptyMsg = document.querySelector('#empty-msg');
 const timeChart = document.querySelector('#time-chart');
 const visitsChart = document.querySelector('#visits-chart');
-const timeChartContainer = document.querySelector('#time-chart-container');
-const visitsChartContainer = document.querySelector('#visits-chart-container');
-const audioChartContainer = document.querySelector('#audio-chart-container');
+const timeNoData = document.querySelector('#time-no-data');
+const visitsNoData = document.querySelector('#visits-no-data');
+const peakTooltip = document.querySelector('#peak-tooltip');
+const statsContainer = document.querySelector('#stats-container');
 
-if (siteId) {
-  const { siteLabel } = resolveSite(siteId);
+const statsList = document.querySelector('#stats-list');
+
+const rootStyle = getComputedStyle(document.documentElement);
+
+const topStats = [
+  { label: STAT_LABELS.today, id: 'stat-today' },
+  { label: STAT_LABELS.dailyAvg, id: 'stat-daily-avg' },
+  { label: STAT_LABELS.peakDay, id: 'stat-peak' },
+];
+
+const bottomStats = [
+  { label: STAT_LABELS.totalTime, id: 'stat-total-time' },
+  { label: STAT_LABELS.visits, id: 'stat-visits' },
+  { label: STAT_LABELS.avgSession, id: 'stat-avg-session' },
+];
+
+topStats.forEach((stat, i) => {
+  const item = document.createElement('div');
+  item.className = 'stat-item';
+  if (i === 2) {
+    item.id = 'stat-peak-item';
+    item.innerHTML = `<span class="stat-label">${stat.label}</span><span class="stat-value-row"><span class="stat-value" id="${stat.id}"></span><span id="stat-peak-info" class="stat-info" style="display:none" title="">ⓘ</span></span>`;
+  } else {
+    item.innerHTML = `<span class="stat-label">${stat.label}</span><span class="stat-value" id="${stat.id}"></span>`;
+  }
+  statsList.appendChild(item);
+});
+
+const divider = document.createElement('hr');
+divider.id = 'stats-divider';
+statsList.appendChild(divider);
+
+bottomStats.forEach(stat => {
+  const item = document.createElement('div');
+  item.className = 'stat-item';
+  item.innerHTML = `<span class="stat-label">${stat.label}</span><span class="stat-value" id="${stat.id}"></span>`;
+  statsList.appendChild(item);
+});
+
+const peakItem = document.querySelector('#stat-peak-item');
+const peakInfo = document.querySelector('#stat-peak-info');
+
+peakItem.addEventListener('mouseenter', () => {
+  if (!peakInfo.dataset.date) return;
+  peakTooltip.textContent = peakInfo.dataset.date;
+  peakTooltip.style.display = 'block';
+});
+peakItem.addEventListener('mousemove', (e) => {
+  if (!peakInfo.dataset.date) return;
+  const box = statsContainer.getBoundingClientRect();
+  peakTooltip.style.left = `${e.clientX - box.left + 10}px`;
+  peakTooltip.style.top = `${e.clientY - box.top - 28}px`;
+});
+peakItem.addEventListener('mouseleave', () => {
+  peakTooltip.style.display = 'none';
+});
+
+function entrySum(obj) {
+  const zero = { activeMs: 0, audioMs: 0, visits: 0 };
+  if (!obj) return zero;
+  if (!isMerged) {
+    const e = obj[siteId];
+    return e ? { activeMs: e.activeMs ?? 0, audioMs: e.audioMs ?? 0, visits: e.visits ?? 0 } : zero;
+  }
+  return siteIds.reduce((acc, id) => {
+    const e = obj[id];
+    if (!e) return acc;
+    return { activeMs: acc.activeMs + (e.activeMs ?? 0), audioMs: acc.audioMs + (e.audioMs ?? 0), visits: acc.visits + (e.visits ?? 0) };
+  }, { ...zero });
+}
+
+if (siteId || siteIds) {
+  const { siteLabel } = resolveSite(siteId ?? siteIds[0]);
   document.querySelector('#site-label').textContent = siteLabel;
-  document.querySelector('#site-id').textContent = siteId;
+  document.querySelector('#site-id').textContent = isMerged ? siteIds.join(', ') : siteId;
   document.title = `BiteGuard — ${siteLabel}`;
 }
 
 let byDayCache = null;
 let byHourCache = null;
 const avgPerHourCache = {};
+
+const chartsGrid = document.querySelector('#charts-grid');
+const drillView = document.querySelector('#drill-view');
+const navLabel = document.querySelector('#nav-label');
+const navPrev = document.querySelector('#nav-prev');
+const navNext = document.querySelector('#nav-next');
+const navClose = document.querySelector('#nav-close');
+const drillChart = document.querySelector('#drill-chart');
+const drillTooltip = document.querySelector('#drill-tooltip');
+const drillLegend = document.querySelector('#drill-legend');
+const drillTimeBtn = document.querySelector('#drill-time-btn');
+const drillVisitsBtn = document.querySelector('#drill-visits-btn');
+const drillHourBtn = document.querySelector('#drill-hour-btn');
+const drillNoData = document.querySelector('#drill-no-data');
+const drillMonthLink = document.querySelector('#drill-month-link');
+const drillStats = document.querySelector('#drill-stats');
+const drillScaleBtn = document.querySelector('#drill-scale-btn');
+const drillKeysBtn = document.querySelector('#drill-keys-btn');
+const drillKeysPopup = document.querySelector('#drill-keys-popup');
+const backBtn = document.querySelector('#back-btn');
 
 const hourlyChart = document.querySelector('#hourly-chart');
 const hourlyTooltip = document.querySelector('#hourly-tooltip');
@@ -28,23 +124,74 @@ const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
 const hourlySubheading = document.querySelector('#hourly-subheading');
 
 function hourlySubheadingText(range) {
-  if (range === 'all') return '(all days, excluding today)';
+  if (range === 'all') return '(all days from earliest data, excluding today)';
   return `(past ${parseInt(range)} days, excluding today)`;
 }
 
-const savedRange = sessionStorage.getItem('analyticsRange');
-if (savedRange) rangeSelect.value = savedRange;
+const opts = { today: 'Today', '7': 'Last 7 days', '30': 'Last 30 days', '180': 'Last 6 months', '365': 'Last year', all: 'All time' };
+const savedRange = sessionStorage.getItem('analyticsRange') || '7';
+rangeSelect.dataset.value = savedRange;
+rangeSelect.firstChild.textContent = opts[savedRange];
 
-rangeSelect.addEventListener('change', () => {
-  sessionStorage.setItem('analyticsRange', rangeSelect.value);
-  render();
+rangeSelect.parentElement.querySelector('.dropdown-menu').querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    rangeSelect.dataset.value = btn.value;
+    rangeSelect.firstChild.textContent = btn.textContent;
+    rangeSelect.parentElement.querySelector('.dropdown-menu').classList.remove('open');
+    sessionStorage.setItem('analyticsRange', btn.value);
+    render();
+  });
+});
+
+rangeSelect.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const menu = rangeSelect.parentElement.querySelector('.dropdown-menu');
+  const isOpen = menu.classList.contains('open');
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+  if (!isOpen) menu.classList.add('open');
+});
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+});
+
+window.addEventListener('storage', (e) => {
+  if (e.key === 'theme') render();
+});
+
+initDrill({
+  chartsGrid,
+  drillView,
+  rangeSelect,
+  backBtn,
+  navPrev,
+  navNext,
+  navClose,
+  drillTimeBtn,
+  drillVisitsBtn,
+  drillHourBtn,
+  drillChart,
+  drillTooltip,
+  drillLegend,
+  drillNoData,
+  drillMonthLink,
+  drillStats,
+  drillScaleBtn,
+  drillKeysBtn,
+  drillKeysPopup,
+  navLabel,
+  entrySum,
+  get byDayCache() { return byDayCache; },
+  siteIds: effectiveSiteIds,
+  render,
 });
 
 loadAndRender();
 
 async function loadAndRender() {
   byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
-  if (rangeSelect.value === 'today') await loadByHour();
+  if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
 }
 
@@ -55,7 +202,7 @@ async function loadByHour() {
 
 async function loadAvgPerHour(range) {
   if (avgPerHourCache[range]) return;
-  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteId, range });
+  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range });
 }
 
 function todayDayKey() {
@@ -64,7 +211,8 @@ function todayDayKey() {
 }
 
 function render() {
-  const range = rangeSelect.value;
+  if (isInDrillMode()) return;
+  const range = rangeSelect.dataset.value;
 
   let data;
   if (range === 'today') {
@@ -74,18 +222,28 @@ function render() {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
       const hStr = String(h).padStart(2, '0');
       const hNext = String(h + 1).padStart(2, '0');
-      return {
-        label: `${hStr}:00`,
-        range: `${hStr}:00 - ${hNext}:00`,
-        activeMs: byHourCache[hourKey]?.[siteId]?.activeMs ?? 0,
-        audioMs: byHourCache[hourKey]?.[siteId]?.audioMs ?? 0,
-        visits: byHourCache[hourKey]?.[siteId]?.visits ?? 0,
-      };
+      return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, ...entrySum(byHourCache[hourKey]) };
     });
   } else {
     let dayKeys;
     if (range === 'all') {
-      dayKeys = Object.keys(byDayCache ?? {}).sort();
+      const allDays = Object.keys(byDayCache ?? {}).sort();
+      const daysWithSiteData = allDays.filter(day => {
+        const entry = entrySum(byDayCache[day]);
+        return entry.activeMs > 0 || entry.visits > 0;
+      });
+      if (daysWithSiteData.length > 0) {
+        const firstDay = daysWithSiteData[0];
+        const [y1, m1, d1] = firstDay.split('-').map(Number);
+        const today = new Date();
+        const [y2, m2, d2] = [today.getFullYear(), today.getMonth() + 1, today.getDate()];
+        dayKeys = [];
+        for (let date = new Date(y1, m1 - 1, d1); date <= new Date(y2, m2 - 1, d2); date.setDate(date.getDate() + 1)) {
+          dayKeys.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`);
+        }
+      } else {
+        dayKeys = [];
+      }
     } else {
       const now = new Date();
       dayKeys = Array.from({ length: parseInt(range) }, (_, i) => {
@@ -108,47 +266,98 @@ function render() {
       }
       data = monthKeys.map(month => {
         const days = dayKeys.filter(day => day.startsWith(month));
-        const activeMs = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.activeMs ?? 0), 0);
-        const audioMs = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.audioMs ?? 0), 0);
-        const visits = days.reduce((sum, day) => sum + (byDayCache?.[day]?.[siteId]?.visits ?? 0), 0);
-        return { label: month, range: month, activeMs, audioMs, visits };
+        const totals = days.reduce((acc, day) => {
+          const e = entrySum(byDayCache?.[day]);
+          return { activeMs: acc.activeMs + e.activeMs, audioMs: acc.audioMs + e.audioMs, visits: acc.visits + e.visits };
+        }, { activeMs: 0, audioMs: 0, visits: 0 });
+        return { label: month, range: month, ...totals };
       });
     } else {
       const shortLabel = parseInt(range) <= 30;
-      data = dayKeys.map(day => ({
-        label: shortLabel ? day.slice(5) : day,
-        range: day,
-        activeMs: byDayCache?.[day]?.[siteId]?.activeMs ?? 0,
-        audioMs: byDayCache?.[day]?.[siteId]?.audioMs ?? 0,
-        visits: byDayCache?.[day]?.[siteId]?.visits ?? 0,
-      }));
+      data = dayKeys.map(day => ({ label: shortLabel ? day.slice(5) : day, range: day, ...entrySum(byDayCache?.[day]) }));
     }
   }
 
   const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
-  emptyMsg.style.display = hasData ? 'none' : 'block';
-  timeChartContainer.style.display = hasData ? 'block' : 'none';
-  visitsChartContainer.style.display = hasData ? 'block' : 'none';
-  const hasAudio = data.some(d => d.audioMs > 0);
-  audioChartContainer.style.display = hasAudio ? 'block' : 'none';
-  if (hasData) drawChart(data);
+  document.querySelector('#time-legend').style.display = 'none';
+  timeChart.style.display = hasData ? 'block' : 'none';
+  visitsChart.style.display = hasData ? 'block' : 'none';
+  timeNoData.style.display = hasData ? 'none' : 'block';
+  visitsNoData.style.display = hasData ? 'none' : 'block';
+  if (hasData) drawChart(data, range);
   renderHourly(range);
+  renderStats(data, range);
+}
+
+function formatTotalTime(ms) {
+  const main = formatMs(ms);
+  if (ms < 86400000) return main;
+  const d = ms / 86400000;
+  const dStr = `${d < 10 ? d.toFixed(1).replace(/\.0$/, '') : Math.round(d)}d`;
+  return `${main} (${dStr})`;
+}
+
+function renderStats(data, range) {
+  const todayKey = todayDayKey();
+  const todayMs = entrySum(byDayCache?.[todayKey]).activeMs;
+
+  const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
+  const totalVisits = data.reduce((s, d) => s + d.visits, 0);
+  const activeDays = range !== 'today' ? data.filter(d => d.activeMs > 0).length : 0;
+  const avgMs = activeDays > 0 ? totalMs / activeDays : 0;
+
+  let peakMs = 0, peakLabel = '';
+  if (range !== 'today' && byDayCache) {
+    const cutoff = range === 'all' ? null : (() => {
+      const d = new Date();
+      d.setDate(d.getDate() - (parseInt(range) - 1));
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    })();
+    for (const [day, sites] of Object.entries(byDayCache)) {
+      if (cutoff && day < cutoff) continue;
+      const ms = entrySum(sites).activeMs;
+      if (ms > peakMs) { peakMs = ms; peakLabel = day; }
+    }
+  }
+
+  document.querySelector('#stat-today').textContent = formatMs(todayMs) || '0m';
+  document.querySelector('#stat-daily-avg').textContent = activeDays > 0 ? formatMs(avgMs) : '—';
+  const peakEl = document.querySelector('#stat-peak');
+  peakEl.textContent = peakMs > 0 ? formatMs(peakMs) : '—';
+  peakEl.classList.remove('has-tooltip');
+  peakInfo.style.display = peakMs > 0 ? 'inline' : 'none';
+  peakInfo.dataset.date = peakMs > 0 ? peakLabel : '';
+  peakInfo.title = '';
+  const totalTimeEl = document.querySelector('#stat-total-time');
+  if (totalMs > 0) {
+    const full = formatTotalTime(totalMs);
+    const match = full.match(/^(.+?)(\s*\(.+\))?$/);
+    totalTimeEl.innerHTML = match[2] ? `${match[1]}<span class="stat-sub"> ${match[2]}</span>` : full;
+  } else {
+    totalTimeEl.textContent = '—';
+  }
+  document.querySelector('#stat-visits').textContent = totalVisits > 0 ? totalVisits : '—';
+  document.querySelector('#stat-avg-session').textContent = totalVisits > 0 ? formatMs(totalMs / totalVisits) : '—';
+
+  const subheadings = { today: '(today)', '7': '(last 7 days)', '30': '(last 30 days)', '180': '(last 6 months)', '365': '(last year)', all: '(all time, from earliest data)' };
+  document.querySelector('#overview-subheading').textContent = subheadings[range] ?? '';
 }
 
 function renderHourly(range) {
+  hourlyChartContainer.style.display = 'block';
+
   if (range === 'today') {
     hourlyChart.style.display = 'none';
-    hourlyTooltip.style.display = 'none';
+    hourlyNotRelevant.textContent = 'Not relevant for "Today".';
     hourlyNotRelevant.style.display = 'block';
-    hourlyChartContainer.style.display = 'block';
+    hourlySubheading.textContent = '';
     return;
   }
-  hourlyNotRelevant.style.display = 'none';
-  hourlyChart.style.display = 'block';
+
   hourlySubheading.textContent = hourlySubheadingText(range);
 
   if (!avgPerHourCache[range]) {
-    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.value));
+    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.dataset.value));
     return;
   }
 
@@ -160,10 +369,14 @@ function renderHourly(range) {
 
   const hasData = data.some(d => d.activeMs > 0);
   if (!hasData) {
-    hourlyChartContainer.style.display = 'none';
+    hourlyChart.style.display = 'none';
+    hourlyNotRelevant.textContent = 'No data for past days yet.';
+    hourlyNotRelevant.style.display = 'block';
     return;
   }
-  hourlyChartContainer.style.display = 'block';
+
+  hourlyChart.style.display = 'block';
+  hourlyNotRelevant.style.display = 'none';
 
   drawBarChart({
     svgEl: hourlyChart,
@@ -172,20 +385,35 @@ function renderHourly(range) {
     maxVal: Math.max(...data.map(d => d.activeMs)),
     getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
-    color: '#0891b2',
+    color: rootStyle.getPropertyValue('--color-chart-hourly'),
   });
 }
 
-function drawChart(data) {
+function drawChart(data, range) {
+  const timeOnClick = range !== 'today' ? r => enterDrill(r, null, 'time') : null;
+  const visitsOnClick = range !== 'today' ? r => enterDrill(r, null, 'visits') : null;
+  const hasAudio = data.some(d => d.audioMs > 0);
+  document.querySelector('#time-legend').style.display = hasAudio ? 'flex' : 'none';
+
+  const timeSeriesData = hasAudio
+    ? [
+        { label: 'Active', getValue: d => d.activeMs, color: rootStyle.getPropertyValue('--color-chart-time'), formatVal: formatMs },
+        { label: 'Audio', getValue: d => d.audioMs, color: rootStyle.getPropertyValue('--color-chart-audio'), formatVal: formatMs },
+      ]
+    : undefined;
+
   drawBarChart({
     svgEl: timeChart,
     tooltipEl: document.querySelector('#time-tooltip'),
     data,
-    maxVal: Math.max(...data.map(d => d.activeMs)),
+    maxVal: Math.max(...data.map(d => Math.max(d.activeMs, d.audioMs || 0))),
     getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
-    color: '#2563eb',
+    color: rootStyle.getPropertyValue('--color-chart-time'),
+    series: timeSeriesData,
+    onBarClick: timeOnClick,
   });
+
   drawBarChart({
     svgEl: visitsChart,
     tooltipEl: document.querySelector('#visits-tooltip'),
@@ -195,18 +423,8 @@ function drawChart(data) {
     formatVal: v => `${Math.round(v)}`,
     formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
     hideMidTicks: maxVal => maxVal < 3,
-    color: '#ea580c',
+    color: rootStyle.getPropertyValue('--color-chart-visits'),
+    onBarClick: visitsOnClick,
   });
-  if (data.some(d => d.audioMs > 0)) {
-    drawBarChart({
-      svgEl: document.querySelector('#audio-chart'),
-      tooltipEl: document.querySelector('#audio-tooltip'),
-      data,
-      maxVal: Math.max(...data.map(d => d.audioMs)),
-      getValue: d => d.audioMs,
-      formatVal: ms => formatMs(ms),
-      color: '#7c3aed',
-    });
-  }
 }
 

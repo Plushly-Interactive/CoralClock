@@ -2,8 +2,8 @@ import { formatMs } from './utils.js';
 
 const addBtn = document.querySelector('#add-btn');
 
-document.querySelector('#analytics-btn').addEventListener('click', () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('analytics.html') });
+document.querySelector('#dashboard-btn').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
 });
 
 const addForm = document.querySelector('#add-form');
@@ -26,8 +26,8 @@ addBtn.addEventListener('click', async () => {
 document.querySelector('#save-btn').addEventListener('click', async () => {
   const target = document.querySelector('#form-target').value.trim();
   const limit = parseInt(document.querySelector('#form-limit').value);
-  const limitUnit = document.querySelector('#form-unit').value;
-  const period = document.querySelector('#form-period').value;
+  const limitUnit = document.querySelector('#form-unit-btn').dataset.value;
+  const period = document.querySelector('#form-period-btn').dataset.value;
 
   if (!target || !limit) return;
 
@@ -44,6 +44,7 @@ document.querySelector('#save-btn').addEventListener('click', async () => {
   await chrome.storage.local.set({ rules: [...rules, rule] });
 
   document.querySelector('#form-target').value = '';
+  document.querySelector('#form-limit').value = '10';
   addForm.classList.remove('visible');
   renderRules();
 });
@@ -70,6 +71,14 @@ rulesList.addEventListener('click', async (e) => {
 async function renderRules() {
   const { rules = [] } = await chrome.storage.local.get('rules');
   const multipliers = { minutes: 60000, hours: 3600000, days: 86400000 };
+  const noRulesMsg = document.querySelector('#no-rules-message');
+
+  if (rules.length === 0) {
+    noRulesMsg.textContent = 'No rules yet. Add one to get started!';
+    noRulesMsg.classList.add('visible', 'text-meta');
+  } else {
+    noRulesMsg.classList.remove('visible', 'text-meta');
+  }
 
   rulesList.innerHTML = rules.map(rule => {
     const limitMs = rule.limit * (multipliers[rule.limitUnit] ?? 60000);
@@ -79,10 +88,61 @@ async function renderRules() {
         <strong>${rule.target}</strong>
         <span>${formatMs(limitMs)} per ${rule.period}</span>
       </div>
-      <button class="toggle-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
-      <button class="delete-btn" data-id="${rule.id}">✕</button>
+      <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
+      <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>
     </li>`;
   }).join('');
 }
 
 renderRules();
+
+function initCustomDropdowns() {
+  document.querySelectorAll('.dropdown-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = btn.nextElementSibling;
+      const isOpen = menu.classList.contains('open');
+      document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+      if (!isOpen) menu.classList.add('open');
+    });
+  });
+
+  document.querySelectorAll('.dropdown-menu:not(#theme-dropdown) button').forEach(option => {
+    option.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = option.parentElement;
+      const btn = menu.previousElementSibling;
+      btn.firstChild.textContent = option.textContent;
+      btn.dataset.value = option.value;
+      menu.classList.remove('open');
+    });
+  });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+  });
+}
+
+initCustomDropdowns();
+
+const themeBtn = document.querySelector('#theme-btn');
+const themeDropdown = document.querySelector('#theme-dropdown');
+
+themeBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  themeDropdown.classList.toggle('open');
+});
+
+document.addEventListener('click', () => {
+  themeDropdown.classList.remove('open');
+});
+
+themeDropdown.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const val = btn.getAttribute('value');
+    if (val === 'system') localStorage.removeItem('theme');
+    else localStorage.setItem('theme', val);
+    window.applyTheme();
+    themeDropdown.classList.remove('open');
+  });
+});

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard Analytics</title>
+    <script src="theme.js"></script>
+    <link rel="stylesheet" href="theme.css" />
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <div id="brand">
+          <img id="brand-logo" src="resources/icons/biteguard-icon-blue-square-48px.png" alt="BiteGuard" />
+          <span id="brand-name"><span class="brand-bite">Bite</span><span class="brand-guard">Guard</span></span>
+        </div>
+      </div>
+      <div id="header-center">
+        <div class="custom-dropdown">
+          <button class="dropdown-btn" id="range-select" data-value="7">Last 7 days<span class="dropdown-arrow">▼</span></button>
+          <div class="dropdown-menu">
+            <button value="today">Today</button>
+            <button value="7">Last 7 days</button>
+            <button value="30">Last 30 days</button>
+            <button value="180">Last 6 months</button>
+            <button value="365">Last year</button>
+            <button value="all">All time</button>
+          </div>
+        </div>
+      </div>
+      <div id="header-right">
+        <button id="import-btn" class="btn">Import/Export data</button>
+        <div id="storage-bar-container">
+          <div id="storage-bar-track">
+            <div id="storage-bar-fill"></div>
+          </div>
+          <span id="storage-bar-label" class="text-meta"></span>
+        </div>
+      </div>
+    </header>
+
+    <div id="io-modal-overlay" hidden>
+      <div id="io-modal" role="dialog" aria-labelledby="io-modal-title" aria-modal="true">
+        <div id="io-modal-header">
+          <h2 id="io-modal-title" class="dialog-title">Import / Export data</h2>
+          <button id="io-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div id="io-modal-body">
+          <input type="file" id="import-input" accept=".json" style="display:none">
+          <div id="io-columns">
+            <section class="io-section" id="io-section-bg">
+              <h3 class="io-section-title">BiteGuard format</h3>
+              <p class="io-section-desc">
+                Back up your BiteGuard data or transfer it between installs. 
+                Includes all daily and hourly browsing stats and settings.</p>
+              <ul class="io-bullets">
+                <li class="io-yes">Active time per site</li>
+                <li class="io-yes">Visit counts per site</li>
+                <li class="io-yes">Audio time per site</li>
+                <li class="io-no">Site rules &amp; limits <span class="io-soon">(coming soon)</span></li>
+                <li class="io-no">Settings <span class="io-soon">(coming soon)</span></li>
+              </ul>
+              <div class="io-actions">
+                <button id="bg-export-btn" class="btn io-btn">Export</button>
+                <button id="bg-import-btn" class="btn io-btn">Import</button>
+              </div>
+            </section>
+
+            <section class="io-section" id="io-section-tt">
+              <h3 class="io-section-title">Time Tracker compatibility</h3>
+              <p class="io-section-desc">
+                Exchange data with the "Time Tracker - Web Habit Builder" extension (v<span id="tt-version"></span>).
+                Not all data is compatible.
+              </p>
+              <ul class="io-bullets">
+                <li class="io-yes">Active time per site (daily only)</li>
+                <li class="io-yes">Visit counts per site (daily only)</li>
+                <li class="io-no">Audio time</li>
+                <li class="io-no">Site rules</li>
+                <li class="io-no">Settings</li>
+              </ul>
+              <div class="io-actions">
+                <button id="tt-export-btn" class="btn io-btn">Export</button>
+                <button id="tt-import-btn" class="btn io-btn">Import</button>
+              </div>
+            </section>
+          </div>
+          <div id="io-conflict-view" hidden>
+            <h3 id="io-conflict-title" class="dialog-title">
+              <span id="io-conflict-warning-symbol" aria-hidden="true">⚠</span>Conflicting days
+            </h3>
+            <p id="io-conflict-desc" class="io-section-desc">
+              The following days exist both in your current data and the imported file.
+              Choose what to do — the choice applies to all listed days.
+            </p>
+            <ul id="io-conflict-list"></ul>
+            <div class="io-actions" id="io-conflict-actions">
+              <button id="io-conflict-cancel" class="btn io-btn">Cancel</button>
+              <button id="io-conflict-keep" class="btn io-btn">Keep existing</button>
+              <button id="io-conflict-replace" class="btn io-btn">Replace with imported</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dashboard-grid">
+      <div id="dashboard-charts-col">
+        <div class="chart-container" id="top-chart-container">
+          <h2 class="chart-heading">Top 5 sites <span id="top-subheading" class="chart-subheading text-meta"></span></h2>
+          <svg id="top-chart"></svg>
+          <div class="tooltip text-meta" id="top-tooltip"></div>
+        </div>
+
+        <div class="chart-container" id="hourly-chart-container">
+          <h2 class="chart-heading">
+            Average per clock hour
+            <span id="hourly-subheading" class="chart-subheading text-meta"></span>
+          </h2>
+          <svg id="hourly-chart"></svg>
+          <div class="tooltip text-meta" id="hourly-tooltip"></div>
+          <p id="hourly-not-relevant" class="chart-note" style="display:none">Not relevant for "Today".</p>
+        </div>
+      </div>
+
+      <div id="dashboard-table-col">
+        <h2 class="chart-heading" id="dashboard-table-heading">
+          All browsed sites
+          <label id="merge-label" class="table-filter text-meta"><input type="checkbox" id="merge-toggle"> Merge by name</label>
+          <label id="hide-brief-label" class="table-filter text-meta"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
+        </h2>
+        <table id="dashboard-table">
+          <thead>
+            <tr>
+              <th id="th-name">Site</th>
+              <th id="th-time">Active time</th>
+              <th id="th-audio">Audio playback</th>
+              <th id="th-visits">Visits</th>
+            </tr>
+          </thead>
+          <tbody id="dashboard-body"></tbody>
+        </table>
+        <p id="empty-msg">No data for this period.</p>
+      </div>
+    </div>
+
+    <div id="notification" hidden></div>
+
+    <script type="module" src="importData.js"></script>
+    <script type="module" src="dashboard.js"></script>
+  </body>
+</html>

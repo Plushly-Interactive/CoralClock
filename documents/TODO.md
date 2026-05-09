@@ -1,0 +1,1 @@
+- Import feature: specify to the user which apps import is possible from, what can be imported, etc.
