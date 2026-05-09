@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>BiteGuard</title>
-    <script src="theme.js"></script>
-    <link rel="stylesheet" href="theme.css" />
-    <link rel="stylesheet" href="popup.css" />
-  </head>
-  <body>
-    <header>
-      <div id="brand">
-        <img id="brand-logo" src="resources/imgs/biteguard-logo-horizontal-984px.png" alt="BiteGuard" />
-        <span id="brand-name"><span class="brand-bite">Bite</span><span class="brand-guard">Guard</span></span>
-      </div>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>BiteGuard</title>
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+
+<body>
+  <header>
+    <div id="brand">
+      <img id="brand-logo" src="resources/icons/biteguard-icon-blue-square-48px.png" alt="BiteGuard" />
+      <span id="brand-name"><span class="brand-bite">Bite</span><span class="brand-guard">Guard</span></span>
+    </div>
+    <div id="popup-header-btns">
       <button id="dashboard-btn" class="btn">
         Dashboard
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -24,10 +27,12 @@
       </button>
       <div id="theme-menu">
         <button id="theme-btn">
-          <svg id="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg id="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
           </svg>
-          <svg id="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg id="sun-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
             <circle cx="12" cy="12" r="5"></circle>
             <line x1="12" y1="1" x2="12" y2="3"></line>
             <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -45,34 +50,36 @@
           <button value="dark">Dark</button>
         </div>
       </div>
-    </header>
-
-    <div id="rules-header">
-      <h2 id="rules-title">Rules</h2>
-      <button id="add-btn" class="btn">+ Add a rule</button>
     </div>
-    <div id="no-rules-message"></div>
-    <ul id="rules-list"></ul>
+  </header>
 
-    <div id="add-form">
-      <input id="form-target" type="text" placeholder="google.com" />
-      <div class="form-row">
-        <input id="form-limit" type="number" value="10" min="1" />
-        <select id="form-unit">
-          <option value="minutes">min</option>
-          <option value="hours">hours</option>
-          <option value="days">days</option>
-        </select>
-        <span>per</span>
-        <select id="form-period">
-          <option value="day">day</option>
-          <option value="hour">hour</option>
-          <option value="week">week</option>
-        </select>
-      </div>
-      <button id="save-btn" class="btn">Save</button>
+  <div id="rules-header">
+    <h2 id="rules-title">Rules</h2>
+    <button id="add-btn" class="btn">+ Add a rule</button>
+  </div>
+  <div id="no-rules-message"></div>
+  <ul id="rules-list"></ul>
+
+  <div id="add-form">
+    <input id="form-target" type="text" placeholder="google.com" />
+    <div class="form-row">
+      <input id="form-limit" type="number" value="10" min="1" />
+      <select id="form-unit">
+        <option value="minutes">min</option>
+        <option value="hours">hours</option>
+        <option value="days">days</option>
+      </select>
+      <span>per</span>
+      <select id="form-period">
+        <option value="day">day</option>
+        <option value="hour">hour</option>
+        <option value="week">week</option>
+      </select>
     </div>
+    <button id="save-btn" class="btn">Save</button>
+  </div>
 
-    <script type="module" src="popup.js"></script>
-  </body>
+  <script type="module" src="popup.js"></script>
+</body>
+
 </html>
