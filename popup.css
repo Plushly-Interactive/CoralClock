@@ -29,20 +29,6 @@ header {
   position: relative;
 }
 
-#theme-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--color-border-input);
-  border-radius: 4px;
-  background: var(--color-bg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-accent);
-}
-
 #theme-btn svg {
   stroke: currentColor;
 }
@@ -57,55 +43,11 @@ html.dark #moon-icon {
 
 #sun-icon {
   display: none;
-  color: #fbbf24;
+  color: var(--color-accent-light);
 }
 
 html.dark #sun-icon {
   display: block;
-}
-
-#theme-btn:hover {
-  background-color: var(--color-bg-hover);
-}
-
-#theme-dropdown {
-  display: none;
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-input);
-  border-radius: 4px;
-  min-width: 100px;
-  z-index: 1000;
-}
-
-#theme-dropdown.open {
-  display: flex;
-  flex-direction: column;
-}
-
-#theme-dropdown button {
-  padding: 8px 12px;
-  border: none;
-  background: none;
-  color: var(--color-text);
-  text-align: left;
-  cursor: pointer;
-  font-size: var(--font-base);
-}
-
-#theme-dropdown button:hover {
-  background: var(--color-bg-hover);
-}
-
-#theme-dropdown button:first-child {
-  border-radius: 4px 4px 0 0;
-}
-
-#theme-dropdown button:last-child {
-  border-radius: 0 0 4px 4px;
 }
 
 #dashboard-btn {
@@ -125,7 +67,7 @@ html.dark #sun-icon {
 #rules-title {
   font-size: var(--font-base);
   font-weight: 600;
-  color: var(--color-text-dim);
+  color: var(--color-accent);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -134,8 +76,6 @@ html.dark #sun-icon {
   display: none;
   min-height: 100px;
   padding: 16px 16px;
-  color: var(--color-text-secondary);
-  font-size: var(--font-base);
 }
 
 #no-rules-message.visible {
@@ -147,8 +87,7 @@ html.dark #sun-icon {
 
 #add-form {
   display: none;
-  padding: 0 16px 16px ;
-  border-bottom: 1px solid var(--color-border);
+  padding: 16px 16px 0 16px;
   flex-direction: column;
   gap: 8px;
 }
@@ -160,38 +99,39 @@ html.dark #sun-icon {
 #add-form input[type="text"] {
   width: 100%;
   padding: 8px;
-  border: 1px solid var(--color-border-input);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: var(--font-md);
   background: var(--color-bg);
   color: var(--color-text);
 }
 
+#add-form input[type="text"]:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
 .form-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
 }
 
 .form-row input[type="number"] {
   width: 60px;
   padding: 6px 8px;
-  border: 1px solid var(--color-border-input);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: var(--font-md);
   background: var(--color-bg);
   color: var(--color-text);
 }
 
-.form-row select {
-  flex: 1;
+.form-row input[type="number"]:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
-
-.form-row span {
-  font-size: var(--font-md);
-  color: var(--color-text);
-}
-
 
 #rules-list {
   list-style: none;
@@ -201,7 +141,7 @@ html.dark #sun-icon {
   display: flex;
   align-items: center;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-text-secondary);
   gap: 8px;
 }
 
@@ -219,20 +159,4 @@ html.dark #sun-icon {
 .rule-info span {
   font-size: var(--font-sm);
   color: var(--color-text-secondary);
-}
-
-.toggle-btn,
-.delete-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: var(--font-lg);
-  padding: 4px;
-  color: var(--color-text-secondary);
-  border-radius: 4px;
-}
-
-.toggle-btn:hover,
-.delete-btn:hover {
-  background: var(--color-bg-subtle);
 }

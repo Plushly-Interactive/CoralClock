@@ -1,10 +1,10 @@
-import { formatMs, drawBarChart } from './utils.js';
+import { formatMs, drawBarChart, STAT_LABELS } from './utils.js';
 
 let drillPeriod = null;
 let drillPrevPeriod = null;
 let drillDepth = 0;
 let drillMetric = 'time';
-let drillScale = 'sqrt';
+let drillScale = 'linear';
 let exitingDrill = false;
 
 const byHourDayCache = {};
@@ -17,7 +17,7 @@ export function initDrill(context) {
   ctx.backBtn.addEventListener('click', (e) => {
     if (!drillPeriod) return;
     e.preventDefault();
-    exitDrillCompletely();
+    location.href = 'dashboard.html';
   });
 
   ctx.navPrev.addEventListener('click', () => navigatePeriod(-1));
@@ -230,23 +230,25 @@ async function renderDrillChart() {
   const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
   const totalVisits = data.reduce((s, d) => s + d.visits, 0);
   const stats = [];
-  if (totalMs > 0) stats.push(`Total: ${formatMs(totalMs)}`);
-  if (totalVisits > 0) stats.push(`Visits: ${totalVisits}`);
-  if (totalMs > 0 && totalVisits > 0) stats.push(`Avg/visit: ${formatMs(totalMs / totalVisits)}`);
-  ctx.drillStats.innerHTML = stats.map(s => `<span>${s}</span>`).join('');
+  if (totalMs > 0) stats.push({ label: STAT_LABELS.totalTime, value: formatMs(totalMs) });
+  if (totalVisits > 0) stats.push({ label: STAT_LABELS.visits, value: totalVisits });
+  if (totalMs > 0 && totalVisits > 0) stats.push({ label: STAT_LABELS.avgSession, value: formatMs(totalMs / totalVisits) });
+  ctx.drillStats.innerHTML = stats.map(s => `<div><span class="stat-label">${s.label}</span> <span class="stat-value">${s.value}</span></div>`).join('');
 
   if (!hasData) return;
 
   const onBarClick = isMonthDrill ? r => enterDrill(r, drillPeriod, drillMetric) : null;
   const maxTimeMs = isMonthDrill ? 24 * 3600000 : 3600000;
 
+  const rootStyle = getComputedStyle(document.documentElement);
+  
   if (drillMetric === 'time') {
     const hasAudio = data.some(d => d.audioMs > 0);
     ctx.drillLegend.style.display = hasAudio ? 'flex' : 'none';
     const series = hasAudio
       ? [
-          { label: 'Active', getValue: d => d.activeMs, color: '#2563eb', formatVal: formatMs },
-          { label: 'Audio', getValue: d => d.audioMs, color: '#7c3aed', formatVal: formatMs },
+          { label: 'Active', getValue: d => d.activeMs, color: rootStyle.getPropertyValue('--color-chart-time'), formatVal: formatMs },
+          { label: 'Audio', getValue: d => d.audioMs, color: rootStyle.getPropertyValue('--color-chart-audio'), formatVal: formatMs },
         ]
       : undefined;
 
@@ -257,11 +259,12 @@ async function renderDrillChart() {
       maxVal: maxTimeMs,
       getValue: d => d.activeMs,
       formatVal: formatMs,
-      color: '#2563eb',
+      color: rootStyle.getPropertyValue('--color-chart-time'),
       series,
       onBarClick,
 
       scale: drillScale,
+      gridLineWidth: 0.5,
     });
   } else if (drillMetric === 'visits') {
     ctx.drillLegend.style.display = 'none';
@@ -274,10 +277,11 @@ async function renderDrillChart() {
       formatVal: v => `${Math.round(v)}`,
       formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
       hideMidTicks: maxVal => maxVal < 3,
-      color: '#ea580c',
+      color: rootStyle.getPropertyValue('--color-chart-visits'),
       onBarClick,
 
       scale: drillScale,
+      gridLineWidth: 0.5,
     });
   } else if (drillMetric === 'hour') {
     ctx.drillLegend.style.display = 'none';
@@ -313,9 +317,10 @@ async function renderDrillChart() {
       maxVal: 3600000,
       getValue: d => d.activeMs,
       formatVal: formatMs,
-      color: '#0891b2',
+      color: rootStyle.getPropertyValue('--color-chart-hourly'),
 
       scale: drillScale,
+      gridLineWidth: 0.5,
     });
   }
 }

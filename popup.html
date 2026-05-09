@@ -18,15 +18,9 @@
     <div id="popup-header-btns">
       <button id="dashboard-btn" class="btn">
         Dashboard
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7"></rect>
-          <rect x="14" y="3" width="7" height="7"></rect>
-          <rect x="14" y="14" width="7" height="7"></rect>
-          <rect x="3" y="14" width="7" height="7"></rect>
-        </svg>
       </button>
       <div id="theme-menu">
-        <button id="theme-btn">
+        <button id="theme-btn" class="square-btn">
           <svg id="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
@@ -44,7 +38,7 @@
             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
           </svg>
         </button>
-        <div id="theme-dropdown">
+        <div id="theme-dropdown" class="dropdown-menu">
           <button value="system">System</button>
           <button value="light">Light</button>
           <button value="dark">Dark</button>
@@ -57,27 +51,34 @@
     <h2 id="rules-title">Rules</h2>
     <button id="add-btn" class="btn">+ Add a rule</button>
   </div>
-  <div id="no-rules-message"></div>
-  <ul id="rules-list"></ul>
 
   <div id="add-form">
     <input id="form-target" type="text" placeholder="google.com" />
     <div class="form-row">
       <input id="form-limit" type="number" value="10" min="1" />
-      <select id="form-unit">
-        <option value="minutes">min</option>
-        <option value="hours">hours</option>
-        <option value="days">days</option>
-      </select>
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
+        <div class="dropdown-menu" id="form-unit-menu">
+          <button value="minutes">min</button>
+          <button value="hours">hours</button>
+          <button value="days">days</button>
+        </div>
+      </div>
       <span>per</span>
-      <select id="form-period">
-        <option value="day">day</option>
-        <option value="hour">hour</option>
-        <option value="week">week</option>
-      </select>
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" id="form-period-btn" data-value="day">day<span class="dropdown-arrow">▼</span></button>
+        <div class="dropdown-menu" id="form-period-menu">
+          <button value="day">day</button>
+          <button value="hour">hour</button>
+          <button value="week">week</button>
+        </div>
+      </div>
     </div>
     <button id="save-btn" class="btn">Save</button>
   </div>
+
+  <div id="no-rules-message"></div>
+  <ul id="rules-list"></ul>
 
   <script type="module" src="popup.js"></script>
 </body>
