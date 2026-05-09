@@ -1,4 +1,4 @@
-import { formatMs, drawBarChart } from './utils.js';
+import { formatMs, drawBarChart, STAT_LABELS } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from './drill.js';
 
@@ -14,6 +14,45 @@ const timeNoData = document.querySelector('#time-no-data');
 const visitsNoData = document.querySelector('#visits-no-data');
 const peakTooltip = document.querySelector('#peak-tooltip');
 const statsContainer = document.querySelector('#stats-container');
+
+const statsList = document.querySelector('#stats-list');
+
+const rootStyle = getComputedStyle(document.documentElement);
+
+const topStats = [
+  { label: STAT_LABELS.today, id: 'stat-today' },
+  { label: STAT_LABELS.dailyAvg, id: 'stat-daily-avg' },
+  { label: STAT_LABELS.peakDay, id: 'stat-peak' },
+];
+
+const bottomStats = [
+  { label: STAT_LABELS.totalTime, id: 'stat-total-time' },
+  { label: STAT_LABELS.visits, id: 'stat-visits' },
+  { label: STAT_LABELS.avgSession, id: 'stat-avg-session' },
+];
+
+topStats.forEach((stat, i) => {
+  const item = document.createElement('div');
+  item.className = 'stat-item';
+  if (i === 2) {
+    item.id = 'stat-peak-item';
+    item.innerHTML = `<span class="stat-label">${stat.label}</span><span class="stat-value-row"><span class="stat-value" id="${stat.id}"></span><span id="stat-peak-info" class="stat-info" style="display:none" title="">ⓘ</span></span>`;
+  } else {
+    item.innerHTML = `<span class="stat-label">${stat.label}</span><span class="stat-value" id="${stat.id}"></span>`;
+  }
+  statsList.appendChild(item);
+});
+
+const divider = document.createElement('hr');
+divider.id = 'stats-divider';
+statsList.appendChild(divider);
+
+bottomStats.forEach(stat => {
+  const item = document.createElement('div');
+  item.className = 'stat-item';
+  item.innerHTML = `<span class="stat-label">${stat.label}</span><span class="stat-value" id="${stat.id}"></span>`;
+  statsList.appendChild(item);
+});
 
 const peakItem = document.querySelector('#stat-peak-item');
 const peakInfo = document.querySelector('#stat-peak-info');
@@ -89,12 +128,32 @@ function hourlySubheadingText(range) {
   return `(past ${parseInt(range)} days, excluding today)`;
 }
 
-const savedRange = sessionStorage.getItem('analyticsRange');
-if (savedRange) rangeSelect.value = savedRange;
+const opts = { today: 'Today', '7': 'Last 7 days', '30': 'Last 30 days', '180': 'Last 6 months', '365': 'Last year', all: 'All time' };
+const savedRange = sessionStorage.getItem('analyticsRange') || '7';
+rangeSelect.dataset.value = savedRange;
+rangeSelect.firstChild.textContent = opts[savedRange];
 
-rangeSelect.addEventListener('change', () => {
-  sessionStorage.setItem('analyticsRange', rangeSelect.value);
-  render();
+rangeSelect.parentElement.querySelector('.dropdown-menu').querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    rangeSelect.dataset.value = btn.value;
+    rangeSelect.firstChild.textContent = btn.textContent;
+    rangeSelect.parentElement.querySelector('.dropdown-menu').classList.remove('open');
+    sessionStorage.setItem('analyticsRange', btn.value);
+    render();
+  });
+});
+
+rangeSelect.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const menu = rangeSelect.parentElement.querySelector('.dropdown-menu');
+  const isOpen = menu.classList.contains('open');
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+  if (!isOpen) menu.classList.add('open');
+});
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
 });
 
 window.addEventListener('storage', (e) => {
@@ -132,7 +191,7 @@ loadAndRender();
 
 async function loadAndRender() {
   byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
-  if (rangeSelect.value === 'today') await loadByHour();
+  if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
 }
 
@@ -153,7 +212,7 @@ function todayDayKey() {
 
 function render() {
   if (isInDrillMode()) return;
-  const range = rangeSelect.value;
+  const range = rangeSelect.dataset.value;
 
   let data;
   if (range === 'today') {
@@ -298,7 +357,7 @@ function renderHourly(range) {
   hourlySubheading.textContent = hourlySubheadingText(range);
 
   if (!avgPerHourCache[range]) {
-    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.value));
+    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.dataset.value));
     return;
   }
 
@@ -326,7 +385,7 @@ function renderHourly(range) {
     maxVal: Math.max(...data.map(d => d.activeMs)),
     getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
-    color: '#0891b2',
+    color: rootStyle.getPropertyValue('--color-chart-hourly'),
   });
 }
 
@@ -338,8 +397,8 @@ function drawChart(data, range) {
 
   const timeSeriesData = hasAudio
     ? [
-        { label: 'Active', getValue: d => d.activeMs, color: '#2563eb', formatVal: formatMs },
-        { label: 'Audio', getValue: d => d.audioMs, color: '#7c3aed', formatVal: formatMs },
+        { label: 'Active', getValue: d => d.activeMs, color: rootStyle.getPropertyValue('--color-chart-time'), formatVal: formatMs },
+        { label: 'Audio', getValue: d => d.audioMs, color: rootStyle.getPropertyValue('--color-chart-audio'), formatVal: formatMs },
       ]
     : undefined;
 
@@ -350,7 +409,7 @@ function drawChart(data, range) {
     maxVal: Math.max(...data.map(d => Math.max(d.activeMs, d.audioMs || 0))),
     getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
-    color: '#2563eb',
+    color: rootStyle.getPropertyValue('--color-chart-time'),
     series: timeSeriesData,
     onBarClick: timeOnClick,
   });
@@ -364,7 +423,7 @@ function drawChart(data, range) {
     formatVal: v => `${Math.round(v)}`,
     formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
     hideMidTicks: maxVal => maxVal < 3,
-    color: '#ea580c',
+    color: rootStyle.getPropertyValue('--color-chart-visits'),
     onBarClick: visitsOnClick,
   });
 }

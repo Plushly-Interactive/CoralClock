@@ -34,10 +34,14 @@ const thVisits = document.querySelector('#th-visits');
 
 const TH_LABELS = { name: 'Site', time: 'Active time', audio: 'Audio playback', visits: 'Visits' };
 
+const rootStyle = getComputedStyle(document.documentElement);
+
 function updateHeaders() {
   for (const [col, th] of [['name', thName], ['time', thTime], ['audio', thAudio], ['visits', thVisits]]) {
-    const arrow = sortCol === col ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
+    const isSorted = sortCol === col;
+    const arrow = isSorted ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
     th.textContent = TH_LABELS[col] + arrow;
+    th.classList.toggle('sorted', isSorted);
   }
 }
 
@@ -97,10 +101,10 @@ function renderTable(rows) {
       ? (ids.length === 1 ? ids[0] : `${ids.length} sites`)
       : row.siteId;
     return `<tr class="clickable" data-href="${href}">
-      <td><span class="site-label">${siteLabel}</span><span class="site-id">${subtitle}</span></td>
-      <td>${formatMs(activeMs)}</td>
-      <td>${formatMs(audioMs)}</td>
-      <td>${visits}</td>
+      <td><span class="site-label">${siteLabel}</span><span class="site-id text-meta">${subtitle}</span></td>
+      <td><span class="stat-value">${formatMs(activeMs)}</span></td>
+      <td><span class="stat-value">${formatMs(audioMs)}</span></td>
+      <td><span class="stat-value">${visits}</span></td>
     </tr>`;
   }).join('');
   tbody.querySelectorAll('tr.clickable').forEach(row => {
@@ -133,7 +137,7 @@ function renderHourly(range) {
   hourlySubheading.textContent = hourlySubheadingText(range);
 
   if (!avgPerHourCache[range]) {
-    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.value));
+    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.dataset.value));
     return;
   }
 
@@ -150,18 +154,38 @@ function renderHourly(range) {
     maxVal: Math.max(...data.map(d => d.activeMs), 1),
     getValue: d => d.activeMs,
     formatVal: ms => formatMs(ms),
-    color: '#0891b2',
+    color: rootStyle.getPropertyValue('--color-chart-hourly'),
   });
 }
 
 let byDayCache = null;
 
-const savedRange = sessionStorage.getItem('analyticsRange');
-if (savedRange) rangeSelect.value = savedRange;
+const opts = { today: 'Today', '7': 'Last 7 days', '30': 'Last 30 days', '180': 'Last 6 months', '365': 'Last year', all: 'All time' };
+const savedRange = sessionStorage.getItem('analyticsRange') || '7';
+rangeSelect.dataset.value = savedRange;
+rangeSelect.firstChild.textContent = opts[savedRange];
 
-rangeSelect.addEventListener('change', () => {
-  sessionStorage.setItem('analyticsRange', rangeSelect.value);
-  render();
+rangeSelect.parentElement.querySelector('.dropdown-menu').querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    rangeSelect.dataset.value = btn.value;
+    rangeSelect.firstChild.textContent = btn.textContent;
+    rangeSelect.parentElement.querySelector('.dropdown-menu').classList.remove('open');
+    sessionStorage.setItem('analyticsRange', btn.value);
+    render();
+  });
+});
+
+rangeSelect.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const menu = rangeSelect.parentElement.querySelector('.dropdown-menu');
+  const isOpen = menu.classList.contains('open');
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+  if (!isOpen) menu.classList.add('open');
+});
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
 });
 
 mergeToggle.addEventListener('change', () => {
@@ -233,7 +257,10 @@ function dayKeys(range) {
 }
 
 const TOP_SUBHEADING = { time: '(active time)', audio: '(audio playback)', visits: '(visits)' };
-const TOP_COLOR = { time: '#2563eb', audio: '#7c3aed', visits: '#ea580c' };
+const TOP_COLOR = { 
+  time: rootStyle.getPropertyValue('--color-chart-time'), 
+  audio: rootStyle.getPropertyValue('--color-chart-audio'), 
+  visits: rootStyle.getPropertyValue('--color-chart-visits') };
 
 function renderTopChart() {
   const col = sortCol === 'name' ? 'time' : sortCol;
@@ -262,7 +289,7 @@ function renderTopChart() {
 }
 
 function render() {
-  const range = rangeSelect.value;
+  const range = rangeSelect.dataset.value;
   const byDay = byDayCache ?? {};
 
   const allowed = dayKeys(range);

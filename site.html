@@ -10,27 +10,27 @@
   </head>
   <body>
     <header>
-      <a id="back-btn" href="dashboard.html">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7"></rect>
-          <rect x="14" y="3" width="7" height="7"></rect>
-          <rect x="14" y="14" width="7" height="7"></rect>
-          <rect x="3" y="14" width="7" height="7"></rect>
-        </svg>
-      </a>
+      <div id="header-left">
+        <a id="back-btn" href="dashboard.html">
+          <img src="resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
       <div id="header-center">
         <div id="site-title">
-          <span id="site-label"></span>
-          <span id="site-id"></span>
+          <span id="site-label" class="site-label"></span>
+          <span id="site-id" class="text-meta"></span>
         </div>
-        <select id="range-select">
-          <option value="today">Today</option>
-          <option value="7" selected>Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="180">Last 6 months</option>
-          <option value="365">Last year</option>
-          <option value="all">All time</option>
-        </select>
+        <div class="custom-dropdown">
+          <button class="dropdown-btn" id="range-select" data-value="7">Last 7 days<span class="dropdown-arrow">▼</span></button>
+          <div class="dropdown-menu">
+            <button value="today">Today</button>
+            <button value="7">Last 7 days</button>
+            <button value="30">Last 30 days</button>
+            <button value="180">Last 6 months</button>
+            <button value="365">Last year</button>
+            <button value="all">All time</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -38,97 +38,69 @@
       <div id="time-chart-container" class="chart-container">
         <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
           <h2 class="chart-heading" style="margin: 0;">Time spent</h2>
-          <div id="time-legend" class="time-legend" style="display: none; margin-left: auto;">
+          <div id="time-legend" class="time-legend text-meta" style="display: none; margin-left: auto;">
             <span>
-              <span style="background: #2563eb;"></span>
+              <span class="chart-legend-time"></span>
               Active browsing
             </span>
             <span>
-              <span style="background: #7c3aed;"></span>
+              <span class="chart-legend-audio"></span>
               Audio playback
             </span>
           </div>
         </div>
         <svg id="time-chart"></svg>
-        <div id="time-tooltip" class="tooltip"></div>
+        <div id="time-tooltip" class="tooltip text-meta"></div>
         <p id="time-no-data" class="chart-note" style="display:none">No data for this period.</p>
       </div>
 
       <div id="stats-container" class="chart-container">
-        <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading"></span></h2>
-        <div id="stats-list">
-          <div class="stat-item">
-            <span class="stat-label">Today</span>
-            <span class="stat-value" id="stat-today"></span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Daily avg</span>
-            <span class="stat-value" id="stat-daily-avg"></span>
-          </div>
-          <div class="stat-item" id="stat-peak-item">
-            <span class="stat-label">Peak day</span>
-            <span class="stat-value-row">
-              <span class="stat-value" id="stat-peak"></span><span id="stat-peak-info" class="stat-info" style="display:none" title="">ⓘ</span>
-            </span>
-          </div>
-          <hr id="stats-divider">
-          <div class="stat-item">
-            <span class="stat-label">Total time</span>
-            <span class="stat-value" id="stat-total-time"></span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Visits</span>
-            <span class="stat-value" id="stat-visits"></span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Avg session</span>
-            <span class="stat-value" id="stat-avg-session"></span>
-          </div>
-        </div>
-        <div class="tooltip" id="peak-tooltip"></div>
+        <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading text-meta"></span></h2>
+        <div id="stats-list"></div>
+        <div class="tooltip text-meta" id="peak-tooltip"></div>
       </div>
 
       <div id="visits-chart-container" class="chart-container">
         <h2 class="chart-heading">Visits</h2>
         <svg id="visits-chart"></svg>
-        <div id="visits-tooltip" class="tooltip"></div>
+        <div id="visits-tooltip" class="tooltip text-meta"></div>
         <p id="visits-no-data" class="chart-note" style="display:none">No data for this period.</p>
       </div>
 
       <div id="hourly-chart-container" class="chart-container">
-        <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading"></span></h2>
+        <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading text-meta"></span></h2>
         <svg id="hourly-chart"></svg>
-        <div id="hourly-tooltip" class="tooltip"></div>
+        <div id="hourly-tooltip" class="tooltip text-meta"></div>
         <p id="hourly-not-relevant" class="chart-note" style="display:none">Not relevant for "Today".</p>
       </div>
     </div>
 
     <div id="drill-view" style="display:none">
       <div id="drill-top">
-        <button id="nav-close">
+        <button id="nav-close" class="link-btn">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
           Overview
         </button>
-        <button id="drill-month-link" style="display:none"></button>
+        <button id="drill-month-link" class="link-btn" style="display:none"></button>
       </div>
       <div id="drill-controls">
         <div id="nav-strip">
-          <button id="nav-prev">&#8592;</button>
+          <button id="nav-prev" class="link-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
           <span id="nav-label"></span>
-          <button id="nav-next">&#8594;</button>
+          <button id="nav-next" class="link-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
         </div>
-        <div id="drill-legend" class="time-legend" style="display: none;">
+        <div id="drill-legend" class="time-legend text-meta" style="display: none;">
           <span>
-            <span style="background: #2563eb;"></span>
+            <span class="chart-legend-time"></span>
             Active browsing
           </span>
           <span>
-            <span style="background: #7c3aed;"></span>
+            <span class="chart-legend-audio"></span>
             Audio playback
           </span>
         </div>
-        <label id="drill-scale-label"><input type="checkbox" id="drill-scale-btn" checked> Enhance readbility (√x scale)</label>
-        <div id="drill-stats"></div>
+        <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn"> Enhance readbility (√x scale)</label>
+        <div id="drill-stats" class="text-meta"></div>
         <div id="drill-toggle">
           <button id="drill-time-btn" class="drill-toggle-btn active">Time</button>
           <button id="drill-visits-btn" class="drill-toggle-btn">Visits</button>
@@ -136,8 +108,8 @@
         </div>
       </div>
       <div id="drill-chart-wrapper">
-        <button id="drill-keys-btn">&#215;</button>
-        <div id="drill-keys-popup">
+        <button id="drill-keys-btn" class="square-btn">&#215;</button>
+        <div id="drill-keys-popup" class="tooltip text-meta">
           <div id="drill-keys-title">Keyboard shortcuts</div>
           <div><kbd>←</kbd><kbd>→</kbd> Navigate period</div>
           <div><kbd>↑</kbd> Go to month (day → month)</div>
@@ -146,7 +118,7 @@
           <div><kbd>Esc</kbd> Exit to overview</div>
         </div>
         <svg id="drill-chart"></svg>
-        <div id="drill-tooltip" class="tooltip"></div>
+        <div id="drill-tooltip" class="tooltip text-meta"></div>
         <p id="drill-no-data" class="chart-note" style="display:none">No data for this period.</p>
       </div>
     </div>

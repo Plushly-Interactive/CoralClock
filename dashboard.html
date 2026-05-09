@@ -9,22 +9,32 @@
   </head>
   <body>
     <header>
-      <span>🦈 BiteGuard — Dashboard</span>
-      <select id="range-select">
-        <option value="today">Today</option>
-        <option value="7" selected>Last 7 days</option>
-        <option value="30">Last 30 days</option>
-        <option value="180">Last 6 months</option>
-        <option value="365">Last year</option>
-        <option value="all">All time</option>
-      </select>
+      <div id="header-left">
+        <div id="brand">
+          <img id="brand-logo" src="resources/icons/biteguard-icon-blue-square-48px.png" alt="BiteGuard" />
+          <span id="brand-name"><span class="brand-bite">Bite</span><span class="brand-guard">Guard</span></span>
+        </div>
+      </div>
+      <div id="header-center">
+        <div class="custom-dropdown">
+          <button class="dropdown-btn" id="range-select" data-value="7">Last 7 days<span class="dropdown-arrow">▼</span></button>
+          <div class="dropdown-menu">
+            <button value="today">Today</button>
+            <button value="7">Last 7 days</button>
+            <button value="30">Last 30 days</button>
+            <button value="180">Last 6 months</button>
+            <button value="365">Last year</button>
+            <button value="all">All time</button>
+          </div>
+        </div>
+      </div>
       <div id="header-right">
-        <button id="import-btn">Import/Export data</button>
+        <button id="import-btn" class="btn">Import/Export data</button>
         <div id="storage-bar-container">
           <div id="storage-bar-track">
             <div id="storage-bar-fill"></div>
           </div>
-          <span id="storage-bar-label"></span>
+          <span id="storage-bar-label" class="text-meta"></span>
         </div>
       </div>
     </header>
@@ -32,7 +42,7 @@
     <div id="io-modal-overlay" hidden>
       <div id="io-modal" role="dialog" aria-labelledby="io-modal-title" aria-modal="true">
         <div id="io-modal-header">
-          <h2 id="io-modal-title">Import / Export data</h2>
+          <h2 id="io-modal-title" class="dialog-title">Import / Export data</h2>
           <button id="io-modal-close" aria-label="Close">&times;</button>
         </div>
         <div id="io-modal-body">
@@ -51,8 +61,8 @@
                 <li class="io-no">Settings <span class="io-soon">(coming soon)</span></li>
               </ul>
               <div class="io-actions">
-                <button id="bg-export-btn" class="io-btn">Export</button>
-                <button id="bg-import-btn" class="io-btn">Import</button>
+                <button id="bg-export-btn" class="btn io-btn">Export</button>
+                <button id="bg-import-btn" class="btn io-btn">Import</button>
               </div>
             </section>
 
@@ -70,24 +80,24 @@
                 <li class="io-no">Settings</li>
               </ul>
               <div class="io-actions">
-                <button id="tt-export-btn" class="io-btn">Export</button>
-                <button id="tt-import-btn" class="io-btn">Import</button>
+                <button id="tt-export-btn" class="btn io-btn">Export</button>
+                <button id="tt-import-btn" class="btn io-btn">Import</button>
               </div>
             </section>
           </div>
           <div id="io-conflict-view" hidden>
-            <h3 id="io-conflict-title">
+            <h3 id="io-conflict-title" class="dialog-title">
               <span id="io-conflict-warning-symbol" aria-hidden="true">⚠</span>Conflicting days
             </h3>
-            <p id="io-conflict-desc">
+            <p id="io-conflict-desc" class="io-section-desc">
               The following days exist both in your current data and the imported file.
               Choose what to do — the choice applies to all listed days.
             </p>
             <ul id="io-conflict-list"></ul>
             <div class="io-actions" id="io-conflict-actions">
-              <button id="io-conflict-cancel" class="io-btn">Cancel</button>
-              <button id="io-conflict-keep" class="io-btn">Keep existing</button>
-              <button id="io-conflict-replace" class="io-btn">Replace with imported</button>
+              <button id="io-conflict-cancel" class="btn io-btn">Cancel</button>
+              <button id="io-conflict-keep" class="btn io-btn">Keep existing</button>
+              <button id="io-conflict-replace" class="btn io-btn">Replace with imported</button>
             </div>
           </div>
         </div>
@@ -97,18 +107,18 @@
     <div id="dashboard-grid">
       <div id="dashboard-charts-col">
         <div class="chart-container" id="top-chart-container">
-          <h2 class="chart-heading">Top 5 sites <span id="top-subheading" class="chart-subheading"></span></h2>
+          <h2 class="chart-heading">Top 5 sites <span id="top-subheading" class="chart-subheading text-meta"></span></h2>
           <svg id="top-chart"></svg>
-          <div class="tooltip" id="top-tooltip"></div>
+          <div class="tooltip text-meta" id="top-tooltip"></div>
         </div>
 
         <div class="chart-container" id="hourly-chart-container">
           <h2 class="chart-heading">
             Average per clock hour
-            <span id="hourly-subheading" class="chart-subheading"></span>
+            <span id="hourly-subheading" class="chart-subheading text-meta"></span>
           </h2>
           <svg id="hourly-chart"></svg>
-          <div class="tooltip" id="hourly-tooltip"></div>
+          <div class="tooltip text-meta" id="hourly-tooltip"></div>
           <p id="hourly-not-relevant" class="chart-note" style="display:none">Not relevant for "Today".</p>
         </div>
       </div>
@@ -116,8 +126,8 @@
       <div id="dashboard-table-col">
         <h2 class="chart-heading" id="dashboard-table-heading">
           All browsed sites
-          <label id="merge-label"><input type="checkbox" id="merge-toggle"> Merge by name</label>
-          <label id="hide-brief-label"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
+          <label id="merge-label" class="table-filter text-meta"><input type="checkbox" id="merge-toggle"> Merge by name</label>
+          <label id="hide-brief-label" class="table-filter text-meta"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
         </h2>
         <table id="dashboard-table">
           <thead>

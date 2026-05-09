@@ -5,9 +5,9 @@
 }
 
 body {
-  width: 300px;
+  width: 400px;
   font-family: system-ui, sans-serif;
-  font-size: 14px;
+  font-size: var(--font-md);
   color: var(--color-text);
 }
 
@@ -15,27 +15,18 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 14px 16px 14px 10px;
   font-weight: 600;
   border-bottom: 1px solid var(--color-border);
 }
 
-#theme-menu {
-  position: relative;
+#popup-header-btns {
+  display: flex;
+  gap: 16px;
 }
 
-#theme-btn {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 1px solid var(--color-border-input);
-  border-radius: 4px;
-  background: var(--color-bg);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-accent);
+#theme-menu {
+  position: relative;
 }
 
 #theme-btn svg {
@@ -52,121 +43,51 @@ html.dark #moon-icon {
 
 #sun-icon {
   display: none;
-  color: #fbbf24;
+  color: var(--color-accent-light);
 }
 
 html.dark #sun-icon {
   display: block;
 }
 
-#theme-btn:hover {
-  background-color: var(--color-bg-hover);
-}
-
-#theme-dropdown {
-  display: none;
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-input);
-  border-radius: 4px;
-  min-width: 100px;
-  z-index: 1000;
-}
-
-#theme-dropdown.open {
-  display: flex;
-  flex-direction: column;
-}
-
-#theme-dropdown button {
-  padding: 8px 12px;
-  border: none;
-  background: none;
-  color: var(--color-text);
-  text-align: left;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-#theme-dropdown button:hover {
-  background: var(--color-bg-hover);
-}
-
-#theme-dropdown button:first-child {
-  border-radius: 4px 4px 0 0;
-}
-
-#theme-dropdown button:last-child {
-  border-radius: 0 0 4px 4px;
-}
-
 #dashboard-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid var(--color-border-input);
-  border-radius: 4px;
-  background: var(--color-bg);
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--color-accent);
   white-space: nowrap;
 }
 
-#dashboard-btn:hover {
-  background-color: var(--color-bg-hover);
+#rules-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 0;
 }
 
 #rules-title {
-  padding: 12px 16px 0;
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 600;
-  color: var(--color-text-dim);
-  margin: 0 0 8px;
+  color: var(--color-accent);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 #no-rules-message {
   display: none;
-  padding: 16px;
-  text-align: center;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  min-height: 40px;
+  min-height: 100px;
+  padding: 16px 16px;
+}
+
+#no-rules-message.visible {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-#no-rules-message.visible {
-  display: flex;
-}
-
-#add-btn {
-  width: 100%;
-  padding: 10px 16px;
-  text-align: left;
-  background: none;
-  border: none;
-  border-bottom: 1px solid var(--color-border);
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--color-accent);
-}
-
-#add-btn:hover {
-  background: var(--color-bg-hover);
-}
 
 #add-form {
   display: none;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 16px 16px 0 16px;
   flex-direction: column;
   gap: 8px;
 }
@@ -178,56 +99,38 @@ html.dark #sun-icon {
 #add-form input[type="text"] {
   width: 100%;
   padding: 8px;
-  border: 1px solid var(--color-border-input);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  font-size: 14px;
+  font-size: var(--font-md);
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+#add-form input[type="text"]:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
 
 .form-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
 }
 
 .form-row input[type="number"] {
   width: 60px;
   padding: 6px 8px;
-  border: 1px solid var(--color-border-input);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  font-size: 14px;
+  font-size: var(--font-md);
   background: var(--color-bg);
   color: var(--color-text);
 }
 
-.form-row select {
-  padding: 6px 8px;
-  border: 1px solid var(--color-border-input);
-  border-radius: 4px;
-  font-size: 14px;
-  background: var(--color-bg);
-  color: var(--color-text);
-  flex: 1;
-}
-
-.form-row span {
-  font-size: 14px;
-  color: var(--color-text);
-}
-
-.btn-primary {
-  padding: 7px;
-  background: var(--color-accent);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.btn-primary:hover {
-  background: var(--color-accent-hover);
+.form-row input[type="number"]:focus {
+  outline: none;
+  border-color: var(--color-accent);
 }
 
 #rules-list {
@@ -238,7 +141,7 @@ html.dark #sun-icon {
   display: flex;
   align-items: center;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-text-secondary);
   gap: 8px;
 }
 
@@ -254,22 +157,6 @@ html.dark #sun-icon {
 }
 
 .rule-info span {
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--color-text-secondary);
-}
-
-.toggle-btn,
-.delete-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px;
-  color: var(--color-text-secondary);
-  border-radius: 4px;
-}
-
-.toggle-btn:hover,
-.delete-btn:hover {
-  background: var(--color-bg-subtle);
 }
