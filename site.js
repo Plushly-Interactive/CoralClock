@@ -1,4 +1,4 @@
-import { formatMs, drawBarChart, STAT_LABELS } from './utils.js';
+import { formatMs, drawBarChart, formatWithSmallSub, STAT_LABELS } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from './drill.js';
 
@@ -289,13 +289,6 @@ function render() {
   renderStats(data, range);
 }
 
-function formatTotalTime(ms) {
-  const main = formatMs(ms);
-  if (ms < 86400000) return main;
-  const d = ms / 86400000;
-  const dStr = `${d < 10 ? d.toFixed(1).replace(/\.0$/, '') : Math.round(d)}d`;
-  return `${main} (${dStr})`;
-}
 
 function renderStats(data, range) {
   const todayKey = todayDayKey();
@@ -303,7 +296,21 @@ function renderStats(data, range) {
 
   const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
   const totalVisits = data.reduce((s, d) => s + d.visits, 0);
-  const activeDays = range !== 'today' ? data.filter(d => d.activeMs > 0).length : 0;
+  let activeDays = 0;
+  if (range !== 'today') {
+    if (range === 'all') {
+      const allDays = Object.keys(byDayCache ?? {}).sort();
+      if (allDays.length > 0) {
+        const [y1, m1, d1] = allDays[0].split('-').map(Number);
+        const [y2, m2, d2] = allDays[allDays.length - 1].split('-').map(Number);
+        const start = new Date(y1, m1 - 1, d1);
+        const end = new Date(y2, m2 - 1, d2);
+        activeDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+      }
+    } else {
+      activeDays = parseInt(range);
+    }
+  }
   const avgMs = activeDays > 0 ? totalMs / activeDays : 0;
 
   let peakMs = 0, peakLabel = '';
@@ -321,7 +328,12 @@ function renderStats(data, range) {
   }
 
   document.querySelector('#stat-today').textContent = formatMs(todayMs) || '0m';
-  document.querySelector('#stat-daily-avg').textContent = activeDays > 0 ? formatMs(avgMs) : '—';
+  const dailyAvgEl = document.querySelector('#stat-daily-avg');
+  if (activeDays > 0) {
+    dailyAvgEl.innerHTML = formatWithSmallSub(formatMs(avgMs));
+  } else {
+    dailyAvgEl.textContent = '—';
+  }
   const peakEl = document.querySelector('#stat-peak');
   peakEl.textContent = peakMs > 0 ? formatMs(peakMs) : '—';
   peakEl.classList.remove('has-tooltip');
@@ -330,7 +342,7 @@ function renderStats(data, range) {
   peakInfo.title = '';
   const totalTimeEl = document.querySelector('#stat-total-time');
   if (totalMs > 0) {
-    const full = formatTotalTime(totalMs);
+    const full = formatMs(totalMs);
     const match = full.match(/^(.+?)(\s*\(.+\))?$/);
     totalTimeEl.innerHTML = match[2] ? `${match[1]}<span class="stat-sub"> ${match[2]}</span>` : full;
   } else {

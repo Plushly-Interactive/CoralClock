@@ -4,6 +4,8 @@
   --font-md:   14px;
   --font-lg:   16px;
 
+  --stat-sub-size: 0.85em;
+
   --color-accent: #74322a;
   --color-accent-light: #9a4237;
   --color-secondary: #97aabe;
@@ -121,12 +123,6 @@ input[type="checkbox"] {
 .btn:hover {
   background: var(--color-accent-light);
   border-color: var(--color-accent-light);
-}
-
-.stat-value {
-  font-size: var(--font-md);
-  font-weight: 500;
-  color: var(--color-text);
 }
 
 .text-meta {
@@ -281,6 +277,68 @@ input[type="checkbox"] {
   color: var(--color-accent);
 }
 
+#dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+#dashboard-table {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  table-layout: fixed;
+  width: 100%;
+}
+
+#dashboard-table thead {
+  display: block;
+  flex-shrink: 0;
+}
+
+#dashboard-table tbody {
+  display: block;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+#dashboard-table thead tr,
+#dashboard-table tbody tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+#dashboard-table th {
+  text-align: left;
+  padding: 8px 20px;
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  user-select: none;
+}
+
+#dashboard-table th:hover {
+  color: var(--color-accent-light);
+}
+
+#dashboard-table td {
+  padding: 10px 20px;
+  font-size: var(--font-lg);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+#dashboard-table td:nth-child(2),
+#dashboard-table td:nth-child(3),
+#dashboard-table td:nth-child(4) {
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
 #notification {
   position: fixed;
   top: 20px;
@@ -320,4 +378,22 @@ input[type="checkbox"] {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.stat-value {
+  font-size: var(--font-md);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.stat-value-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-sub {
+  font-size: var(--stat-sub-size);
+  color: var(--color-text-secondary);
+  vertical-align: baseline;
 }

@@ -1,4 +1,4 @@
-import { formatMs, drawBarChart } from './utils.js';
+import { formatMs, drawBarChart, formatWithSmallSub } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 import { seedTestData } from './seedTestData.js';
 
@@ -102,8 +102,8 @@ function renderTable(rows) {
       : row.siteId;
     return `<tr class="clickable" data-href="${href}">
       <td><span class="site-label">${siteLabel}</span><span class="site-id text-meta">${subtitle}</span></td>
-      <td><span class="stat-value">${formatMs(activeMs)}</span></td>
-      <td><span class="stat-value">${formatMs(audioMs)}</span></td>
+      <td><span class="stat-value">${formatWithSmallSub(formatMs(activeMs))}</span></td>
+      <td><span class="stat-value">${formatWithSmallSub(formatMs(audioMs))}</span></td>
       <td><span class="stat-value">${visits}</span></td>
     </tr>`;
   }).join('');

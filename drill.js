@@ -1,4 +1,4 @@
-import { formatMs, drawBarChart, STAT_LABELS } from './utils.js';
+import { formatMs, drawBarChart, formatWithSmallSub, formatMsAsDays, STAT_LABELS } from './utils.js';
 
 let drillPeriod = null;
 let drillPrevPeriod = null;
@@ -233,7 +233,11 @@ async function renderDrillChart() {
   if (totalMs > 0) stats.push({ label: STAT_LABELS.totalTime, value: formatMs(totalMs) });
   if (totalVisits > 0) stats.push({ label: STAT_LABELS.visits, value: totalVisits });
   if (totalMs > 0 && totalVisits > 0) stats.push({ label: STAT_LABELS.avgSession, value: formatMs(totalMs / totalVisits) });
-  ctx.drillStats.innerHTML = stats.map(s => `<div><span class="stat-label">${s.label}</span> <span class="stat-value">${s.value}</span></div>`).join('');
+  ctx.drillStats.innerHTML = stats.map(s => {
+    const isTimeValue = s.label === STAT_LABELS.totalTime || s.label === STAT_LABELS.avgSession;
+    const displayValue = isTimeValue ? formatWithSmallSub(s.value) : s.value;
+    return `<div><span class="stat-label">${s.label}</span> <span class="stat-value">${displayValue}</span></div>`;
+  }).join('');
 
   if (!hasData) return;
 
@@ -245,6 +249,9 @@ async function renderDrillChart() {
   if (drillMetric === 'time') {
     const hasAudio = data.some(d => d.audioMs > 0);
     ctx.drillLegend.style.display = hasAudio ? 'flex' : 'none';
+    const formatValForAxis = isMonthDrill
+      ? (val) => Math.abs(val - maxTimeMs) < 1 ? formatMsAsDays(val) : formatMs(val)
+      : formatMs;
     const series = hasAudio
       ? [
           { label: 'Active', getValue: d => d.activeMs, color: rootStyle.getPropertyValue('--color-chart-time'), formatVal: formatMs },
@@ -258,7 +265,7 @@ async function renderDrillChart() {
       data,
       maxVal: maxTimeMs,
       getValue: d => d.activeMs,
-      formatVal: formatMs,
+      formatVal: formatValForAxis,
       color: rootStyle.getPropertyValue('--color-chart-time'),
       series,
       onBarClick,

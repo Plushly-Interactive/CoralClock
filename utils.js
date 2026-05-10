@@ -7,6 +7,21 @@ export const STAT_LABELS = {
   avgSession: 'Avg session',
 };
 
+export function formatWithSmallSub(text) {
+  const match = text.match(/^(.+?)(\s*\(.+\))?$/);
+  return match[2] ? `${match[1]}<span class="stat-sub">${match[2]}</span>` : text;
+}
+
+export function formatWithSmallSubSvg(text, baseFontSize) {
+  const match = text.match(/^(.+?)(\s*\(.+\))?$/);
+  if (!match[2]) return text;
+  const rootStyle = getComputedStyle(document.documentElement);
+  const varValue = rootStyle.getPropertyValue('--stat-sub-size').trim();
+  const ratio = parseFloat(varValue) || 0.75;
+  const smallSize = (baseFontSize * ratio).toFixed(1);
+  return `${match[1]}<tspan font-size="${smallSize}">${match[2]}</tspan>`;
+}
+
 export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick, scale = 'linear', gridLineWidth = 1 }) {
   const W = 600, H = 260, padLeft = 38, padRight = 8, padTop = 10, padBottom = 40;
   const innerW = W - padLeft - padRight;
@@ -38,7 +53,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   const hideMid = hideMidTicks(maxVal);
   const gridlines = yTicks.map(({ y, val }, i) => {
     const isMid = i === 1 || i === 2;
-    const label = hideMid && isMid ? '' : `<text x="${padLeft - 6}" y="${y + 4}" text-anchor="end" font-size="${axisFontSize}" fill="var(--color-text-secondary)">${formatVal(val)}</text>`;
+    const label = hideMid && isMid ? '' : `<text x="${padLeft - 6}" y="${y + 4}" text-anchor="end" font-size="${axisFontSize}" fill="var(--color-text-secondary)">${formatWithSmallSubSvg(formatVal(val), axisFontSize)}</text>`;
     return `<line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="${gridColor}" stroke-width="${gridLineWidth}"/>${label}`;
   }).join('');
 
@@ -115,7 +130,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
       let html;
       if (rect.dataset.allSeries) {
         const seriesLines = rect.dataset.seriesList.split('\n');
-        const seriesHtml = seriesLines.join('<br>');
+        const seriesHtml = seriesLines.map(line => formatWithSmallSub(line)).join('<br>');
         html = `${seriesHtml}<br>${rect.dataset.range}`;
         if (onBarClick) html += '<br>(click to open detailed chart)';
         tooltipEl.innerHTML = html;
@@ -128,7 +143,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
         }
       } else {
         const val = Number(rect.dataset.val);
-        let text = val === 0 ? rect.dataset.range : formatTooltip(val) + '<br>' + rect.dataset.range;
+        let text = val === 0 ? rect.dataset.range : formatWithSmallSub(formatTooltip(val)) + '<br>' + rect.dataset.range;
         if (onBarClick) text += '<br>(click to open detailed chart)';
         if (onBarClick || val > 0) {
           tooltipEl.innerHTML = text;
@@ -187,5 +202,14 @@ export function formatMs(ms) {
   if (ms < 3600000)  { const r = Math.round(ms / 60000); return r < 60 ? `${r}m` : '1h'; }
   if (ms < 36000000) { const m = totalMinutes % 60; return m ? `${Math.floor(hours)}h${m}m` : `${Math.floor(hours)}h`; }
   if (ms < 86400000) { const h = hours.toFixed(1); return `${h.endsWith('.0') ? Math.floor(hours) : h}h`; }
-  const d = days.toFixed(1); return `${d.endsWith('.0') ? Math.floor(days) : d}d`;
+  const hStr = Math.floor(hours);
+  const dTruncated = Math.floor(days * 10) / 10;
+  const dStr = dTruncated >= 10 || dTruncated % 1 === 0 ? Math.floor(dTruncated) : dTruncated.toFixed(1);
+  return `${hStr}h (${dStr}d)`;
+}
+
+export function formatMsAsDays(ms) {
+  const days = ms / 86400000;
+  if (days === Math.floor(days)) return `${Math.floor(days)}d`;
+  return `${days.toFixed(1)}d`;
 }
