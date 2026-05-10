@@ -14,6 +14,13 @@ export function siteIdFromUrl(url) {
   return resolveSite(new URL(url).hostname).siteId;
 }
 
+export function pathFromUrl(url) {
+  if (!url?.startsWith('http')) return null;
+  const u = new URL(url);
+  const path = u.pathname === '/' ? '/' : u.pathname.replace(/\/$/, '');
+  return path + u.search;
+}
+
 function addWindowSite(windowId, siteId) {
   let s = siteStates.get(siteId);
   if (!s) {
