@@ -194,6 +194,19 @@ export function localHourKey(ts) {
   return `${localDayKey(ts)}T${String(new Date(ts).getHours()).padStart(2, '0')}`;
 }
 
+export function splitByHour(from, to) {
+  const segs = [];
+  let t = from;
+  while (t < to) {
+    const nextHour = new Date(t);
+    nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+    const end = Math.min(nextHour.getTime(), to);
+    segs.push({ hourKey: localHourKey(t), dayKey: localDayKey(t), ms: end - t });
+    t = end;
+  }
+  return segs;
+}
+
 export function formatMs(ms) {
   const totalMinutes = Math.floor(ms / 60000);
   const hours = ms / 3600000;
