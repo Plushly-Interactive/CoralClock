@@ -2,7 +2,9 @@ import { formatMs, localDayKey } from './timeUtils.js';
 import { drawBarChart, formatWithSmallSub, escapeHtml } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 import { seedTestData } from './seedTestData.js';
+import { createRangeDropdown } from './rangeSelect.js';
 
+document.querySelector('#header-center').appendChild(createRangeDropdown());
 const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#dashboard-body');
 const emptyMsg = document.querySelector('#empty-msg');

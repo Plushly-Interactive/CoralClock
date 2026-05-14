@@ -2,12 +2,14 @@ import { formatMs, localDayKey } from './timeUtils.js';
 import { drawBarChart, formatWithSmallSub, STAT_LABELS } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from './drill.js';
+import { createRangeDropdown } from './rangeSelect.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
 const siteIds = params.get('ids')?.split(',') ?? null;
 const isMerged = !!siteIds;
 const effectiveSiteIds = isMerged ? siteIds : [siteId];
+document.querySelector('#header-center').appendChild(createRangeDropdown());
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
 const visitsChart = document.querySelector('#visits-chart');
@@ -123,6 +125,10 @@ const hourlyTooltip = document.querySelector('#hourly-tooltip');
 const hourlyChartContainer = document.querySelector('#hourly-chart-container');
 const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
 const hourlySubheading = document.querySelector('#hourly-subheading');
+
+const legendTpl = document.querySelector('#legend-tpl');
+document.querySelector('#time-legend').append(legendTpl.content.cloneNode(true));
+document.querySelector('#drill-legend').append(legendTpl.content.cloneNode(true));
 
 function hourlySubheadingText(range) {
   if (range === 'all') return '(all days from earliest data, excluding today)';
