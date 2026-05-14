@@ -3,6 +3,7 @@ import { drawBarChart, formatWithSmallSub, STAT_LABELS } from '../../shared/util
 import { resolveSite } from '../../background/siteResolution.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath } from '../../shared/paths.js';
+import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
 
 const drill = JSON.parse(sessionStorage.getItem('subpageDrill') || 'null');
 if (!drill) {
@@ -55,6 +56,45 @@ stats.forEach(s => {
 
 const legendTpl = document.querySelector('#legend-tpl');
 document.querySelector('#time-legend').append(legendTpl.content.cloneNode(true));
+
+const chartsGrid = document.querySelector('#charts-grid');
+const drillView = document.querySelector('#drill-view');
+
+backBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (isInDrillMode()) {
+    exitDrillCompletely();
+  } else {
+    location.href = siteHref;
+  }
+});
+
+initDrill({
+  chartsGrid,
+  drillView,
+  rangeSelect,
+  getDayEntry: (dayKey) => entryForDay(dayKey),
+  getHourEntriesForDay: (dayKey) => {
+    const result = {};
+    for (let h = 0; h < 24; h++) {
+      const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
+      result[hourKey] = entryForHour(hourKey);
+    }
+    return result;
+  },
+  getAvgPerClockHour: (dayKeys) => {
+    if (dayKeys.length === 0) return new Array(24).fill(0);
+    const sums = new Array(24).fill(0);
+    for (const dayKey of dayKeys) {
+      for (let h = 0; h < 24; h++) {
+        const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
+        sums[h] += entryForHour(hourKey).activeMs;
+      }
+    }
+    return sums.map(s => s / dayKeys.length);
+  },
+  render,
+});
 
 let byDayCache = null;
 let byHourCache = null;
@@ -111,6 +151,7 @@ function entryForHour(hourKey) {
 }
 
 function render() {
+  if (isInDrillMode()) return;
   const range = rangeSelect.dataset.value;
 
   let data;
@@ -156,14 +197,17 @@ function render() {
   visitsChart.style.display = hasData ? 'block' : 'none';
   timeNoData.style.display = hasData ? 'none' : 'block';
   visitsNoData.style.display = hasData ? 'none' : 'block';
-  if (hasData) drawCharts(data);
+  if (hasData) drawCharts(data, range);
   renderStats(data, range);
   renderHourly(range);
 }
 
-function drawCharts(data) {
+function drawCharts(data, range) {
   const hasAudio = data.some(d => d.audioMs > 0);
   document.querySelector('#time-legend').style.display = hasAudio ? 'flex' : 'none';
+
+  const timeOnClick = range !== 'today' ? r => enterDrill(r, null, 'time') : null;
+  const visitsOnClick = range !== 'today' ? r => enterDrill(r, null, 'visits') : null;
 
   const timeSeriesData = hasAudio
     ? [
@@ -181,6 +225,7 @@ function drawCharts(data) {
     formatVal: ms => formatMs(ms),
     color: rootStyle.getPropertyValue('--color-chart-time'),
     series: timeSeriesData,
+    onBarClick: timeOnClick,
   });
 
   drawBarChart({
@@ -193,6 +238,7 @@ function drawCharts(data) {
     formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
     hideMidTicks: maxVal => maxVal < 3,
     color: rootStyle.getPropertyValue('--color-chart-visits'),
+    onBarClick: visitsOnClick,
   });
 }
 

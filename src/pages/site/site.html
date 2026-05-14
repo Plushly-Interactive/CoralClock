@@ -71,44 +71,7 @@
       </div>
     </div>
 
-    <div id="drill-view" style="display:none">
-      <div id="drill-top">
-        <button id="nav-close" class="link-btn">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-          Overview
-        </button>
-        <button id="drill-month-link" class="link-btn" style="display:none"></button>
-      </div>
-      <div id="drill-controls">
-        <div id="nav-strip">
-          <button id="nav-prev" class="link-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
-          <span id="nav-label"></span>
-          <button id="nav-next" class="link-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
-        </div>
-        <div id="drill-legend" class="time-legend text-meta" style="display: none;"></div>
-        <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn"> Enhance readbility (√x scale)</label>
-        <div id="drill-stats" class="text-meta"></div>
-        <div id="drill-toggle">
-          <button id="drill-time-btn" class="drill-toggle-btn active">Time</button>
-          <button id="drill-visits-btn" class="drill-toggle-btn">Visits</button>
-          <button id="drill-hour-btn" class="drill-toggle-btn">Hourly avg.</button>
-        </div>
-      </div>
-      <div id="drill-chart-wrapper">
-        <button id="drill-keys-btn" class="square-btn">&#215;</button>
-        <div id="drill-keys-popup" class="tooltip text-meta">
-          <div id="drill-keys-title">Keyboard shortcuts</div>
-          <div><kbd>←</kbd><kbd>→</kbd> Navigate period</div>
-          <div><kbd>↑</kbd> Go to month (day → month)</div>
-          <div><kbd>↓</kbd> Go to first day with data in month</div>
-          <div><kbd>Space</kbd> Toggle mode (time → visits → avg.)</div>
-          <div><kbd>Esc</kbd> Exit to overview</div>
-        </div>
-        <svg id="drill-chart"></svg>
-        <div id="drill-tooltip" class="tooltip text-meta"></div>
-        <p id="drill-no-data" class="chart-note" style="display:none">No data for this period.</p>
-      </div>
-    </div>
+    <div id="drill-view" style="display:none"></div>
 
     <p id="empty-msg">No data for this period.</p>
 

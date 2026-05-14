@@ -287,4 +287,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await saveSubpageSnapshot(flushAt);
   cachedByDay = null;
   cachedByHour = null;
+  cachedSubpagesByDay = null;
+  cachedSubpagesByHour = null;
 });

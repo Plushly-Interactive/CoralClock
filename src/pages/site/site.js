@@ -1,7 +1,7 @@
 import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
 import { drawBarChart, formatWithSmallSub, STAT_LABELS } from '../../shared/utils.js';
 import { resolveSite } from '../../background/siteResolution.js';
-import { initDrill, isInDrillMode, enterDrill } from './drill.js';
+import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath } from '../../shared/paths.js';
@@ -107,22 +107,6 @@ let currentSort = 'time';
 
 const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
-const navLabel = document.querySelector('#nav-label');
-const navPrev = document.querySelector('#nav-prev');
-const navNext = document.querySelector('#nav-next');
-const navClose = document.querySelector('#nav-close');
-const drillChart = document.querySelector('#drill-chart');
-const drillTooltip = document.querySelector('#drill-tooltip');
-const drillLegend = document.querySelector('#drill-legend');
-const drillTimeBtn = document.querySelector('#drill-time-btn');
-const drillVisitsBtn = document.querySelector('#drill-visits-btn');
-const drillHourBtn = document.querySelector('#drill-hour-btn');
-const drillNoData = document.querySelector('#drill-no-data');
-const drillMonthLink = document.querySelector('#drill-month-link');
-const drillStats = document.querySelector('#drill-stats');
-const drillScaleBtn = document.querySelector('#drill-scale-btn');
-const drillKeysBtn = document.querySelector('#drill-keys-btn');
-const drillKeysPopup = document.querySelector('#drill-keys-popup');
 const backBtn = document.querySelector('#back-btn');
 
 const hourlyChart = document.querySelector('#hourly-chart');
@@ -133,7 +117,6 @@ const hourlySubheading = document.querySelector('#hourly-subheading');
 
 const legendTpl = document.querySelector('#legend-tpl');
 document.querySelector('#time-legend').append(legendTpl.content.cloneNode(true));
-document.querySelector('#drill-legend').append(legendTpl.content.cloneNode(true));
 
 const hourly = createHourlyChart({
   chart: hourlyChart,
@@ -152,30 +135,29 @@ window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
 });
 
+backBtn.addEventListener('click', (e) => {
+  if (!isInDrillMode()) return;
+  e.preventDefault();
+  location.href = '../dashboard/dashboard.html';
+});
+
 initDrill({
   chartsGrid,
   drillView,
   rangeSelect,
-  backBtn,
-  navPrev,
-  navNext,
-  navClose,
-  drillTimeBtn,
-  drillVisitsBtn,
-  drillHourBtn,
-  drillChart,
-  drillTooltip,
-  drillLegend,
-  drillNoData,
-  drillMonthLink,
-  drillStats,
-  drillScaleBtn,
-  drillKeysBtn,
-  drillKeysPopup,
-  navLabel,
-  entrySum,
-  get byDayCache() { return byDayCache; },
-  siteIds: effectiveSiteIds,
+  getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
+  getHourEntriesForDay: async (dayKey) => {
+    const hourData = await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourForDay', dayKey });
+    const result = {};
+    for (let h = 0; h < 24; h++) {
+      const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
+      result[hourKey] = entrySum(hourData?.[hourKey]);
+    }
+    return result;
+  },
+  getAvgPerClockHour: (dayKeys) => chrome.runtime.sendMessage({
+    type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range: null, dayKeys,
+  }),
   render,
 });
 
