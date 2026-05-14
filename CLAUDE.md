@@ -22,7 +22,7 @@
 - Use classes for CSS styling (shared styles across elements). Use ids for JS selection. An element can have both.
 - Always prefix unused parameters with _.
 - SVG <title> tooltips are unreliable in Chromium, never use them.
-- Never duplicate CSS code, use shared classes as much as possible.
+- Never duplicate CSS code, use existing shared classes as much as possible.
 
 ## Communication
 - Explain each step as if I'm learning, not just following along.
