@@ -1,12 +1,19 @@
-import { localDayKey } from './utils.js';
+import { localDayKey } from './timeUtils.js';
 import { ensureStorageVersion } from './migrations.js';
+import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import {
-  siteIdFromUrl,
   setWindowSite, removeWindowSite,
   addAudibleTab, removeAudibleTab,
   flushToStorage, reconcileWindows, initTracking,
   saveSnapshot, recoverFromSnapshot,
-} from './tracking.js';
+} from './siteTracking.js';
+import {
+  setWindowPath, removeWindowPath,
+  addAudibleTabPath, removeAudibleTabPath,
+  initSubpageTracking, reconcileSubpagePaths,
+  flushSubpagesToStorage,
+  saveSubpageSnapshot, recoverSubpagesFromSnapshot,
+} from './subpageTracking.js';
 
 console.log('BiteGuard: background started');
 
@@ -22,13 +29,14 @@ const bootstrapDone = bootstrap();
 
 chrome.runtime.onStartup.addListener(() => {
   coldStart = true;
-  chrome.storage.local.remove('_trackingSnapshot');
+  chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
 });
 
 async function bootstrap() {
   await ensureStorageVersion();
   bootstrapAt = Date.now();
   await initTracking();
+  await initSubpageTracking();
 }
 
 // --- Messages ---
@@ -155,27 +163,41 @@ chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
   await bootstrapDone;
   const tab = await chrome.tabs.get(tabId);
   if (!tab.active) return;
-  setWindowSite(windowId, siteIdFromUrl(tab.url));
+  const siteId = siteIdFromUrl(tab.url);
+  const path = pathFromUrl(tab.url);
+  setWindowSite(windowId, siteId);
+  setWindowPath(windowId, siteId, path);
 });
 
 chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   await bootstrapDone;
   if (changeInfo.status === 'complete' && tab.active) {
-    setWindowSite(tab.windowId, siteIdFromUrl(tab.url));
+    const siteId = siteIdFromUrl(tab.url);
+    const path = pathFromUrl(tab.url);
+    setWindowSite(tab.windowId, siteId);
+    setWindowPath(tab.windowId, siteId, path);
   }
   if (changeInfo.status === 'complete') {
     // Catches audible tab navigating between sites without going silent (changeInfo.audible won't fire)
     if (tab.audible && !tab.mutedInfo?.muted) {
-      addAudibleTab(tab.id, siteIdFromUrl(tab.url));
+      const siteId = siteIdFromUrl(tab.url);
+      const path = pathFromUrl(tab.url);
+      addAudibleTab(tab.id, siteId);
+      addAudibleTabPath(tab.id, siteId, path);
     } else {
       removeAudibleTab(tab.id);
+      removeAudibleTabPath(tab.id);
     }
   }
   if ('audible' in changeInfo) {
     if (changeInfo.audible && !tab.mutedInfo?.muted) {
-      addAudibleTab(tab.id, siteIdFromUrl(tab.url));
+      const siteId = siteIdFromUrl(tab.url);
+      const path = pathFromUrl(tab.url);
+      addAudibleTab(tab.id, siteId);
+      addAudibleTabPath(tab.id, siteId, path);
     } else {
       removeAudibleTab(tab.id);
+      removeAudibleTabPath(tab.id);
     }
   }
 });
@@ -183,18 +205,38 @@ chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   await bootstrapDone;
   removeAudibleTab(tabId);
+  removeAudibleTabPath(tabId);
 });
 
 chrome.windows.onCreated.addListener(async (window) => {
   await bootstrapDone;
   if (window.state === 'minimized') return;
   const [tab] = await chrome.tabs.query({ windowId: window.id, active: true });
-  setWindowSite(window.id, siteIdFromUrl(tab?.url));
+  const siteId = siteIdFromUrl(tab?.url);
+  const path = pathFromUrl(tab?.url);
+  setWindowSite(window.id, siteId);
+  setWindowPath(window.id, siteId, path);
 });
 
 chrome.windows.onRemoved.addListener(async (windowId) => {
   await bootstrapDone;
   removeWindowSite(windowId);
+  removeWindowPath(windowId);
+});
+
+// SPA navigation — domain unchanged, only path changes. tabs.onUpdated with
+// status:complete handles full loads; this handles history.pushState etc.
+chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
+  await bootstrapDone;
+  if (details.frameId !== 0) return;
+  const tab = await chrome.tabs.get(details.tabId).catch(() => null);
+  if (!tab) return;
+  const siteId = siteIdFromUrl(details.url);
+  const path = pathFromUrl(details.url);
+  if (tab.active) setWindowPath(tab.windowId, siteId, path);
+  if (tab.audible && !tab.mutedInfo?.muted) {
+    addAudibleTabPath(tab.id, siteId, path);
+  }
 });
 
 // --- Flush alarm ---
@@ -203,14 +245,18 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'flush') return;
   await bootstrapDone;
   if (coldStart) {
-    await chrome.storage.local.remove('_trackingSnapshot');
+    await chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
     coldStart = false;
   }
   await recoverFromSnapshot(bootstrapAt);
+  await recoverSubpagesFromSnapshot(bootstrapAt);
   await reconcileWindows();
+  await reconcileSubpagePaths();
   const flushAt = Date.now();
   await flushToStorage(flushAt);
+  await flushSubpagesToStorage(flushAt);
   await saveSnapshot(flushAt);
+  await saveSubpageSnapshot(flushAt);
   cachedByDay = null;
   cachedByHour = null;
 });

@@ -7,6 +7,15 @@ export const STAT_LABELS = {
   avgSession: 'Avg session',
 };
 
+export function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function formatWithSmallSub(text) {
   const match = text.match(/^(.+?)(\s*\(.+\))?$/);
   return match[2] ? `${match[1]}<span class="stat-sub">${match[2]}</span>` : text;
@@ -183,33 +192,4 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
       }
     });
   });
-}
-
-export function localDayKey(ts) {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-export function localHourKey(ts) {
-  return `${localDayKey(ts)}T${String(new Date(ts).getHours()).padStart(2, '0')}`;
-}
-
-export function formatMs(ms) {
-  const totalMinutes = Math.floor(ms / 60000);
-  const hours = ms / 3600000;
-  const days = ms / 86400000;
-  if (ms < 60000)    return `${Math.floor(ms / 1000)}s`;
-  if (ms < 3600000)  { const r = Math.round(ms / 60000); return r < 60 ? `${r}m` : '1h'; }
-  if (ms < 36000000) { const m = totalMinutes % 60; return m ? `${Math.floor(hours)}h${m}m` : `${Math.floor(hours)}h`; }
-  if (ms < 86400000) { const h = hours.toFixed(1); return `${h.endsWith('.0') ? Math.floor(hours) : h}h`; }
-  const hStr = Math.floor(hours);
-  const dTruncated = Math.floor(days * 10) / 10;
-  const dStr = dTruncated >= 10 || dTruncated % 1 === 0 ? Math.floor(dTruncated) : dTruncated.toFixed(1);
-  return `${hStr}h (${dStr}d)`;
-}
-
-export function formatMsAsDays(ms) {
-  const days = ms / 86400000;
-  if (days === Math.floor(days)) return `${Math.floor(days)}d`;
-  return `${days.toFixed(1)}d`;
 }

@@ -1,4 +1,5 @@
-import { formatMs, drawBarChart, formatWithSmallSub } from './utils.js';
+import { formatMs, localDayKey } from './timeUtils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 import { seedTestData } from './seedTestData.js';
 
@@ -101,7 +102,7 @@ function renderTable(rows) {
       ? (ids.length === 1 ? ids[0] : `${ids.length} sites`)
       : row.siteId;
     return `<tr class="clickable" data-href="${href}">
-      <td><span class="site-label">${siteLabel}</span><span class="site-id text-meta">${subtitle}</span></td>
+      <td><span class="site-label">${escapeHtml(siteLabel)}</span><span class="site-id text-meta">${escapeHtml(subtitle)}</span></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(activeMs))}</span></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(audioMs))}</span></td>
       <td><span class="stat-value">${visits}</span></td>
@@ -251,7 +252,7 @@ function dayKeys(range) {
   for (let i = 0; i < days; i++) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    keys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    keys.push(localDayKey(d.getTime()));
   }
   return keys;
 }

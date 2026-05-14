@@ -1,4 +1,4 @@
-import { formatMs } from './utils.js';
+import { formatMs } from './timeUtils.js';
 
 const addBtn = document.querySelector('#add-btn');
 
@@ -131,10 +131,6 @@ const themeDropdown = document.querySelector('#theme-dropdown');
 themeBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   themeDropdown.classList.toggle('open');
-});
-
-document.addEventListener('click', () => {
-  themeDropdown.classList.remove('open');
 });
 
 themeDropdown.querySelectorAll('button').forEach(btn => {
