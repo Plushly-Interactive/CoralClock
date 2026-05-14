@@ -6,7 +6,7 @@ import {
   addAudibleTab, removeAudibleTab,
   flushToStorage, reconcileWindows, initTracking,
   saveSnapshot, recoverFromSnapshot,
-} from './tracking.js';
+} from './siteTracking.js';
 import {
   setWindowPath, removeWindowPath,
   addAudibleTabPath, removeAudibleTabPath,

@@ -1,3 +1,152 @@
+import { localDayKey, localHourKey, splitByHour } from './utils.js';
+
+const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
+
+export function createTrackingModule({
+  urlToKey,
+  dayStorageKey,
+  hourStorageKey,
+  snapshotStorageKey,
+  getCell,
+  recoverLegacy,
+}) {
+  const tracker = createRangeTracker();
+  let _recovered = false;
+  const parseSnapshot = recoverLegacy ?? (snap => ({
+    activeKeys: snap.activeKeys ?? [],
+    audioKeys: snap.audioKeys ?? [],
+  }));
+
+  async function init() {
+    const windows = await chrome.windows.getAll({ populate: true });
+    for (const w of windows) {
+      if (w.state === 'minimized') continue;
+      const tab = w.tabs?.find(t => t.active);
+      const key = urlToKey(tab?.url);
+      if (key) tracker.addWindow(w.id, key);
+    }
+    const tabs = await chrome.tabs.query({ audible: true });
+    for (const tab of tabs) {
+      if (tab.mutedInfo?.muted) continue;
+      const key = urlToKey(tab.url);
+      if (key) tracker.addAudibleTab(tab.id, key, false);
+    }
+  }
+
+  async function reconcile() {
+    const windows = await chrome.windows.getAll();
+    const liveById = new Map(windows.map(w => [w.id, w]));
+    for (const id of tracker.getTrackedWindowIds()) {
+      const w = liveById.get(id);
+      if (!w || w.state === 'minimized') tracker.removeWindow(id);
+    }
+    for (const w of windows) {
+      if (w.state === 'minimized') continue;
+      if (tracker.isWindowTracked(w.id)) continue;
+      const [tab] = await chrome.tabs.query({ windowId: w.id, active: true });
+      const key = urlToKey(tab?.url);
+      if (key) tracker.addWindow(w.id, key);
+    }
+    const audibleTabs = await chrome.tabs.query({ audible: true });
+    const liveAudibleIds = new Set(
+      audibleTabs.filter(t => !t.mutedInfo?.muted).map(t => t.id)
+    );
+    for (const tabId of tracker.getTrackedAudibleTabIds()) {
+      if (!liveAudibleIds.has(tabId)) tracker.removeAudibleTab(tabId);
+    }
+    for (const tab of audibleTabs) {
+      if (tab.mutedInfo?.muted) continue;
+      const key = urlToKey(tab.url);
+      if (key) tracker.addAudibleTab(tab.id, key, false);
+    }
+  }
+
+  async function saveSnapshot(now = Date.now()) {
+    const activeKeys = tracker.getActiveKeys();
+    const audioKeys = tracker.getAudibleKeys();
+    if (activeKeys.length > 0 || audioKeys.length > 0) {
+      await chrome.storage.local.set({ [snapshotStorageKey]: { activeKeys, audioKeys, at: now } });
+    } else {
+      await chrome.storage.local.remove(snapshotStorageKey);
+    }
+  }
+
+  async function recoverFromSnapshot(clipAt) {
+    if (_recovered) return;
+    _recovered = true;
+    const stored = await chrome.storage.local.get(snapshotStorageKey);
+    const snap = stored[snapshotStorageKey];
+    if (!snap) return;
+    const now = Date.now();
+    if (now - snap.at > SNAPSHOT_MAX_GAP_MS) {
+      await chrome.storage.local.remove(snapshotStorageKey);
+      return;
+    }
+    const endAt = Math.min(clipAt ?? now, now);
+    const { activeKeys, audioKeys } = parseSnapshot(snap);
+    const activeKeySet = new Set(activeKeys);
+    for (const key of activeKeys) {
+      tracker.pushRange('active', key, [snap.at, endAt]);
+    }
+    for (const key of audioKeys) {
+      tracker.pushRange('audio', key, [snap.at, endAt]);
+      if (activeKeySet.has(key)) {
+        tracker.pushRange('overlap', key, [snap.at, endAt]);
+      }
+    }
+  }
+
+  async function flushToStorage(now = Date.now()) {
+    tracker.flushAllElapsed(now);
+    const { active, audio, overlap, visits } = tracker.pending;
+    if (active.size === 0 && audio.size === 0 && overlap.size === 0 && visits.size === 0) return;
+    const stored = await chrome.storage.local.get([dayStorageKey, hourStorageKey]);
+    const byDay = stored[dayStorageKey] ?? {};
+    const byHour = stored[hourStorageKey] ?? {};
+
+    function addRanges(map, field) {
+      for (const [key, ranges] of map) {
+        for (const [from, to] of ranges) {
+          for (const { hourKey, dayKey, ms } of splitByHour(from, to)) {
+            byHour[hourKey] ??= {};
+            const hourEntry = getCell(byHour[hourKey], key);
+            const before = hourEntry[field];
+            hourEntry[field] = Math.min(before + ms, 3600000);
+            const added = hourEntry[field] - before;
+            byDay[dayKey] ??= {};
+            getCell(byDay[dayKey], key)[field] += added;
+          }
+        }
+      }
+    }
+
+    addRanges(active, 'activeMs');
+    addRanges(audio, 'audioMs');
+    addRanges(overlap, 'overlapMs');
+
+    const day = localDayKey(now);
+    const hour = localHourKey(now);
+    for (const [key, count] of visits) {
+      byDay[day] ??= {};
+      getCell(byDay[day], key).visits += count;
+      byHour[hour] ??= {};
+      getCell(byHour[hour], key).visits += count;
+    }
+
+    tracker.clearPending();
+    await chrome.storage.local.set({ [dayStorageKey]: byDay, [hourStorageKey]: byHour });
+  }
+
+  return {
+    setWindow: tracker.setWindow,
+    removeWindow: tracker.removeWindow,
+    addAudibleTab: tracker.addAudibleTab,
+    removeAudibleTab: tracker.removeAudibleTab,
+    init, reconcile,
+    saveSnapshot, recoverFromSnapshot, flushToStorage,
+  };
+}
+
 export function createRangeTracker() {
   const states = new Map();
   const windowToKey = new Map();
