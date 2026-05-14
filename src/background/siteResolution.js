@@ -1,4 +1,4 @@
-import { getDomain, getDomainWithoutSuffix } from './tldts.js';
+import { getDomain, getDomainWithoutSuffix } from '../vendor/tldts.js';
 
 export function resolveSite(hostname) {
   const siteId = getDomain(hostname) ?? hostname;

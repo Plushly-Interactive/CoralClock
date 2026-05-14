@@ -1,4 +1,4 @@
-import { resolveSite } from './siteResolution.js';
+import { resolveSite } from '../../background/siteResolution.js';
 
 const TT_VERSION = '4.2.1';
 

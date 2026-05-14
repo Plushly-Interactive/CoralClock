@@ -5,7 +5,7 @@
   "description": "Block websites after a time limit.",
 
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "src/background/background.js",
     "type": "module"
   },
 
@@ -16,7 +16,7 @@
   },
 
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/pages/popup/popup.html",
     "default_title": "BiteGuard",
     "default_icon": {
       "16": "resources/icons/biteguard-icon-blue-square-16px.png",
@@ -29,7 +29,7 @@
   "host_permissions": ["<all_urls>"],
 
   "web_accessible_resources": [{
-    "resources": ["blocked.html"],
+    "resources": ["src/pages/blocked/blocked.html"],
     "matches": ["<all_urls>"]
   }]
 }

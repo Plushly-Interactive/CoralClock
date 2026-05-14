@@ -1,5 +1,5 @@
-import { formatMs, formatMsAsDays, localDayKey } from './timeUtils.js';
-import { drawBarChart, formatWithSmallSub, STAT_LABELS } from './utils.js';
+import { formatMs, formatMsAsDays, localDayKey } from '../../shared/timeUtils.js';
+import { drawBarChart, formatWithSmallSub, STAT_LABELS } from '../../shared/utils.js';
 
 let drillPeriod = null;
 let drillPrevPeriod = null;
@@ -18,7 +18,7 @@ export function initDrill(context) {
   ctx.backBtn.addEventListener('click', (e) => {
     if (!drillPeriod) return;
     e.preventDefault();
-    location.href = 'dashboard.html';
+    location.href = '../dashboard/dashboard.html';
   });
 
   ctx.navPrev.addEventListener('click', () => navigatePeriod(-1));

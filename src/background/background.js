@@ -1,5 +1,5 @@
-import { localDayKey } from './timeUtils.js';
-import { ensureStorageVersion } from './migrations.js';
+import { localDayKey } from '../shared/timeUtils.js';
+import { ensureStorageVersion } from '../data/migrations.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import {
   setWindowSite, removeWindowSite,

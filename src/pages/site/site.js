@@ -1,9 +1,9 @@
-import { formatMs, localDayKey } from './timeUtils.js';
-import { drawBarChart, formatWithSmallSub, STAT_LABELS } from './utils.js';
-import { resolveSite } from './siteResolution.js';
+import { formatMs, localDayKey } from '../../shared/timeUtils.js';
+import { drawBarChart, formatWithSmallSub, STAT_LABELS } from '../../shared/utils.js';
+import { resolveSite } from '../../background/siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from './drill.js';
-import { createRangeDropdown, initRangeSelect } from './rangeSelect.js';
-import { createHourlyChart } from './hourlyChart.js';
+import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
+import { createHourlyChart } from '../../shared/hourlyChart.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');

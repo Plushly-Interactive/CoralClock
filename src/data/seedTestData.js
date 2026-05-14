@@ -1,4 +1,4 @@
-import { localDayKey } from './timeUtils.js';
+import { localDayKey } from '../shared/timeUtils.js';
 
 const SITES = {
   'youtube.com':          { peaks: [[19,23,1.0],[12,14,0.6],[15,18,0.5]], peakMaxMin: 35, weekendFactor: 1.7, skipDayProb: 0.10, audioFraction: 0.65 },

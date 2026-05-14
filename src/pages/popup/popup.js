@@ -1,9 +1,9 @@
-import { formatMs } from './timeUtils.js';
+import { formatMs } from '../../shared/timeUtils.js';
 
 const addBtn = document.querySelector('#add-btn');
 
 document.querySelector('#dashboard-btn').addEventListener('click', () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('dashboard.html') });
+  chrome.tabs.create({ url: chrome.runtime.getURL('src/pages/dashboard/dashboard.html') });
 });
 
 const addForm = document.querySelector('#add-form');

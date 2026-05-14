@@ -1,9 +1,9 @@
-import { formatMs, localDayKey } from './timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml } from './utils.js';
-import { resolveSite } from './siteResolution.js';
-import { seedTestData } from './seedTestData.js';
-import { createRangeDropdown, initRangeSelect } from './rangeSelect.js';
-import { createHourlyChart } from './hourlyChart.js';
+import { formatMs, localDayKey } from '../../shared/timeUtils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml } from '../../shared/utils.js';
+import { resolveSite } from '../../background/siteResolution.js';
+import { seedTestData } from '../../data/seedTestData.js';
+import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
+import { createHourlyChart } from '../../shared/hourlyChart.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 const rangeSelect = document.querySelector('#range-select');
@@ -107,9 +107,9 @@ function renderTable(rows) {
     const ids = row.siteIds;
     const href = ids
       ? (ids.length === 1
-          ? `site.html?id=${encodeURIComponent(ids[0])}`
-          : `site.html?ids=${encodeURIComponent(ids.join(','))}`)
-      : `site.html?id=${encodeURIComponent(row.siteId)}`;
+          ? `../site/site.html?id=${encodeURIComponent(ids[0])}`
+          : `../site/site.html?ids=${encodeURIComponent(ids.join(','))}`)
+      : `../site/site.html?id=${encodeURIComponent(row.siteId)}`;
     const subtitle = ids
       ? (ids.length === 1 ? ids[0] : `${ids.length} sites`)
       : row.siteId;
@@ -213,8 +213,8 @@ function renderTopChart() {
   const top = [...getDisplayRows()].sort((a, b) => getVal(b) - getVal(a)).slice(0, 5).map(row => {
     const ids = row.siteIds ?? [row.siteId];
     const href = ids.length === 1
-      ? `site.html?id=${encodeURIComponent(ids[0])}`
-      : `site.html?ids=${encodeURIComponent(ids.join(','))}`;
+      ? `../site/site.html?id=${encodeURIComponent(ids[0])}`
+      : `../site/site.html?ids=${encodeURIComponent(ids.join(','))}`;
     return { label: row.siteLabel, range: ids.join(', '), val: getVal(row), href };
   });
   const hrefByRange = new Map(top.map(d => [d.range, d.href]));
