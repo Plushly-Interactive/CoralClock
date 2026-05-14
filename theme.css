@@ -1,3 +1,9 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 :root {
   --font-sm:   12px;
   --font-base: 13px;
@@ -35,6 +41,8 @@ html.dark {
 }
 
 body {
+  font-family: system-ui, sans-serif;
+  color: var(--color-text);
   background-color: var(--color-bg);
 }
 
@@ -133,6 +141,13 @@ input[type="checkbox"] {
 
 .chart-container {
   position: relative;
+}
+
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: calc(100% - 16px);
+  margin-bottom: 16px;
 }
 
 .chart-heading {

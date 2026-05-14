@@ -1,14 +1,4 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
 body {
-  font-family: system-ui, sans-serif;
-  color: var(--color-text);
-  margin: 0;
-  padding: 0;
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -51,13 +41,6 @@ header {
   padding: 16px;
 }
 
-#top-chart,
-#hourly-chart {
-  display: block;
-  width: 100%;
-  height: calc(100% - 16px);
-  margin-bottom: 16px;
-}
 
 header {
   display: grid;
@@ -177,7 +160,7 @@ tr.clickable:hover td {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  width: min(560px, 90vw);
+  width: min(820px, 92vw);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -214,10 +197,6 @@ tr.clickable:hover td {
 #io-modal-body {
   padding: 20px;
   overflow-y: auto;
-}
-
-#io-modal {
-  width: min(820px, 92vw);
 }
 
 #io-columns {
