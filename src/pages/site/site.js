@@ -1,4 +1,4 @@
-import { formatMs, localDayKey } from '../../shared/timeUtils.js';
+import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
 import { drawBarChart, formatWithSmallSub, STAT_LABELS } from '../../shared/utils.js';
 import { resolveSite } from '../../background/siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from './drill.js';
@@ -376,22 +376,10 @@ function drawChart(data, range) {
   });
 }
 
-function dayKeysForRange(range) {
-  if (range === 'today') return [localDayKey(Date.now())];
-  if (range === 'all') return Object.keys(subpagesByDayCache ?? {}).sort();
-  const now = new Date();
-  const n = parseInt(range);
-  return Array.from({ length: n }, (_, i) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - (n - 1 - i));
-    return localDayKey(d.getTime());
-  });
-}
-
 function aggregateSubpages(range) {
   const out = {};
   if (!subpagesByDayCache) return out;
-  const dayKeys = dayKeysForRange(range);
+  const dayKeys = dayKeysForRange(range, subpagesByDayCache);
   for (const dayKey of dayKeys) {
     const dayData = subpagesByDayCache[dayKey];
     if (!dayData) continue;
@@ -473,6 +461,14 @@ function renderSubpages(range) {
       : `${row.visits} visit${row.visits === 1 ? '' : 's'}`;
     li.title = decoded + (row.truncated ? '*' : '');
     li.innerHTML = `<span class="subpage-path">${display}${star}</span><span class="subpage-num">${num}</span>`;
+    li.onclick = () => {
+      sessionStorage.setItem('subpageDrill', JSON.stringify({
+        siteIds: effectiveSiteIds,
+        path: row.path,
+        prefix: row.truncated,
+      }));
+      location.href = '../path/path.html';
+    };
     list.appendChild(li);
   }
   document.querySelector('#subpages-count').textContent = `${merged.length} path${merged.length !== 1 ? 's' : ''}`;

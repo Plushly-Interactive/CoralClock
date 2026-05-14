@@ -1,3 +1,15 @@
+export function dayKeysForRange(range, allDaysSource) {
+  if (range === 'today') return [localDayKey(Date.now())];
+  if (range === 'all') return Object.keys(allDaysSource ?? {}).sort();
+  const now = new Date();
+  const n = parseInt(range);
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (n - 1 - i));
+    return localDayKey(d.getTime());
+  });
+}
+
 export function localDayKey(ts) {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

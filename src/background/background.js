@@ -20,6 +20,7 @@ console.log('BiteGuard: background started');
 let cachedByDay = null;
 let cachedByHour = null;
 let cachedSubpagesByDay = null;
+let cachedSubpagesByHour = null;
 let bootstrapAt;
 let coldStart = false;
 
@@ -63,10 +64,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     getSubpagesByDay().then(sendResponse);
     return true;
   }
+  if (msg.type === 'getSubpagesByHour') {
+    getSubpagesByHour().then(sendResponse);
+    return true;
+  }
   if (msg.type === 'invalidateAnalyticsCache') {
     cachedByDay = null;
     cachedByHour = null;
     cachedSubpagesByDay = null;
+    cachedSubpagesByHour = null;
     sendResponse(true);
     return true;
   }
@@ -86,6 +92,14 @@ async function getSubpagesByDay() {
     cachedSubpagesByDay = subpagesByDay;
   }
   return cachedSubpagesByDay;
+}
+
+async function getSubpagesByHour() {
+  if (!cachedSubpagesByHour) {
+    const { subpagesByHour = {} } = await chrome.storage.local.get('subpagesByHour');
+    cachedSubpagesByHour = subpagesByHour;
+  }
+  return cachedSubpagesByHour;
 }
 
 async function getByHourToday() {
