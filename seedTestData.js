@@ -1,3 +1,5 @@
+import { localDayKey } from './timeUtils.js';
+
 const SITES = {
   'youtube.com':          { peaks: [[19,23,1.0],[12,14,0.6],[15,18,0.5]], peakMaxMin: 35, weekendFactor: 1.7, skipDayProb: 0.10, audioFraction: 0.65 },
   'github.com':           { peaks: [[9,12,1.0],[14,17,0.9],[20,22,0.3]], peakMaxMin: 30, weekendFactor: 0.2, skipDayProb: 0.20, audioFraction: 0 },
@@ -23,20 +25,16 @@ function visitsForMs(ms) {
   return 1 + Math.floor(ms / (10 * 60_000));
 }
 
-function dayKeyOf(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
 export async function seedTestData() {
   const now = new Date();
-  const todayKey = dayKeyOf(now);
+  const todayKey = localDayKey(now.getTime());
   const currentHour = now.getHours();
   const analyticsByDay = {}, analyticsByHour = {};
 
   for (let d = 0; d < DAYS_BACK; d++) {
     const day = new Date(now);
     day.setDate(day.getDate() - d);
-    const dayKey = dayKeyOf(day);
+    const dayKey = localDayKey(day.getTime());
     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
     const isToday = dayKey === todayKey;
 

@@ -1,4 +1,5 @@
-import { formatMs, drawBarChart, formatWithSmallSub, formatMsAsDays, STAT_LABELS } from './utils.js';
+import { formatMs, formatMsAsDays, localDayKey } from './timeUtils.js';
+import { drawBarChart, formatWithSmallSub, STAT_LABELS } from './utils.js';
 
 let drillPeriod = null;
 let drillPrevPeriod = null;
@@ -174,7 +175,7 @@ function navigatePeriod(dir) {
   } else {
     const [y, m, day] = drillPeriod.split('-').map(Number);
     const d = new Date(y, m - 1, day + dir);
-    drillPeriod = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    drillPeriod = localDayKey(d.getTime());
   }
   ctx.navLabel.textContent = formatPeriodLabel(drillPeriod);
   renderDrillChart();

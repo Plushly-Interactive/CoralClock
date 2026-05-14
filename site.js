@@ -1,4 +1,5 @@
-import { formatMs, drawBarChart, formatWithSmallSub, STAT_LABELS } from './utils.js';
+import { formatMs, localDayKey } from './timeUtils.js';
+import { drawBarChart, formatWithSmallSub, STAT_LABELS } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from './drill.js';
 
@@ -205,11 +206,6 @@ async function loadAvgPerHour(range) {
   avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range });
 }
 
-function todayDayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 function render() {
   if (isInDrillMode()) return;
   const range = rangeSelect.dataset.value;
@@ -217,7 +213,7 @@ function render() {
   let data;
   if (range === 'today') {
     if (!byHourCache) { loadByHour().then(render); return; }
-    const dayKey = todayDayKey();
+    const dayKey = localDayKey(Date.now());
     data = Array.from({ length: 24 }, (_, h) => {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
       const hStr = String(h).padStart(2, '0');
@@ -239,7 +235,7 @@ function render() {
         const [y2, m2, d2] = [today.getFullYear(), today.getMonth() + 1, today.getDate()];
         dayKeys = [];
         for (let date = new Date(y1, m1 - 1, d1); date <= new Date(y2, m2 - 1, d2); date.setDate(date.getDate() + 1)) {
-          dayKeys.push(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`);
+          dayKeys.push(localDayKey(date.getTime()));
         }
       } else {
         dayKeys = [];
@@ -249,7 +245,7 @@ function render() {
       dayKeys = Array.from({ length: parseInt(range) }, (_, i) => {
         const d = new Date(now);
         d.setDate(d.getDate() - (parseInt(range) - 1 - i));
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        return localDayKey(d.getTime());
       });
     }
     if (range === 'all' || parseInt(range) > 90) {
@@ -291,7 +287,7 @@ function render() {
 
 
 function renderStats(data, range) {
-  const todayKey = todayDayKey();
+  const todayKey = localDayKey(Date.now());
   const todayMs = entrySum(byDayCache?.[todayKey]).activeMs;
 
   const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
@@ -318,7 +314,7 @@ function renderStats(data, range) {
     const cutoff = range === 'all' ? null : (() => {
       const d = new Date();
       d.setDate(d.getDate() - (parseInt(range) - 1));
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return localDayKey(d.getTime());
     })();
     for (const [day, sites] of Object.entries(byDayCache)) {
       if (cutoff && day < cutoff) continue;
