@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mockup B — Tile inside grid</title>
+  <script src="../../../src/shared/theme.js"></script>
+  <link rel="stylesheet" href="../../../src/shared/theme.css" />
+  <link rel="stylesheet" href="../../../src/pages/dashboard/dashboard.css" />
+  <link rel="stylesheet" href="../../../src/pages/site/site.css" />
+  <link rel="stylesheet" href="./_shared.css" />
+  <style>
+    /* Direction B: change grid to 3 columns x 2 rows to fit a 5th tile */
+    #charts-grid {
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+    #time-chart-container    { grid-column: 1; grid-row: 1; }
+    #stats-container         { grid-column: 2; grid-row: 1; }
+    #subpages-container      { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; }
+    #hourly-chart-container  { grid-column: 1; grid-row: 2; }
+    #visits-chart-container  { grid-column: 2; grid-row: 2; }
+
+    #subpages-container { border: 1px solid var(--color-border); border-radius: 6px; padding: 16px; }
+    #subpages-container .subpages-compact { margin-top: 8px; overflow: auto; min-height: 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="header-left">
+      <a id="back-btn" href="#">
+        <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+      </a>
+    </div>
+    <div id="header-center">
+      <div id="site-title">
+        <span id="site-label" class="site-label">reddit.com</span>
+        <span id="site-id" class="text-meta">last 7 days</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="charts-grid">
+    <div id="time-chart-container" class="chart-container">
+      <h2 class="chart-heading">Time spent</h2>
+      <div class="mock-chart">time chart</div>
+    </div>
+    <div id="stats-container" class="chart-container">
+      <h2 class="chart-heading">Overview</h2>
+      <div class="mock-stats">
+        <div><div class="mock-stat-label">Total</div><div class="mock-stat-value">8h 14m</div></div>
+        <div><div class="mock-stat-label">Avg/day</div><div class="mock-stat-value">1h 10m</div></div>
+        <div><div class="mock-stat-label">Visits</div><div class="mock-stat-value">142</div></div>
+      </div>
+    </div>
+    <div id="subpages-container" class="chart-container">
+      <h2 class="chart-heading">Top pages</h2>
+      <ol class="subpages-compact">
+        <li><span class="path">/r/programming</span><span class="time">1h 42m</span></li>
+        <li><span class="path">/r/rust</span><span class="time">58m</span></li>
+        <li><span class="path">/r/popular</span><span class="time">22m</span></li>
+        <li><span class="path">/r/askreddit</span><span class="time">14m</span></li>
+        <li><span class="path">/r/news</span><span class="time">9m</span></li>
+        <li><span class="path">/r/Just%20Chatting</span><span class="time">6m</span></li>
+        <li><span class="path">/r/webdev</span><span class="time">4m</span></li>
+        <li><span class="path">/r/javascript</span><span class="time">3m</span></li>
+      </ol>
+    </div>
+    <div id="hourly-chart-container" class="chart-container">
+      <h2 class="chart-heading">Average per clock hour</h2>
+      <div class="mock-chart">hourly chart</div>
+    </div>
+    <div id="visits-chart-container" class="chart-container">
+      <h2 class="chart-heading">Visits</h2>
+      <div class="mock-chart">visits chart</div>
+    </div>
+  </div>
+
+  <div class="mock-note">Direction B — tile inside grid</div>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mockup C — Site ⇄ Pages toggle</title>
+  <script src="../../../src/shared/theme.js"></script>
+  <link rel="stylesheet" href="../../../src/shared/theme.css" />
+  <link rel="stylesheet" href="../../../src/pages/dashboard/dashboard.css" />
+  <link rel="stylesheet" href="../../../src/pages/site/site.css" />
+  <link rel="stylesheet" href="./_shared.css" />
+  <style>
+    #view-toggle { margin-top: 4px; }
+    #pages-view {
+      flex: 1;
+      min-height: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+    #pages-table-wrap {
+      flex: 1;
+      overflow: auto;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="header-left">
+      <a id="back-btn" href="#">
+        <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+      </a>
+    </div>
+    <div id="header-center">
+      <div id="site-title">
+        <span id="site-label" class="site-label">reddit.com</span>
+        <span id="site-id" class="text-meta">last 7 days</span>
+      </div>
+      <div id="view-toggle" class="segmented">
+        <button id="view-site-btn" class="seg-btn" onclick="switchView('site')">Site</button>
+        <button id="view-pages-btn" class="seg-btn active" onclick="switchView('pages')">Pages</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="site-view" style="display:none; flex:1; min-height:0;">
+    <div id="charts-grid">
+      <div id="time-chart-container" class="chart-container">
+        <h2 class="chart-heading">Time spent</h2>
+        <div class="mock-chart">time chart</div>
+      </div>
+      <div id="stats-container" class="chart-container">
+        <h2 class="chart-heading">Overview</h2>
+        <div class="mock-stats">
+          <div><div class="mock-stat-label">Total</div><div class="mock-stat-value">8h 14m</div></div>
+          <div><div class="mock-stat-label">Avg/day</div><div class="mock-stat-value">1h 10m</div></div>
+          <div><div class="mock-stat-label">Visits</div><div class="mock-stat-value">142</div></div>
+        </div>
+      </div>
+      <div id="hourly-chart-container" class="chart-container">
+        <h2 class="chart-heading">Average per clock hour</h2>
+        <div class="mock-chart">hourly chart</div>
+      </div>
+      <div id="visits-chart-container" class="chart-container">
+        <h2 class="chart-heading">Visits</h2>
+        <div class="mock-chart">visits chart</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pages-view">
+    <div class="pages-controls">
+      <input id="pages-search" type="search" placeholder="Filter paths…" />
+      <select id="pages-sort">
+        <option>Most time</option>
+        <option>Most visits</option>
+        <option>Recently visited</option>
+      </select>
+      <span class="text-meta" style="margin-left:auto;">24 paths</span>
+    </div>
+    <div id="pages-table-wrap">
+      <table class="subpages-table">
+        <thead>
+          <tr>
+            <th>Path</th>
+            <th class="num">Time</th>
+            <th class="num">Visits</th>
+            <th class="num">Last visited</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="path">/r/programming</td><td class="num">1h 42m</td><td class="num">23</td><td class="num">2h ago</td></tr>
+          <tr><td class="path">/r/rust</td><td class="num">58m</td><td class="num">14</td><td class="num">yesterday</td></tr>
+          <tr><td class="path">/r/popular</td><td class="num">22m</td><td class="num">9</td><td class="num">3d ago</td></tr>
+          <tr><td class="path">/r/askreddit</td><td class="num">14m</td><td class="num">11</td><td class="num">today</td></tr>
+          <tr><td class="path">/r/news</td><td class="num">9m</td><td class="num">6</td><td class="num">today</td></tr>
+          <tr><td class="path">/r/Just%20Chatting</td><td class="num">6m</td><td class="num">3</td><td class="num">5d ago</td></tr>
+          <tr><td class="path">/r/webdev</td><td class="num">4m</td><td class="num">2</td><td class="num">6d ago</td></tr>
+          <tr><td class="path">/r/javascript</td><td class="num">3m</td><td class="num">2</td><td class="num">today</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="mock-note">Direction C — Site ⇄ Pages toggle</div>
+
+  <script>
+    function switchView(which) {
+      const site = document.querySelector('#site-view');
+      const pages = document.querySelector('#pages-view');
+      const siteBtn = document.querySelector('#view-site-btn');
+      const pagesBtn = document.querySelector('#view-pages-btn');
+      if (which === 'site') {
+        site.style.display = 'flex';
+        pages.style.display = 'none';
+        siteBtn.classList.add('active');
+        pagesBtn.classList.remove('active');
+      } else {
+        site.style.display = 'none';
+        pages.style.display = 'flex';
+        pagesBtn.classList.add('active');
+        siteBtn.classList.remove('active');
+      }
+    }
+  </script>
+</body>
+</html>
