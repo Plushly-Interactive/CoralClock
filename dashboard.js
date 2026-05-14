@@ -2,7 +2,8 @@ import { formatMs, localDayKey } from './timeUtils.js';
 import { drawBarChart, formatWithSmallSub, escapeHtml } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 import { seedTestData } from './seedTestData.js';
-import { createRangeDropdown } from './rangeSelect.js';
+import { createRangeDropdown, initRangeSelect } from './rangeSelect.js';
+import { createHourlyChart } from './hourlyChart.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 const rangeSelect = document.querySelector('#range-select');
@@ -20,7 +21,16 @@ const topSubheading = document.querySelector('#top-subheading');
 const mergeToggle = document.querySelector('#merge-toggle');
 const hideBriefToggle = document.querySelector('#hide-brief-toggle');
 
-const avgPerHourCache = {};
+const hourly = createHourlyChart({
+  chart: hourlyChart,
+  tooltip: hourlyTooltip,
+  container: hourlyChartContainer,
+  subheading: hourlySubheading,
+  notRelevant: hourlyNotRelevant,
+  siteIds: null,
+  allDaysLabel: '(all days, excluding today)',
+  getRangeValue: () => rangeSelect.dataset.value,
+});
 
 let sortCol = 'time';
 let sortDir = 'desc';
@@ -116,80 +126,9 @@ function renderTable(rows) {
   updateHeaders();
 }
 
-function hourlySubheadingText(range) {
-  if (range === 'all') return '(all days, excluding today)';
-  return `(past ${parseInt(range)} days, excluding today)`;
-}
-
-async function loadAvgPerHour(range) {
-  if (avgPerHourCache[range]) return;
-  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds: null, range });
-}
-
-function renderHourly(range) {
-  hourlyChartContainer.style.display = 'block';
-
-  if (range === 'today') {
-    hourlyChart.style.display = 'none';
-    hourlySubheading.textContent = '';
-    hourlyNotRelevant.style.display = 'block';
-    return;
-  }
-  hourlyNotRelevant.style.display = 'none';
-  hourlyChart.style.display = 'block';
-  hourlySubheading.textContent = hourlySubheadingText(range);
-
-  if (!avgPerHourCache[range]) {
-    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.dataset.value));
-    return;
-  }
-
-  const data = avgPerHourCache[range].map((avgMs, h) => {
-    const hStr = String(h).padStart(2, '0');
-    const hNext = String(h + 1).padStart(2, '0');
-    return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, activeMs: avgMs };
-  });
-
-  drawBarChart({
-    svgEl: hourlyChart,
-    tooltipEl: hourlyTooltip,
-    data,
-    maxVal: Math.max(...data.map(d => d.activeMs), 1),
-    getValue: d => d.activeMs,
-    formatVal: ms => formatMs(ms),
-    color: rootStyle.getPropertyValue('--color-chart-hourly'),
-  });
-}
-
 let byDayCache = null;
 
-const opts = { today: 'Today', '7': 'Last 7 days', '30': 'Last 30 days', '180': 'Last 6 months', '365': 'Last year', all: 'All time' };
-const savedRange = sessionStorage.getItem('analyticsRange') || '7';
-rangeSelect.dataset.value = savedRange;
-rangeSelect.firstChild.textContent = opts[savedRange];
-
-rangeSelect.parentElement.querySelector('.dropdown-menu').querySelectorAll('button').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    rangeSelect.dataset.value = btn.value;
-    rangeSelect.firstChild.textContent = btn.textContent;
-    rangeSelect.parentElement.querySelector('.dropdown-menu').classList.remove('open');
-    sessionStorage.setItem('analyticsRange', btn.value);
-    render();
-  });
-});
-
-rangeSelect.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const menu = rangeSelect.parentElement.querySelector('.dropdown-menu');
-  const isOpen = menu.classList.contains('open');
-  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-  if (!isOpen) menu.classList.add('open');
-});
-
-document.addEventListener('click', () => {
-  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-});
+initRangeSelect(rangeSelect, render);
 
 mergeToggle.addEventListener('change', () => {
   mergeMode = mergeToggle.checked;
@@ -235,13 +174,13 @@ async function loadAndRender() {
 document.querySelector('#seed-btn')?.addEventListener('click', async () => {
   await seedTestData();
   byDayCache = null;
-  Object.keys(avgPerHourCache).forEach(k => delete avgPerHourCache[k]);
+  hourly.clearCache();
   await loadAndRender();
 });
 
 window.addEventListener('importcomplete', async () => {
   byDayCache = null;
-  Object.keys(avgPerHourCache).forEach(k => delete avgPerHourCache[k]);
+  hourly.clearCache();
   await loadAndRender();
 });
 
@@ -323,7 +262,7 @@ function render() {
 
   emptyMsg.style.display = 'none';
   topChartContainer.style.display = 'block';
-  renderHourly(range);
+  hourly.render(range);
 
   renderTopChart();
   renderTable(sortedRows());

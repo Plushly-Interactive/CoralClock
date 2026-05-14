@@ -2,7 +2,8 @@ import { formatMs, localDayKey } from './timeUtils.js';
 import { drawBarChart, formatWithSmallSub, STAT_LABELS } from './utils.js';
 import { resolveSite } from './siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from './drill.js';
-import { createRangeDropdown } from './rangeSelect.js';
+import { createRangeDropdown, initRangeSelect } from './rangeSelect.js';
+import { createHourlyChart } from './hourlyChart.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -98,7 +99,6 @@ if (siteId || siteIds) {
 
 let byDayCache = null;
 let byHourCache = null;
-const avgPerHourCache = {};
 
 const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
@@ -130,38 +130,18 @@ const legendTpl = document.querySelector('#legend-tpl');
 document.querySelector('#time-legend').append(legendTpl.content.cloneNode(true));
 document.querySelector('#drill-legend').append(legendTpl.content.cloneNode(true));
 
-function hourlySubheadingText(range) {
-  if (range === 'all') return '(all days from earliest data, excluding today)';
-  return `(past ${parseInt(range)} days, excluding today)`;
-}
-
-const opts = { today: 'Today', '7': 'Last 7 days', '30': 'Last 30 days', '180': 'Last 6 months', '365': 'Last year', all: 'All time' };
-const savedRange = sessionStorage.getItem('analyticsRange') || '7';
-rangeSelect.dataset.value = savedRange;
-rangeSelect.firstChild.textContent = opts[savedRange];
-
-rangeSelect.parentElement.querySelector('.dropdown-menu').querySelectorAll('button').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    rangeSelect.dataset.value = btn.value;
-    rangeSelect.firstChild.textContent = btn.textContent;
-    rangeSelect.parentElement.querySelector('.dropdown-menu').classList.remove('open');
-    sessionStorage.setItem('analyticsRange', btn.value);
-    render();
-  });
+const hourly = createHourlyChart({
+  chart: hourlyChart,
+  tooltip: hourlyTooltip,
+  container: hourlyChartContainer,
+  subheading: hourlySubheading,
+  notRelevant: hourlyNotRelevant,
+  siteIds: effectiveSiteIds,
+  allDaysLabel: '(all days from earliest data, excluding today)',
+  getRangeValue: () => rangeSelect.dataset.value,
 });
 
-rangeSelect.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const menu = rangeSelect.parentElement.querySelector('.dropdown-menu');
-  const isOpen = menu.classList.contains('open');
-  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-  if (!isOpen) menu.classList.add('open');
-});
-
-document.addEventListener('click', () => {
-  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-});
+initRangeSelect(rangeSelect, render);
 
 window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
@@ -205,11 +185,6 @@ async function loadAndRender() {
 async function loadByHour() {
   if (byHourCache) return;
   byHourCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourToday' });
-}
-
-async function loadAvgPerHour(range) {
-  if (avgPerHourCache[range]) return;
-  avgPerHourCache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range });
 }
 
 function render() {
@@ -287,7 +262,7 @@ function render() {
   timeNoData.style.display = hasData ? 'none' : 'block';
   visitsNoData.style.display = hasData ? 'none' : 'block';
   if (hasData) drawChart(data, range);
-  renderHourly(range);
+  hourly.render(range);
   renderStats(data, range);
 }
 
@@ -344,9 +319,7 @@ function renderStats(data, range) {
   peakInfo.title = '';
   const totalTimeEl = document.querySelector('#stat-total-time');
   if (totalMs > 0) {
-    const full = formatMs(totalMs);
-    const match = full.match(/^(.+?)(\s*\(.+\))?$/);
-    totalTimeEl.innerHTML = match[2] ? `${match[1]}<span class="stat-sub"> ${match[2]}</span>` : full;
+    totalTimeEl.innerHTML = formatWithSmallSub(formatMs(totalMs));
   } else {
     totalTimeEl.textContent = '—';
   }
@@ -355,52 +328,6 @@ function renderStats(data, range) {
 
   const subheadings = { today: '(today)', '7': '(last 7 days)', '30': '(last 30 days)', '180': '(last 6 months)', '365': '(last year)', all: '(all time, from earliest data)' };
   document.querySelector('#overview-subheading').textContent = subheadings[range] ?? '';
-}
-
-function renderHourly(range) {
-  hourlyChartContainer.style.display = 'block';
-
-  if (range === 'today') {
-    hourlyChart.style.display = 'none';
-    hourlyNotRelevant.textContent = 'Not relevant for "Today".';
-    hourlyNotRelevant.style.display = 'block';
-    hourlySubheading.textContent = '';
-    return;
-  }
-
-  hourlySubheading.textContent = hourlySubheadingText(range);
-
-  if (!avgPerHourCache[range]) {
-    loadAvgPerHour(range).then(() => renderHourly(rangeSelect.dataset.value));
-    return;
-  }
-
-  const data = avgPerHourCache[range].map((avgMs, h) => {
-    const hStr = String(h).padStart(2, '0');
-    const hNext = String(h + 1).padStart(2, '0');
-    return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, activeMs: avgMs };
-  });
-
-  const hasData = data.some(d => d.activeMs > 0);
-  if (!hasData) {
-    hourlyChart.style.display = 'none';
-    hourlyNotRelevant.textContent = 'No data for past days yet.';
-    hourlyNotRelevant.style.display = 'block';
-    return;
-  }
-
-  hourlyChart.style.display = 'block';
-  hourlyNotRelevant.style.display = 'none';
-
-  drawBarChart({
-    svgEl: hourlyChart,
-    tooltipEl: hourlyTooltip,
-    data,
-    maxVal: Math.max(...data.map(d => d.activeMs)),
-    getValue: d => d.activeMs,
-    formatVal: ms => formatMs(ms),
-    color: rootStyle.getPropertyValue('--color-chart-hourly'),
-  });
 }
 
 function drawChart(data, range) {
