@@ -4,6 +4,8 @@ import { resolveSite } from '../../background/siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from './drill.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
+import { mergePaths, displayPath } from '../../shared/paths.js';
+import { escapeHtml } from '../../shared/utils.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -99,6 +101,9 @@ if (siteId || siteIds) {
 
 let byDayCache = null;
 let byHourCache = null;
+let subpagesByDayCache = null;
+let currentDepth = null;
+let currentSort = 'time';
 
 const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
@@ -178,6 +183,7 @@ loadAndRender();
 
 async function loadAndRender() {
   byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
+  subpagesByDayCache = await chrome.runtime.sendMessage({ type: 'getSubpagesByDay' });
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
 }
@@ -264,6 +270,7 @@ function render() {
   if (hasData) drawChart(data, range);
   hourly.render(range);
   renderStats(data, range);
+  renderSubpages(range);
 }
 
 
@@ -369,3 +376,104 @@ function drawChart(data, range) {
   });
 }
 
+function dayKeysForRange(range) {
+  if (range === 'today') return [localDayKey(Date.now())];
+  if (range === 'all') return Object.keys(subpagesByDayCache ?? {}).sort();
+  const now = new Date();
+  const n = parseInt(range);
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (n - 1 - i));
+    return localDayKey(d.getTime());
+  });
+}
+
+function aggregateSubpages(range) {
+  const out = {};
+  if (!subpagesByDayCache) return out;
+  const dayKeys = dayKeysForRange(range);
+  for (const dayKey of dayKeys) {
+    const dayData = subpagesByDayCache[dayKey];
+    if (!dayData) continue;
+    for (const sid of effectiveSiteIds) {
+      const sitePaths = dayData[sid];
+      if (!sitePaths) continue;
+      for (const [path, d] of Object.entries(sitePaths)) {
+        out[path] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
+        out[path].activeMs += d.activeMs || 0;
+        out[path].audioMs += d.audioMs || 0;
+        out[path].overlapMs += d.overlapMs || 0;
+        out[path].visits += d.visits || 0;
+      }
+    }
+  }
+  return out;
+}
+
+function buildDepthToggle(paths) {
+  const actualMax = Math.max(...paths.map(p => p.split('/').filter(Boolean).length));
+  const shownMax = Math.min(5, actualMax - 1);
+  const toggle = document.querySelector('#depth-toggle');
+  toggle.innerHTML = '';
+  for (let d = 1; d <= shownMax; d++) {
+    const btn = document.createElement('button');
+    btn.className = 'seg-btn';
+    btn.textContent = String(d);
+    btn.onclick = () => setDepth(d, btn);
+    if (currentDepth === d) btn.classList.add('active');
+    toggle.appendChild(btn);
+  }
+  const full = document.createElement('button');
+  full.className = 'seg-btn';
+  full.textContent = 'Full';
+  full.onclick = () => setDepth(null, full);
+  if (currentDepth === null) full.classList.add('active');
+  toggle.appendChild(full);
+}
+
+function setDepth(depth, btn) {
+  currentDepth = depth;
+  document.querySelectorAll('#depth-toggle .seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSubpages(rangeSelect.dataset.value);
+}
+
+document.querySelector('#sort-time-btn').onclick = () => setSort('time');
+document.querySelector('#sort-visits-btn').onclick = () => setSort('visits');
+
+function setSort(sort) {
+  currentSort = sort;
+  document.querySelector('#sort-time-btn').classList.toggle('active', sort === 'time');
+  document.querySelector('#sort-visits-btn').classList.toggle('active', sort === 'visits');
+  renderSubpages(rangeSelect.dataset.value);
+}
+
+function renderSubpages(range) {
+  const raw = aggregateSubpages(range);
+  const paths = Object.keys(raw);
+  if (paths.length === 0) {
+    chartsGrid.classList.remove('has-subpages');
+    return;
+  }
+  chartsGrid.classList.add('has-subpages');
+  buildDepthToggle(paths);
+
+  const merged = mergePaths(raw, currentDepth);
+  merged.sort((a, b) => currentSort === 'time' ? b.activeMs - a.activeMs : b.visits - a.visits);
+
+  const list = document.querySelector('#subpages-list');
+  list.innerHTML = '';
+  for (const row of merged) {
+    const li = document.createElement('li');
+    const decoded = displayPath(row.path);
+    const display = escapeHtml(decoded);
+    const star = row.truncated ? '<span class="subpage-truncated">*</span>' : '';
+    const num = currentSort === 'time'
+      ? formatMs(row.activeMs)
+      : `${row.visits} visit${row.visits === 1 ? '' : 's'}`;
+    li.title = decoded + (row.truncated ? '*' : '');
+    li.innerHTML = `<span class="subpage-path">${display}${star}</span><span class="subpage-num">${num}</span>`;
+    list.appendChild(li);
+  }
+  document.querySelector('#subpages-count').textContent = `${merged.length} path${merged.length !== 1 ? 's' : ''}`;
+}

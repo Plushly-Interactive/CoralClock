@@ -47,6 +47,22 @@
         <p id="visits-no-data" class="chart-note" style="display:none">No data for this period.</p>
       </div>
 
+      <div id="subpages-container" class="chart-container">
+        <div id="subpages-header">
+          <h2 class="chart-heading">Top pages</h2>
+          <span id="subpages-count" class="text-meta"></span>
+        </div>
+        <div id="subpages-controls">
+          <span class="text-meta">Depth</span>
+          <div id="depth-toggle"></div>
+          <div id="sort-toggle">
+            <button id="sort-time-btn" class="seg-btn active">Time</button>
+            <button id="sort-visits-btn" class="seg-btn">Visits</button>
+          </div>
+        </div>
+        <ol id="subpages-list"></ol>
+      </div>
+
       <div id="hourly-chart-container" class="chart-container">
         <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading text-meta"></span></h2>
         <svg id="hourly-chart" class="chart-svg"></svg>
