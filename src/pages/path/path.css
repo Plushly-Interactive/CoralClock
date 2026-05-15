@@ -1,4 +1,5 @@
 #path-subheader {
+  position: relative;
   display: flex;
   align-items: center;
   padding: 0 24px;
@@ -8,24 +9,105 @@
   flex-shrink: 0;
 }
 
+.path-crumb-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 14px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.path-crumb-link #path-crumb-path,
+.path-crumb-link #path-links-toggle {
+  cursor: inherit;
+}
+
+.path-crumb-link:hover #path-crumb-path {
+  text-decoration: underline;
+  color: var(--color-text);
+}
+
+.path-crumb-link:hover #path-links-toggle {
+  color: var(--color-text);
+}
+
+#path-links-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--color-text-secondary);
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 #path-crumb-site {
   color: var(--color-accent);
   font-size: var(--font-sm);
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 #path-crumb-site:hover {
   color: var(--color-accent-light);
 }
 
-#path-crumb-sep {
-  color: var(--color-text-secondary);
-  font-size: var(--font-sm);
-}
-
 #path-crumb-path {
   font-size: var(--font-sm);
   font-family: ui-monospace, monospace;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+#path-crumb-path:hover {
+  text-decoration: underline;
+}
+
+#path-links {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+  padding: 10px 24px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+#path-links.open {
+  display: flex;
+}
+
+.path-link-chip {
+  color: inherit;
+  text-decoration: none;
+  font-family: ui-monospace, monospace;
+}
+
+.path-link-chip:hover {
   color: var(--color-text);
+  text-decoration: underline;
+}
+
+.path-link-chip-domain {
+  color: var(--color-accent);
+  margin-right: 4px;
+}
+
+.path-link-chip:hover .path-link-chip-domain {
+  color: var(--color-accent-light);
 }

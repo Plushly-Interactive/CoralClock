@@ -4,7 +4,7 @@ import { resolveSite } from '../../background/siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
-import { mergePaths, displayPath } from '../../shared/paths.js';
+import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
 
 const params = new URLSearchParams(location.search);
@@ -105,6 +105,14 @@ let byHourCache = null;
 let subpagesByDayCache = null;
 let currentDepth = null;
 let currentSort = 'time';
+let stripParams = sessionStorage.getItem('subpagesStripParams') !== 'false';
+const stripParamsToggle = document.querySelector('#strip-params-toggle');
+stripParamsToggle.checked = stripParams;
+stripParamsToggle.addEventListener('change', () => {
+  stripParams = stripParamsToggle.checked;
+  sessionStorage.setItem('subpagesStripParams', stripParams);
+  renderSubpages(rangeSelect.dataset.value);
+});
 
 const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
@@ -279,11 +287,12 @@ function aggregateSubpages(range) {
       const sitePaths = dayData[sid];
       if (!sitePaths) continue;
       for (const [path, d] of Object.entries(sitePaths)) {
-        out[path] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
-        out[path].activeMs += d.activeMs || 0;
-        out[path].audioMs += d.audioMs || 0;
-        out[path].overlapMs += d.overlapMs || 0;
-        out[path].visits += d.visits || 0;
+        const key = stripParams ? stripQuery(path) : path;
+        out[key] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
+        out[key].activeMs += d.activeMs || 0;
+        out[key].audioMs += d.audioMs || 0;
+        out[key].overlapMs += d.overlapMs || 0;
+        out[key].visits += d.visits || 0;
       }
     }
   }
@@ -358,10 +367,11 @@ function renderSubpages(range) {
         siteIds: effectiveSiteIds,
         path: row.path,
         prefix: row.truncated,
+        stripParams,
       }));
       location.href = '../path/path.html';
     };
     list.appendChild(li);
   }
-  document.querySelector('#subpages-count').textContent = `${merged.length} path${merged.length !== 1 ? 's' : ''}`;
+  document.querySelector('#subpages-count').textContent = `${merged.length} page${merged.length !== 1 ? 's' : ''}`;
 }

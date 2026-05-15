@@ -139,6 +139,11 @@ input[type="checkbox"] {
   fill: var(--color-text-secondary);
 }
 
+.text-hint {
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
 .chart-container {
   position: relative;
 }

@@ -19,14 +19,18 @@
       <div id="header-center">
         <div id="site-title">
           <span id="site-label" class="site-label"></span>
+          <span id="site-id" class="text-meta"></span>
         </div>
       </div>
     </header>
 
     <div id="path-subheader">
       <a id="path-crumb-site" href="#"></a>
-      <span id="path-crumb-sep">/</span>
-      <span id="path-crumb-path"></span>
+      <span class="path-crumb-link">
+        <a id="path-crumb-path" class="text-meta" href="#" target="_blank" rel="noopener"></a>
+        <button id="path-links-toggle" type="button" aria-expanded="false" style="display:none" title="Show open-link options"><span id="path-links-toggle-label" class="text-hint"></span></button>
+      </span>
+      <div id="path-links" class="text-meta"></div>
     </div>
 
     <div id="charts-grid">

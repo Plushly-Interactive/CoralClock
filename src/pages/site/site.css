@@ -93,10 +93,6 @@ body {
   margin-bottom: 8px;
 }
 
-#subpages-count {
-  margin-left: auto;
-}
-
 #subpages-controls {
   display: flex;
   align-items: center;
@@ -115,6 +111,13 @@ body {
 
 #sort-toggle {
   margin-left: auto;
+}
+
+#subpages-footer {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .seg-btn {

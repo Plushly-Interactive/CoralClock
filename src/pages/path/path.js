@@ -2,7 +2,7 @@ import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.j
 import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from '../../shared/utils.js';
 import { resolveSite } from '../../background/siteResolution.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
-import { displayPath } from '../../shared/paths.js';
+import { displayPath, stripQuery } from '../../shared/paths.js';
 import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
@@ -12,7 +12,7 @@ if (!drill) {
   location.href = '../dashboard/dashboard.html';
 }
 
-const { siteIds, path, prefix } = drill;
+const { siteIds, path, prefix, stripParams } = drill;
 const siteId = siteIds[0];
 const isMerged = siteIds.length > 1;
 
@@ -31,9 +31,134 @@ const crumbSite = document.querySelector('#path-crumb-site');
 
 const { siteLabel } = resolveSite(siteId);
 document.querySelector('#site-label').textContent = siteLabel;
-crumbSite.textContent = siteLabel;
+document.querySelector('#site-id').textContent = isMerged ? siteIds.join(', ') : siteId;
 document.title = `BiteGuard — ${siteLabel} ${displayPath(path)}`;
-document.querySelector('#path-crumb-path').textContent = displayPath(path) + (prefix ? '*' : '');
+const crumbPath = document.querySelector('#path-crumb-path');
+const spacedPath = displayPath(path).replace(/\//g, ' / ').trimStart() + (prefix ? ' *' : '');
+crumbPath.textContent = spacedPath;
+crumbPath.title = displayPath(path) + (prefix ? '*' : '');
+
+function setCrumbDomain(domain) {
+  crumbSite.textContent = domain ?? siteIds.join(', ');
+  if (domain) {
+    crumbPath.href = `https://${domain}${path}`;
+  } else {
+    crumbPath.removeAttribute('href');
+    crumbPath.removeAttribute('target');
+  }
+}
+setCrumbDomain(isMerged ? null : siteId);
+
+function resolveOwningDomain() {
+  const owners = new Set();
+  for (const sites of Object.values(byDayCache ?? {})) {
+    for (const sid of siteIds) {
+      const sitePaths = sites[sid];
+      if (!sitePaths) continue;
+      for (const k of Object.keys(sitePaths)) {
+        if (matchesPath(k)) { owners.add(sid); break; }
+      }
+    }
+  }
+  return owners.size === 1 ? [...owners][0] : null;
+}
+
+const pathLinks = document.querySelector('#path-links');
+const pathLinksToggle = document.querySelector('#path-links-toggle');
+const pathLinksToggleLabel = document.querySelector('#path-links-toggle-label');
+
+let singleLinkUrl = null;
+
+function togglePathLinks(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  const open = pathLinks.classList.toggle('open');
+  pathLinksToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function handleCrumbClick(e) {
+  if (singleLinkUrl) {
+    e.preventDefault();
+    chrome.tabs.create({ url: singleLinkUrl });
+    return;
+  }
+  if (pathLinksToggle.style.display !== 'none') togglePathLinks(e);
+}
+
+pathLinksToggle.addEventListener('click', handleCrumbClick);
+crumbPath.addEventListener('click', handleCrumbClick);
+
+document.addEventListener('click', (e) => {
+  if (pathLinks.contains(e.target)) return;
+  if (e.target === pathLinksToggle || pathLinksToggle.contains(e.target)) return;
+  if (e.target === crumbPath && pathLinksToggle.style.display !== 'none') return;
+  pathLinks.classList.remove('open');
+  pathLinksToggle.setAttribute('aria-expanded', 'false');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    pathLinks.classList.remove('open');
+    pathLinksToggle.setAttribute('aria-expanded', 'false');
+  }
+});
+
+function resolveOwningEntries() {
+  const totals = new Map();
+  for (const sites of Object.values(byDayCache ?? {})) {
+    for (const sid of siteIds) {
+      const sitePaths = sites[sid];
+      if (!sitePaths) continue;
+      for (const [k, d] of Object.entries(sitePaths)) {
+        if (!matchesPath(k)) continue;
+        const key = `${sid}\0${k}`;
+        const cur = totals.get(key) ?? { domain: sid, fullPath: k, activeMs: 0, visits: 0 };
+        cur.activeMs += d.activeMs || 0;
+        cur.visits += d.visits || 0;
+        totals.set(key, cur);
+      }
+    }
+  }
+  const entries = [...totals.values()].filter(e => e.activeMs > 0 || e.visits > 0);
+  entries.sort((a, b) => a.domain.localeCompare(b.domain) || a.fullPath.localeCompare(b.fullPath));
+  return entries;
+}
+
+function chipLabel(fullPath) {
+  return displayPath(fullPath);
+}
+
+function renderPathLinks(entries) {
+  pathLinks.replaceChildren();
+  singleLinkUrl = null;
+  if (entries.length === 0) {
+    pathLinksToggle.style.display = 'none';
+    return;
+  }
+  pathLinksToggle.style.display = '';
+  pathLinksToggleLabel.textContent = entries.length === 1 ? '(click to open link)' : '(click to see links)';
+  if (entries.length === 1) {
+    const { domain, fullPath } = entries[0];
+    singleLinkUrl = `https://${domain}${fullPath}`;
+    crumbPath.href = singleLinkUrl;
+    return;
+  }
+  for (const { domain, fullPath } of entries) {
+    const chip = document.createElement('a');
+    chip.className = 'path-link-chip';
+    chip.href = `https://${domain}${fullPath}`;
+    chip.title = `https://${domain}${displayPath(fullPath)}`;
+    chip.addEventListener('click', (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: chip.href });
+    });
+    const dom = document.createElement('span');
+    dom.className = 'path-link-chip-domain';
+    dom.textContent = domain;
+    chip.append(dom, chipLabel(fullPath));
+    pathLinks.appendChild(chip);
+  }
+}
 
 const siteHref = isMerged
   ? `../site/site.html?ids=${encodeURIComponent(siteIds.join(','))}`
@@ -71,7 +196,8 @@ let byDayCache = null;
 let byHourCache = null;
 
 function matchesPath(key) {
-  return prefix ? (key === path || key.startsWith(path + '/')) : key === path;
+  const k = stripParams ? stripQuery(key) : key;
+  return prefix ? (k === path || k.startsWith(path + '/')) : k === path;
 }
 
 function entryFor(cache, key) {
@@ -147,6 +273,8 @@ async function loadAndRender() {
     chrome.runtime.sendMessage({ type: 'getSubpagesByDay' }),
     chrome.runtime.sendMessage({ type: 'getSubpagesByHour' }),
   ]);
+  if (isMerged) setCrumbDomain(resolveOwningDomain());
+  renderPathLinks(resolveOwningEntries());
   render();
 }
 

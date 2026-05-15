@@ -3,6 +3,11 @@ export function displayPath(path) {
   catch (_) { return path; }
 }
 
+export function stripQuery(path) {
+  const i = path.indexOf('?');
+  return i === -1 ? path : path.slice(0, i);
+}
+
 export function mergePaths(paths, depth) {
   const entries = Object.entries(paths);
   if (!depth) {
@@ -19,6 +24,7 @@ export function mergePaths(paths, depth) {
       existing.audioMs += data.audioMs || 0;
       existing.overlapMs += data.overlapMs || 0;
       existing.visits += data.visits || 0;
+      existing.sourceCount += 1;
       if (wasTruncated) existing.truncated = true;
     } else {
       map.set(key, {
@@ -28,8 +34,18 @@ export function mergePaths(paths, depth) {
         overlapMs: data.overlapMs || 0,
         visits: data.visits || 0,
         truncated: wasTruncated,
+        sourceCount: 1,
+        sourcePath: path,
       });
     }
+  }
+  for (const g of map.values()) {
+    if (g.sourceCount === 1) {
+      g.path = g.sourcePath;
+      g.truncated = false;
+    }
+    delete g.sourceCount;
+    delete g.sourcePath;
   }
   return [...map.values()];
 }

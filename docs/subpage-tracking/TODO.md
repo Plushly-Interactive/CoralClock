@@ -9,6 +9,7 @@ Items intentionally left out of the initial subpage-tracking implementation.
 ## Path normalization
 
 - **Per-site path patterns** (was option Q1C): user-defined rules like `reddit.com` → keep `/r/<sub>` only, `youtube.com` → keep `?v=<id>` only. Could replace or complement raw path storage.
+- **Don't record transit-only visits.** Cross-domain redirects, short-lived intermediate URLs, and prerender hits currently produce subpage entries the user never actually viewed (e.g. `amazon.fr` → `amazon.co.jp` redirect briefly recording the JP path). Filter at tracking time so these never reach storage, instead of papering over on the display side. Candidate heuristic: only commit a path entry after it stays active for ≥ N ms or receives a real focus/interaction event.
 
 ## Storage
 
