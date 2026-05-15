@@ -27,9 +27,11 @@ const hourly = createHourlyChart({
   container: hourlyChartContainer,
   subheading: hourlySubheading,
   notRelevant: hourlyNotRelevant,
-  siteIds: null,
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
+  loadAvgPerHour: (range) => chrome.runtime.sendMessage({
+    type: 'getAvgPerClockHour', siteIds: null, range,
+  }),
 });
 
 let sortCol = 'time';

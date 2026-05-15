@@ -1,12 +1,11 @@
-import { formatMs } from './timeUtils.js';
-import { drawBarChart } from './utils.js';
+import { buildHourlyBuckets, drawHourlyChart } from './overview.js';
 
-export function createHourlyChart({ chart, tooltip, container, subheading, notRelevant, siteIds, allDaysLabel, getRangeValue }) {
+export function createHourlyChart({ chart, tooltip, container, subheading, notRelevant, allDaysLabel, getRangeValue, loadAvgPerHour }) {
   const cache = {};
 
   async function load(range) {
     if (cache[range]) return;
-    cache[range] = await chrome.runtime.sendMessage({ type: 'getAvgPerClockHour', siteIds, range });
+    cache[range] = await loadAvgPerHour(range);
   }
 
   function subheadingText(range) {
@@ -32,12 +31,7 @@ export function createHourlyChart({ chart, tooltip, container, subheading, notRe
       return;
     }
 
-    const data = cache[range].map((avgMs, h) => {
-      const hStr = String(h).padStart(2, '0');
-      const hNext = String(h + 1).padStart(2, '0');
-      return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, activeMs: avgMs };
-    });
-
+    const data = buildHourlyBuckets(cache[range]);
     const hasData = data.some(d => d.activeMs > 0);
     if (!hasData) {
       chart.style.display = 'none';
@@ -48,17 +42,7 @@ export function createHourlyChart({ chart, tooltip, container, subheading, notRe
 
     chart.style.display = 'block';
     notRelevant.style.display = 'none';
-
-    const color = getComputedStyle(document.documentElement).getPropertyValue('--color-chart-hourly');
-    drawBarChart({
-      svgEl: chart,
-      tooltipEl: tooltip,
-      data,
-      maxVal: Math.max(...data.map(d => d.activeMs), 1),
-      getValue: d => d.activeMs,
-      formatVal: ms => formatMs(ms),
-      color,
-    });
+    drawHourlyChart({ svgEl: chart, tooltipEl: tooltip, data });
   }
 
   return {

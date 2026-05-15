@@ -1,5 +1,6 @@
 import { formatMs, formatMsAsDays, localDayKey } from './timeUtils.js';
-import { drawBarChart, formatWithSmallSub, STAT_LABELS } from './utils.js';
+import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from './utils.js';
+import { drawTimeChart, drawVisitsChart, drawHourlyChart, buildHourlyBuckets } from './overview.js';
 
 let drillPeriod = null;
 let drillPrevPeriod = null;
@@ -24,10 +25,7 @@ const DRILL_INNER_HTML = `
       <span id="nav-label"></span>
       <button id="nav-next" class="link-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
     </div>
-    <div id="drill-legend" class="time-legend text-meta" style="display: none;">
-      <span><span class="chart-legend-time"></span> Active browsing</span>
-      <span><span class="chart-legend-audio"></span> Audio playback</span>
-    </div>
+    <div id="drill-legend" class="time-legend text-meta" style="display: none;">${CHART_LEGEND_HTML}</div>
     <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn"> Enhance readbility (&radic;x scale)</label>
     <div id="drill-stats" class="text-meta"></div>
     <div id="drill-toggle">
@@ -289,49 +287,28 @@ async function renderDrillChart() {
   const onBarClick = isMonthDrill ? r => enterDrill(r, drillPeriod, drillMetric) : null;
   const maxTimeMs = isMonthDrill ? 24 * 3600000 : 3600000;
 
-  const rootStyle = getComputedStyle(document.documentElement);
-
   if (drillMetric === 'time') {
-    const hasAudio = data.some(d => d.audioMs > 0);
-    ctx.drillLegend.style.display = hasAudio ? 'flex' : 'none';
     const formatValForAxis = isMonthDrill
       ? (val) => Math.abs(val - maxTimeMs) < 1 ? formatMsAsDays(val) : formatMs(val)
       : formatMs;
-    const series = hasAudio
-      ? [
-          { label: 'Active', getValue: d => d.activeMs, color: rootStyle.getPropertyValue('--color-chart-time'), formatVal: formatMs },
-          { label: 'Audio', getValue: d => d.audioMs, color: rootStyle.getPropertyValue('--color-chart-audio'), formatVal: formatMs },
-        ]
-      : undefined;
-
-    drawBarChart({
+    drawTimeChart({
       svgEl: ctx.drillChart,
       tooltipEl: ctx.drillTooltip,
+      legendEl: ctx.drillLegend,
       data,
       maxVal: maxTimeMs,
-      getValue: d => d.activeMs,
       formatVal: formatValForAxis,
-      color: rootStyle.getPropertyValue('--color-chart-time'),
-      series,
       onBarClick,
-
       scale: drillScale,
       gridLineWidth: 0.5,
     });
   } else if (drillMetric === 'visits') {
     ctx.drillLegend.style.display = 'none';
-    drawBarChart({
+    drawVisitsChart({
       svgEl: ctx.drillChart,
       tooltipEl: ctx.drillTooltip,
       data,
-      maxVal: Math.max(...data.map(d => d.visits), 1),
-      getValue: d => d.visits,
-      formatVal: v => `${Math.round(v)}`,
-      formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
-      hideMidTicks: maxVal => maxVal < 3,
-      color: rootStyle.getPropertyValue('--color-chart-visits'),
       onBarClick,
-
       scale: drillScale,
       gridLineWidth: 0.5,
     });
@@ -349,27 +326,17 @@ async function renderDrillChart() {
       dayKeys = [drillPeriod];
     }
 
-    const avgPerHours = await ctx.getAvgPerClockHour(dayKeys);
-    const hourlyData = avgPerHours.map((avgMs, h) => {
-      const hStr = String(h).padStart(2, '0');
-      const hNext = String(h + 1).padStart(2, '0');
-      return { label: `${hStr}:00`, range: `${hStr}:00–${hNext}:00`, activeMs: avgMs };
-    });
-
+    const hourlyData = buildHourlyBuckets(await ctx.getAvgPerClockHour(dayKeys));
     const hasHourlyData = hourlyData.some(d => d.activeMs > 0);
     ctx.drillNoData.style.display = hasHourlyData ? 'none' : 'block';
     ctx.drillChart.style.display = hasHourlyData ? 'block' : 'none';
     if (!hasHourlyData) return;
 
-    drawBarChart({
+    drawHourlyChart({
       svgEl: ctx.drillChart,
       tooltipEl: ctx.drillTooltip,
       data: hourlyData,
       maxVal: 3600000,
-      getValue: d => d.activeMs,
-      formatVal: formatMs,
-      color: rootStyle.getPropertyValue('--color-chart-hourly'),
-
       scale: drillScale,
       gridLineWidth: 0.5,
     });

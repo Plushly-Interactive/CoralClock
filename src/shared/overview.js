@@ -1,0 +1,162 @@
+import { localDayKey, formatMs } from './timeUtils.js';
+import { drawBarChart } from './utils.js';
+
+const SUBHEADINGS = {
+  today: '(today)',
+  '7': '(last 7 days)',
+  '30': '(last 30 days)',
+  '180': '(last 6 months)',
+  '365': '(last year)',
+  all: '(all time, from earliest data)',
+};
+
+export function subheadingText(range) {
+  return SUBHEADINGS[range] ?? '';
+}
+
+export function activeDaysFromRange(range, byDayCache) {
+  if (range === 'today') return 0;
+  if (range === 'all') {
+    const allDays = Object.keys(byDayCache ?? {}).sort();
+    if (allDays.length === 0) return 0;
+    const [y1, m1, d1] = allDays[0].split('-').map(Number);
+    const [y2, m2, d2] = allDays[allDays.length - 1].split('-').map(Number);
+    const start = new Date(y1, m1 - 1, d1);
+    const end = new Date(y2, m2 - 1, d2);
+    return Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+  }
+  return parseInt(range);
+}
+
+export function buildOverviewData({ range, dayKeys, getDayEntry, getHourEntry }) {
+  if (range === 'today') {
+    const dayKey = localDayKey(Date.now());
+    return Array.from({ length: 24 }, (_, h) => {
+      const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
+      const hStr = String(h).padStart(2, '0');
+      const hNext = String(h + 1).padStart(2, '0');
+      return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, ...getHourEntry(hourKey) };
+    });
+  }
+  if (range === 'all' || parseInt(range) > 90) {
+    let monthKeys;
+    if (range === 'all') {
+      monthKeys = [...new Set(dayKeys.map(d => d.slice(0, 7)))].sort();
+    } else {
+      const numMonths = Math.round(parseInt(range) / 30);
+      const now = new Date();
+      monthKeys = Array.from({ length: numMonths }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (numMonths - 1 - i), 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      });
+    }
+    return monthKeys.map(month => {
+      const days = dayKeys.filter(d => d.startsWith(month));
+      const totals = days.reduce((acc, d) => {
+        const e = getDayEntry(d);
+        return {
+          activeMs: acc.activeMs + e.activeMs,
+          audioMs: acc.audioMs + e.audioMs,
+          visits: acc.visits + e.visits,
+        };
+      }, { activeMs: 0, audioMs: 0, visits: 0 });
+      return { label: month, range: month, ...totals };
+    });
+  }
+  const shortLabel = parseInt(range) <= 30;
+  return dayKeys.map(d => ({ label: shortLabel ? d.slice(5) : d, range: d, ...getDayEntry(d) }));
+}
+
+export function drawTimeChart({ svgEl, tooltipEl, legendEl, data, maxVal, formatVal, onBarClick, scale, gridLineWidth }) {
+  const rootStyle = getComputedStyle(document.documentElement);
+  const hasAudio = data.some(d => d.audioMs > 0);
+  if (legendEl) legendEl.style.display = hasAudio ? 'flex' : 'none';
+
+  const series = hasAudio
+    ? [
+        { label: 'Active', getValue: d => d.activeMs, color: rootStyle.getPropertyValue('--color-chart-time'), formatVal: formatMs },
+        { label: 'Audio', getValue: d => d.audioMs, color: rootStyle.getPropertyValue('--color-chart-audio'), formatVal: formatMs },
+      ]
+    : undefined;
+
+  drawBarChart({
+    svgEl,
+    tooltipEl,
+    data,
+    maxVal: maxVal ?? Math.max(...data.map(d => Math.max(d.activeMs, d.audioMs || 0))),
+    getValue: d => d.activeMs,
+    formatVal: formatVal ?? (ms => formatMs(ms)),
+    color: rootStyle.getPropertyValue('--color-chart-time'),
+    series,
+    onBarClick,
+    scale,
+    gridLineWidth,
+  });
+}
+
+export function buildHourlyBuckets(avgPerHours) {
+  return avgPerHours.map((avgMs, h) => {
+    const hStr = String(h).padStart(2, '0');
+    const hNext = String(h + 1).padStart(2, '0');
+    return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, activeMs: avgMs };
+  });
+}
+
+export function drawHourlyChart({ svgEl, tooltipEl, data, maxVal, scale, gridLineWidth }) {
+  const rootStyle = getComputedStyle(document.documentElement);
+  drawBarChart({
+    svgEl,
+    tooltipEl,
+    data,
+    maxVal: maxVal ?? Math.max(...data.map(d => d.activeMs), 1),
+    getValue: d => d.activeMs,
+    formatVal: ms => formatMs(ms),
+    color: rootStyle.getPropertyValue('--color-chart-hourly'),
+    scale,
+    gridLineWidth,
+  });
+}
+
+export function drawVisitsChart({ svgEl, tooltipEl, data, maxVal, onBarClick, scale, gridLineWidth }) {
+  const rootStyle = getComputedStyle(document.documentElement);
+  drawBarChart({
+    svgEl,
+    tooltipEl,
+    data,
+    maxVal: maxVal ?? Math.max(...data.map(d => d.visits), 1),
+    getValue: d => d.visits,
+    formatVal: v => `${Math.round(v)}`,
+    formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
+    hideMidTicks: maxV => maxV < 3,
+    color: rootStyle.getPropertyValue('--color-chart-visits'),
+    onBarClick,
+    scale,
+    gridLineWidth,
+  });
+}
+
+export function drawOverviewCharts({
+  data,
+  range,
+  timeChart, timeTooltip, timeLegend, timeNoData,
+  visitsChart, visitsTooltip, visitsNoData,
+  onEnterDrill,
+}) {
+  const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
+  timeLegend.style.display = 'none';
+  timeChart.style.display = hasData ? 'block' : 'none';
+  visitsChart.style.display = hasData ? 'block' : 'none';
+  timeNoData.style.display = hasData ? 'none' : 'block';
+  visitsNoData.style.display = hasData ? 'none' : 'block';
+  if (!hasData) return;
+
+  const drillable = range !== 'today';
+  drawTimeChart({
+    svgEl: timeChart, tooltipEl: timeTooltip, legendEl: timeLegend, data,
+    onBarClick: drillable ? r => onEnterDrill(r, 'time') : null,
+  });
+  drawVisitsChart({
+    svgEl: visitsChart, tooltipEl: visitsTooltip, data,
+    onBarClick: drillable ? r => onEnterDrill(r, 'visits') : null,
+  });
+}

@@ -7,6 +7,8 @@ export const STAT_LABELS = {
   avgSession: 'Avg session',
 };
 
+export const CHART_LEGEND_HTML = `<span><span class="chart-legend-time"></span> Active browsing</span><span><span class="chart-legend-audio"></span> Audio playback</span>`;
+
 export function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')

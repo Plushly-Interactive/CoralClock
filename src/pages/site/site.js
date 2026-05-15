@@ -1,11 +1,11 @@
 import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, STAT_LABELS } from '../../shared/utils.js';
+import { formatWithSmallSub, STAT_LABELS, escapeHtml, CHART_LEGEND_HTML } from '../../shared/utils.js';
 import { resolveSite } from '../../background/siteResolution.js';
 import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath } from '../../shared/paths.js';
-import { escapeHtml } from '../../shared/utils.js';
+import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -15,15 +15,16 @@ const effectiveSiteIds = isMerged ? siteIds : [siteId];
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
+const timeTooltip = document.querySelector('#time-tooltip');
+const timeLegend = document.querySelector('#time-legend');
 const visitsChart = document.querySelector('#visits-chart');
+const visitsTooltip = document.querySelector('#visits-tooltip');
 const timeNoData = document.querySelector('#time-no-data');
 const visitsNoData = document.querySelector('#visits-no-data');
 const peakTooltip = document.querySelector('#peak-tooltip');
 const statsContainer = document.querySelector('#stats-container');
 
 const statsList = document.querySelector('#stats-list');
-
-const rootStyle = getComputedStyle(document.documentElement);
 
 const topStats = [
   { label: STAT_LABELS.today, id: 'stat-today' },
@@ -115,8 +116,7 @@ const hourlyChartContainer = document.querySelector('#hourly-chart-container');
 const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
 const hourlySubheading = document.querySelector('#hourly-subheading');
 
-const legendTpl = document.querySelector('#legend-tpl');
-document.querySelector('#time-legend').append(legendTpl.content.cloneNode(true));
+timeLegend.innerHTML = CHART_LEGEND_HTML;
 
 const hourly = createHourlyChart({
   chart: hourlyChart,
@@ -124,9 +124,11 @@ const hourly = createHourlyChart({
   container: hourlyChartContainer,
   subheading: hourlySubheading,
   notRelevant: hourlyNotRelevant,
-  siteIds: effectiveSiteIds,
   allDaysLabel: '(all days from earliest data, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
+  loadAvgPerHour: (range) => chrome.runtime.sendMessage({
+    type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range,
+  }),
 });
 
 initRangeSelect(rangeSelect, render);
@@ -175,81 +177,43 @@ async function loadByHour() {
   byHourCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourToday' });
 }
 
+function siteDayKeysForRange(range) {
+  if (range === 'today') return [localDayKey(Date.now())];
+  if (range === 'all') {
+    const allDays = Object.keys(byDayCache ?? {}).sort();
+    const daysWithSiteData = allDays.filter(day => {
+      const entry = entrySum(byDayCache[day]);
+      return entry.activeMs > 0 || entry.visits > 0;
+    });
+    if (daysWithSiteData.length === 0) return [];
+    const [y1, m1, d1] = daysWithSiteData[0].split('-').map(Number);
+    const today = new Date();
+    const [y2, m2, d2] = [today.getFullYear(), today.getMonth() + 1, today.getDate()];
+    const out = [];
+    for (let date = new Date(y1, m1 - 1, d1); date <= new Date(y2, m2 - 1, d2); date.setDate(date.getDate() + 1)) {
+      out.push(localDayKey(date.getTime()));
+    }
+    return out;
+  }
+  return dayKeysForRange(range, byDayCache);
+}
+
 function render() {
   if (isInDrillMode()) return;
   const range = rangeSelect.dataset.value;
-
-  let data;
-  if (range === 'today') {
-    if (!byHourCache) { loadByHour().then(render); return; }
-    const dayKey = localDayKey(Date.now());
-    data = Array.from({ length: 24 }, (_, h) => {
-      const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
-      const hStr = String(h).padStart(2, '0');
-      const hNext = String(h + 1).padStart(2, '0');
-      return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, ...entrySum(byHourCache[hourKey]) };
-    });
-  } else {
-    let dayKeys;
-    if (range === 'all') {
-      const allDays = Object.keys(byDayCache ?? {}).sort();
-      const daysWithSiteData = allDays.filter(day => {
-        const entry = entrySum(byDayCache[day]);
-        return entry.activeMs > 0 || entry.visits > 0;
-      });
-      if (daysWithSiteData.length > 0) {
-        const firstDay = daysWithSiteData[0];
-        const [y1, m1, d1] = firstDay.split('-').map(Number);
-        const today = new Date();
-        const [y2, m2, d2] = [today.getFullYear(), today.getMonth() + 1, today.getDate()];
-        dayKeys = [];
-        for (let date = new Date(y1, m1 - 1, d1); date <= new Date(y2, m2 - 1, d2); date.setDate(date.getDate() + 1)) {
-          dayKeys.push(localDayKey(date.getTime()));
-        }
-      } else {
-        dayKeys = [];
-      }
-    } else {
-      const now = new Date();
-      dayKeys = Array.from({ length: parseInt(range) }, (_, i) => {
-        const d = new Date(now);
-        d.setDate(d.getDate() - (parseInt(range) - 1 - i));
-        return localDayKey(d.getTime());
-      });
-    }
-    if (range === 'all' || parseInt(range) > 90) {
-      let monthKeys;
-      if (range === 'all') {
-        monthKeys = [...new Set(dayKeys.map(day => day.slice(0, 7)))].sort();
-      } else {
-        const numMonths = Math.round(parseInt(range) / 30);
-        const now = new Date();
-        monthKeys = Array.from({ length: numMonths }, (_, i) => {
-          const d = new Date(now.getFullYear(), now.getMonth() - (numMonths - 1 - i), 1);
-          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        });
-      }
-      data = monthKeys.map(month => {
-        const days = dayKeys.filter(day => day.startsWith(month));
-        const totals = days.reduce((acc, day) => {
-          const e = entrySum(byDayCache?.[day]);
-          return { activeMs: acc.activeMs + e.activeMs, audioMs: acc.audioMs + e.audioMs, visits: acc.visits + e.visits };
-        }, { activeMs: 0, audioMs: 0, visits: 0 });
-        return { label: month, range: month, ...totals };
-      });
-    } else {
-      const shortLabel = parseInt(range) <= 30;
-      data = dayKeys.map(day => ({ label: shortLabel ? day.slice(5) : day, range: day, ...entrySum(byDayCache?.[day]) }));
-    }
-  }
-
-  const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
-  document.querySelector('#time-legend').style.display = 'none';
-  timeChart.style.display = hasData ? 'block' : 'none';
-  visitsChart.style.display = hasData ? 'block' : 'none';
-  timeNoData.style.display = hasData ? 'none' : 'block';
-  visitsNoData.style.display = hasData ? 'none' : 'block';
-  if (hasData) drawChart(data, range);
+  if (range === 'today' && !byHourCache) { loadByHour().then(render); return; }
+  const dayKeys = siteDayKeysForRange(range);
+  const data = buildOverviewData({
+    range, dayKeys,
+    getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
+    getHourEntry: (hourKey) => entrySum(byHourCache?.[hourKey]),
+  });
+  drawOverviewCharts({
+    data, range,
+    timeChart, timeTooltip, timeLegend, timeNoData,
+    visitsChart, visitsTooltip, visitsNoData,
+    onEnterDrill: (r, metric) => enterDrill(r, null, metric),
+  });
   hourly.render(range);
   renderStats(data, range);
   renderSubpages(range);
@@ -262,21 +226,7 @@ function renderStats(data, range) {
 
   const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
   const totalVisits = data.reduce((s, d) => s + d.visits, 0);
-  let activeDays = 0;
-  if (range !== 'today') {
-    if (range === 'all') {
-      const allDays = Object.keys(byDayCache ?? {}).sort();
-      if (allDays.length > 0) {
-        const [y1, m1, d1] = allDays[0].split('-').map(Number);
-        const [y2, m2, d2] = allDays[allDays.length - 1].split('-').map(Number);
-        const start = new Date(y1, m1 - 1, d1);
-        const end = new Date(y2, m2 - 1, d2);
-        activeDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-      }
-    } else {
-      activeDays = parseInt(range);
-    }
-  }
+  const activeDays = activeDaysFromRange(range, byDayCache);
   const avgMs = activeDays > 0 ? totalMs / activeDays : 0;
 
   let peakMs = 0, peakLabel = '';
@@ -315,47 +265,7 @@ function renderStats(data, range) {
   document.querySelector('#stat-visits').textContent = totalVisits > 0 ? totalVisits : '—';
   document.querySelector('#stat-avg-session').textContent = totalVisits > 0 ? formatMs(totalMs / totalVisits) : '—';
 
-  const subheadings = { today: '(today)', '7': '(last 7 days)', '30': '(last 30 days)', '180': '(last 6 months)', '365': '(last year)', all: '(all time, from earliest data)' };
-  document.querySelector('#overview-subheading').textContent = subheadings[range] ?? '';
-}
-
-function drawChart(data, range) {
-  const timeOnClick = range !== 'today' ? r => enterDrill(r, null, 'time') : null;
-  const visitsOnClick = range !== 'today' ? r => enterDrill(r, null, 'visits') : null;
-  const hasAudio = data.some(d => d.audioMs > 0);
-  document.querySelector('#time-legend').style.display = hasAudio ? 'flex' : 'none';
-
-  const timeSeriesData = hasAudio
-    ? [
-        { label: 'Active', getValue: d => d.activeMs, color: rootStyle.getPropertyValue('--color-chart-time'), formatVal: formatMs },
-        { label: 'Audio', getValue: d => d.audioMs, color: rootStyle.getPropertyValue('--color-chart-audio'), formatVal: formatMs },
-      ]
-    : undefined;
-
-  drawBarChart({
-    svgEl: timeChart,
-    tooltipEl: document.querySelector('#time-tooltip'),
-    data,
-    maxVal: Math.max(...data.map(d => Math.max(d.activeMs, d.audioMs || 0))),
-    getValue: d => d.activeMs,
-    formatVal: ms => formatMs(ms),
-    color: rootStyle.getPropertyValue('--color-chart-time'),
-    series: timeSeriesData,
-    onBarClick: timeOnClick,
-  });
-
-  drawBarChart({
-    svgEl: visitsChart,
-    tooltipEl: document.querySelector('#visits-tooltip'),
-    data,
-    maxVal: Math.max(...data.map(d => d.visits)),
-    getValue: d => d.visits,
-    formatVal: v => `${Math.round(v)}`,
-    formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
-    hideMidTicks: maxVal => maxVal < 3,
-    color: rootStyle.getPropertyValue('--color-chart-visits'),
-    onBarClick: visitsOnClick,
-  });
+  document.querySelector('#overview-subheading').textContent = subheadingText(range);
 }
 
 function aggregateSubpages(range) {
