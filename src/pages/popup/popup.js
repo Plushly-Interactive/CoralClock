@@ -1,6 +1,7 @@
 import { formatMs } from '../../shared/timeUtils.js';
 
 const addBtn = document.querySelector('#add-btn');
+const formTarget = document.querySelector('#form-target');
 
 document.querySelector('#dashboard-btn').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('src/pages/dashboard/dashboard.html') });
@@ -14,17 +15,16 @@ addBtn.addEventListener('click', async () => {
 
   if (addForm.classList.contains('visible')) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const input = document.querySelector('#form-target');
     if (tab?.url?.startsWith('http')) {
-      input.value = new URL(tab.url).hostname;
+      formTarget.value = new URL(tab.url).hostname;
     }
-    input.focus();
-    input.select();
+    formTarget.focus();
+    formTarget.select();
   }
 });
 
 document.querySelector('#save-btn').addEventListener('click', async () => {
-  const target = document.querySelector('#form-target').value.trim();
+  const target = formTarget.value.trim();
   const limit = parseInt(document.querySelector('#form-limit').value);
   const limitUnit = document.querySelector('#form-unit-btn').dataset.value;
   const period = document.querySelector('#form-period-btn').dataset.value;
@@ -43,7 +43,7 @@ document.querySelector('#save-btn').addEventListener('click', async () => {
   const { rules = [] } = await chrome.storage.local.get('rules');
   await chrome.storage.local.set({ rules: [...rules, rule] });
 
-  document.querySelector('#form-target').value = '';
+  formTarget.value = '';
   document.querySelector('#form-limit').value = '10';
   addForm.classList.remove('visible');
   renderRules();

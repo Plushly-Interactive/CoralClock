@@ -13,10 +13,13 @@ function urlToKey(url) {
   return siteId && path ? makeKey(siteId, path) : null;
 }
 
+export const SUBPAGES_DAY_KEY = 'subpagesByDay';
+export const SUBPAGES_HOUR_KEY = 'subpagesByHour';
+
 const mod = createTrackingModule({
   urlToKey,
-  dayStorageKey: 'subpagesByDay',
-  hourStorageKey: 'subpagesByHour',
+  dayStorageKey: SUBPAGES_DAY_KEY,
+  hourStorageKey: SUBPAGES_HOUR_KEY,
   snapshotStorageKey: '_subpageSnapshot',
   getCell(bucket, key) {
     const [siteId, path] = key.split(KEY_SEP);

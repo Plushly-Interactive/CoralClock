@@ -4,10 +4,6 @@ body {
   flex-direction: column;
 }
 
-header {
-  flex-shrink: 0;
-}
-
 #dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -33,10 +29,6 @@ header {
 
 #dashboard-charts-col .chart-container {
   flex: 1;
-  min-height: 0;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding: 16px;
 }
 
 
@@ -53,6 +45,7 @@ header {
   background: var(--color-bg);
   z-index: 10;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 #dashboard-table-heading {

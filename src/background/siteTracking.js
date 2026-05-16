@@ -1,10 +1,13 @@
 import { siteIdFromUrl } from './siteResolution.js';
 import { createTrackingModule } from './trackingUtils.js';
 
+export const ANALYTICS_DAY_KEY = 'analyticsByDay';
+export const ANALYTICS_HOUR_KEY = 'analyticsByHour';
+
 const mod = createTrackingModule({
   urlToKey: siteIdFromUrl,
-  dayStorageKey: 'analyticsByDay',
-  hourStorageKey: 'analyticsByHour',
+  dayStorageKey: ANALYTICS_DAY_KEY,
+  hourStorageKey: ANALYTICS_HOUR_KEY,
   snapshotStorageKey: '_trackingSnapshot',
   getCell(bucket, key) {
     bucket[key] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };

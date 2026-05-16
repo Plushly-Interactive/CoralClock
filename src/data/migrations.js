@@ -1,3 +1,5 @@
+import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../background/siteTracking.js';
+
 const migrations = [
   // v0 → v1: initial schema
   // analyticsByDay[day][siteId]   = { ms, visits }
@@ -9,15 +11,17 @@ const migrations = [
   // analyticsByDay[day][siteId]   = { activeMs, visits, audioMs, overlapMs }
   // analyticsByHour[hour][siteId] = { activeMs, visits, audioMs, overlapMs }
   async () => {
-    const { analyticsByDay = {}, analyticsByHour = {} } =
-      await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
+    const {
+      [ANALYTICS_DAY_KEY]: analyticsByDay = {},
+      [ANALYTICS_HOUR_KEY]: analyticsByHour = {},
+    } = await chrome.storage.local.get([ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY]);
     for (const sites of Object.values(analyticsByDay))
       for (const [id, d] of Object.entries(sites))
         sites[id] = { activeMs: d.ms ?? d.activeMs ?? 0, audioMs: d.audioMs ?? 0, overlapMs: d.overlapMs ?? 0, visits: d.visits ?? 0 };
     for (const sites of Object.values(analyticsByHour))
       for (const [id, d] of Object.entries(sites))
         sites[id] = { activeMs: d.ms ?? d.activeMs ?? 0, audioMs: d.audioMs ?? 0, overlapMs: d.overlapMs ?? 0, visits: d.visits ?? 0 };
-    await chrome.storage.local.set({ analyticsByDay, analyticsByHour });
+    await chrome.storage.local.set({ [ANALYTICS_DAY_KEY]: analyticsByDay, [ANALYTICS_HOUR_KEY]: analyticsByHour });
   },
 ];
 

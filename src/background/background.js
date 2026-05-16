@@ -6,6 +6,7 @@ import {
   addAudibleTab, removeAudibleTab,
   flushToStorage, reconcileWindows, initTracking,
   saveSnapshot, recoverFromSnapshot,
+  ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY,
 } from './siteTracking.js';
 import {
   setWindowPath, removeWindowPath,
@@ -13,6 +14,7 @@ import {
   initSubpageTracking, reconcileSubpagePaths,
   flushSubpagesToStorage,
   saveSubpageSnapshot, recoverSubpagesFromSnapshot,
+  SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
 } from './subpageTracking.js';
 
 console.log('BiteGuard: background started');
@@ -80,7 +82,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 async function getByDay() {
   if (!cachedByDay) {
-    const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
+    const { [ANALYTICS_DAY_KEY]: analyticsByDay = {} } = await chrome.storage.local.get(ANALYTICS_DAY_KEY);
     cachedByDay = analyticsByDay;
   }
   return cachedByDay;
@@ -88,7 +90,7 @@ async function getByDay() {
 
 async function getSubpagesByDay() {
   if (!cachedSubpagesByDay) {
-    const { subpagesByDay = {} } = await chrome.storage.local.get('subpagesByDay');
+    const { [SUBPAGES_DAY_KEY]: subpagesByDay = {} } = await chrome.storage.local.get(SUBPAGES_DAY_KEY);
     cachedSubpagesByDay = subpagesByDay;
   }
   return cachedSubpagesByDay;
@@ -96,7 +98,7 @@ async function getSubpagesByDay() {
 
 async function getSubpagesByHour() {
   if (!cachedSubpagesByHour) {
-    const { subpagesByHour = {} } = await chrome.storage.local.get('subpagesByHour');
+    const { [SUBPAGES_HOUR_KEY]: subpagesByHour = {} } = await chrome.storage.local.get(SUBPAGES_HOUR_KEY);
     cachedSubpagesByHour = subpagesByHour;
   }
   return cachedSubpagesByHour;
@@ -104,7 +106,7 @@ async function getSubpagesByHour() {
 
 async function getByHourToday() {
   if (!cachedByHour) {
-    const { analyticsByHour = {} } = await chrome.storage.local.get('analyticsByHour');
+    const { [ANALYTICS_HOUR_KEY]: analyticsByHour = {} } = await chrome.storage.local.get(ANALYTICS_HOUR_KEY);
     cachedByHour = analyticsByHour;
   }
   const todayKey = localDayKey(Date.now());
@@ -118,7 +120,7 @@ async function getByHourToday() {
 
 async function getByHourForDay(dayKey) {
   if (!cachedByHour) {
-    const { analyticsByHour = {} } = await chrome.storage.local.get('analyticsByHour');
+    const { [ANALYTICS_HOUR_KEY]: analyticsByHour = {} } = await chrome.storage.local.get(ANALYTICS_HOUR_KEY);
     cachedByHour = analyticsByHour;
   }
   const result = {};
@@ -131,7 +133,7 @@ async function getByHourForDay(dayKey) {
 
 async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
   if (!cachedByHour) {
-    const { analyticsByHour = {} } = await chrome.storage.local.get('analyticsByHour');
+    const { [ANALYTICS_HOUR_KEY]: analyticsByHour = {} } = await chrome.storage.local.get(ANALYTICS_HOUR_KEY);
     cachedByHour = analyticsByHour;
   }
 

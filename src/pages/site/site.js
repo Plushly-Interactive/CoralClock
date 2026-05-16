@@ -344,13 +344,15 @@ function setDepth(depth, btn) {
   renderSubpages(rangeSelect.dataset.value);
 }
 
-document.querySelector('#sort-time-btn').onclick = () => setSort('time');
-document.querySelector('#sort-visits-btn').onclick = () => setSort('visits');
+const sortTimeBtn = document.querySelector('#sort-time-btn');
+const sortVisitsBtn = document.querySelector('#sort-visits-btn');
+sortTimeBtn.onclick = () => setSort('time');
+sortVisitsBtn.onclick = () => setSort('visits');
 
 function setSort(sort) {
   currentSort = sort;
-  document.querySelector('#sort-time-btn').classList.toggle('active', sort === 'time');
-  document.querySelector('#sort-visits-btn').classList.toggle('active', sort === 'visits');
+  sortTimeBtn.classList.toggle('active', sort === 'time');
+  sortVisitsBtn.classList.toggle('active', sort === 'visits');
   renderSubpages(rangeSelect.dataset.value);
 }
 
