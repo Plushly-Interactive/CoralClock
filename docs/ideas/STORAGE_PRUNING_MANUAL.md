@@ -4,144 +4,109 @@ Manual pruning flips the model: user controls retention, extension monitors size
 
 ---
 
+## Storage keys
+
+Four persisted stores, each a single `chrome.storage.local` key:
+
+| Key | Structure | Notes |
+|---|---|---|
+| `analyticsByDay` | `{ [dayKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }` | One entry per site per day |
+| `analyticsByHour` | `{ [hourKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }` | One entry per site per hour-slot visited |
+| `subpagesByDay` | `{ [dayKey]: { [siteId]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }` | One entry per path per site per day |
+| `subpagesByHour` | `{ [hourKey]: { [siteId]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }` | One entry per path per site per hour-slot |
+
+`dayKey` = `"2026-05-03"`, `hourKey` = `"2026-05-03T14"`.
+
+Subpages are the most expensive store — a site like YouTube can accumulate one path entry per video watched. Pruning subpages first has the largest impact on storage.
+
+---
+
+## Pruning strategies
+
+### 1. Insignificant records (first to implement)
+
+Delete records where the tracked time is too low to be meaningful. This is the lowest-risk pruning — it doesn't discard real history, only noise.
+
+**Defining "insignificant":**
+
+A record is insignificant if its total tracked time is below a threshold. Best measure is `activeMs + audioMs - overlapMs` (union — the actual wall-clock time the user was present on the site/path). This is the value the UI already shows.
+
+Candidate thresholds:
+
+| Threshold | What it catches |
+|---|---|
+| < 5 s | Accidental navigations, prefetches, instant bounces |
+| < 30 s | Brief tab openings, skimmed-over pages |
+| < 60 s | Conservative; only catches very fast bounces |
+
+Subpages are the main target here — a YouTube video opened for 3 seconds creates a path record identical in structure to one watched for an hour. Sites are less likely to have truly insignificant records (if you visited a domain at all, something happened).
+
+**Granularity:** insignificant pruning operates at the record level within a bucket, not the whole bucket. A day bucket with 20 sites keeps 19 of them after one insignificant site is pruned.
+
+**Open question:** should insignificant pruning apply to:
+- Subpages only (highest impact, lowest risk of surprising the user)
+- Both sites and subpages
+- Configurable per type
+
+### 2. Date-based retention (later)
+
+Keep hourly data for N months, daily data for N years. Deletes entire date-key buckets. This is the blunter tool for users who want to shed old data wholesale.
+
+---
+
 ## Measuring storage
 
-### Size calculation
+`chrome.storage.local.getBytesInUse()` is the authoritative method — it returns actual quota usage including metadata. Should be called per-key to show a breakdown:
 
-Chrome `storage.local` quota: **10 MB** (without `unlimitedStorage` permission)
-
-Measure by serializing and measuring JSON size:
 ```js
-const analyticsByHour = await storage.local.get('analyticsByHour');
-const analyticsByDay = await storage.local.get('analyticsByDay');
-const hourSize = new Blob([JSON.stringify(analyticsByHour.analyticsByHour)]).size;
-const daySize = new Blob([JSON.stringify(analyticsByDay.analyticsByDay)]).size;
-const totalSize = hourSize + daySize;
+const [hourBytes, dayBytes, subHourBytes, subDayBytes] = await Promise.all([
+  chrome.storage.local.getBytesInUse('analyticsByHour'),
+  chrome.storage.local.getBytesInUse('analyticsByDay'),
+  chrome.storage.local.getBytesInUse('subpagesByHour'),
+  chrome.storage.local.getBytesInUse('subpagesByDay'),
+]);
 ```
 
-Could also use `chrome.storage.local.getBytesInUse()` (gives actual quota usage including metadata).
-
-### When to measure
-
-Options:
-- A: On service worker startup (cheap, ties to extension lifecycle)
-- B: On a periodic alarm (e.g. daily or weekly, more predictable)
-- C: Both (on startup, then cache until next alarm)
+Chrome quota without `unlimitedStorage`: **10 MB**.
 
 ---
 
 ## Alerting thresholds
 
-When does the user need to know?
-
-| Threshold | Action | Rationale |
-|---|---|---|
-| 70% (7 MB) | Show warning badge/banner in options page | Give user time to prune |
-| 95% (9.5 MB) | Show urgent warning + recommend immediate pruning | At risk of quota exhaustion |
-| 100% | Writes start failing silently | Data loss risk |
-
-**Open question:** Does the UI live in:
-- The main options/settings page (one section for storage info)?
-- A dedicated "Storage" or "Data Management" tab?
-- Both (small widget in settings, full page in admin area)?
+| Threshold | Action |
+|---|---|
+| 70% (7 MB) | Show warning in options page |
+| 95% (9.5 MB) | Show urgent warning, recommend pruning immediately |
 
 ---
 
 ## Manual pruning UI
 
+### Where it lives
+
+Options:
+- A section in the main settings page
+- A dedicated "Data & Storage" tab
+
 ### What the user controls
 
-Two models:
-
-**Model A: Date-based retention sliders**
-```
-Hourly data: Keep for [1 month |--------|] [6 months]
-Daily data:  Keep for [1 year  |--------|] [5 years]
-[Prune Now] button
-```
-Pros: Direct, predictable
-Cons: User may not know what "retention" means; doesn't tie to their usage pattern
-
-**Model B: "Keep last N sites / N days" + safety valve**
-```
-Keep hourly data from last [N] months
-Keep daily data from last [N] years
-Current size: 2.3 MB / 10 MB
-
-[Delete oldest hourly data]  (removes 1 month bucket)
-[Delete oldest daily data]   (removes 1 year bucket)
-```
-Pros: Granular, user can prune incrementally
-Cons: More clicks if deleting a lot
-
-**Model C: "Safe defaults" + expert mode**
-```
-[Use recommended retention] (3 months/2 years)
-☐ Show advanced pruning options
-
-If checked:
-  Hourly retention: [3 months]
-  Daily retention: [2 years]
-  [Prune] [Delete all historical data]
-```
-Pros: Simple for most users, experts can tune
-Cons: Extra clicks for power users
-
----
-
-## Data flow
-
-1. **Service worker on startup** → measure size → store in `storage.local` as `storageStatus: { sizeBytes, lastMeasured, analyticsByHourSize, analyticsByDaySize }`
-2. **Options page (on open)** → read `storageStatus` → display size bar + current thresholds
-3. **User adjusts sliders + clicks [Prune]** → runs pruning logic with those params → updates `storageStatus`
-4. **Service worker daily alarm** → re-measure size (optional, for background monitoring)
+To be decided — see open questions below.
 
 ---
 
 ## Open questions
 
-1. **Measurement method:** `Blob.size` (simpler) or `chrome.storage.local.getBytesInUse()` (more accurate)?
-2. **UI location:** widget in main settings, dedicated Storage tab, or both?
-3. **UI model:** which of A/B/C above?
-4. **Default retention:** if keeping 3 months/2 years, do we auto-prune to those on first install, or let user manually prune?
-5. **Re-measurement frequency:** on startup only, or also on a periodic alarm?
-
----
-
-## Pruning implementation
-
-Once parameters are set:
-
-```js
-async function pruneTo(hourlyMonths, dailyYears) {
-  const now = new Date();
-  const hourCutoff = new Date(now.getFullYear(), now.getMonth() - hourlyMonths, 1);
-  const dayCutoff = new Date(now.getFullYear() - dailyYears, now.getMonth(), now.getDate());
-  
-  // Get both stores
-  const { analyticsByHour, analyticsByDay } = await storage.local.get(['analyticsByHour', 'analyticsByDay']);
-  
-  // Delete old keys
-  const prunedHour = Object.fromEntries(
-    Object.entries(analyticsByHour || {}).filter(([key]) => key >= hourCutoff.toISOString().split('T')[0])
-  );
-  const prunedDay = Object.fromEntries(
-    Object.entries(analyticsByDay || {}).filter(([key]) => key >= dayCutoff.toISOString().split('T')[0])
-  );
-  
-  await storage.local.set({ analyticsByHour: prunedHour, analyticsByDay: prunedDay });
-  
-  // Re-measure and update status
-  await measureStorage();
-}
-```
+1. **Insignificant threshold:** which floor — 5 s, 30 s, 60 s? User-configurable or fixed?
+2. **Insignificant scope:** subpages only, or sites too?
+3. **Date retention UI model:** sliders, step-by-step delete, or safe-defaults + expert mode?
+4. **UI location:** settings section or dedicated tab?
+5. **Re-measurement frequency:** on startup only, or also after each flush?
 
 ---
 
 ## Next steps
 
-Pick:
-- Measurement method
-- UI model (A/B/C)
-- Storage thresholds (keep 70%/95%?)
-- Default retention (if any)
+- [ ] Implement insignificant-record pruning (define threshold, apply to subpagesByDay + subpagesByHour, optionally analyticsByDay + analyticsByHour)
+- [ ] Implement size measurement via `getBytesInUse`
+- [ ] Design pruning UI page
+- [ ] Implement date-based retention pruning
