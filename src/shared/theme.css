@@ -155,6 +155,10 @@ input[type="checkbox"] {
   margin-bottom: 16px;
 }
 
+.chart-axis-label {
+  font-size: var(--font-sm);
+}
+
 .chart-heading {
   font-size: var(--font-base);
   font-weight: 600;

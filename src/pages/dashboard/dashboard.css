@@ -34,8 +34,6 @@ header {
 #dashboard-charts-col .chart-container {
   flex: 1;
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto 1fr;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 16px;
