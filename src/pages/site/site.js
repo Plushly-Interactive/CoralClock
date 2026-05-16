@@ -114,6 +114,15 @@ stripParamsToggle.addEventListener('change', () => {
   renderSubpages(rangeSelect.dataset.value);
 });
 
+let hideBriefSubpages = sessionStorage.getItem('hideBriefSubpages') !== 'false';
+const hideBriefSubpagesToggle = document.querySelector('#hide-brief-subpages-toggle');
+hideBriefSubpagesToggle.checked = hideBriefSubpages;
+hideBriefSubpagesToggle.addEventListener('change', () => {
+  hideBriefSubpages = hideBriefSubpagesToggle.checked;
+  sessionStorage.setItem('hideBriefSubpages', hideBriefSubpages);
+  renderSubpages(rangeSelect.dataset.value);
+});
+
 const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
 const backBtn = document.querySelector('#back-btn');
@@ -347,8 +356,9 @@ function renderSubpages(range) {
   chartsGrid.classList.add('has-subpages');
   buildDepthToggle(paths);
 
-  const merged = mergePaths(raw, currentDepth);
+  let merged = mergePaths(raw, currentDepth);
   merged.sort((a, b) => currentSort === 'time' ? b.activeMs - a.activeMs : b.visits - a.visits);
+  if (hideBriefSubpages) merged = merged.filter(r => r.activeMs >= 60_000);
 
   const list = document.querySelector('#subpages-list');
   list.innerHTML = '';

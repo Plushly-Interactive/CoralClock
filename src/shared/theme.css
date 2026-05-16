@@ -151,7 +151,7 @@ input[type="checkbox"] {
 .chart-svg {
   display: block;
   width: 100%;
-  height: calc(100% - 16px);
+  height: calc(100% - 18px);
   margin-bottom: 16px;
 }
 
