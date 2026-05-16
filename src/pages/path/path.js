@@ -3,7 +3,7 @@ import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from '../../shared
 import { resolveSite } from '../../background/siteResolution.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
-import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
+import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
 
@@ -163,7 +163,7 @@ function renderPathLinks(entries) {
 const siteHref = isMerged
   ? `../site/site.html?ids=${encodeURIComponent(siteIds.join(','))}`
   : `../site/site.html?id=${encodeURIComponent(siteId)}`;
-backBtn.href = siteHref;
+backBtn.href = '../dashboard/dashboard.html';
 crumbSite.href = siteHref;
 
 const stats = [
@@ -182,15 +182,6 @@ timeLegend.innerHTML = CHART_LEGEND_HTML;
 
 const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
-
-backBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  if (isInDrillMode()) {
-    exitDrillCompletely();
-  } else {
-    location.href = siteHref;
-  }
-});
 
 let byDayCache = null;
 let byHourCache = null;
