@@ -139,6 +139,11 @@ input[type="checkbox"] {
   fill: var(--color-text-secondary);
 }
 
+.text-hint {
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
 .chart-container {
   position: relative;
 }
@@ -146,8 +151,12 @@ input[type="checkbox"] {
 .chart-svg {
   display: block;
   width: 100%;
-  height: calc(100% - 16px);
+  height: calc(100% - 18px);
   margin-bottom: 16px;
+}
+
+.chart-axis-label {
+  font-size: var(--font-sm);
 }
 
 .chart-heading {

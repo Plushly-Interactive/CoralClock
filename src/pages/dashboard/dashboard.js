@@ -27,9 +27,11 @@ const hourly = createHourlyChart({
   container: hourlyChartContainer,
   subheading: hourlySubheading,
   notRelevant: hourlyNotRelevant,
-  siteIds: null,
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
+  loadAvgPerHour: (range) => chrome.runtime.sendMessage({
+    type: 'getAvgPerClockHour', siteIds: null, range,
+  }),
 });
 
 let sortCol = 'time';
@@ -147,6 +149,14 @@ window.addEventListener('storage', (e) => {
 });
 
 loadAndRender();
+
+window.addEventListener('pageshow', () => {
+  hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
+  hideBriefToggle.checked = hideBrief;
+  mergeMode = sessionStorage.getItem('mergeMode') !== 'false';
+  mergeToggle.checked = mergeMode;
+  if (currentRows.length) render();
+});
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;

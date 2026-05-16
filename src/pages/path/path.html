@@ -2,16 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>BiteGuard — Site</title>
+    <title>BiteGuard — Path</title>
     <script src="../../shared/theme.js"></script>
     <link rel="stylesheet" href="../../shared/theme.css" />
     <link rel="stylesheet" href="../dashboard/dashboard.css" />
-    <link rel="stylesheet" href="./site.css" />
+    <link rel="stylesheet" href="../site/site.css" />
+    <link rel="stylesheet" href="./path.css" />
   </head>
   <body>
     <header>
       <div id="header-left">
-        <a id="back-btn" href="../dashboard/dashboard.html">
+        <a id="back-btn" href="#">
           <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
         </a>
       </div>
@@ -22,6 +23,15 @@
         </div>
       </div>
     </header>
+
+    <div id="path-subheader">
+      <a id="path-crumb-site" href="#"></a>
+      <span class="path-crumb-link">
+        <a id="path-crumb-path" class="text-meta" href="#" target="_blank" rel="noopener"></a>
+        <button id="path-links-toggle" type="button" aria-expanded="false" style="display:none" title="Show open-link options"><span id="path-links-toggle-label" class="text-hint"></span></button>
+      </span>
+      <div id="path-links" class="text-meta"></div>
+    </div>
 
     <div id="charts-grid">
       <div id="time-chart-container" class="chart-container">
@@ -37,7 +47,6 @@
       <div id="stats-container" class="chart-container">
         <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading text-meta"></span></h2>
         <div id="stats-list"></div>
-        <div class="tooltip text-meta" id="peak-tooltip"></div>
       </div>
 
       <div id="visits-chart-container" class="chart-container">
@@ -45,31 +54,6 @@
         <svg id="visits-chart" class="chart-svg"></svg>
         <div id="visits-tooltip" class="tooltip text-meta"></div>
         <p id="visits-no-data" class="chart-note" style="display:none">No data for this period.</p>
-      </div>
-
-      <div id="subpages-container" class="chart-container">
-        <div id="subpages-header">
-          <h2 class="chart-heading" id="subpages-heading">Page activity
-            <label id="hide-brief-subpages-label" class="table-filter text-meta">
-              <input type="checkbox" id="hide-brief-subpages-toggle" checked> Hide brief (&lt;1m)
-            </label>
-          </h2>
-        </div>
-        <div id="subpages-controls">
-          <span class="text-meta">Depth</span>
-          <div id="depth-toggle"></div>
-          <div id="sort-toggle">
-            <button id="sort-time-btn" class="seg-btn active">Time</button>
-            <button id="sort-visits-btn" class="seg-btn">Visits</button>
-          </div>
-        </div>
-        <ol id="subpages-list"></ol>
-        <div id="subpages-footer">
-          <span id="subpages-count" class="text-meta"></span>
-          <label id="strip-params-label" class="table-filter text-meta">
-            <input type="checkbox" id="strip-params-toggle" checked> Ignore URL params
-          </label>
-        </div>
       </div>
 
       <div id="hourly-chart-container" class="chart-container">
@@ -82,8 +66,6 @@
 
     <div id="drill-view" style="display:none"></div>
 
-    <p id="empty-msg">No data for this period.</p>
-
-    <script type="module" src="./site.js"></script>
+    <script type="module" src="./path.js"></script>
   </body>
 </html>

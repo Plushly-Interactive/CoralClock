@@ -7,6 +7,8 @@ export const STAT_LABELS = {
   avgSession: 'Avg session',
 };
 
+export const CHART_LEGEND_HTML = `<span><span class="chart-legend-time"></span> Active browsing</span><span><span class="chart-legend-audio"></span> Audio playback</span>`;
+
 export function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -21,34 +23,40 @@ export function formatWithSmallSub(text) {
   return match[2] ? `${match[1]}<span class="stat-sub">${match[2]}</span>` : text;
 }
 
-export function formatWithSmallSubSvg(text, baseFontSize) {
+export function formatWithSmallSubSvg(text) {
   const match = text.match(/^(.+?)(\s*\(.+\))?$/);
   if (!match[2]) return text;
-  const rootStyle = getComputedStyle(document.documentElement);
-  const varValue = rootStyle.getPropertyValue('--stat-sub-size').trim();
-  const ratio = parseFloat(varValue) || 0.75;
-  const smallSize = (baseFontSize * ratio).toFixed(1);
-  return `${match[1]}<tspan font-size="${smallSize}">${match[2]}</tspan>`;
+  return `${match[1]}<tspan style="font-size: var(--stat-sub-size, 0.75em)">${match[2]}</tspan>`;
 }
 
-export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick, scale = 'linear', gridLineWidth = 1 }) {
-  const W = 600, H = 260, padLeft = 38, padRight = 8, padTop = 10, padBottom = 40;
+const chartOpts = new WeakMap();
+
+export function drawBarChart(opts) {
+  chartOpts.set(opts.svgEl, opts);
+  if (!opts.svgEl.dataset.chartObserved) {
+    opts.svgEl.dataset.chartObserved = '1';
+    new ResizeObserver(() => {
+      const o = chartOpts.get(opts.svgEl);
+      if (o) _drawBarChart(o);
+    }).observe(opts.svgEl);
+  }
+  _drawBarChart(opts);
+}
+
+function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick, scale = 'linear', gridLineWidth = 1 }) {
+  const rect = svgEl.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return;
+  const W = rect.width, H = rect.height;
+  const padLeft = 55, padRight = 8, padTop = 10, padBottom = 40;
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
-  const gap = Math.floor(innerW / data.length);
+  const gap = innerW / data.length;
   const labelEvery = data.length === 24 ? 3 : Math.ceil(data.length / 10);
 
   const rootStyle = getComputedStyle(document.documentElement);
   const gridColor = rootStyle.getPropertyValue('--color-border').trim() || '#f0f0f0';
 
   svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svgEl.setAttribute('width', '100%');
-  svgEl.removeAttribute('height');
-
-  const rect = svgEl.getBoundingClientRect();
-  const svgScale = Math.min(rect.width / W, rect.height / H) || 1;
-  const targetFontPx = parseFloat(rootStyle.getPropertyValue('--font-sm')) || 12;
-  const axisFontSize = (targetFontPx / svgScale).toFixed(1);
 
   const toFrac = scale === 'sqrt'
     ? v => maxVal > 0 ? Math.sqrt(v / maxVal) : 0
@@ -62,7 +70,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   const hideMid = hideMidTicks(maxVal);
   const gridlines = yTicks.map(({ y, val }, i) => {
     const isMid = i === 1 || i === 2;
-    const label = hideMid && isMid ? '' : `<text x="${padLeft - 6}" y="${y + 4}" text-anchor="end" font-size="${axisFontSize}" fill="var(--color-text-secondary)">${formatWithSmallSubSvg(formatVal(val), axisFontSize)}</text>`;
+    const label = hideMid && isMid ? '' : `<text x="${padLeft - 6}" y="${y + 4}" text-anchor="end" class="chart-axis-label" fill="var(--color-text-secondary)">${formatWithSmallSubSvg(formatVal(val))}</text>`;
     return `<line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" stroke="${gridColor}" stroke-width="${gridLineWidth}"/>${label}`;
   }).join('');
 
@@ -70,7 +78,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
   if (series) {
     rects = data.map((d, i) => {
       const showLabel = i % labelEvery === 0 || i === data.length - 1;
-      const labelHtml = showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" font-size="${axisFontSize}" fill="var(--color-text-secondary)">${d.label}</text>` : '';
+      const labelHtml = showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" class="chart-axis-label" fill="var(--color-text-secondary)">${d.label}</text>` : '';
 
       const nonZeroBars = series.filter(s => s.getValue(d) > 0);
       const hasAnyData = nonZeroBars.length > 0;
@@ -121,7 +129,7 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
         <rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="2"></rect>
         <rect x="${x}" y="${padTop}" width="${barW}" height="${innerH}" fill="transparent"
           data-range="${d.range}" data-val="${val}"></rect>
-        ${showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" font-size="${axisFontSize}" fill="var(--color-text-secondary)">${d.label}</text>` : ''}
+        ${showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" class="chart-axis-label" fill="var(--color-text-secondary)">${d.label}</text>` : ''}
       `;
     }).join('');
   }
@@ -141,19 +149,19 @@ export function drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatV
         const seriesLines = rect.dataset.seriesList.split('\n');
         const seriesHtml = seriesLines.map(line => formatWithSmallSub(line)).join('<br>');
         html = `${seriesHtml}<br>${rect.dataset.range}`;
-        if (onBarClick) html += '<br>(click to open detailed chart)';
+        if (onBarClick) html += '<br><span class="text-hint">(click to open detailed chart)</span>';
         tooltipEl.innerHTML = html;
       } else if (rect.dataset.series) {
         const text = `${rect.dataset.series}: ${rect.dataset.format} / ${rect.dataset.range}`;
         if (onBarClick) {
-          tooltipEl.innerHTML = `${text}<br>(click to open detailed chart)`;
+          tooltipEl.innerHTML = `${text}<br><span class="text-hint">(click to open detailed chart)</span>`;
         } else {
           tooltipEl.textContent = text;
         }
       } else {
         const val = Number(rect.dataset.val);
         let text = val === 0 ? rect.dataset.range : formatWithSmallSub(formatTooltip(val)) + '<br>' + rect.dataset.range;
-        if (onBarClick) text += '<br>(click to open detailed chart)';
+        if (onBarClick) text += '<br><span class="text-hint">(click to open detailed chart)</span>';
         if (onBarClick || val > 0) {
           tooltipEl.innerHTML = text;
         } else {
