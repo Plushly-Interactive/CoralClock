@@ -114,6 +114,15 @@ stripParamsToggle.addEventListener('change', () => {
   renderSubpages(rangeSelect.dataset.value);
 });
 
+let hideBriefSubpages = sessionStorage.getItem('hideBrief') !== 'false';
+const hideBriefSubpagesToggle = document.querySelector('#hide-brief-subpages-toggle');
+hideBriefSubpagesToggle.checked = hideBriefSubpages;
+hideBriefSubpagesToggle.addEventListener('change', () => {
+  hideBriefSubpages = hideBriefSubpagesToggle.checked;
+  sessionStorage.setItem('hideBrief', hideBriefSubpages);
+  renderSubpages(rangeSelect.dataset.value);
+});
+
 const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
 const backBtn = document.querySelector('#back-btn');
@@ -172,6 +181,14 @@ initDrill({
 });
 
 loadAndRender();
+
+window.addEventListener('pageshow', () => {
+  hideBriefSubpages = sessionStorage.getItem('hideBrief') !== 'false';
+  hideBriefSubpagesToggle.checked = hideBriefSubpages;
+  stripParams = sessionStorage.getItem('subpagesStripParams') !== 'false';
+  stripParamsToggle.checked = stripParams;
+  if (subpagesByDayCache) renderSubpages(rangeSelect.dataset.value);
+});
 
 async function loadAndRender() {
   byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
@@ -347,8 +364,9 @@ function renderSubpages(range) {
   chartsGrid.classList.add('has-subpages');
   buildDepthToggle(paths);
 
-  const merged = mergePaths(raw, currentDepth);
+  let merged = mergePaths(raw, currentDepth);
   merged.sort((a, b) => currentSort === 'time' ? b.activeMs - a.activeMs : b.visits - a.visits);
+  if (hideBriefSubpages) merged = merged.filter(r => r.activeMs >= 60_000);
 
   const list = document.querySelector('#subpages-list');
   list.innerHTML = '';

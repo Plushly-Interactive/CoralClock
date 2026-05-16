@@ -150,6 +150,14 @@ window.addEventListener('storage', (e) => {
 
 loadAndRender();
 
+window.addEventListener('pageshow', () => {
+  hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
+  hideBriefToggle.checked = hideBrief;
+  mergeMode = sessionStorage.getItem('mergeMode') !== 'false';
+  mergeToggle.checked = mergeMode;
+  if (currentRows.length) render();
+});
+
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
