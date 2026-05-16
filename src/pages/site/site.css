@@ -162,17 +162,46 @@ body {
 
 #subpages-list li {
   display: flex;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-base);
+}
+
+#subpages-list .subpage-drill {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 10px 8px;
   cursor: pointer;
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-base);
+  flex: 1;
+  min-width: 0;
 }
 
-#subpages-list li:hover {
+#subpages-list .subpage-drill:hover {
   background: color-mix(in srgb, var(--color-border) 20%, transparent);
+}
+
+#subpages-list .subpage-open-btn {
+  display: none;
+  padding: 0 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-sm);
+  text-decoration: none;
+  white-space: nowrap;
+  align-items: center;
+}
+
+#subpages-list .subpage-open-btn:hover {
+  background: color-mix(in srgb, var(--color-border) 20%, transparent);
+  color: var(--color-text);
+}
+
+#subpages-list li:hover .subpage-open-btn {
+  display: flex;
+}
+
+#subpages-list li:hover .subpage-num {
+  visibility: hidden;
 }
 
 #subpages-list .subpage-path {

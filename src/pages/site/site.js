@@ -362,11 +362,42 @@ function renderSubpages(range) {
     return;
   }
   chartsGrid.classList.add('has-subpages');
+
+  if (hideBriefSubpages && !mergePaths(raw, currentDepth).some(r => r.activeMs >= 60_000)) {
+    const actualMax = Math.max(...paths.map(p => p.split('/').filter(Boolean).length));
+    const shownMax = Math.min(5, actualMax - 1);
+    for (let d = shownMax; d >= 1; d--) {
+      if (mergePaths(raw, d).some(r => r.activeMs >= 60_000)) { currentDepth = d; break; }
+    }
+  }
+
   buildDepthToggle(paths);
 
   let merged = mergePaths(raw, currentDepth);
   merged.sort((a, b) => currentSort === 'time' ? b.activeMs - a.activeMs : b.visits - a.visits);
   if (hideBriefSubpages) merged = merged.filter(r => r.activeMs >= 60_000);
+
+  const pathSiteMs = {};
+  if (isMerged) {
+    for (const dayKey of dayKeysForRange(range, subpagesByDayCache)) {
+      const dayData = subpagesByDayCache?.[dayKey];
+      if (!dayData) continue;
+      for (const sid of effectiveSiteIds) {
+        for (const [p, d] of Object.entries(dayData[sid] ?? {})) {
+          const key = stripParams ? stripQuery(p) : p;
+          pathSiteMs[key] ??= {};
+          pathSiteMs[key][sid] = (pathSiteMs[key][sid] ?? 0) + (d.activeMs || 0);
+        }
+      }
+    }
+  }
+
+  function domainForPath(path) {
+    if (!isMerged) return effectiveSiteIds[0];
+    const siteMs = pathSiteMs[path];
+    if (!siteMs) return effectiveSiteIds[0];
+    return effectiveSiteIds.reduce((best, sid) => (siteMs[sid] ?? 0) > (siteMs[best] ?? 0) ? sid : best);
+  }
 
   const list = document.querySelector('#subpages-list');
   list.innerHTML = '';
@@ -379,8 +410,10 @@ function renderSubpages(range) {
       ? formatMs(row.activeMs)
       : `${row.visits} visit${row.visits === 1 ? '' : 's'}`;
     li.title = decoded + (row.truncated ? '*' : '');
-    li.innerHTML = `<span class="subpage-path">${display}${star}</span><span class="subpage-num">${num}</span>`;
-    li.onclick = () => {
+    const drill = document.createElement('div');
+    drill.className = 'subpage-drill';
+    drill.innerHTML = `<span class="subpage-path">${display}${star}</span><span class="subpage-num">${num}</span>`;
+    drill.onclick = () => {
       sessionStorage.setItem('subpageDrill', JSON.stringify({
         siteIds: effectiveSiteIds,
         path: row.path,
@@ -389,6 +422,25 @@ function renderSubpages(range) {
       }));
       location.href = '../path/path.html';
     };
+    let openPath = row.path;
+    if (row.truncated) {
+      const prefix = row.path + '/';
+      let bestMs = -1;
+      for (const [p, d] of Object.entries(raw)) {
+        if (p.startsWith(prefix) && (d.activeMs || 0) > bestMs) {
+          bestMs = d.activeMs || 0;
+          openPath = p;
+        }
+      }
+    }
+    const openBtn = document.createElement('a');
+    openBtn.className = 'subpage-open-btn';
+    openBtn.href = `https://${domainForPath(openPath)}${openPath}`;
+    openBtn.target = '_blank';
+    openBtn.rel = 'noopener noreferrer';
+    openBtn.textContent = '↗ Open';
+    li.appendChild(drill);
+    li.appendChild(openBtn);
     list.appendChild(li);
   }
   document.querySelector('#subpages-count').textContent = `${merged.length} page${merged.length !== 1 ? 's' : ''}`;
