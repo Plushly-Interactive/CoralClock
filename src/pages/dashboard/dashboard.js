@@ -6,6 +6,9 @@ import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.j
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+document.querySelector('#prune-btn').addEventListener('click', () => {
+  location.href = '../storage-pruning/storage-pruning.html';
+});
 const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#dashboard-body');
 const emptyMsg = document.querySelector('#empty-msg');

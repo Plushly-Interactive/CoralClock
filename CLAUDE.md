@@ -25,6 +25,10 @@
 - SVG <title> tooltips are unreliable in Chromium, never use them.
 - Never duplicate JS code, use existing functions as much as possible, extract functions that get new use cases in a separate shared file when relevant.
 
+## Page layout
+- Every page reuses the shared header in `theme.css` (75px height, three-column grid). Don't redefine `header` per page.
+- For "back to dashboard" navigation, use the icon-back pattern: an `<a id="back-btn">` wrapping the BiteGuard logo image, placed in `#header-left`. Never add a text "Back to dashboard" button.
+
 ## Communication
 - Explain each step as if I'm learning, not just following along.
 - Explain each new function, listener or code block you add.

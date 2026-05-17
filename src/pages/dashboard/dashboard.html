@@ -18,6 +18,7 @@
       <div id="header-center"></div>
       <div id="header-right">
         <button id="import-btn" class="btn">Import/Export data</button>
+        <button id="prune-btn" class="btn">Storage pruning</button>
         <div id="storage-bar-container">
           <div id="storage-bar-track">
             <div id="storage-bar-fill"></div>
@@ -118,7 +119,7 @@
           <label id="merge-label" class="table-filter text-meta"><input type="checkbox" id="merge-toggle"> Merge by name</label>
           <label id="hide-brief-label" class="table-filter text-meta"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
         </h2>
-        <table id="dashboard-table">
+        <table id="dashboard-table" class="data-table data-table--scroll">
           <thead>
             <tr>
               <th id="th-name">Site</th>
