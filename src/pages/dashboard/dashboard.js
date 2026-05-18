@@ -156,7 +156,7 @@ function renderTable(rows) {
       href = `../site/site.html?id=${encodeURIComponent(onlyEtld1)}`;
       subtitle = `${hostCount} subdomains`;
     } else if (hostCount === etld1Count) {
-      href = `../site/site.html?ids=${encodeURIComponent([...row.etld1s].join(','))}`;
+      href = `../site/site.html?ids=${encodeURIComponent([...row.hostnames].join(','))}`;
       subtitle = `${etld1Count} sites`;
     } else {
       href = `../site/site.html?ids=${encodeURIComponent([...row.hostnames].join(','))}`;
