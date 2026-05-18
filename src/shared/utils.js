@@ -18,6 +18,26 @@ export function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+export function showNotification(message, durationMs = 3000) {
+  const el = document.querySelector('#notification');
+  el.textContent = message;
+  el.removeAttribute('hidden');
+  setTimeout(() => { el.setAttribute('hidden', ''); }, durationMs);
+}
+
+export function formatBytes(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(1)} MB`;
+}
+
+export async function renderStorageBar() {
+  const used = await chrome.storage.local.getBytesInUse(null);
+  const quota = chrome.storage.local.QUOTA_BYTES;
+  document.querySelector('#storage-bar-fill').style.width = `${(used / quota) * 100}%`;
+  document.querySelector('#storage-bar-label').textContent = `${formatBytes(used)} / ${formatBytes(quota)}`;
+}
+
 export function formatWithSmallSub(text) {
   const match = text.match(/^(.+?)(\s*\(.+\))?$/);
   return match[2] ? `${match[1]}<span class="stat-sub">${match[2]}</span>` : text;
@@ -176,8 +196,7 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
       hoverOverlay.setAttribute('y', rect.getAttribute('y'));
       hoverOverlay.setAttribute('width', rect.getAttribute('width'));
       hoverOverlay.setAttribute('height', rect.getAttribute('height'));
-      hoverOverlay.setAttribute('fill', rootStyle.getPropertyValue('--color-border'));
-      hoverOverlay.setAttribute('opacity', '0.20');
+      hoverOverlay.setAttribute('fill', rootStyle.getPropertyValue('--color-hover-bg'));
       hoverOverlay.setAttribute('pointer-events', 'none');
       hoverOverlay.setAttribute('rx', '2');
       const firstRect = svgEl.querySelector('rect');

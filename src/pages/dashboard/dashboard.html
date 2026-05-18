@@ -18,6 +18,7 @@
       <div id="header-center"></div>
       <div id="header-right">
         <button id="import-btn" class="btn">Import/Export data</button>
+        <button id="prune-btn" class="btn">Storage pruning</button>
         <div id="storage-bar-container">
           <div id="storage-bar-track">
             <div id="storage-bar-fill"></div>
@@ -108,7 +109,7 @@
           </h2>
           <svg id="hourly-chart" class="chart-svg"></svg>
           <div class="tooltip text-meta" id="hourly-tooltip"></div>
-          <p id="hourly-not-relevant" class="chart-note" style="display:none"></p>
+          <p id="hourly-not-relevant" class="text-meta" style="display:none"></p>
         </div>
       </div>
 
@@ -118,7 +119,7 @@
           <label id="merge-label" class="table-filter text-meta"><input type="checkbox" id="merge-toggle"> Merge by name</label>
           <label id="hide-brief-label" class="table-filter text-meta"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
         </h2>
-        <table id="dashboard-table">
+        <table id="dashboard-table" class="data-table data-table--scroll">
           <thead>
             <tr>
               <th id="th-name">Site</th>
@@ -129,7 +130,7 @@
           </thead>
           <tbody id="dashboard-body"></tbody>
         </table>
-        <p id="empty-msg">No data for this period.</p>
+        <p id="empty-msg" class="empty-msg text-meta">No data for this period.</p>
       </div>
     </div>
 
