@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard – Storage pruning</title>
+    <script src="../../shared/theme.js"></script>
+    <link rel="stylesheet" href="../../shared/theme.css" />
+    <link rel="stylesheet" href="./storage-pruning.css" />
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="../dashboard/dashboard.html">
+          <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Storage pruning</h1></div>
+      <div id="header-right">
+        <div id="storage-bar-container">
+          <div id="storage-bar-track">
+            <div id="storage-bar-fill"></div>
+          </div>
+          <span id="storage-bar-label" class="text-meta"></span>
+        </div>
+      </div>
+    </header>
+
+    <main id="prune-main">
+      <section id="intro">
+        <p>
+          BiteGuard tracks every domain and subpage you visit. Over time, brief visits and accidental clicks
+          accumulate noise — short stays on pages you never meant to track. This tool finds and removes those.
+        </p>
+        <p>
+          A domain or subpage is considered <strong>insignificant</strong> when, summed across <em>every</em> record
+          ever stored for it (daily and hourly buckets, within each selected store), both its total active time and
+          total audio playback time fall below the threshold below. A site briefly opened once is caught; a site briefly
+          opened many times that totals real time is kept.
+        </p>
+      </section>
+
+      <section id="controls">
+        <div id="threshold-row">
+          <label id="threshold-label" for="threshold-input">Threshold — an identity is insignificant when its total active time and total audio time are both below</label>
+          <input id="threshold-input" type="number" min="1" step="1" />
+          <span class="text-meta">seconds</span>
+        </div>
+
+        <div id="scope-row">
+          <span id="scope-label" class="text-meta">Scan these stores:</span>
+          <label class="scope-check"><input type="checkbox" id="scope-site-daily" checked> Domains — daily</label>
+          <label class="scope-check"><input type="checkbox" id="scope-site-hourly" checked> Domains — hourly</label>
+          <label class="scope-check"><input type="checkbox" id="scope-subpage-daily" checked> Subpages — daily</label>
+          <label class="scope-check"><input type="checkbox" id="scope-subpage-hourly" checked> Subpages — hourly</label>
+        </div>
+
+        <div id="action-row">
+          <button id="scan-btn" class="btn">Scan</button>
+        </div>
+      </section>
+
+      <section id="results-section" hidden>
+        <div id="results-summary-row">
+          <span id="results-summary" class="text-meta"></span>
+        </div>
+        <div id="results-list"></div>
+        <p id="empty-msg" class="empty-msg text-meta">No records below the threshold in the selected stores.</p>
+        <div id="delete-row" hidden>
+          <button id="delete-btn" class="btn">Delete selected</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="notification" hidden></div>
+
+    <script type="module" src="./storage-pruning.js"></script>
+  </body>
+</html>
