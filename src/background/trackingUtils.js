@@ -19,10 +19,12 @@ export function createTrackingModule({
 
   async function init() {
     const windows = await chrome.windows.getAll({ populate: true });
+    console.log('[BG-DBG] init: windows count=', windows.length);
     for (const w of windows) {
-      if (w.state === 'minimized') continue;
+      if (w.state === 'minimized') { console.log('[BG-DBG] init: window', w.id, 'minimized, skip'); continue; }
       const tab = w.tabs?.find(t => t.active);
       const key = urlToKey(tab?.url);
+      console.log('[BG-DBG] init: window', w.id, 'activeTab url=', tab?.url, '→ key=', key);
       if (key) tracker.addWindow(w.id, key);
     }
     const tabs = await chrome.tabs.query({ audible: true });
@@ -214,14 +216,23 @@ export function createRangeTracker() {
 
   function setWindow(windowId, key) {
     const oldKey = windowToKey.get(windowId);
-    if (oldKey === key) return;
-    if (!oldKey && !key) return;
+    console.log('[BG-DBG] setWindow: windowId=', windowId, 'oldKey=', oldKey, 'newKey=', key);
+    if (oldKey === key) { console.log('[BG-DBG] setWindow: same key, return'); return; }
+    if (!oldKey && !key) { console.log('[BG-DBG] setWindow: both null, return'); return; }
     if (oldKey) removeWindow(windowId);
     if (key) {
       const existing = states.get(key);
       const wasTracked = !!existing && (existing.wasActive || existing.wasAudible);
+      console.log('[BG-DBG] setWindow: existing state for', key, '?', !!existing, 'wasTracked=', wasTracked);
       addWindow(windowId, key);
-      if (!wasTracked) pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
+      if (!wasTracked) {
+        pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
+        console.log('[BG-DBG] setWindow: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
+      } else {
+        console.log('[BG-DBG] setWindow: visit NOT counted (already tracked)');
+      }
+    } else {
+      console.log('[BG-DBG] setWindow: key is null/falsy, only removed old');
     }
   }
 

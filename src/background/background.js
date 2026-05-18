@@ -192,6 +192,7 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
 chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
   await bootstrapDone;
   const tab = await chrome.tabs.get(tabId);
+  console.log('[BG-DBG] onActivated: windowId=', windowId, 'tabId=', tabId, 'url=', tab.url, 'pendingUrl=', tab.pendingUrl, 'status=', tab.status, 'discarded=', tab.discarded, 'active=', tab.active);
   if (!tab.active) return;
   const siteId = siteIdFromUrl(tab.url);
   const path = pathFromUrl(tab.url);
