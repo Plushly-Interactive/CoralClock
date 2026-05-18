@@ -1,7 +1,49 @@
-import { resolveSite } from '../background/siteResolution.js';
 import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
 import { showNotification } from '../shared/utils.js';
+
+function normalizeHost(host) {
+  return host.startsWith('www.') ? host.slice(4) : host;
+}
+
+function normalizeAnalyticsBuckets(buckets) {
+  for (const [bucketKey, sites] of Object.entries(buckets)) {
+    const next = {};
+    for (const [siteId, cell] of Object.entries(sites)) {
+      const host = normalizeHost(siteId);
+      if (!next[host]) { next[host] = cell; continue; }
+      const existing = next[host];
+      next[host] = {
+        activeMs: (existing.activeMs ?? 0) + (cell.activeMs ?? 0),
+        audioMs: (existing.audioMs ?? 0) + (cell.audioMs ?? 0),
+        overlapMs: (existing.overlapMs ?? 0) + (cell.overlapMs ?? 0),
+        visits: (existing.visits ?? 0) + (cell.visits ?? 0),
+      };
+    }
+    buckets[bucketKey] = next;
+  }
+}
+
+function normalizeSubpageBuckets(buckets) {
+  for (const [bucketKey, sites] of Object.entries(buckets)) {
+    const next = {};
+    for (const [siteId, paths] of Object.entries(sites)) {
+      const host = normalizeHost(siteId);
+      if (!next[host]) { next[host] = paths; continue; }
+      const merged = next[host];
+      for (const [p, cell] of Object.entries(paths)) {
+        if (!merged[p]) { merged[p] = cell; continue; }
+        merged[p] = {
+          activeMs: (merged[p].activeMs ?? 0) + (cell.activeMs ?? 0),
+          audioMs: (merged[p].audioMs ?? 0) + (cell.audioMs ?? 0),
+          overlapMs: (merged[p].overlapMs ?? 0) + (cell.overlapMs ?? 0),
+          visits: (merged[p].visits ?? 0) + (cell.visits ?? 0),
+        };
+      }
+    }
+    buckets[bucketKey] = next;
+  }
+}
 
 const TT_VERSION = '4.2.1';
 
@@ -144,7 +186,7 @@ async function handleTtImport(json) {
   for (const { host, date, focus, time } of json.__stat__) {
     if (!host || !date || focus == null) continue;
     const dayKey = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
-    const siteId = resolveSite(host).siteId;
+    const siteId = normalizeHost(host);
     data[dayKey] ??= {};
     data[dayKey][siteId] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
     data[dayKey][siteId].activeMs += focus;
@@ -191,6 +233,10 @@ async function handleBgImport(json) {
   const importByHour = json.data[ANALYTICS_HOUR_KEY] || {};
   const importSubpagesByDay = json.data[SUBPAGES_DAY_KEY] || {};
   const importSubpagesByHour = json.data[SUBPAGES_HOUR_KEY] || {};
+  normalizeAnalyticsBuckets(importByDay);
+  normalizeAnalyticsBuckets(importByHour);
+  normalizeSubpageBuckets(importSubpagesByDay);
+  normalizeSubpageBuckets(importSubpagesByHour);
 
   const {
     [ANALYTICS_DAY_KEY]: analyticsByDay = {},

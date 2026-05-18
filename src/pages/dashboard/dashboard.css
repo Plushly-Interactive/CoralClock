@@ -44,19 +44,17 @@ body {
   color: var(--color-accent);
 }
 
-#merge-label {
+#hide-brief-label {
   margin-left: auto;
 }
 
-.table-filter {
+#dashboard-footer {
+  flex-shrink: 0;
+}
+
+#dashboard-footer-toggles {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-  cursor: pointer;
-  user-select: none;
+  gap: 12px;
 }
 
 #dashboard-table th:nth-child(1),

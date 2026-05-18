@@ -1,6 +1,7 @@
 import { formatMs, localDayKey } from '../../shared/timeUtils.js';
 import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar } from '../../shared/utils.js';
-import { resolveSite } from '../../background/siteResolution.js';
+import { eTLDPlus1 } from '../../background/siteResolution.js';
+import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
@@ -12,6 +13,7 @@ document.querySelector('#prune-btn').addEventListener('click', () => {
 const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#dashboard-body');
 const emptyMsg = document.querySelector('#empty-msg');
+const entriesCount = document.querySelector('#entries-count');
 const topChart = document.querySelector('#top-chart');
 const topTooltip = document.querySelector('#top-tooltip');
 const topChartContainer = document.querySelector('#top-chart-container');
@@ -21,6 +23,7 @@ const hourlyChartContainer = document.querySelector('#hourly-chart-container');
 const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
 const hourlySubheading = document.querySelector('#hourly-subheading');
 const topSubheading = document.querySelector('#top-subheading');
+const groupToggle = document.querySelector('#group-toggle');
 const mergeToggle = document.querySelector('#merge-toggle');
 const hideBriefToggle = document.querySelector('#hide-brief-toggle');
 
@@ -40,6 +43,8 @@ const hourly = createHourlyChart({
 let sortCol = 'time';
 let sortDir = 'desc';
 let currentRows = [];
+let groupMode = sessionStorage.getItem('groupMode') === 'true';
+groupToggle.checked = groupMode;
 let mergeMode = sessionStorage.getItem('mergeMode') !== 'false';
 mergeToggle.checked = mergeMode;
 let hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
@@ -77,12 +82,37 @@ function updateHeaders() {
   });
 });
 
-function groupRows(rows) {
+function groupByEtld1(rows) {
+  const groups = {};
+  for (const row of rows) {
+    const key = row.etld1;
+    if (!groups[key]) groups[key] = {
+      siteLabel: formatHostnameLabel(key),
+      etld1Label: formatHostnameLabel(key),
+      siteIds: [], hostnames: new Set(), etld1s: new Set([key]),
+      activeMs: 0, audioMs: 0, visits: 0,
+    };
+    groups[key].siteIds.push(row.siteId);
+    groups[key].hostnames.add(row.siteId);
+    groups[key].activeMs += row.activeMs;
+    groups[key].audioMs += row.audioMs;
+    groups[key].visits += row.visits;
+  }
+  return Object.values(groups);
+}
+
+function mergeByLabel(rows) {
   const groups = {};
   for (const row of rows) {
     const key = row.siteLabel;
-    if (!groups[key]) groups[key] = { siteLabel: key, siteIds: [], activeMs: 0, audioMs: 0, visits: 0 };
-    groups[key].siteIds.push(row.siteId);
+    if (!groups[key]) groups[key] = {
+      siteLabel: key,
+      siteIds: [], hostnames: new Set(), etld1s: new Set(),
+      activeMs: 0, audioMs: 0, visits: 0,
+    };
+    groups[key].siteIds.push(...(row.siteIds ?? [row.siteId]));
+    for (const h of (row.hostnames ?? [row.siteId])) groups[key].hostnames.add(h);
+    for (const e of (row.etld1s ?? [row.etld1])) groups[key].etld1s.add(e);
     groups[key].activeMs += row.activeMs;
     groups[key].audioMs += row.audioMs;
     groups[key].visits += row.visits;
@@ -91,7 +121,9 @@ function groupRows(rows) {
 }
 
 function getDisplayRows() {
-  const rows = mergeMode ? groupRows(currentRows) : currentRows;
+  let rows = currentRows;
+  if (groupMode) rows = groupByEtld1(rows);
+  if (mergeMode) rows = mergeByLabel(rows);
   return hideBrief ? rows.filter(r => r.activeMs >= 60_000 || r.audioMs >= 60_000) : rows;
 }
 
@@ -109,15 +141,27 @@ function sortedRows() {
 function renderTable(rows) {
   tbody.innerHTML = rows.map(row => {
     const { siteLabel, activeMs, audioMs, visits } = row;
-    const ids = row.siteIds;
-    const href = ids
-      ? (ids.length === 1
-          ? `../site/site.html?id=${encodeURIComponent(ids[0])}`
-          : `../site/site.html?ids=${encodeURIComponent(ids.join(','))}`)
-      : `../site/site.html?id=${encodeURIComponent(row.siteId)}`;
-    const subtitle = ids
-      ? (ids.length === 1 ? ids[0] : `${ids.length} sites`)
-      : row.siteId;
+    const etld1Count = row.etld1s?.size ?? 0;
+    const hostCount = row.hostnames?.size ?? 0;
+    let href, subtitle;
+    if (!row.etld1s) {
+      href = `../site/site.html?id=${encodeURIComponent(row.siteId)}`;
+      subtitle = row.siteId;
+    } else if (etld1Count === 1 && hostCount === 1) {
+      const only = [...row.hostnames][0];
+      href = `../site/site.html?id=${encodeURIComponent(only)}`;
+      subtitle = only;
+    } else if (etld1Count === 1) {
+      const onlyEtld1 = [...row.etld1s][0];
+      href = `../site/site.html?id=${encodeURIComponent(onlyEtld1)}`;
+      subtitle = `${hostCount} subdomains`;
+    } else if (hostCount === etld1Count) {
+      href = `../site/site.html?ids=${encodeURIComponent([...row.etld1s].join(','))}`;
+      subtitle = `${etld1Count} sites`;
+    } else {
+      href = `../site/site.html?ids=${encodeURIComponent([...row.hostnames].join(','))}`;
+      subtitle = `${etld1Count} sites · ${hostCount} subdomains`;
+    }
     return `<tr class="clickable" data-href="${href}">
       <td><span class="site-label">${escapeHtml(siteLabel)}</span><span class="site-id text-meta">${escapeHtml(subtitle)}</span></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(activeMs))}</span></td>
@@ -128,12 +172,19 @@ function renderTable(rows) {
   tbody.querySelectorAll('tr.clickable').forEach(row => {
     row.addEventListener('click', () => { location.href = row.dataset.href; });
   });
+  entriesCount.textContent = `${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`;
   updateHeaders();
 }
 
 let byDayCache = null;
 
 initRangeSelect(rangeSelect, render);
+
+groupToggle.addEventListener('change', () => {
+  groupMode = groupToggle.checked;
+  sessionStorage.setItem('groupMode', groupMode);
+  render();
+});
 
 mergeToggle.addEventListener('change', () => {
   mergeMode = mergeToggle.checked;
@@ -158,6 +209,8 @@ window.addEventListener('pageshow', () => {
   hideBriefToggle.checked = hideBrief;
   mergeMode = sessionStorage.getItem('mergeMode') !== 'false';
   mergeToggle.checked = mergeMode;
+  groupMode = sessionStorage.getItem('groupMode') === 'true';
+  groupToggle.checked = groupMode;
   if (currentRows.length) render();
 });
 
@@ -248,12 +301,19 @@ function render() {
   }
 
   currentRows = Object.entries(totals).map(([siteId, { activeMs, audioMs, visits }]) => {
-    const { siteLabel } = resolveSite(siteId);
-    return { siteId, siteLabel, activeMs, audioMs, visits };
+    const etld1 = eTLDPlus1(siteId);
+    return {
+      siteId,
+      siteLabel: formatHostnameLabel(siteId),
+      etld1,
+      etld1Label: formatHostnameLabel(etld1),
+      activeMs, audioMs, visits,
+    };
   });
 
   if (currentRows.length === 0) {
     tbody.innerHTML = '';
+    entriesCount.textContent = '';
     emptyMsg.style.display = 'block';
     topChartContainer.style.display = 'none';
     hourlyChartContainer.style.display = 'none';
