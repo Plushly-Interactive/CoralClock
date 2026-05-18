@@ -1,18 +1,9 @@
 import { resolveSite } from '../background/siteResolution.js';
 import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
+import { showNotification } from '../shared/utils.js';
 
 const TT_VERSION = '4.2.1';
-
-const notification = document.querySelector('#notification');
-
-function showNotification(message) {
-  notification.textContent = message;
-  notification.hidden = false;
-  setTimeout(() => {
-    notification.hidden = true;
-  }, 3000);
-}
 
 const importBtn = document.querySelector('#import-btn');
 const importInput = document.querySelector('#import-input');
@@ -32,11 +23,12 @@ const conflictKeep = document.querySelector('#io-conflict-keep');
 const conflictReplace = document.querySelector('#io-conflict-replace');
 
 function openModal() {
-  modalOverlay.hidden = false;
+  modalOverlay.removeAttribute('hidden');
+  modalOverlay.style.display = '';
 }
 
 function closeModal() {
-  modalOverlay.hidden = true;
+  modalOverlay.style.display = 'none';
 }
 
 importBtn.addEventListener('click', openModal);
@@ -270,13 +262,14 @@ function showConflictView(conflicts) {
     li.textContent = day;
     conflictList.appendChild(li);
   }
-  ioColumns.hidden = true;
-  conflictView.hidden = false;
+  ioColumns.style.display = 'none';
+  conflictView.removeAttribute('hidden');
+  conflictView.style.display = '';
 }
 
 function hideConflictView() {
-  conflictView.hidden = true;
-  ioColumns.hidden = false;
+  conflictView.style.display = 'none';
+  ioColumns.style.display = '';
   pendingImport = null;
 }
 

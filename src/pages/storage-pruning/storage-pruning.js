@@ -1,5 +1,5 @@
 import { resolveSite } from '../../background/siteResolution.js';
-import { escapeHtml } from '../../shared/utils.js';
+import { escapeHtml, showNotification, formatBytes, renderStorageBar } from '../../shared/utils.js';
 import { formatMs } from '../../shared/timeUtils.js';
 import {
   scanSiteBucket, scanSubpageBucket,
@@ -29,7 +29,6 @@ const resultsSummary = document.querySelector('#results-summary');
 const deleteBtn = document.querySelector('#delete-btn');
 const deleteRow = document.querySelector('#delete-row');
 const emptyMsg = document.querySelector('#empty-msg');
-const notification = document.querySelector('#notification');
 
 let currentResults = [];
 let scannedStores = {};
@@ -104,17 +103,18 @@ async function runScan() {
 }
 
 function renderResults() {
-  resultsSection.hidden = false;
+  resultsSection.removeAttribute('hidden');
   if (currentResults.length === 0) {
     resultsList.innerHTML = '';
-    emptyMsg.hidden = false;
-    deleteRow.hidden = true;
+    emptyMsg.style.display = 'block';
+    deleteRow.style.display = 'none';
     deleteBtn.disabled = true;
     resultsSummary.textContent = '';
     return;
   }
-  emptyMsg.hidden = true;
-  deleteRow.hidden = false;
+  emptyMsg.style.display = 'none';
+  deleteRow.removeAttribute('hidden');
+  deleteRow.style.display = '';
 
   const grouped = {};
   for (const r of currentResults) {
@@ -155,6 +155,7 @@ function headerCellsHtml(store) {
       <th class="th-last ${sortedCls('last')}" data-col="last">Last visit${arrow('last')}</th>
       <th class="th-time ${sortedCls('time')}" data-col="time">Total active${arrow('time')}</th>
       <th class="th-time ${sortedCls('audio')}" data-col="audio">Total audio${arrow('audio')}</th>
+      <th class="th-records ${sortedCls('records')}" data-col="records">Records${arrow('records')}</th>
       <th class="th-select"><label class="group-select-label"><input type="checkbox" class="group-select"> Selected</label></th>`;
 }
 
@@ -171,6 +172,7 @@ function rowsHtml(rows, store) {
       <td><span class="site-label">${escapeHtml(day)}</span>${hour ? `<span class="site-id text-meta">${escapeHtml(hour)}</span>` : ''}</td>
       <td><span class="stat-value">${formatMs(r.totalActive)}</span></td>
       <td><span class="stat-value">${formatMs(r.totalAudio)}</span></td>
+      <td><span class="stat-value">${r.recordCount}</span></td>
       <td class="td-select"><input type="checkbox" data-id="${r._id}" ${r._selected ? 'checked' : ''}></td>
     </tr>`;
   }).join('');
@@ -191,6 +193,8 @@ function sortRows(rows, { col, dir }) {
       cmp = a.totalActive - b.totalActive;
     } else if (col === 'audio') {
       cmp = a.totalAudio - b.totalAudio;
+    } else if (col === 'records') {
+      cmp = a.recordCount - b.recordCount;
     } else if (col === 'last') {
       cmp = a.lastVisit.localeCompare(b.lastVisit);
     } else {
@@ -304,19 +308,6 @@ function updateSummary() {
   deleteBtn.disabled = selected.length === 0;
 }
 
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1048576).toFixed(1)} MB`;
-}
-
-async function renderStorageBar() {
-  const used = await chrome.storage.local.getBytesInUse(null);
-  const quota = chrome.storage.local.QUOTA_BYTES;
-  document.querySelector('#storage-bar-fill').style.width = `${(used / quota) * 100}%`;
-  document.querySelector('#storage-bar-label').textContent = `${formatBytes(used)} / ${formatBytes(quota)}`;
-}
-
 async function runDelete() {
   const identities = currentResults.filter(r => r._selected);
   if (identities.length === 0) return;
@@ -343,11 +334,6 @@ async function runDelete() {
   await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
   showNotification(`Deleted ${totalRecords} record${totalRecords === 1 ? '' : 's'} — freed ${formatBytes(bytesBefore - bytesAfter)}.`);
   await runScan();
-  renderStorageBar();
+  await renderStorageBar();
 }
 
-function showNotification(text) {
-  notification.textContent = text;
-  notification.hidden = false;
-  setTimeout(() => { notification.hidden = true; }, 2400);
-}
