@@ -29,8 +29,10 @@ Backlog:
 ## UX / UI
 
 - Dynamically constrain the limit unit dropdown based on the selected period (e.g. period=hour → only minutes allowed).
-- Add a "Tutorial": guided app tour that explains each UI button/user action step by step with a popup for each step.
+- Add a "Tutorial": guided app tour that explains each UI button/user action step by step with a popup for each step — see [guided-tour.md](../features/guided-tour.md)
+- Add a "week" level in the drills, compatible with keyboard navigation.
 
 ## Settings & configuration
 
 - Settings: look for currently fixed, hardcoded values in code that could be user-defined in settings.
+
