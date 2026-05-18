@@ -67,7 +67,7 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
   const rect = svgEl.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return;
   const W = rect.width, H = rect.height;
-  const padLeft = 55, padRight = 8, padTop = 10, padBottom = 40;
+  const padLeft = 60, padRight = 8, padTop = 10, padBottom = 40;
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
   const gap = innerW / data.length;

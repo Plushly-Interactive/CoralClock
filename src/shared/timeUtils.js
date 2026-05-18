@@ -41,8 +41,8 @@ export function formatMs(ms) {
   if (ms < 36000000) { const m = totalMinutes % 60; return m ? `${Math.floor(hours)}h${m}m` : `${Math.floor(hours)}h`; }
   if (ms < 86400000) { const h = hours.toFixed(1); return `${h.endsWith('.0') ? Math.floor(hours) : h}h`; }
   const hStr = Math.floor(hours);
-  const dTruncated = Math.floor(days * 10) / 10;
-  const dStr = dTruncated >= 10 || dTruncated % 1 === 0 ? Math.floor(dTruncated) : dTruncated.toFixed(1);
+  const dRounded = Math.round(days * 10) / 10;
+  const dStr = dRounded >= 10 || dRounded % 1 === 0 ? Math.round(dRounded) : dRounded.toFixed(1);
   return `${hStr}h (${dStr}d)`;
 }
 
