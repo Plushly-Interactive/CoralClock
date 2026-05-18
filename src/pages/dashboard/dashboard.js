@@ -88,7 +88,6 @@ function groupByEtld1(rows) {
     const key = row.etld1;
     if (!groups[key]) groups[key] = {
       siteLabel: formatHostnameLabel(key),
-      etld1Label: formatHostnameLabel(key),
       siteIds: [], hostnames: new Set(), etld1s: new Set([key]),
       activeMs: 0, audioMs: 0, visits: 0,
     };
@@ -300,16 +299,12 @@ function render() {
     }
   }
 
-  currentRows = Object.entries(totals).map(([siteId, { activeMs, audioMs, visits }]) => {
-    const etld1 = eTLDPlus1(siteId);
-    return {
-      siteId,
-      siteLabel: formatHostnameLabel(siteId),
-      etld1,
-      etld1Label: formatHostnameLabel(etld1),
-      activeMs, audioMs, visits,
-    };
-  });
+  currentRows = Object.entries(totals).map(([siteId, { activeMs, audioMs, visits }]) => ({
+    siteId,
+    siteLabel: formatHostnameLabel(siteId),
+    etld1: eTLDPlus1(siteId),
+    activeMs, audioMs, visits,
+  }));
 
   if (currentRows.length === 0) {
     tbody.innerHTML = '';

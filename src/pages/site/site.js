@@ -198,17 +198,18 @@ window.addEventListener('pageshow', () => {
 async function loadAndRender() {
   byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
   subpagesByDayCache = await chrome.runtime.sendMessage({ type: 'getSubpagesByDay' });
-  expandEtld1Match();
+  resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
 }
 
-function expandEtld1Match() {
+function resolveAggregationMode() {
   if (isMerged || !siteId) return;
   const matched = new Set();
-  for (const sites of Object.values(byDayCache ?? {}))
-    for (const host of Object.keys(sites))
-      if (host === siteId || eTLDPlus1(host) === siteId) matched.add(host);
+  for (const cache of [byDayCache, subpagesByDayCache])
+    for (const sites of Object.values(cache ?? {}))
+      for (const host of Object.keys(sites))
+        if (host === siteId || eTLDPlus1(host) === siteId) matched.add(host);
   if (matched.size > 1) {
     effectiveSiteIds = [...matched];
     isAggregatedEtld1 = true;

@@ -6,19 +6,21 @@ function normalizeHost(host) {
   return host.startsWith('www.') ? host.slice(4) : host;
 }
 
+function sumCell(a, b) {
+  return {
+    activeMs: (a.activeMs ?? 0) + (b.activeMs ?? 0),
+    audioMs: (a.audioMs ?? 0) + (b.audioMs ?? 0),
+    overlapMs: (a.overlapMs ?? 0) + (b.overlapMs ?? 0),
+    visits: (a.visits ?? 0) + (b.visits ?? 0),
+  };
+}
+
 function normalizeAnalyticsBuckets(buckets) {
   for (const [bucketKey, sites] of Object.entries(buckets)) {
     const next = {};
     for (const [siteId, cell] of Object.entries(sites)) {
       const host = normalizeHost(siteId);
-      if (!next[host]) { next[host] = cell; continue; }
-      const existing = next[host];
-      next[host] = {
-        activeMs: (existing.activeMs ?? 0) + (cell.activeMs ?? 0),
-        audioMs: (existing.audioMs ?? 0) + (cell.audioMs ?? 0),
-        overlapMs: (existing.overlapMs ?? 0) + (cell.overlapMs ?? 0),
-        visits: (existing.visits ?? 0) + (cell.visits ?? 0),
-      };
+      next[host] = next[host] ? sumCell(next[host], cell) : cell;
     }
     buckets[bucketKey] = next;
   }
@@ -31,15 +33,8 @@ function normalizeSubpageBuckets(buckets) {
       const host = normalizeHost(siteId);
       if (!next[host]) { next[host] = paths; continue; }
       const merged = next[host];
-      for (const [p, cell] of Object.entries(paths)) {
-        if (!merged[p]) { merged[p] = cell; continue; }
-        merged[p] = {
-          activeMs: (merged[p].activeMs ?? 0) + (cell.activeMs ?? 0),
-          audioMs: (merged[p].audioMs ?? 0) + (cell.audioMs ?? 0),
-          overlapMs: (merged[p].overlapMs ?? 0) + (cell.overlapMs ?? 0),
-          visits: (merged[p].visits ?? 0) + (cell.visits ?? 0),
-        };
-      }
+      for (const [p, cell] of Object.entries(paths))
+        merged[p] = merged[p] ? sumCell(merged[p], cell) : cell;
     }
     buckets[bucketKey] = next;
   }

@@ -5,16 +5,7 @@ function normalizeHost(key) {
   return key.startsWith('www.') ? key.slice(4) : key;
 }
 
-function sumAnalyticsCell(a, b) {
-  return {
-    activeMs: (a.activeMs ?? 0) + (b.activeMs ?? 0),
-    audioMs: (a.audioMs ?? 0) + (b.audioMs ?? 0),
-    overlapMs: (a.overlapMs ?? 0) + (b.overlapMs ?? 0),
-    visits: (a.visits ?? 0) + (b.visits ?? 0),
-  };
-}
-
-function sumSubpageCell(a, b) {
+function sumCell(a, b) {
   return {
     activeMs: (a.activeMs ?? 0) + (b.activeMs ?? 0),
     audioMs: (a.audioMs ?? 0) + (b.audioMs ?? 0),
@@ -28,7 +19,7 @@ function rewriteAnalytics(buckets) {
     const next = {};
     for (const [siteId, cell] of Object.entries(sites)) {
       const host = normalizeHost(siteId);
-      next[host] = next[host] ? sumAnalyticsCell(next[host], cell) : cell;
+      next[host] = next[host] ? sumCell(next[host], cell) : cell;
     }
     buckets[bucketKey] = next;
   }
@@ -45,7 +36,7 @@ function rewriteSubpages(buckets) {
       }
       const merged = next[host];
       for (const [p, cell] of Object.entries(paths))
-        merged[p] = merged[p] ? sumSubpageCell(merged[p], cell) : cell;
+        merged[p] = merged[p] ? sumCell(merged[p], cell) : cell;
     }
     buckets[bucketKey] = next;
   }
