@@ -34,8 +34,6 @@ body {
 
 
 #dashboard-table-heading {
-  padding: 0 20px;
-  height: 36px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -75,7 +73,7 @@ tr.clickable:hover td {
 }
 
 #empty-msg {
-  padding: 40px 20px;
+  padding: 40px 0;
 }
 
 #io-modal-overlay {
