@@ -1,7 +1,44 @@
-import { resolveSite } from '../background/siteResolution.js';
 import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
 import { showNotification } from '../shared/utils.js';
+
+function normalizeHost(host) {
+  return host.startsWith('www.') ? host.slice(4) : host;
+}
+
+function sumCell(a, b) {
+  return {
+    activeMs: (a.activeMs ?? 0) + (b.activeMs ?? 0),
+    audioMs: (a.audioMs ?? 0) + (b.audioMs ?? 0),
+    overlapMs: (a.overlapMs ?? 0) + (b.overlapMs ?? 0),
+    visits: (a.visits ?? 0) + (b.visits ?? 0),
+  };
+}
+
+function normalizeAnalyticsBuckets(buckets) {
+  for (const [bucketKey, sites] of Object.entries(buckets)) {
+    const next = {};
+    for (const [siteId, cell] of Object.entries(sites)) {
+      const host = normalizeHost(siteId);
+      next[host] = next[host] ? sumCell(next[host], cell) : cell;
+    }
+    buckets[bucketKey] = next;
+  }
+}
+
+function normalizeSubpageBuckets(buckets) {
+  for (const [bucketKey, sites] of Object.entries(buckets)) {
+    const next = {};
+    for (const [siteId, paths] of Object.entries(sites)) {
+      const host = normalizeHost(siteId);
+      if (!next[host]) { next[host] = paths; continue; }
+      const merged = next[host];
+      for (const [p, cell] of Object.entries(paths))
+        merged[p] = merged[p] ? sumCell(merged[p], cell) : cell;
+    }
+    buckets[bucketKey] = next;
+  }
+}
 
 const TT_VERSION = '4.2.1';
 
@@ -144,7 +181,7 @@ async function handleTtImport(json) {
   for (const { host, date, focus, time } of json.__stat__) {
     if (!host || !date || focus == null) continue;
     const dayKey = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
-    const siteId = resolveSite(host).siteId;
+    const siteId = normalizeHost(host);
     data[dayKey] ??= {};
     data[dayKey][siteId] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
     data[dayKey][siteId].activeMs += focus;
@@ -191,6 +228,10 @@ async function handleBgImport(json) {
   const importByHour = json.data[ANALYTICS_HOUR_KEY] || {};
   const importSubpagesByDay = json.data[SUBPAGES_DAY_KEY] || {};
   const importSubpagesByHour = json.data[SUBPAGES_HOUR_KEY] || {};
+  normalizeAnalyticsBuckets(importByDay);
+  normalizeAnalyticsBuckets(importByHour);
+  normalizeSubpageBuckets(importSubpagesByDay);
+  normalizeSubpageBuckets(importSubpagesByHour);
 
   const {
     [ANALYTICS_DAY_KEY]: analyticsByDay = {},

@@ -1,6 +1,7 @@
 import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
 import { formatWithSmallSub, STAT_LABELS, escapeHtml, CHART_LEGEND_HTML } from '../../shared/utils.js';
-import { resolveSite } from '../../background/siteResolution.js';
+import { eTLDPlus1 } from '../../background/siteResolution.js';
+import { formatHostnameLabel } from '../../shared/labels.js';
 import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
@@ -11,7 +12,8 @@ const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
 const siteIds = params.get('ids')?.split(',') ?? null;
 const isMerged = !!siteIds;
-const effectiveSiteIds = isMerged ? siteIds : [siteId];
+let effectiveSiteIds = isMerged ? siteIds : [siteId];
+let isAggregatedEtld1 = false;
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
@@ -82,23 +84,26 @@ peakItem.addEventListener('mouseleave', () => {
 function entrySum(obj) {
   const zero = { activeMs: 0, audioMs: 0, visits: 0 };
   if (!obj) return zero;
-  if (!isMerged) {
-    const e = obj[siteId];
-    return e ? { activeMs: e.activeMs ?? 0, audioMs: e.audioMs ?? 0, visits: e.visits ?? 0 } : zero;
-  }
-  return siteIds.reduce((acc, id) => {
+  return effectiveSiteIds.reduce((acc, id) => {
     const e = obj[id];
     if (!e) return acc;
     return { activeMs: acc.activeMs + (e.activeMs ?? 0), audioMs: acc.audioMs + (e.audioMs ?? 0), visits: acc.visits + (e.visits ?? 0) };
   }, { ...zero });
 }
 
-if (siteId || siteIds) {
-  const { siteLabel } = resolveSite(siteId ?? siteIds[0]);
-  document.querySelector('#site-label').textContent = siteLabel;
-  document.querySelector('#site-id').textContent = isMerged ? siteIds.join(', ') : siteId;
-  document.title = `BiteGuard — ${siteLabel}`;
+function applyHeader() {
+  if (!siteId && !siteIds) return;
+  const primary = siteId ?? siteIds[0];
+  const label = formatHostnameLabel(primary);
+  document.querySelector('#site-label').textContent = label;
+  let secondary;
+  if (isMerged) secondary = siteIds.join(', ');
+  else if (isAggregatedEtld1) secondary = effectiveSiteIds.join(', ');
+  else secondary = siteId;
+  document.querySelector('#site-id').textContent = secondary;
+  document.title = `BiteGuard — ${label}`;
 }
+applyHeader();
 
 let byDayCache = null;
 let byHourCache = null;
@@ -193,8 +198,23 @@ window.addEventListener('pageshow', () => {
 async function loadAndRender() {
   byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
   subpagesByDayCache = await chrome.runtime.sendMessage({ type: 'getSubpagesByDay' });
+  resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
+}
+
+function resolveAggregationMode() {
+  if (isMerged || !siteId) return;
+  const matched = new Set();
+  for (const cache of [byDayCache, subpagesByDayCache])
+    for (const sites of Object.values(cache ?? {}))
+      for (const host of Object.keys(sites))
+        if (host === siteId || eTLDPlus1(host) === siteId) matched.add(host);
+  if (matched.size > 1) {
+    effectiveSiteIds = [...matched];
+    isAggregatedEtld1 = true;
+    applyHeader();
+  }
 }
 
 async function loadByHour() {
@@ -380,7 +400,7 @@ function renderSubpages(range) {
   if (hideBriefSubpages) merged = merged.filter(r => r.activeMs >= 60_000);
 
   const pathSiteMs = {};
-  if (isMerged) {
+  if (effectiveSiteIds.length > 1) {
     for (const dayKey of dayKeysForRange(range, subpagesByDayCache)) {
       const dayData = subpagesByDayCache?.[dayKey];
       if (!dayData) continue;
@@ -395,7 +415,7 @@ function renderSubpages(range) {
   }
 
   function domainForPath(path) {
-    if (!isMerged) return effectiveSiteIds[0];
+    if (effectiveSiteIds.length === 1) return effectiveSiteIds[0];
     const siteMs = pathSiteMs[path];
     if (!siteMs) return effectiveSiteIds[0];
     return effectiveSiteIds.reduce((best, sid) => (siteMs[sid] ?? 0) > (siteMs[best] ?? 0) ? sid : best);

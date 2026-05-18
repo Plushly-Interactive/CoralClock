@@ -100,13 +100,6 @@ body {
   margin-left: auto;
 }
 
-#subpages-footer {
-  margin-top: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  line-height: 1;
-}
 
 .seg-btn {
   background: none;
@@ -129,7 +122,6 @@ body {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  margin: 0 -4px;
   list-style: none;
   padding: 0;
   display: flex;

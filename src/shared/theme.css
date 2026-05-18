@@ -159,6 +159,26 @@ button:disabled {
   min-height: 0;
 }
 
+.table-footer {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  line-height: 1;
+}
+
+.table-filter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
 .chart-svg {
   display: block;
   width: 100%;

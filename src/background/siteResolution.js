@@ -6,9 +6,14 @@ export function resolveSite(hostname) {
   return { siteId, siteLabel };
 }
 
+export function eTLDPlus1(hostname) {
+  return getDomain(hostname) ?? hostname;
+}
+
 export function siteIdFromUrl(url) {
   if (!url?.startsWith('http')) return null;
-  return resolveSite(new URL(url).hostname).siteId;
+  const host = new URL(url).hostname;
+  return host.startsWith('www.') ? host.slice(4) : host;
 }
 
 export function pathFromUrl(url) {

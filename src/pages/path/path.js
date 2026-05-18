@@ -1,6 +1,6 @@
 import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
 import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from '../../shared/utils.js';
-import { resolveSite } from '../../background/siteResolution.js';
+import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
 import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
@@ -29,7 +29,7 @@ const statsList = document.querySelector('#stats-list');
 const backBtn = document.querySelector('#back-btn');
 const crumbSite = document.querySelector('#path-crumb-site');
 
-const { siteLabel } = resolveSite(siteId);
+const siteLabel = formatHostnameLabel(siteId);
 document.querySelector('#site-label').textContent = siteLabel;
 document.querySelector('#site-id').textContent = isMerged ? siteIds.join(', ') : siteId;
 document.title = `BiteGuard — ${siteLabel} ${displayPath(path)}`;

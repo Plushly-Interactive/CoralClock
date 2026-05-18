@@ -1,4 +1,4 @@
-import { resolveSite } from '../../background/siteResolution.js';
+import { formatHostnameLabel } from '../../shared/labels.js';
 import { escapeHtml, showNotification, formatBytes, renderStorageBar } from '../../shared/utils.js';
 import { formatMs } from '../../shared/timeUtils.js';
 import {
@@ -162,7 +162,7 @@ function headerCellsHtml(store) {
 function rowsHtml(rows, store) {
   const isSubpage = store === SUBPAGES_DAY_KEY || store === SUBPAGES_HOUR_KEY;
   return rows.map(r => {
-    const { siteLabel } = resolveSite(r.siteId ?? '');
+    const siteLabel = formatHostnameLabel(r.siteId ?? '');
     const topText = isSubpage ? (r.siteId ?? '') : siteLabel;
     const subtitleText = isSubpage ? (r.path ?? '') : (r.siteId ?? '');
     const titleAttr = isSubpage ? ` title="${escapeHtml(r.path ?? '')}"` : '';
@@ -199,8 +199,8 @@ function sortRows(rows, { col, dir }) {
     } else if (col === 'last') {
       cmp = a.lastVisit.localeCompare(b.lastVisit);
     } else {
-      const aLabel = resolveSite(a.siteId ?? '').siteLabel;
-      const bLabel = resolveSite(b.siteId ?? '').siteLabel;
+      const aLabel = formatHostnameLabel(a.siteId ?? '');
+      const bLabel = formatHostnameLabel(b.siteId ?? '');
       cmp = aLabel.localeCompare(bLabel);
       if (cmp === 0 && a.path && b.path) cmp = a.path.localeCompare(b.path);
     }

@@ -113,10 +113,9 @@
         </div>
       </div>
 
-      <div id="dashboard-table-col">
+      <div id="dashboard-table-col" class="chart-container">
         <h2 class="chart-heading" id="dashboard-table-heading">
           All browsed sites
-          <label id="merge-label" class="table-filter text-meta"><input type="checkbox" id="merge-toggle"> Merge by name</label>
           <label id="hide-brief-label" class="table-filter text-meta"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
         </h2>
         <table id="dashboard-table" class="data-table data-table--scroll">
@@ -131,6 +130,13 @@
           <tbody id="dashboard-body"></tbody>
         </table>
         <p id="empty-msg" class="empty-msg text-meta">No data for this period.</p>
+        <div id="dashboard-footer" class="table-footer">
+          <span id="entries-count" class="text-meta"></span>
+          <div id="dashboard-footer-toggles">
+            <label id="group-label" class="table-filter text-meta"><input type="checkbox" id="group-toggle"> Group subdomains</label>
+            <label id="merge-label" class="table-filter text-meta"><input type="checkbox" id="merge-toggle"> Merge by name</label>
+          </div>
+        </div>
       </div>
     </div>
 
