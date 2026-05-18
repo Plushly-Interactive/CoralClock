@@ -46,7 +46,7 @@ const DRILL_INNER_HTML = `
     </div>
     <svg id="drill-chart"></svg>
     <div id="drill-tooltip" class="tooltip text-meta"></div>
-    <p id="drill-no-data" class="chart-note" style="display:none">No data for this period.</p>
+    <p id="drill-no-data" class="text-meta" style="display:none">No data for this period.</p>
   </div>
 `;
 

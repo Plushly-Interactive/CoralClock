@@ -1,5 +1,5 @@
 import { formatMs, localDayKey } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml } from '../../shared/utils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar } from '../../shared/utils.js';
 import { resolveSite } from '../../background/siteResolution.js';
 import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
@@ -160,19 +160,6 @@ window.addEventListener('pageshow', () => {
   mergeToggle.checked = mergeMode;
   if (currentRows.length) render();
 });
-
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1048576).toFixed(1)} MB`;
-}
-
-async function renderStorageBar() {
-  const used = await chrome.storage.local.getBytesInUse(null);
-  const quota = chrome.storage.local.QUOTA_BYTES;
-  document.querySelector('#storage-bar-fill').style.width = `${(used / quota) * 100}%`;
-  document.querySelector('#storage-bar-label').textContent = `${formatBytes(used)} / ${formatBytes(quota)}`;
-}
 
 async function loadAndRender() {
   if (new URL(location.href).searchParams.has('seed')) {

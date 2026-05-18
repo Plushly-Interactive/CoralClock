@@ -31,6 +31,8 @@
   --color-border: #d0d0d0;
   --color-text: #1a1a1a;
   --color-text-secondary: #888;
+
+  --color-hover-bg: color-mix(in srgb, var(--color-border) 20%, transparent);
 }
 
 html.dark {
@@ -133,6 +135,11 @@ input[type="checkbox"] {
   border-color: var(--color-accent-light);
 }
 
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .text-meta {
   font-size: var(--font-sm);
   color: var(--color-text-secondary);
@@ -172,6 +179,21 @@ input[type="checkbox"] {
   letter-spacing: 0.04em;
 }
 
+.chart-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.chart-header .chart-heading {
+  margin: 0;
+}
+
+.chart-header .time-legend {
+  margin-left: auto;
+}
+
 .page-title {
   font-size: var(--font-base);
   font-weight: 600;
@@ -186,12 +208,6 @@ input[type="checkbox"] {
   text-transform: none;
   letter-spacing: 0;
   margin-left: 6px;
-}
-
-.chart-note {
-  font-size: var(--font-base);
-  color: var(--color-text-secondary);
-  margin: 8px 0 0;
 }
 
 .chart-legend-time {
@@ -280,7 +296,7 @@ input[type="checkbox"] {
 }
 
 .dropdown-menu button:hover {
-  background: color-mix(in srgb, var(--color-border) 20%, transparent);
+  background: var(--color-hover-bg);
 }
 
 .dropdown-menu button:first-child {
@@ -307,7 +323,7 @@ input[type="checkbox"] {
 }
 
 .square-btn:hover {
-  background-color: color-mix(in srgb, var(--color-border) 20%, transparent);
+  background-color: var(--color-hover-bg);
 }
 
 .data-table {
@@ -475,4 +491,34 @@ header {
   font-size: var(--stat-sub-size);
   color: var(--color-text-secondary);
   vertical-align: baseline;
+}
+
+#storage-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 160px;
+}
+
+#storage-bar-track {
+  flex: 1;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
+#storage-bar-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 2px;
+  width: 0%;
+}
+
+#storage-bar-label {
+  white-space: nowrap;
+}
+
+.empty-msg {
+  display: none;
+  text-align: center;
 }

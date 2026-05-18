@@ -154,7 +154,7 @@ body {
 }
 
 #subpages-list .subpage-drill:hover {
-  background: color-mix(in srgb, var(--color-border) 20%, transparent);
+  background: var(--color-hover-bg);
 }
 
 #subpages-list .subpage-open-btn {
@@ -168,7 +168,7 @@ body {
 }
 
 #subpages-list .subpage-open-btn:hover {
-  background: color-mix(in srgb, var(--color-border) 20%, transparent);
+  background: var(--color-hover-bg);
   color: var(--color-text);
 }
 
