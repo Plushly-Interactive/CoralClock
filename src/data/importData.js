@@ -37,7 +37,7 @@ modalOverlay.addEventListener('click', (e) => {
   if (e.target === modalOverlay) closeModal();
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !modalOverlay.hidden) closeModal();
+  if (e.key === 'Escape' && modalOverlay.style.display !== 'none') closeModal();
 });
 
 bgExportBtn.addEventListener('click', async () => {

@@ -22,8 +22,7 @@ export function showNotification(message, durationMs = 3000) {
   const el = document.querySelector('#notification');
   el.textContent = message;
   el.removeAttribute('hidden');
-  el.style.display = '';
-  setTimeout(() => { el.style.display = 'none'; }, durationMs);
+  setTimeout(() => { el.setAttribute('hidden', ''); }, durationMs);
 }
 
 export function formatBytes(bytes) {

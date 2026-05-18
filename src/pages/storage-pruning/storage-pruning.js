@@ -181,8 +181,9 @@ function rowsHtml(rows, store) {
 function splitDateKey(key) {
   if (key.length === 10) return { day: key, hour: null };
   const h = Number(key.slice(11));
+  const start = String(h).padStart(2, '0');
   const next = String((h + 1) % 24).padStart(2, '0');
-  return { day: key.slice(0, 10), hour: `${key.slice(11)}:00 – ${next}:00` };
+  return { day: key.slice(0, 10), hour: `${start}:00 – ${next}:00` };
 }
 
 function sortRows(rows, { col, dir }) {
