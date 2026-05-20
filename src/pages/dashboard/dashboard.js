@@ -17,6 +17,7 @@ const entriesCount = document.querySelector('#entries-count');
 const topChart = document.querySelector('#top-chart');
 const topTooltip = document.querySelector('#top-tooltip');
 const topChartContainer = document.querySelector('#top-chart-container');
+const topNotRelevant = document.querySelector('#top-not-relevant');
 const hourlyChart = document.querySelector('#hourly-chart');
 const hourlyTooltip = document.querySelector('#hourly-tooltip');
 const hourlyChartContainer = document.querySelector('#hourly-chart-container');
@@ -310,13 +311,19 @@ function render() {
     tbody.innerHTML = '';
     entriesCount.textContent = '';
     emptyMsg.style.display = 'block';
-    topChartContainer.style.display = 'none';
-    hourlyChartContainer.style.display = 'none';
+    topChartContainer.style.display = 'block';
+    topChart.style.display = 'none';
+    topSubheading.textContent = '';
+    topNotRelevant.textContent = 'No data for this period.';
+    topNotRelevant.style.display = 'block';
+    hourly.render(range);
     return;
   }
 
   emptyMsg.style.display = 'none';
   topChartContainer.style.display = 'block';
+  topChart.style.display = 'block';
+  topNotRelevant.style.display = 'none';
   hourly.render(range);
 
   renderTopChart();
