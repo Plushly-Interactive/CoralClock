@@ -36,3 +36,8 @@ Backlog:
 
 - Settings: look for currently fixed, hardcoded values in code that could be user-defined in settings.
 
+## i18n
+
+- Implement 12h time format for the UIs
+- Translate UI texts, add a language selector
+- Translate guided tour, language should match the selected language
