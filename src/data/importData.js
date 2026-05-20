@@ -59,12 +59,12 @@ const conflictCancel = document.querySelector('#io-conflict-cancel');
 const conflictKeep = document.querySelector('#io-conflict-keep');
 const conflictReplace = document.querySelector('#io-conflict-replace');
 
-function openModal() {
+export function openModal() {
   modalOverlay.removeAttribute('hidden');
   modalOverlay.style.display = '';
 }
 
-function closeModal() {
+export function closeModal() {
   modalOverlay.style.display = 'none';
 }
 

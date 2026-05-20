@@ -6,6 +6,7 @@ import { displayPath, stripQuery } from '../../shared/paths.js';
 import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
+import { autoStartIfMatches } from '../../shared/tour.js';
 
 const drill = JSON.parse(sessionStorage.getItem('subpageDrill') || 'null');
 if (!drill) {
@@ -301,3 +302,39 @@ function renderStats(data, range) {
   document.querySelector('#stat-visits').textContent = totalVisits > 0 ? totalVisits : '—';
   document.querySelector('#overview-subheading').textContent = subheadingText(range);
 }
+
+const pathTourSteps = [
+  {
+    selector: '#path-subheader',
+    title: 'Path details',
+    body: 'This page shows everything BiteGuard tracks for a single subpage. The site and path are shown here.',
+  },
+  {
+    selector: '#time-chart-container',
+    title: 'Time spent',
+    body: 'Active browsing time and audio playback on this subpage, per day in the selected range.',
+  },
+  {
+    selector: '#stats-container',
+    title: 'Overview',
+    body: 'Aggregate stats for this subpage: daily average, peak day, total time and more.',
+  },
+  {
+    selector: '#visits-chart-container',
+    title: 'Visits',
+    body: 'Number of separate visits to this subpage per day.',
+  },
+  {
+    selector: '#hourly-chart-container',
+    title: 'Average per clock hour',
+    body: 'Your typical browsing pattern on this subpage across the 24 hours of the day.',
+  },
+  {
+    selector: '#back-btn',
+    title: 'Back to the dashboard',
+    body: 'Use back to return to the site, then back again to the dashboard, where the tour continues.',
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 9, mode: 'inPage' },
+  },
+];
+
+autoStartIfMatches('path', pathTourSteps);

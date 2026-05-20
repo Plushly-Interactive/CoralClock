@@ -10,9 +10,13 @@
   pointer-events: none;
 }
 
+body.tour-modal-step #io-modal-overlay {
+  z-index: 2500;
+}
+
 #tour-spotlight {
   position: fixed;
-  z-index: 2001;
+  z-index: 3001;
   border-radius: 6px;
   pointer-events: none;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
@@ -21,7 +25,7 @@
 
 #tour-tooltip {
   position: fixed;
-  z-index: 2002;
+  z-index: 3002;
   max-width: 320px;
   padding: 14px 16px;
   background: var(--color-bg);

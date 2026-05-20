@@ -6,6 +6,7 @@ const formTarget = document.querySelector('#form-target');
 
 document.querySelector('#dashboard-btn').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('src/pages/dashboard/dashboard.html') });
+  window.close();
 });
 
 const addForm = document.querySelector('#add-form');
@@ -160,7 +161,7 @@ const popupTourSteps = [
     selector: '#dashboard-btn',
     title: 'Back to the dashboard',
     body: 'Click Dashboard to return there and continue the tour.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 5, mode: 'inPage' },
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'inPage' },
   },
 ];
 

@@ -71,6 +71,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
   let stopped = false;
   let handoffEngaged = false;
   let lastWrittenSurface = null;
+  let advanceClickCleanup = null;
 
   function positionFor(target, { moveTooltip = true } = {}) {
     const rect = target.getBoundingClientRect();
@@ -148,6 +149,10 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (currentStep && currentStep.onExit) {
       try { await currentStep.onExit(); } catch (_e) {}
     }
+    if (advanceClickCleanup) {
+      advanceClickCleanup();
+      advanceClickCleanup = null;
+    }
     currentStep = step;
     currentIndex = index;
 
@@ -162,16 +167,23 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
 
     const isHandoff = !!step.handoff;
     const handoffMode = step.handoff?.mode;
-    nextBtn.style.display = isHandoff ? 'none' : '';
+    const advanceOnClick = step.advanceOn === 'click';
+    nextBtn.style.display = (isHandoff || advanceOnClick) ? 'none' : '';
     nextBtn.textContent = index === steps.length - 1 ? 'Finish' : 'Next';
 
-    overlay.classList.toggle('non-blocking', handoffMode === 'inPage');
+    overlay.classList.toggle('non-blocking', handoffMode === 'inPage' || step.nonBlocking === true || advanceOnClick);
     tooltip.classList.toggle('has-arrow-up', step.arrow === 'up');
+    document.body.classList.toggle('tour-modal-step', step.modalStep === true);
 
     if (step.selector) {
       const liveTarget = document.querySelector(step.selector);
       if (!liveTarget) return showStep(index + 1);
       positionFor(liveTarget, { moveTooltip: !step.keepTooltipPosition });
+      if (advanceOnClick) {
+        const handler = () => showStep(currentIndex + 1);
+        liveTarget.addEventListener('click', handler, { once: true });
+        advanceClickCleanup = () => liveTarget.removeEventListener('click', handler);
+      }
     } else if (!step.keepTooltipPosition) {
       positionFloating(step.tooltipPosition);
     }
@@ -193,6 +205,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (currentStep && currentStep.onExit) {
       try { await currentStep.onExit(); } catch (_e) {}
     }
+    if (advanceClickCleanup) { advanceClickCleanup(); advanceClickCleanup = null; }
+    document.body.classList.remove('tour-modal-step');
     window.removeEventListener('scroll', reposition, true);
     window.removeEventListener('resize', reposition);
     document.removeEventListener('keydown', onKeydown);
@@ -227,6 +241,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
   function closeQuietly() {
     if (stopped) return;
     stopped = true;
+    if (advanceClickCleanup) { advanceClickCleanup(); advanceClickCleanup = null; }
+    document.body.classList.remove('tour-modal-step');
     window.removeEventListener('scroll', reposition, true);
     window.removeEventListener('resize', reposition);
     document.removeEventListener('keydown', onKeydown);

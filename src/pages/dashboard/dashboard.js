@@ -6,6 +6,7 @@ import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, clearTourProgress } from '../../shared/tour.js';
+import { openModal, closeModal } from '../../data/importData.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 document.querySelector('#prune-btn').addEventListener('click', () => {
@@ -348,6 +349,26 @@ const dashboardTourSteps = [
     body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
   },
   {
+    selector: '#import-btn',
+    title: 'Import / Export',
+    body: 'Open the import/export modal to back up your data or transfer it between installs.',
+    advanceOn: 'click',
+  },
+  {
+    selector: '#io-section-bg',
+    title: 'BiteGuard format',
+    body: 'Export and import all your BiteGuard data — daily and hourly stats for sites and subpages.',
+    modalStep: true,
+    onEnter: openModal,
+  },
+  {
+    selector: '#io-section-tt',
+    title: 'Time Tracker compatibility',
+    body: 'Exchange data with the Time Tracker extension. Daily site totals and visit counts are compatible; audio time and subpage data are not.',
+    modalStep: true,
+    onExit: closeModal,
+  },
+  {
     title: 'Open the popup',
     body: 'Click the BiteGuard icon in your browser toolbar to continue the tour.',
     tooltipPosition: 'top-right',
@@ -359,6 +380,12 @@ const dashboardTourSteps = [
     title: 'See site details',
     body: 'Click any row in the table to drill into a site and see per-day detail.',
     handoff: { nextSurface: 'site', mode: 'inPage' },
+  },
+  {
+    selector: '#prune-btn',
+    title: 'Open Storage pruning',
+    body: 'Click Storage pruning to see how BiteGuard manages its storage and remove low-value entries.',
+    handoff: { nextSurface: 'storage-pruning', mode: 'inPage' },
   },
 ];
 

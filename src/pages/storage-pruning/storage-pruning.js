@@ -6,6 +6,7 @@ import {
   applySiteDeletions, applySubpageDeletions,
 } from '../../data/prune.js';
 import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../../background/siteTracking.js';
+import { autoStartIfMatches } from '../../shared/tour.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../../background/subpageTracking.js';
 
 const STORE_LABELS = {
@@ -337,4 +338,39 @@ async function runDelete() {
   await runScan();
   await renderStorageBar();
 }
+
+const pruningTourSteps = [
+  {
+    selector: '#intro',
+    title: 'Storage pruning',
+    body: 'This tool finds low-value tracking entries — short visits and accidental clicks — so you can remove them and keep BiteGuard\'s storage tidy.',
+  },
+  {
+    selector: '#controls',
+    title: 'Configure the scan',
+    body: 'Set a threshold (in seconds) and choose which stores to scan. Domains and subpages are tracked separately, daily and hourly.',
+  },
+  {
+    selector: '#scan-btn',
+    title: 'Run the scan',
+    body: 'Click Scan to find entries below your threshold. They appear below for review.',
+    advanceOn: 'click',
+  },
+  {
+    selector: '#results-section',
+    title: 'Review and delete',
+    body: 'Insignificant entries appear here. Select the ones you want to remove and click Delete selected.',
+  },
+  {
+    selector: '#back-btn',
+    title: "That's the end",
+    body: 'You\'ve seen every surface of BiteGuard. You can replay this tour any time from the dashboard.',
+  },
+];
+
+autoStartIfMatches('storage-pruning', pruningTourSteps, {
+  onClose: ({ skipped }) => {
+    if (!skipped) location.href = '../dashboard/dashboard.html';
+  },
+});
 
