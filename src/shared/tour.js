@@ -1,16 +1,21 @@
 const TOUR_KEY = 'tour';
 
-const DEFAULT_STATE = { completed: false, completedAt: null, inProgress: null };
+const DEFAULT_STATE = { completed: false, completedAt: null, inProgress: null, useMockData: false };
 
 export async function readTourState() {
   const { [TOUR_KEY]: state } = await chrome.storage.local.get(TOUR_KEY);
   return { ...DEFAULT_STATE, ...(state || {}) };
 }
 
-export async function writeTourState(patch) {
-  const current = await readTourState();
-  const next = { ...current, ...patch };
-  await chrome.storage.local.set({ [TOUR_KEY]: next });
+let writeChain = Promise.resolve();
+export function writeTourState(patch) {
+  const next = writeChain.then(async () => {
+    const current = await readTourState();
+    const merged = { ...current, ...patch };
+    await chrome.storage.local.set({ [TOUR_KEY]: merged });
+    return merged;
+  });
+  writeChain = next.catch(() => {});
   return next;
 }
 
@@ -19,6 +24,7 @@ export function markTourCompleted() {
     completed: true,
     completedAt: new Date().toISOString(),
     inProgress: null,
+    useMockData: false,
   });
 }
 
@@ -51,7 +57,6 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     <div id="tour-tooltip-body"></div>
     <div id="tour-tooltip-footer">
       <span id="tour-step-counter"></span>
-      <button id="tour-skip-btn" class="btn">Skip</button>
       <button id="tour-prev-btn" class="btn">Previous</button>
       <button id="tour-next-btn" class="btn">Next</button>
     </div>
@@ -64,7 +69,6 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
   const counterEl = tooltip.querySelector('#tour-step-counter');
   const prevBtn = tooltip.querySelector('#tour-prev-btn');
   const nextBtn = tooltip.querySelector('#tour-next-btn');
-  const skipBtn = tooltip.querySelector('#tour-skip-btn');
 
   let currentIndex = 0;
   let currentStep = null;
@@ -72,8 +76,21 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
   let handoffEngaged = false;
   let lastWrittenSurface = null;
   let advanceClickCleanup = null;
+  let resizeObserver = null;
 
-  function positionFor(target, { moveTooltip = true } = {}) {
+  function applyClickThroughHole(top, left, width, height) {
+    const t = Math.max(0, top);
+    const l = Math.max(0, left);
+    const r = left + width;
+    const b = top + height;
+    overlay.style.clipPath = `polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 ${t}px, ${l}px ${t}px, ${l}px ${b}px, ${r}px ${b}px, ${r}px ${t}px, 0 ${t}px)`;
+  }
+
+  function clearClickThroughHole() {
+    overlay.style.clipPath = '';
+  }
+
+  function positionFor(target, { moveTooltip = true, clickThrough = false } = {}) {
     const rect = target.getBoundingClientRect();
     const top = rect.top - SPOTLIGHT_PADDING;
     const left = rect.left - SPOTLIGHT_PADDING;
@@ -84,6 +101,9 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     spotlight.style.left = `${left}px`;
     spotlight.style.width = `${width}px`;
     spotlight.style.height = `${height}px`;
+    spotlight.style.pointerEvents = clickThrough ? 'none' : 'auto';
+
+    applyClickThroughHole(top, left, width, height);
 
     if (!moveTooltip) return;
 
@@ -106,6 +126,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
 
   function positionFloating(position) {
     spotlight.style.display = 'none';
+    clearClickThroughHole();
     const tipRect = tooltip.getBoundingClientRect();
     const vw = window.innerWidth;
     let tipTop = VIEWPORT_MARGIN;
@@ -125,10 +146,19 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (!currentStep) return;
     if (currentStep.selector) {
       const target = document.querySelector(currentStep.selector);
-      if (target) positionFor(target, { moveTooltip: !currentStep.keepTooltipPosition });
+      if (target) positionFor(target, {
+        moveTooltip: !currentStep.keepTooltipPosition,
+        clickThrough: isStepClickThrough(currentStep),
+      });
     } else if (!currentStep.keepTooltipPosition) {
       positionFloating(currentStep.tooltipPosition);
     }
+  }
+
+  function isStepClickThrough(step) {
+    return step.advanceOn === 'click'
+      || step.handoff?.mode === 'inPage'
+      || step.nonBlocking === true;
   }
 
   async function showStep(index) {
@@ -153,6 +183,10 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
       advanceClickCleanup();
       advanceClickCleanup = null;
     }
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = null;
+    }
     currentStep = step;
     currentIndex = index;
 
@@ -166,24 +200,35 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     prevBtn.disabled = index === 0;
 
     const isHandoff = !!step.handoff;
-    const handoffMode = step.handoff?.mode;
     const advanceOnClick = step.advanceOn === 'click';
     nextBtn.style.display = (isHandoff || advanceOnClick) ? 'none' : '';
     nextBtn.textContent = index === steps.length - 1 ? 'Finish' : 'Next';
 
-    overlay.classList.toggle('non-blocking', handoffMode === 'inPage' || step.nonBlocking === true || advanceOnClick);
     tooltip.classList.toggle('has-arrow-up', step.arrow === 'up');
-    document.body.classList.toggle('tour-modal-step', step.modalStep === true);
+    const wasModalStep = document.body.classList.contains('tour-modal-step');
+    const isModalStep = step.modalStep === true;
+    document.body.classList.toggle('tour-modal-step', isModalStep);
+    if (wasModalStep && !isModalStep) {
+      document.dispatchEvent(new CustomEvent('tour:modal-step-leave'));
+    }
+
+    document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
 
     if (step.selector) {
       const liveTarget = document.querySelector(step.selector);
       if (!liveTarget) return showStep(index + 1);
-      positionFor(liveTarget, { moveTooltip: !step.keepTooltipPosition });
+      liveTarget.classList.add('tour-target');
+      positionFor(liveTarget, {
+        moveTooltip: !step.keepTooltipPosition,
+        clickThrough: isStepClickThrough(step),
+      });
       if (advanceOnClick) {
         const handler = () => showStep(currentIndex + 1);
         liveTarget.addEventListener('click', handler, { once: true });
         advanceClickCleanup = () => liveTarget.removeEventListener('click', handler);
       }
+      resizeObserver = new ResizeObserver(reposition);
+      resizeObserver.observe(liveTarget);
     } else if (!step.keepTooltipPosition) {
       positionFloating(step.tooltipPosition);
     }
@@ -206,7 +251,12 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
       try { await currentStep.onExit(); } catch (_e) {}
     }
     if (advanceClickCleanup) { advanceClickCleanup(); advanceClickCleanup = null; }
-    document.body.classList.remove('tour-modal-step');
+    if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null; }
+    document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+    if (document.body.classList.contains('tour-modal-step')) {
+      document.body.classList.remove('tour-modal-step');
+      document.dispatchEvent(new CustomEvent('tour:modal-step-leave'));
+    }
     window.removeEventListener('scroll', reposition, true);
     window.removeEventListener('resize', reposition);
     document.removeEventListener('keydown', onKeydown);
@@ -220,9 +270,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (onClose) onClose({ skipped });
   }
 
-  function onKeydown(e) {
-    if (e.key === 'Escape') finish(true);
-  }
+  function onKeydown(_e) {}
 
   function onStorageChanged(changes, area) {
     if (area !== 'local' || !changes[TOUR_KEY]) return;
@@ -242,7 +290,12 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (stopped) return;
     stopped = true;
     if (advanceClickCleanup) { advanceClickCleanup(); advanceClickCleanup = null; }
-    document.body.classList.remove('tour-modal-step');
+    if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null; }
+    document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+    if (document.body.classList.contains('tour-modal-step')) {
+      document.body.classList.remove('tour-modal-step');
+      document.dispatchEvent(new CustomEvent('tour:modal-step-leave'));
+    }
     window.removeEventListener('scroll', reposition, true);
     window.removeEventListener('resize', reposition);
     document.removeEventListener('keydown', onKeydown);
@@ -255,7 +308,6 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
 
   prevBtn.addEventListener('click', () => showStep(currentIndex - 1));
   nextBtn.addEventListener('click', () => showStep(currentIndex + 1));
-  skipBtn.addEventListener('click', () => finish(true));
   window.addEventListener('scroll', reposition, true);
   window.addEventListener('resize', reposition);
   document.addEventListener('keydown', onKeydown);
@@ -268,11 +320,24 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
 
 export async function autoStartIfMatches(surface, steps, options = {}) {
   const state = await readTourState();
-  if (state.inProgress?.surface !== surface) return null;
-  return runTour({
-    surface,
-    steps,
-    startIndex: state.inProgress.stepIndex || 0,
-    ...options,
-  });
+  const pendingSurface = state.inProgress?.surface;
+  if (!pendingSurface) return null;
+  if (pendingSurface === surface) {
+    return runTour({
+      surface,
+      steps,
+      startIndex: state.inProgress.stepIndex || 0,
+      ...options,
+    });
+  }
+  const handoffIdx = steps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
+  if (handoffIdx >= 0) {
+    return runTour({
+      surface,
+      steps,
+      startIndex: handoffIdx,
+      ...options,
+    });
+  }
+  return null;
 }

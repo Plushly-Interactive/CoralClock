@@ -8,6 +8,7 @@ import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
+import { analyticsRequest } from '../../shared/tourMockData.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -149,7 +150,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days from earliest data, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => chrome.runtime.sendMessage({
+  loadAvgPerHour: (range) => analyticsRequest({
     type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range,
   }),
 });
@@ -172,7 +173,7 @@ initDrill({
   rangeSelect,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
-    const hourData = await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourForDay', dayKey });
+    const hourData = await analyticsRequest({ type: 'getAnalyticsByHourForDay', dayKey });
     const result = {};
     for (let h = 0; h < 24; h++) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
@@ -180,7 +181,7 @@ initDrill({
     }
     return result;
   },
-  getAvgPerClockHour: (dayKeys) => chrome.runtime.sendMessage({
+  getAvgPerClockHour: (dayKeys) => analyticsRequest({
     type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range: null, dayKeys,
   }),
   render,
@@ -197,8 +198,8 @@ window.addEventListener('pageshow', () => {
 });
 
 async function loadAndRender() {
-  byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
-  subpagesByDayCache = await chrome.runtime.sendMessage({ type: 'getSubpagesByDay' });
+  byDayCache = await analyticsRequest({ type: 'getAnalyticsByDay' });
+  subpagesByDayCache = await analyticsRequest({ type: 'getSubpagesByDay' });
   resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
@@ -220,7 +221,7 @@ function resolveAggregationMode() {
 
 async function loadByHour() {
   if (byHourCache) return;
-  byHourCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourToday' });
+  byHourCache = await analyticsRequest({ type: 'getAnalyticsByHourToday' });
 }
 
 function siteDayKeysForRange(range) {

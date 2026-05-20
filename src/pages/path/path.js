@@ -7,6 +7,7 @@ import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
+import { analyticsRequest } from '../../shared/tourMockData.js';
 
 const drill = JSON.parse(sessionStorage.getItem('subpageDrill') || 'null');
 if (!drill) {
@@ -262,8 +263,8 @@ loadAndRender();
 
 async function loadAndRender() {
   [byDayCache, byHourCache] = await Promise.all([
-    chrome.runtime.sendMessage({ type: 'getSubpagesByDay' }),
-    chrome.runtime.sendMessage({ type: 'getSubpagesByHour' }),
+    analyticsRequest({ type: 'getSubpagesByDay' }),
+    analyticsRequest({ type: 'getSubpagesByHour' }),
   ]);
   if (isMerged) setCrumbDomain(resolveOwningDomain());
   renderPathLinks(resolveOwningEntries());

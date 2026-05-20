@@ -5,7 +5,8 @@ import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
-import { runTour, readTourState, clearTourProgress } from '../../shared/tour.js';
+import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
+import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
 import { openModal, closeModal } from '../../data/importData.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
@@ -37,7 +38,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => chrome.runtime.sendMessage({
+  loadAvgPerHour: (range) => analyticsRequest({
     type: 'getAvgPerClockHour', siteIds: null, range,
   }),
 });
@@ -203,7 +204,12 @@ window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
 });
 
-loadAndRender();
+(async () => {
+  if (new URLSearchParams(location.search).get('tour') === '1') {
+    await maybeEnableMockMode();
+  }
+  await loadAndRender();
+})();
 
 window.addEventListener('pageshow', () => {
   hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
@@ -220,7 +226,7 @@ async function loadAndRender() {
     history.replaceState(null, '', location.pathname);
     await seedTestData();
   }
-  byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
+  byDayCache = await analyticsRequest({ type: 'getAnalyticsByDay' });
   render();
   renderStorageBar();
 }
@@ -331,10 +337,10 @@ const dashboardTourSteps = [
   {
     selector: '#tour-btn',
     title: 'Welcome to BiteGuard',
-    body: 'This guided tour will walk you through each surface. You can skip it any time with Esc or the Skip button.',
+    body: 'This guided tour will walk you through each surface of BiteGuard.',
   },
   {
-    selector: '#header-center',
+    selector: '#range-select',
     title: 'Time range',
     body: 'Choose a time range here. All charts and the table update to match.',
   },
@@ -366,7 +372,7 @@ const dashboardTourSteps = [
     title: 'Time Tracker compatibility',
     body: 'Exchange data with the Time Tracker extension. Daily site totals and visit counts are compatible; audio time and subpage data are not.',
     modalStep: true,
-    onExit: closeModal,
+    onEnter: openModal,
   },
   {
     title: 'Open the popup',
@@ -389,25 +395,66 @@ const dashboardTourSteps = [
   },
 ];
 
-function startDashboardTour(startIndex = 0) {
+async function maybeEnableMockMode() {
+  const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
+  const empty = Object.keys(analyticsByDay).length === 0;
+  if (empty) {
+    await writeTourState({ useMockData: true });
+    clearMockModeCache();
+  }
+}
+
+let isTourRunning = false;
+
+async function startDashboardTour(startIndex = 0) {
+  if (isTourRunning) return;
+  isTourRunning = true;
+  if (startIndex === 0) {
+    const tourState = await readTourState();
+    const wasMock = tourState.useMockData;
+    await maybeEnableMockMode();
+    const nowState = await readTourState();
+    if (!wasMock && nowState.useMockData) {
+      await loadAndRender();
+    }
+  }
   runTour({
     surface: 'dashboard',
     steps: dashboardTourSteps,
     startIndex,
-    onClose: () => { tourBtn.textContent = 'Replay tour'; },
+    onClose: () => {
+      isTourRunning = false;
+      clearMockModeCache();
+    },
   });
 }
 
-(async () => {
+tourBtn.addEventListener('click', () => startDashboardTour(0));
+
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  if (isTourRunning) return;
   const state = await readTourState();
-  tourBtn.textContent = state.completed ? 'Replay tour' : 'Tour';
-  tourBtn.addEventListener('click', () => startDashboardTour(0));
+  if (state.inProgress?.surface === 'dashboard') {
+    startDashboardTour(state.inProgress.stepIndex || 0);
+  }
+});
+
+(async () => {
   if (new URLSearchParams(location.search).get('tour') === '1') {
+    history.replaceState(null, '', location.pathname);
     await clearTourProgress();
     startDashboardTour(0);
     return;
   }
+  const state = await readTourState();
   if (state.inProgress?.surface === 'dashboard') {
     startDashboardTour(state.inProgress.stepIndex || 0);
+    return;
+  }
+  const pendingSurface = state.inProgress?.surface;
+  if (pendingSurface) {
+    const handoffIdx = dashboardTourSteps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
+    if (handoffIdx >= 0) startDashboardTour(handoffIdx);
   }
 })();

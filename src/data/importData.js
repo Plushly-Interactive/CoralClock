@@ -68,12 +68,23 @@ export function closeModal() {
   modalOverlay.style.display = 'none';
 }
 
+function inTourModalStep() {
+  return document.body.classList.contains('tour-modal-step');
+}
+
+document.addEventListener('tour:modal-step-leave', closeModal);
+
 importBtn.addEventListener('click', openModal);
-modalClose.addEventListener('click', closeModal);
+modalClose.addEventListener('click', () => {
+  if (inTourModalStep()) return;
+  closeModal();
+});
 modalOverlay.addEventListener('click', (e) => {
+  if (inTourModalStep()) return;
   if (e.target === modalOverlay) closeModal();
 });
 document.addEventListener('keydown', (e) => {
+  if (inTourModalStep()) return;
   if (e.key === 'Escape' && modalOverlay.style.display !== 'none') closeModal();
 });
 

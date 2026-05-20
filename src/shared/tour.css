@@ -3,15 +3,20 @@
   inset: 0;
   z-index: 2000;
   pointer-events: auto;
-  background: transparent;
-}
-
-#tour-overlay.non-blocking {
-  pointer-events: none;
+  background: rgba(0, 0, 0, 0.55);
 }
 
 body.tour-modal-step #io-modal-overlay {
   z-index: 2500;
+}
+
+body.tour-modal-step #io-modal-close {
+  display: none;
+}
+
+body.tour-modal-step .io-section:not(.tour-target) {
+  pointer-events: none;
+  opacity: 0.4;
 }
 
 #tour-spotlight {
@@ -19,7 +24,7 @@ body.tour-modal-step #io-modal-overlay {
   z-index: 3001;
   border-radius: 6px;
   pointer-events: none;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  outline: 2px solid var(--color-accent);
   transition: top 0.15s, left 0.15s, width 0.15s, height 0.15s;
 }
 
@@ -88,13 +93,3 @@ body.tour-modal-step #io-modal-overlay {
   margin-right: auto;
 }
 
-#tour-skip-btn {
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid transparent;
-}
-
-#tour-skip-btn:hover {
-  color: var(--color-accent);
-  border-color: var(--color-border);
-}

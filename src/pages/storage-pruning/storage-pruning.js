@@ -6,7 +6,8 @@ import {
   applySiteDeletions, applySubpageDeletions,
 } from '../../data/prune.js';
 import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../../background/siteTracking.js';
-import { autoStartIfMatches } from '../../shared/tour.js';
+import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
+import { mockScanResults } from '../../shared/tourMockData.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../../background/subpageTracking.js';
 
 const STORE_LABELS = {
@@ -86,18 +87,25 @@ async function runScan() {
   const thresholdMs = getThresholdSeconds() * 1000;
   const scopes = getScopes();
   scanBtn.disabled = true;
-  const keys = [];
-  if (scopes.siteDaily) keys.push(ANALYTICS_DAY_KEY);
-  if (scopes.siteHourly) keys.push(ANALYTICS_HOUR_KEY);
-  if (scopes.subpageDaily) keys.push(SUBPAGES_DAY_KEY);
-  if (scopes.subpageHourly) keys.push(SUBPAGES_HOUR_KEY);
-  const stores = await chrome.storage.local.get(keys);
-  scannedStores = stores;
-  const results = [];
-  if (scopes.siteDaily) results.push(...scanSiteBucket(stores[ANALYTICS_DAY_KEY] ?? {}, thresholdMs, ANALYTICS_DAY_KEY));
-  if (scopes.siteHourly) results.push(...scanSiteBucket(stores[ANALYTICS_HOUR_KEY] ?? {}, thresholdMs, ANALYTICS_HOUR_KEY));
-  if (scopes.subpageDaily) results.push(...scanSubpageBucket(stores[SUBPAGES_DAY_KEY] ?? {}, thresholdMs, SUBPAGES_DAY_KEY));
-  if (scopes.subpageHourly) results.push(...scanSubpageBucket(stores[SUBPAGES_HOUR_KEY] ?? {}, thresholdMs, SUBPAGES_HOUR_KEY));
+  const tourState = await readTourState();
+  let results;
+  if (tourState.useMockData) {
+    scannedStores = {};
+    results = mockScanResults(scopes, thresholdMs);
+  } else {
+    const keys = [];
+    if (scopes.siteDaily) keys.push(ANALYTICS_DAY_KEY);
+    if (scopes.siteHourly) keys.push(ANALYTICS_HOUR_KEY);
+    if (scopes.subpageDaily) keys.push(SUBPAGES_DAY_KEY);
+    if (scopes.subpageHourly) keys.push(SUBPAGES_HOUR_KEY);
+    const stores = await chrome.storage.local.get(keys);
+    scannedStores = stores;
+    results = [];
+    if (scopes.siteDaily) results.push(...scanSiteBucket(stores[ANALYTICS_DAY_KEY] ?? {}, thresholdMs, ANALYTICS_DAY_KEY));
+    if (scopes.siteHourly) results.push(...scanSiteBucket(stores[ANALYTICS_HOUR_KEY] ?? {}, thresholdMs, ANALYTICS_HOUR_KEY));
+    if (scopes.subpageDaily) results.push(...scanSubpageBucket(stores[SUBPAGES_DAY_KEY] ?? {}, thresholdMs, SUBPAGES_DAY_KEY));
+    if (scopes.subpageHourly) results.push(...scanSubpageBucket(stores[SUBPAGES_HOUR_KEY] ?? {}, thresholdMs, SUBPAGES_HOUR_KEY));
+  }
   currentResults = results.map((r, i) => ({ ...r, _id: i, _selected: true }));
   renderResults();
   updateScanEnabled();
@@ -313,6 +321,12 @@ function updateSummary() {
 async function runDelete() {
   const identities = currentResults.filter(r => r._selected);
   if (identities.length === 0) return;
+  const tourState = await readTourState();
+  if (tourState.useMockData) {
+    currentResults = [];
+    renderResults();
+    return;
+  }
   deleteBtn.disabled = true;
   const byStore = {
     [ANALYTICS_DAY_KEY]: [], [ANALYTICS_HOUR_KEY]: [],
@@ -358,8 +372,13 @@ const pruningTourSteps = [
   },
   {
     selector: '#results-section',
-    title: 'Review and delete',
-    body: 'Insignificant entries appear here. Select the ones you want to remove and click Delete selected.',
+    title: 'Review',
+    body: 'Insignificant entries appear here, grouped by store. You can untick rows you want to keep.',
+  },
+  {
+    selector: '#delete-btn',
+    title: 'Delete selected',
+    body: 'When you are ready, clicking Delete selected would remove the ticked entries. We won\'t actually run it during the tour.',
   },
   {
     selector: '#back-btn',
