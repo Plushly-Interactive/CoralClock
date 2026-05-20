@@ -423,10 +423,11 @@ async function startDashboardTour(startIndex = 0) {
     surface: 'dashboard',
     steps: dashboardTourSteps,
     startIndex,
-    onClose: () => {
+    onClose: ({ skipped }) => {
       isTourRunning = false;
       currentTourHandle = null;
       clearMockModeCache();
+      if (skipped) loadAndRender();
     },
   });
 }

@@ -178,4 +178,4 @@ const popupTourSteps = [
   },
 ];
 
-autoStartIfMatches('popup', popupTourSteps);
+autoStartIfMatches('popup', popupTourSteps, { showCloseButton: false });

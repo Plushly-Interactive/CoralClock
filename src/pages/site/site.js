@@ -8,7 +8,7 @@ import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { analyticsRequest } from '../../shared/tourMockData.js';
+import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -542,4 +542,14 @@ const siteTourSteps = [
   },
 ];
 
-loadAndRenderPromise.then(() => autoStartIfMatches('site', siteTourSteps));
+loadAndRenderPromise.then(() => autoStartIfMatches('site', siteTourSteps, {
+  onClose: ({ skipped }) => {
+    if (skipped) {
+      clearMockModeCache();
+      byDayCache = null;
+      subpagesByDayCache = null;
+      byHourCache = null;
+      loadAndRender();
+    }
+  },
+}));

@@ -7,7 +7,7 @@ import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../..
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { analyticsRequest } from '../../shared/tourMockData.js';
+import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
 
 const drill = JSON.parse(sessionStorage.getItem('subpageDrill') || 'null');
 if (!drill) {
@@ -376,4 +376,13 @@ const pathTourSteps = [
   },
 ];
 
-loadAndRenderPromise.then(() => autoStartIfMatches('path', pathTourSteps));
+loadAndRenderPromise.then(() => autoStartIfMatches('path', pathTourSteps, {
+  onClose: ({ skipped }) => {
+    if (skipped) {
+      clearMockModeCache();
+      byDayCache = null;
+      byHourCache = null;
+      loadAndRender();
+    }
+  },
+}));

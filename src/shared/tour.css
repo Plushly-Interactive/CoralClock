@@ -93,3 +93,48 @@ body.tour-modal-step .io-section:not(.tour-target) {
   margin-right: auto;
 }
 
+#tour-close-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 3002;
+  width: 42px;
+  height: 42px;
+  font-size: calc(var(--font-lg) * 1.5);
+}
+
+#tour-close-btn:hover {
+  background-color: var(--color-border);
+}
+
+#tour-confirm {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3003;
+  max-width: 360px;
+  padding: 18px 20px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-modal);
+  font-size: var(--font-base);
+}
+
+#tour-confirm[hidden] {
+  display: none;
+}
+
+#tour-confirm-body {
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+#tour-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+

@@ -7,7 +7,7 @@ import {
 } from '../../data/prune.js';
 import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../../background/siteTracking.js';
 import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
-import { mockScanResults } from '../../shared/tourMockData.js';
+import { mockScanResults, clearMockModeCache } from '../../shared/tourMockData.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../../background/subpageTracking.js';
 
 const STORE_LABELS = {
@@ -395,7 +395,14 @@ const pruningTourSteps = [
 
 autoStartIfMatches('storage-pruning', pruningTourSteps, {
   onClose: ({ skipped }) => {
-    if (!skipped) location.href = '../dashboard/dashboard.html';
+    if (skipped) {
+      clearMockModeCache();
+      currentResults = [];
+      scannedStores = {};
+      resultsSection.setAttribute('hidden', '');
+      return;
+    }
+    location.href = '../dashboard/dashboard.html';
   },
 });
 

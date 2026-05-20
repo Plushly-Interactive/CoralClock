@@ -40,7 +40,7 @@ const SPOTLIGHT_PADDING = 6;
 const TOOLTIP_MARGIN = 12;
 const VIEWPORT_MARGIN = 8;
 
-export function runTour({ surface, steps, startIndex = 0, onClose }) {
+export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButton = true }) {
   if (!steps || steps.length === 0) return { stop: () => {} };
 
   const overlay = document.createElement('div');
@@ -48,6 +48,13 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
 
   const spotlight = document.createElement('div');
   spotlight.id = 'tour-spotlight';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.id = 'tour-close-btn';
+  closeBtn.className = 'square-btn';
+  closeBtn.title = 'Close the tour';
+  closeBtn.textContent = '✕';
+  if (!showCloseButton) closeBtn.style.display = 'none';
 
   const tooltip = document.createElement('div');
   tooltip.id = 'tour-tooltip';
@@ -62,13 +69,26 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     </div>
   `;
 
-  document.body.append(overlay, spotlight, tooltip);
+  const confirm = document.createElement('div');
+  confirm.id = 'tour-confirm';
+  confirm.hidden = true;
+  confirm.innerHTML = `
+    <div id="tour-confirm-body">Are you sure you want to interrupt the guided tour?</div>
+    <div id="tour-confirm-actions">
+      <button id="tour-confirm-no" class="btn">No, keep going</button>
+      <button id="tour-confirm-yes" class="btn">Yes, interrupt</button>
+    </div>
+  `;
+
+  document.body.append(overlay, spotlight, tooltip, closeBtn, confirm);
 
   const titleEl = tooltip.querySelector('#tour-tooltip-title');
   const bodyEl = tooltip.querySelector('#tour-tooltip-body');
   const counterEl = tooltip.querySelector('#tour-step-counter');
   const prevBtn = tooltip.querySelector('#tour-prev-btn');
   const nextBtn = tooltip.querySelector('#tour-next-btn');
+  const confirmNo = confirm.querySelector('#tour-confirm-no');
+  const confirmYes = confirm.querySelector('#tour-confirm-yes');
 
   let currentIndex = 0;
   let currentStep = null;
@@ -291,6 +311,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     overlay.remove();
     spotlight.remove();
     tooltip.remove();
+    closeBtn.remove();
+    confirm.remove();
     if (skipped || !handoffEngaged) {
       await markTourCompleted();
     }
@@ -343,11 +365,16 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     overlay.remove();
     spotlight.remove();
     tooltip.remove();
+    closeBtn.remove();
+    confirm.remove();
     if (onClose) onClose({ skipped: false, quiet: true });
   }
 
   prevBtn.addEventListener('click', () => showStep(currentIndex - 1));
   nextBtn.addEventListener('click', () => showStep(currentIndex + 1));
+  closeBtn.addEventListener('click', () => { confirm.hidden = false; });
+  confirmNo.addEventListener('click', () => { confirm.hidden = true; });
+  confirmYes.addEventListener('click', () => finish(true));
   window.addEventListener('scroll', reposition, true);
   window.addEventListener('resize', reposition);
   document.addEventListener('keydown', onKeydown);
