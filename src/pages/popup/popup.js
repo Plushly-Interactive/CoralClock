@@ -178,4 +178,8 @@ const popupTourSteps = [
   },
 ];
 
-autoStartIfMatches('popup', popupTourSteps, { showCloseButton: false });
+(async () => {
+  const state = await readTourState();
+  if (state.inProgress?.surface !== 'popup') return;
+  autoStartIfMatches('popup', popupTourSteps, { showCloseButton: false });
+})();
