@@ -59,21 +59,32 @@ const conflictCancel = document.querySelector('#io-conflict-cancel');
 const conflictKeep = document.querySelector('#io-conflict-keep');
 const conflictReplace = document.querySelector('#io-conflict-replace');
 
-function openModal() {
+export function openModal() {
   modalOverlay.removeAttribute('hidden');
   modalOverlay.style.display = '';
 }
 
-function closeModal() {
+export function closeModal() {
   modalOverlay.style.display = 'none';
 }
 
+function inTourModalStep() {
+  return document.body.classList.contains('tour-modal-step');
+}
+
+document.addEventListener('tour:modal-step-leave', closeModal);
+
 importBtn.addEventListener('click', openModal);
-modalClose.addEventListener('click', closeModal);
+modalClose.addEventListener('click', () => {
+  if (inTourModalStep()) return;
+  closeModal();
+});
 modalOverlay.addEventListener('click', (e) => {
+  if (inTourModalStep()) return;
   if (e.target === modalOverlay) closeModal();
 });
 document.addEventListener('keydown', (e) => {
+  if (inTourModalStep()) return;
   if (e.key === 'Escape' && modalOverlay.style.display !== 'none') closeModal();
 });
 

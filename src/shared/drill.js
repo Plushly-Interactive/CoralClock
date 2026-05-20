@@ -105,6 +105,7 @@ export function initDrill(context) {
 
   window.addEventListener('keydown', (e) => {
     if (!drillPeriod) return;
+    if (document.body.classList.contains('tour-drill-step')) return;
     if (e.key === ' ') {
       e.preventDefault();
       const isMonthDrill = drillPeriod.length === 7;

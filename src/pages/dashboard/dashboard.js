@@ -5,6 +5,9 @@ import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
+import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
+import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
+import { openModal, closeModal } from '../../data/importData.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 document.querySelector('#prune-btn').addEventListener('click', () => {
@@ -36,7 +39,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => chrome.runtime.sendMessage({
+  loadAvgPerHour: (range) => analyticsRequest({
     type: 'getAvgPerClockHour', siteIds: null, range,
   }),
 });
@@ -202,7 +205,12 @@ window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
 });
 
-loadAndRender();
+(async () => {
+  if (new URLSearchParams(location.search).get('tour') === '1') {
+    await maybeEnableMockMode();
+  }
+  await loadAndRender();
+})();
 
 window.addEventListener('pageshow', () => {
   hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
@@ -219,7 +227,7 @@ async function loadAndRender() {
     history.replaceState(null, '', location.pathname);
     await seedTestData();
   }
-  byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
+  byDayCache = await analyticsRequest({ type: 'getAnalyticsByDay' });
   render();
   renderStorageBar();
 }
@@ -329,3 +337,147 @@ function render() {
   renderTopChart();
   renderTable(sortedRows());
 }
+
+const tourBtn = document.querySelector('#tour-btn');
+
+const dashboardTourSteps = [
+  {
+    selector: '#tour-btn',
+    title: 'Welcome to BiteGuard',
+    body: 'This guided tour will walk you through each surface of BiteGuard.',
+  },
+  {
+    selector: '#range-select',
+    title: 'Time range',
+    body: 'Choose a time range here. All charts and the table update to match.',
+  },
+  {
+    selector: '#top-chart-container',
+    title: 'Top sites',
+    body: 'Your five most-active sites for the selected range.',
+  },
+  {
+    selector: '#dashboard-table-col',
+    title: 'All browsed sites',
+    body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
+  },
+  {
+    selector: '#import-btn',
+    title: 'Import / Export',
+    body: 'Open the import/export modal to back up your data or transfer it between installs.',
+    advanceOn: 'click',
+  },
+  {
+    selector: '#io-section-bg',
+    title: 'BiteGuard format',
+    body: 'Export and import all your BiteGuard data — daily and hourly stats for sites and subpages.',
+    modalStep: true,
+    onEnter: openModal,
+  },
+  {
+    selector: '#io-section-tt',
+    title: 'Time Tracker compatibility',
+    body: 'Exchange data with the Time Tracker extension. Daily site totals and visit counts are compatible; audio time and subpage data are not.',
+    modalStep: true,
+    onEnter: openModal,
+  },
+  {
+    title: 'Open the popup',
+    body: 'Click the BiteGuard icon in your browser toolbar to continue the tour.',
+    tooltipPosition: 'top-right',
+    arrow: 'up',
+    handoff: { nextSurface: 'popup', mode: 'crossDocument' },
+  },
+  {
+    selector: '#dashboard-table-col',
+    title: 'See site details',
+    body: 'Click any row in the table to drill into a site and see per-day detail.',
+    handoff: { nextSurface: 'site', mode: 'inPage' },
+  },
+  {
+    selector: '#prune-btn',
+    title: 'Open Storage pruning',
+    body: 'Click Storage pruning to see how BiteGuard manages its storage and remove low-value entries.',
+    handoff: { nextSurface: 'storage-pruning', mode: 'inPage' },
+  },
+];
+
+async function maybeEnableMockMode() {
+  const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
+  const empty = Object.keys(analyticsByDay).length === 0;
+  if (empty) {
+    await writeTourState({ useMockData: true });
+    clearMockModeCache();
+  }
+}
+
+let isTourRunning = false;
+let currentTourHandle = null;
+
+async function startDashboardTour(startIndex = 0) {
+  if (isTourRunning) return;
+  isTourRunning = true;
+  if (startIndex === 0) {
+    const tourState = await readTourState();
+    const wasMock = tourState.useMockData;
+    await maybeEnableMockMode();
+    const nowState = await readTourState();
+    if (!wasMock && nowState.useMockData) {
+      await loadAndRender();
+    }
+  }
+  currentTourHandle = runTour({
+    surface: 'dashboard',
+    steps: dashboardTourSteps,
+    startIndex,
+    onClose: ({ skipped }) => {
+      isTourRunning = false;
+      currentTourHandle = null;
+      clearMockModeCache();
+      if (skipped) loadAndRender();
+    },
+  });
+}
+
+tourBtn.addEventListener('click', () => startDashboardTour(0));
+
+async function checkResume() {
+  const state = await readTourState();
+  if (state.inProgress?.surface !== 'dashboard') return;
+  const wantedIndex = state.inProgress.stepIndex || 0;
+  if (currentTourHandle) {
+    if (currentTourHandle.getIndex() !== wantedIndex) {
+      currentTourHandle.goto(wantedIndex);
+    }
+  } else if (!isTourRunning) {
+    startDashboardTour(wantedIndex);
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkResume();
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (changes.tourAdvanceRequest) checkResume();
+});
+
+(async () => {
+  if (new URLSearchParams(location.search).get('tour') === '1') {
+    history.replaceState(null, '', location.pathname);
+    await clearTourProgress();
+    startDashboardTour(0);
+    return;
+  }
+  const state = await readTourState();
+  if (state.inProgress?.surface === 'dashboard') {
+    startDashboardTour(state.inProgress.stepIndex || 0);
+    return;
+  }
+  const pendingSurface = state.inProgress?.surface;
+  if (pendingSurface) {
+    const handoffIdx = dashboardTourSteps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
+    if (handoffIdx >= 0) startDashboardTour(handoffIdx);
+  }
+})();

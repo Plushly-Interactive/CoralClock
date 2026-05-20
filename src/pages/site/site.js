@@ -2,11 +2,13 @@ import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.j
 import { formatWithSmallSub, STAT_LABELS, escapeHtml, CHART_LEGEND_HTML } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
-import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
+import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
+import { autoStartIfMatches } from '../../shared/tour.js';
+import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -148,7 +150,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days from earliest data, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => chrome.runtime.sendMessage({
+  loadAvgPerHour: (range) => analyticsRequest({
     type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range,
   }),
 });
@@ -171,7 +173,7 @@ initDrill({
   rangeSelect,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
-    const hourData = await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourForDay', dayKey });
+    const hourData = await analyticsRequest({ type: 'getAnalyticsByHourForDay', dayKey });
     const result = {};
     for (let h = 0; h < 24; h++) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
@@ -179,13 +181,13 @@ initDrill({
     }
     return result;
   },
-  getAvgPerClockHour: (dayKeys) => chrome.runtime.sendMessage({
+  getAvgPerClockHour: (dayKeys) => analyticsRequest({
     type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range: null, dayKeys,
   }),
   render,
 });
 
-loadAndRender();
+const loadAndRenderPromise = loadAndRender();
 
 window.addEventListener('pageshow', () => {
   hideBriefSubpages = sessionStorage.getItem('hideBrief') !== 'false';
@@ -196,8 +198,8 @@ window.addEventListener('pageshow', () => {
 });
 
 async function loadAndRender() {
-  byDayCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByDay' });
-  subpagesByDayCache = await chrome.runtime.sendMessage({ type: 'getSubpagesByDay' });
+  byDayCache = await analyticsRequest({ type: 'getAnalyticsByDay' });
+  subpagesByDayCache = await analyticsRequest({ type: 'getSubpagesByDay' });
   resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
@@ -219,7 +221,7 @@ function resolveAggregationMode() {
 
 async function loadByHour() {
   if (byHourCache) return;
-  byHourCache = await chrome.runtime.sendMessage({ type: 'getAnalyticsByHourToday' });
+  byHourCache = await analyticsRequest({ type: 'getAnalyticsByHourToday' });
 }
 
 function siteDayKeysForRange(range) {
@@ -467,3 +469,87 @@ function renderSubpages(range) {
   }
   document.querySelector('#subpages-count').textContent = `${merged.length} page${merged.length !== 1 ? 's' : ''}`;
 }
+
+function ensureDrillOpen() {
+  if (isInDrillMode()) return;
+  const days = Object.keys(byDayCache ?? {}).sort();
+  const pick = days[days.length - 1];
+  if (pick) enterDrill(pick, null, 'time');
+}
+
+const siteTourSteps = [
+  {
+    selector: '#site-title',
+    title: 'Site details',
+    body: 'This page shows everything BiteGuard tracks for a single site. The site name and ID are shown here.',
+  },
+  {
+    selector: '#time-chart-container',
+    title: 'Time spent',
+    body: 'Active browsing time and audio playback on this site, per day in the selected range.',
+  },
+  {
+    selector: '#stats-container',
+    title: 'Overview',
+    body: 'Aggregate stats for the range: daily average, peak day, total time and more.',
+  },
+  {
+    selector: '#visits-chart-container',
+    title: 'Visits',
+    body: 'Number of separate visits to this site per day.',
+  },
+  {
+    selector: '#hourly-chart-container',
+    title: 'Average per clock hour',
+    body: 'Your typical browsing pattern on this site across the 24 hours of the day.',
+  },
+  {
+    selector: '#time-chart-container',
+    title: 'Drill into a day',
+    body: 'Click any day in the time chart to see hourly detail for that single day.',
+    advanceOn: 'click',
+  },
+  {
+    selector: '#drill-chart-wrapper',
+    title: 'Daily detail',
+    body: 'This shows the activity for the chosen day in finer granularity.',
+    drillStep: true,
+    onEnter: ensureDrillOpen,
+    onExit: ({ direction }) => {
+      if (direction === 'backward' && isInDrillMode()) exitDrillCompletely();
+    },
+  },
+  {
+    selector: '#drill-controls',
+    title: 'Navigate and switch metric',
+    body: 'Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
+    drillStep: true,
+    onEnter: ensureDrillOpen,
+  },
+  {
+    selector: '#nav-close',
+    title: 'Back to overview',
+    body: 'Click Overview to leave drill mode and return to the full range.',
+    advanceOn: 'click',
+    drillStep: true,
+    onEnter: ensureDrillOpen,
+  },
+  {
+    selector: '#subpages-container',
+    title: 'Page activity',
+    body: 'Every subpage under this site. Click a row to drill into a subpage.',
+    handoff: { nextSurface: 'path', mode: 'inPage' },
+  },
+];
+
+loadAndRenderPromise.then(() => autoStartIfMatches('site', siteTourSteps, {
+  onClose: ({ skipped }) => {
+    if (skipped) {
+      clearMockModeCache();
+      byDayCache = null;
+      subpagesByDayCache = null;
+      byHourCache = null;
+      loadAndRender();
+    }
+  },
+}));

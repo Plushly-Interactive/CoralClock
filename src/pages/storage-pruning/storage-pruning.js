@@ -6,6 +6,8 @@ import {
   applySiteDeletions, applySubpageDeletions,
 } from '../../data/prune.js';
 import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../../background/siteTracking.js';
+import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
+import { mockScanResults, clearMockModeCache } from '../../shared/tourMockData.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../../background/subpageTracking.js';
 
 const STORE_LABELS = {
@@ -85,18 +87,25 @@ async function runScan() {
   const thresholdMs = getThresholdSeconds() * 1000;
   const scopes = getScopes();
   scanBtn.disabled = true;
-  const keys = [];
-  if (scopes.siteDaily) keys.push(ANALYTICS_DAY_KEY);
-  if (scopes.siteHourly) keys.push(ANALYTICS_HOUR_KEY);
-  if (scopes.subpageDaily) keys.push(SUBPAGES_DAY_KEY);
-  if (scopes.subpageHourly) keys.push(SUBPAGES_HOUR_KEY);
-  const stores = await chrome.storage.local.get(keys);
-  scannedStores = stores;
-  const results = [];
-  if (scopes.siteDaily) results.push(...scanSiteBucket(stores[ANALYTICS_DAY_KEY] ?? {}, thresholdMs, ANALYTICS_DAY_KEY));
-  if (scopes.siteHourly) results.push(...scanSiteBucket(stores[ANALYTICS_HOUR_KEY] ?? {}, thresholdMs, ANALYTICS_HOUR_KEY));
-  if (scopes.subpageDaily) results.push(...scanSubpageBucket(stores[SUBPAGES_DAY_KEY] ?? {}, thresholdMs, SUBPAGES_DAY_KEY));
-  if (scopes.subpageHourly) results.push(...scanSubpageBucket(stores[SUBPAGES_HOUR_KEY] ?? {}, thresholdMs, SUBPAGES_HOUR_KEY));
+  const tourState = await readTourState();
+  let results;
+  if (tourState.useMockData) {
+    scannedStores = {};
+    results = mockScanResults(scopes, thresholdMs);
+  } else {
+    const keys = [];
+    if (scopes.siteDaily) keys.push(ANALYTICS_DAY_KEY);
+    if (scopes.siteHourly) keys.push(ANALYTICS_HOUR_KEY);
+    if (scopes.subpageDaily) keys.push(SUBPAGES_DAY_KEY);
+    if (scopes.subpageHourly) keys.push(SUBPAGES_HOUR_KEY);
+    const stores = await chrome.storage.local.get(keys);
+    scannedStores = stores;
+    results = [];
+    if (scopes.siteDaily) results.push(...scanSiteBucket(stores[ANALYTICS_DAY_KEY] ?? {}, thresholdMs, ANALYTICS_DAY_KEY));
+    if (scopes.siteHourly) results.push(...scanSiteBucket(stores[ANALYTICS_HOUR_KEY] ?? {}, thresholdMs, ANALYTICS_HOUR_KEY));
+    if (scopes.subpageDaily) results.push(...scanSubpageBucket(stores[SUBPAGES_DAY_KEY] ?? {}, thresholdMs, SUBPAGES_DAY_KEY));
+    if (scopes.subpageHourly) results.push(...scanSubpageBucket(stores[SUBPAGES_HOUR_KEY] ?? {}, thresholdMs, SUBPAGES_HOUR_KEY));
+  }
   currentResults = results.map((r, i) => ({ ...r, _id: i, _selected: true }));
   renderResults();
   updateScanEnabled();
@@ -312,6 +321,12 @@ function updateSummary() {
 async function runDelete() {
   const identities = currentResults.filter(r => r._selected);
   if (identities.length === 0) return;
+  const tourState = await readTourState();
+  if (tourState.useMockData) {
+    currentResults = [];
+    renderResults();
+    return;
+  }
   deleteBtn.disabled = true;
   const byStore = {
     [ANALYTICS_DAY_KEY]: [], [ANALYTICS_HOUR_KEY]: [],
@@ -337,4 +352,57 @@ async function runDelete() {
   await runScan();
   await renderStorageBar();
 }
+
+async function ensureScanRan() {
+  if (resultsSection.hasAttribute('hidden')) await runScan();
+}
+
+const pruningTourSteps = [
+  {
+    selector: '#intro',
+    title: 'Storage pruning',
+    body: 'This tool finds low-value tracking entries — short visits and accidental clicks — so you can remove them and keep BiteGuard\'s storage tidy.',
+  },
+  {
+    selector: '#controls',
+    title: 'Configure the scan',
+    body: 'Set a threshold (in seconds) and choose which stores to scan. Domains and subpages are tracked separately, daily and hourly.',
+  },
+  {
+    selector: '#scan-btn',
+    title: 'Run the scan',
+    body: 'Click Scan to find entries below your threshold. They appear below for review.',
+    advanceOn: 'click',
+  },
+  {
+    selector: '#results-section',
+    title: 'Review',
+    body: 'Insignificant entries appear here, grouped by store. You can untick rows you want to keep.',
+    onEnter: ensureScanRan,
+  },
+  {
+    selector: '#delete-btn',
+    title: 'Delete selected',
+    body: 'When you are ready, clicking Delete selected would remove the ticked entries. We won\'t actually run it during the tour.',
+    onEnter: ensureScanRan,
+  },
+  {
+    selector: '#back-btn',
+    title: "That's the end",
+    body: 'You\'ve seen every surface of BiteGuard. You can replay this tour any time from the dashboard.',
+  },
+];
+
+autoStartIfMatches('storage-pruning', pruningTourSteps, {
+  onClose: ({ skipped }) => {
+    if (skipped) {
+      clearMockModeCache();
+      currentResults = [];
+      scannedStores = {};
+      resultsSection.setAttribute('hidden', '');
+      return;
+    }
+    location.href = '../dashboard/dashboard.html';
+  },
+});
 

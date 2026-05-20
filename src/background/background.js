@@ -36,6 +36,13 @@ chrome.runtime.onStartup.addListener(() => {
   chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
 });
 
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason !== 'install' && details.reason !== 'update') return;
+  chrome.tabs.create({
+    url: chrome.runtime.getURL('src/pages/dashboard/dashboard.html?tour=1'),
+  });
+});
+
 async function bootstrap() {
   await ensureStorageVersion();
   bootstrapAt = Date.now();
