@@ -3,7 +3,7 @@ import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from '../../shared
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
-import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
+import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
@@ -259,7 +259,7 @@ initDrill({
 initRangeSelect(rangeSelect, render);
 window.addEventListener('storage', (e) => { if (e.key === 'theme') render(); });
 
-loadAndRender();
+const loadAndRenderPromise = loadAndRender();
 
 async function loadAndRender() {
   [byDayCache, byHourCache] = await Promise.all([
@@ -304,6 +304,13 @@ function renderStats(data, range) {
   document.querySelector('#overview-subheading').textContent = subheadingText(range);
 }
 
+function ensureDrillOpen() {
+  if (isInDrillMode()) return;
+  const days = Object.keys(byDayCache ?? {}).sort();
+  const pick = days[days.length - 1];
+  if (pick) enterDrill(pick, null, 'time');
+}
+
 const pathTourSteps = [
   {
     selector: '#path-subheader',
@@ -331,6 +338,37 @@ const pathTourSteps = [
     body: 'Your typical browsing pattern on this subpage across the 24 hours of the day.',
   },
   {
+    selector: '#time-chart-container',
+    title: 'Drill into a day',
+    body: 'Click any day in the time chart to see hourly detail for that single day.',
+    advanceOn: 'click',
+  },
+  {
+    selector: '#drill-chart-wrapper',
+    title: 'Daily detail',
+    body: 'This shows the activity for the chosen day in finer granularity.',
+    drillStep: true,
+    onEnter: ensureDrillOpen,
+    onExit: ({ direction }) => {
+      if (direction === 'backward' && isInDrillMode()) exitDrillCompletely();
+    },
+  },
+  {
+    selector: '#drill-controls',
+    title: 'Navigate and switch metric',
+    body: 'Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
+    drillStep: true,
+    onEnter: ensureDrillOpen,
+  },
+  {
+    selector: '#nav-close',
+    title: 'Back to overview',
+    body: 'Click Overview to leave drill mode and return to the full range.',
+    advanceOn: 'click',
+    drillStep: true,
+    onEnter: ensureDrillOpen,
+  },
+  {
     selector: '#back-btn',
     title: 'Back to the dashboard',
     body: 'Use back to return to the site, then back again to the dashboard, where the tour continues.',
@@ -338,4 +376,4 @@ const pathTourSteps = [
   },
 ];
 
-autoStartIfMatches('path', pathTourSteps);
+loadAndRenderPromise.then(() => autoStartIfMatches('path', pathTourSteps));

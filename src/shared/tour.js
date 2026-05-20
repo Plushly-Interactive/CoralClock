@@ -74,7 +74,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
   let currentStep = null;
   let stopped = false;
   let handoffEngaged = false;
-  let lastWrittenSurface = null;
+  let handoffTarget = null;
   let advanceClickCleanup = null;
   let resizeObserver = null;
 
@@ -88,6 +88,30 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
 
   function clearClickThroughHole() {
     overlay.style.clipPath = '';
+  }
+
+  function positionTooltipFor(target) {
+    const rect = target.getBoundingClientRect();
+    const top = rect.top - SPOTLIGHT_PADDING;
+    const left = rect.left - SPOTLIGHT_PADDING;
+    const width = rect.width + SPOTLIGHT_PADDING * 2;
+    const height = rect.height + SPOTLIGHT_PADDING * 2;
+
+    const tipRect = tooltip.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    const spaceBelow = vh - (top + height);
+    let tipTop = top + height + TOOLTIP_MARGIN;
+    if (spaceBelow < tipRect.height + TOOLTIP_MARGIN + VIEWPORT_MARGIN) {
+      tipTop = top - tipRect.height - TOOLTIP_MARGIN;
+    }
+    tipTop = Math.max(VIEWPORT_MARGIN, Math.min(tipTop, vh - tipRect.height - VIEWPORT_MARGIN));
+
+    let tipLeft = left + width / 2 - tipRect.width / 2;
+    tipLeft = Math.max(VIEWPORT_MARGIN, Math.min(tipLeft, vw - tipRect.width - VIEWPORT_MARGIN));
+
+    tooltip.style.top = `${tipTop}px`;
+    tooltip.style.left = `${tipLeft}px`;
   }
 
   function positionFor(target, { moveTooltip = true, clickThrough = false } = {}) {
@@ -105,23 +129,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
 
     applyClickThroughHole(top, left, width, height);
 
-    if (!moveTooltip) return;
-
-    const tipRect = tooltip.getBoundingClientRect();
-    const vh = window.innerHeight;
-    const vw = window.innerWidth;
-    const spaceBelow = vh - (top + height);
-    let tipTop = top + height + TOOLTIP_MARGIN;
-    if (spaceBelow < tipRect.height + TOOLTIP_MARGIN + VIEWPORT_MARGIN) {
-      tipTop = top - tipRect.height - TOOLTIP_MARGIN;
-    }
-    tipTop = Math.max(VIEWPORT_MARGIN, Math.min(tipTop, vh - tipRect.height - VIEWPORT_MARGIN));
-
-    let tipLeft = left + width / 2 - tipRect.width / 2;
-    tipLeft = Math.max(VIEWPORT_MARGIN, Math.min(tipLeft, vw - tipRect.width - VIEWPORT_MARGIN));
-
-    tooltip.style.top = `${tipTop}px`;
-    tooltip.style.left = `${tipLeft}px`;
+    if (moveTooltip) positionTooltipFor(target);
   }
 
   function positionFloating(position) {
@@ -168,16 +176,18 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
 
     const step = steps[index];
 
+    const direction = index < currentIndex ? 'backward' : 'forward';
+
     if (step.selector) {
       const target = document.querySelector(step.selector);
       if (!target) {
         currentIndex = index;
-        return showStep(index + 1);
+        return showStep(direction === 'backward' ? index - 1 : index + 1);
       }
     }
 
     if (currentStep && currentStep.onExit) {
-      try { await currentStep.onExit(); } catch (_e) {}
+      try { await currentStep.onExit({ direction }); } catch (_e) {}
     }
     if (advanceClickCleanup) {
       advanceClickCleanup();
@@ -191,7 +201,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     currentIndex = index;
 
     if (step.onEnter) {
-      try { await step.onEnter(); } catch (_e) {}
+      try { await step.onEnter({ direction }); } catch (_e) {}
     }
 
     titleEl.textContent = step.title || '';
@@ -211,15 +221,31 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (wasModalStep && !isModalStep) {
       document.dispatchEvent(new CustomEvent('tour:modal-step-leave'));
     }
+    document.body.classList.toggle('tour-drill-step', step.drillStep === true);
 
     document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+
+    let anchorPositioned = false;
+    if (step.keepTooltipPosition) {
+      for (let i = index - 1; i >= 0; i--) {
+        const prev = steps[i];
+        if (!prev.selector || prev.keepTooltipPosition) continue;
+        const prevTarget = document.querySelector(prev.selector);
+        if (!prevTarget) continue;
+        positionTooltipFor(prevTarget);
+        anchorPositioned = true;
+        break;
+      }
+    }
+
+    const keepPos = anchorPositioned;
 
     if (step.selector) {
       const liveTarget = document.querySelector(step.selector);
       if (!liveTarget) return showStep(index + 1);
       liveTarget.classList.add('tour-target');
       positionFor(liveTarget, {
-        moveTooltip: !step.keepTooltipPosition,
+        moveTooltip: !keepPos,
         clickThrough: isStepClickThrough(step),
       });
       if (advanceOnClick) {
@@ -229,17 +255,17 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
       }
       resizeObserver = new ResizeObserver(reposition);
       resizeObserver.observe(liveTarget);
-    } else if (!step.keepTooltipPosition) {
+    } else if (!keepPos) {
       positionFloating(step.tooltipPosition);
     }
 
     if (isHandoff) {
       handoffEngaged = true;
-      lastWrittenSurface = step.handoff.nextSurface;
+      handoffTarget = step.handoff.nextSurface;
       await setTourProgress(step.handoff.nextSurface, step.handoff.nextStepIndex ?? 0);
     } else {
       handoffEngaged = false;
-      lastWrittenSurface = surface;
+      handoffTarget = null;
       await setTourProgress(surface, index);
     }
   }
@@ -253,6 +279,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (advanceClickCleanup) { advanceClickCleanup(); advanceClickCleanup = null; }
     if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null; }
     document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+    document.body.classList.remove('tour-drill-step');
     if (document.body.classList.contains('tour-modal-step')) {
       document.body.classList.remove('tour-modal-step');
       document.dispatchEvent(new CustomEvent('tour:modal-step-leave'));
@@ -279,10 +306,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (newState.completed && !oldState.completed) return closeQuietly();
     const newSurface = newState.inProgress?.surface;
     if (!newSurface || newSurface === surface) return;
-    if (newSurface === lastWrittenSurface) {
-      lastWrittenSurface = null;
-      return;
-    }
+    if (newSurface === handoffTarget) return;
     closeQuietly();
   }
 
@@ -292,6 +316,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (advanceClickCleanup) { advanceClickCleanup(); advanceClickCleanup = null; }
     if (resizeObserver) { resizeObserver.disconnect(); resizeObserver = null; }
     document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+    document.body.classList.remove('tour-drill-step');
     if (document.body.classList.contains('tour-modal-step')) {
       document.body.classList.remove('tour-modal-step');
       document.dispatchEvent(new CustomEvent('tour:modal-step-leave'));
@@ -315,7 +340,11 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
 
   showStep(startIndex);
 
-  return { stop: () => finish(true) };
+  return {
+    stop: () => finish(true),
+    goto: (index) => { if (!stopped) showStep(index); },
+    getIndex: () => currentIndex,
+  };
 }
 
 export async function autoStartIfMatches(surface, steps, options = {}) {

@@ -2,7 +2,7 @@ import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.j
 import { formatWithSmallSub, STAT_LABELS, escapeHtml, CHART_LEGEND_HTML } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
-import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
+import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
@@ -187,7 +187,7 @@ initDrill({
   render,
 });
 
-loadAndRender();
+const loadAndRenderPromise = loadAndRender();
 
 window.addEventListener('pageshow', () => {
   hideBriefSubpages = sessionStorage.getItem('hideBrief') !== 'false';
@@ -470,6 +470,13 @@ function renderSubpages(range) {
   document.querySelector('#subpages-count').textContent = `${merged.length} page${merged.length !== 1 ? 's' : ''}`;
 }
 
+function ensureDrillOpen() {
+  if (isInDrillMode()) return;
+  const days = Object.keys(byDayCache ?? {}).sort();
+  const pick = days[days.length - 1];
+  if (pick) enterDrill(pick, null, 'time');
+}
+
 const siteTourSteps = [
   {
     selector: '#site-title',
@@ -497,6 +504,37 @@ const siteTourSteps = [
     body: 'Your typical browsing pattern on this site across the 24 hours of the day.',
   },
   {
+    selector: '#time-chart-container',
+    title: 'Drill into a day',
+    body: 'Click any day in the time chart to see hourly detail for that single day.',
+    advanceOn: 'click',
+  },
+  {
+    selector: '#drill-chart-wrapper',
+    title: 'Daily detail',
+    body: 'This shows the activity for the chosen day in finer granularity.',
+    drillStep: true,
+    onEnter: ensureDrillOpen,
+    onExit: ({ direction }) => {
+      if (direction === 'backward' && isInDrillMode()) exitDrillCompletely();
+    },
+  },
+  {
+    selector: '#drill-controls',
+    title: 'Navigate and switch metric',
+    body: 'Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
+    drillStep: true,
+    onEnter: ensureDrillOpen,
+  },
+  {
+    selector: '#nav-close',
+    title: 'Back to overview',
+    body: 'Click Overview to leave drill mode and return to the full range.',
+    advanceOn: 'click',
+    drillStep: true,
+    onEnter: ensureDrillOpen,
+  },
+  {
     selector: '#subpages-container',
     title: 'Page activity',
     body: 'Every subpage under this site. Click a row to drill into a subpage.',
@@ -504,4 +542,4 @@ const siteTourSteps = [
   },
 ];
 
-autoStartIfMatches('site', siteTourSteps);
+loadAndRenderPromise.then(() => autoStartIfMatches('site', siteTourSteps));

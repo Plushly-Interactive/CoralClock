@@ -353,6 +353,10 @@ async function runDelete() {
   await renderStorageBar();
 }
 
+async function ensureScanRan() {
+  if (resultsSection.hasAttribute('hidden')) await runScan();
+}
+
 const pruningTourSteps = [
   {
     selector: '#intro',
@@ -374,11 +378,13 @@ const pruningTourSteps = [
     selector: '#results-section',
     title: 'Review',
     body: 'Insignificant entries appear here, grouped by store. You can untick rows you want to keep.',
+    onEnter: ensureScanRan,
   },
   {
     selector: '#delete-btn',
     title: 'Delete selected',
     body: 'When you are ready, clicking Delete selected would remove the ticked entries. We won\'t actually run it during the tour.',
+    onEnter: ensureScanRan,
   },
   {
     selector: '#back-btn',

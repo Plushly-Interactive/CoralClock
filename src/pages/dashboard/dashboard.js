@@ -405,6 +405,7 @@ async function maybeEnableMockMode() {
 }
 
 let isTourRunning = false;
+let currentTourHandle = null;
 
 async function startDashboardTour(startIndex = 0) {
   if (isTourRunning) return;
@@ -418,12 +419,13 @@ async function startDashboardTour(startIndex = 0) {
       await loadAndRender();
     }
   }
-  runTour({
+  currentTourHandle = runTour({
     surface: 'dashboard',
     steps: dashboardTourSteps,
     startIndex,
     onClose: () => {
       isTourRunning = false;
+      currentTourHandle = null;
       clearMockModeCache();
     },
   });
@@ -431,13 +433,26 @@ async function startDashboardTour(startIndex = 0) {
 
 tourBtn.addEventListener('click', () => startDashboardTour(0));
 
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState !== 'visible') return;
-  if (isTourRunning) return;
+async function checkResume() {
   const state = await readTourState();
-  if (state.inProgress?.surface === 'dashboard') {
-    startDashboardTour(state.inProgress.stepIndex || 0);
+  if (state.inProgress?.surface !== 'dashboard') return;
+  const wantedIndex = state.inProgress.stepIndex || 0;
+  if (currentTourHandle) {
+    if (currentTourHandle.getIndex() !== wantedIndex) {
+      currentTourHandle.goto(wantedIndex);
+    }
+  } else if (!isTourRunning) {
+    startDashboardTour(wantedIndex);
   }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkResume();
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  if (changes.tourAdvanceRequest) checkResume();
 });
 
 (async () => {

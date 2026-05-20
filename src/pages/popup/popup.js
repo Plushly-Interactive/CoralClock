@@ -11,6 +11,7 @@ document.querySelector('#dashboard-btn').addEventListener('click', async () => {
     const dashboardUrl = chrome.runtime.getURL('src/pages/dashboard/dashboard.html');
     const existing = await chrome.tabs.query({ url: `${dashboardUrl}*` });
     if (existing.length > 0) {
+      await chrome.storage.local.set({ tourAdvanceRequest: Date.now() });
       await chrome.tabs.update(existing[0].id, { active: true });
       await chrome.windows.update(existing[0].windowId, { focused: true });
       window.close();
