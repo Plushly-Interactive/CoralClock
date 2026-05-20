@@ -5,6 +5,7 @@ import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
+import { runTour, readTourState } from '../../shared/tour.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 document.querySelector('#prune-btn').addEventListener('click', () => {
@@ -322,3 +323,45 @@ function render() {
   renderTopChart();
   renderTable(sortedRows());
 }
+
+const tourBtn = document.querySelector('#tour-btn');
+
+const dashboardTourSteps = [
+  {
+    selector: '#tour-btn',
+    title: 'Welcome to BiteGuard',
+    body: 'This guided tour will walk you through each surface. You can skip it any time with Esc or the Skip button.',
+  },
+  {
+    selector: '#header-center',
+    title: 'Time range',
+    body: 'Choose a time range here. All charts and the table update to match.',
+  },
+  {
+    selector: '#top-chart-container',
+    title: 'Top sites',
+    body: 'Your five most-active sites for the selected range.',
+  },
+  {
+    selector: '#dashboard-table-col',
+    title: 'All browsed sites',
+    body: 'Every site you visited in this range, with active time, audio playback and visit counts. Click a row to see per-day detail.',
+  },
+];
+
+function startDashboardTour() {
+  runTour({
+    surface: 'dashboard',
+    steps: dashboardTourSteps,
+    onClose: () => { tourBtn.textContent = 'Replay tour'; },
+  });
+}
+
+(async () => {
+  const state = await readTourState();
+  tourBtn.textContent = state.completed ? 'Replay tour' : 'Tour';
+  tourBtn.addEventListener('click', startDashboardTour);
+  if (new URLSearchParams(location.search).get('tour') === '1') {
+    startDashboardTour();
+  }
+})();

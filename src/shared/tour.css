@@ -1,0 +1,64 @@
+#tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: auto;
+  background: transparent;
+}
+
+#tour-spotlight {
+  position: fixed;
+  z-index: 2001;
+  border-radius: 6px;
+  pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  transition: top 0.15s, left 0.15s, width 0.15s, height 0.15s;
+}
+
+#tour-tooltip {
+  position: fixed;
+  z-index: 2002;
+  max-width: 320px;
+  padding: 14px 16px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-modal);
+  font-size: var(--font-base);
+}
+
+#tour-tooltip-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--color-accent);
+}
+
+#tour-tooltip-body {
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+#tour-tooltip-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#tour-step-counter {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  margin-right: auto;
+}
+
+#tour-skip-btn {
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid transparent;
+}
+
+#tour-skip-btn:hover {
+  color: var(--color-accent);
+  border-color: var(--color-border);
+}
