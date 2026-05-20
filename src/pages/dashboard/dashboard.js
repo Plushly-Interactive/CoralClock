@@ -5,7 +5,7 @@ import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
-import { runTour, readTourState } from '../../shared/tour.js';
+import { runTour, readTourState, clearTourProgress } from '../../shared/tour.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 document.querySelector('#prune-btn').addEventListener('click', () => {
@@ -345,14 +345,28 @@ const dashboardTourSteps = [
   {
     selector: '#dashboard-table-col',
     title: 'All browsed sites',
-    body: 'Every site you visited in this range, with active time, audio playback and visit counts. Click a row to see per-day detail.',
+    body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
+  },
+  {
+    title: 'Open the popup',
+    body: 'Click the BiteGuard icon in your browser toolbar to continue the tour.',
+    tooltipPosition: 'top-right',
+    arrow: 'up',
+    handoff: { nextSurface: 'popup', mode: 'crossDocument' },
+  },
+  {
+    selector: '#dashboard-table-col',
+    title: 'See site details',
+    body: 'Click any row in the table to drill into a site and see per-day detail.',
+    handoff: { nextSurface: 'site', mode: 'inPage' },
   },
 ];
 
-function startDashboardTour() {
+function startDashboardTour(startIndex = 0) {
   runTour({
     surface: 'dashboard',
     steps: dashboardTourSteps,
+    startIndex,
     onClose: () => { tourBtn.textContent = 'Replay tour'; },
   });
 }
@@ -360,8 +374,13 @@ function startDashboardTour() {
 (async () => {
   const state = await readTourState();
   tourBtn.textContent = state.completed ? 'Replay tour' : 'Tour';
-  tourBtn.addEventListener('click', startDashboardTour);
+  tourBtn.addEventListener('click', () => startDashboardTour(0));
   if (new URLSearchParams(location.search).get('tour') === '1') {
-    startDashboardTour();
+    await clearTourProgress();
+    startDashboardTour(0);
+    return;
+  }
+  if (state.inProgress?.surface === 'dashboard') {
+    startDashboardTour(state.inProgress.stepIndex || 0);
   }
 })();

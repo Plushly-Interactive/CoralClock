@@ -34,7 +34,7 @@ const SPOTLIGHT_PADDING = 6;
 const TOOLTIP_MARGIN = 12;
 const VIEWPORT_MARGIN = 8;
 
-export function runTour({ surface, steps, onClose }) {
+export function runTour({ surface, steps, startIndex = 0, onClose }) {
   if (!steps || steps.length === 0) return { stop: () => {} };
 
   const overlay = document.createElement('div');
@@ -46,6 +46,7 @@ export function runTour({ surface, steps, onClose }) {
   const tooltip = document.createElement('div');
   tooltip.id = 'tour-tooltip';
   tooltip.innerHTML = `
+    <div id="tour-tooltip-arrow"></div>
     <div id="tour-tooltip-title"></div>
     <div id="tour-tooltip-body"></div>
     <div id="tour-tooltip-footer">
@@ -68,17 +69,22 @@ export function runTour({ surface, steps, onClose }) {
   let currentIndex = 0;
   let currentStep = null;
   let stopped = false;
+  let handoffEngaged = false;
+  let lastWrittenSurface = null;
 
-  function positionFor(target) {
+  function positionFor(target, { moveTooltip = true } = {}) {
     const rect = target.getBoundingClientRect();
     const top = rect.top - SPOTLIGHT_PADDING;
     const left = rect.left - SPOTLIGHT_PADDING;
     const width = rect.width + SPOTLIGHT_PADDING * 2;
     const height = rect.height + SPOTLIGHT_PADDING * 2;
+    spotlight.style.display = '';
     spotlight.style.top = `${top}px`;
     spotlight.style.left = `${left}px`;
     spotlight.style.width = `${width}px`;
     spotlight.style.height = `${height}px`;
+
+    if (!moveTooltip) return;
 
     const tipRect = tooltip.getBoundingClientRect();
     const vh = window.innerHeight;
@@ -97,10 +103,31 @@ export function runTour({ surface, steps, onClose }) {
     tooltip.style.left = `${tipLeft}px`;
   }
 
+  function positionFloating(position) {
+    spotlight.style.display = 'none';
+    const tipRect = tooltip.getBoundingClientRect();
+    const vw = window.innerWidth;
+    let tipTop = VIEWPORT_MARGIN;
+    let tipLeft;
+    if (position === 'top-right') {
+      tipLeft = vw - tipRect.width - VIEWPORT_MARGIN;
+    } else if (position === 'top-left') {
+      tipLeft = VIEWPORT_MARGIN;
+    } else {
+      tipLeft = vw / 2 - tipRect.width / 2;
+    }
+    tooltip.style.top = `${tipTop}px`;
+    tooltip.style.left = `${tipLeft}px`;
+  }
+
   function reposition() {
     if (!currentStep) return;
-    const target = document.querySelector(currentStep.selector);
-    if (target) positionFor(target);
+    if (currentStep.selector) {
+      const target = document.querySelector(currentStep.selector);
+      if (target) positionFor(target, { moveTooltip: !currentStep.keepTooltipPosition });
+    } else if (!currentStep.keepTooltipPosition) {
+      positionFloating(currentStep.tooltipPosition);
+    }
   }
 
   async function showStep(index) {
@@ -109,10 +136,13 @@ export function runTour({ surface, steps, onClose }) {
     if (index < 0) index = 0;
 
     const step = steps[index];
-    const target = document.querySelector(step.selector);
-    if (!target) {
-      currentIndex = index;
-      return showStep(index + 1);
+
+    if (step.selector) {
+      const target = document.querySelector(step.selector);
+      if (!target) {
+        currentIndex = index;
+        return showStep(index + 1);
+      }
     }
 
     if (currentStep && currentStep.onExit) {
@@ -129,13 +159,32 @@ export function runTour({ surface, steps, onClose }) {
     bodyEl.textContent = step.body || '';
     counterEl.textContent = `${index + 1} / ${steps.length}`;
     prevBtn.disabled = index === 0;
+
+    const isHandoff = !!step.handoff;
+    const handoffMode = step.handoff?.mode;
+    nextBtn.style.display = isHandoff ? 'none' : '';
     nextBtn.textContent = index === steps.length - 1 ? 'Finish' : 'Next';
 
-    const liveTarget = document.querySelector(step.selector);
-    if (!liveTarget) return showStep(index + 1);
-    positionFor(liveTarget);
+    overlay.classList.toggle('non-blocking', handoffMode === 'inPage');
+    tooltip.classList.toggle('has-arrow-up', step.arrow === 'up');
 
-    await setTourProgress(surface, index);
+    if (step.selector) {
+      const liveTarget = document.querySelector(step.selector);
+      if (!liveTarget) return showStep(index + 1);
+      positionFor(liveTarget, { moveTooltip: !step.keepTooltipPosition });
+    } else if (!step.keepTooltipPosition) {
+      positionFloating(step.tooltipPosition);
+    }
+
+    if (isHandoff) {
+      handoffEngaged = true;
+      lastWrittenSurface = step.handoff.nextSurface;
+      await setTourProgress(step.handoff.nextSurface, step.handoff.nextStepIndex ?? 0);
+    } else {
+      handoffEngaged = false;
+      lastWrittenSurface = surface;
+      await setTourProgress(surface, index);
+    }
   }
 
   async function finish(skipped) {
@@ -147,15 +196,45 @@ export function runTour({ surface, steps, onClose }) {
     window.removeEventListener('scroll', reposition, true);
     window.removeEventListener('resize', reposition);
     document.removeEventListener('keydown', onKeydown);
+    chrome.storage.onChanged.removeListener(onStorageChanged);
     overlay.remove();
     spotlight.remove();
     tooltip.remove();
-    await markTourCompleted();
+    if (skipped || !handoffEngaged) {
+      await markTourCompleted();
+    }
     if (onClose) onClose({ skipped });
   }
 
   function onKeydown(e) {
     if (e.key === 'Escape') finish(true);
+  }
+
+  function onStorageChanged(changes, area) {
+    if (area !== 'local' || !changes[TOUR_KEY]) return;
+    const oldState = { ...DEFAULT_STATE, ...(changes[TOUR_KEY].oldValue || {}) };
+    const newState = { ...DEFAULT_STATE, ...(changes[TOUR_KEY].newValue || {}) };
+    if (newState.completed && !oldState.completed) return closeQuietly();
+    const newSurface = newState.inProgress?.surface;
+    if (!newSurface || newSurface === surface) return;
+    if (newSurface === lastWrittenSurface) {
+      lastWrittenSurface = null;
+      return;
+    }
+    closeQuietly();
+  }
+
+  function closeQuietly() {
+    if (stopped) return;
+    stopped = true;
+    window.removeEventListener('scroll', reposition, true);
+    window.removeEventListener('resize', reposition);
+    document.removeEventListener('keydown', onKeydown);
+    chrome.storage.onChanged.removeListener(onStorageChanged);
+    overlay.remove();
+    spotlight.remove();
+    tooltip.remove();
+    if (onClose) onClose({ skipped: false, quiet: true });
   }
 
   prevBtn.addEventListener('click', () => showStep(currentIndex - 1));
@@ -164,8 +243,20 @@ export function runTour({ surface, steps, onClose }) {
   window.addEventListener('scroll', reposition, true);
   window.addEventListener('resize', reposition);
   document.addEventListener('keydown', onKeydown);
+  chrome.storage.onChanged.addListener(onStorageChanged);
 
-  showStep(0);
+  showStep(startIndex);
 
   return { stop: () => finish(true) };
+}
+
+export async function autoStartIfMatches(surface, steps, options = {}) {
+  const state = await readTourState();
+  if (state.inProgress?.surface !== surface) return null;
+  return runTour({
+    surface,
+    steps,
+    startIndex: state.inProgress.stepIndex || 0,
+    ...options,
+  });
 }

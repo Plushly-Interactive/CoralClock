@@ -1,4 +1,5 @@
 import { formatMs } from '../../shared/timeUtils.js';
+import { autoStartIfMatches } from '../../shared/tour.js';
 
 const addBtn = document.querySelector('#add-btn');
 const formTarget = document.querySelector('#form-target');
@@ -142,3 +143,25 @@ themeDropdown.querySelectorAll('button').forEach(btn => {
     themeDropdown.classList.remove('open');
   });
 });
+
+const popupTourSteps = [
+  {
+    selector: '#brand',
+    title: 'The popup',
+    body: 'You can open this popup from your browser toolbar at any time to manage rules.',
+  },
+  {
+    selector: '#add-btn',
+    title: 'Add a rule',
+    body: 'Click here to add a rule that limits your time on a specific site.',
+    keepTooltipPosition: true,
+  },
+  {
+    selector: '#dashboard-btn',
+    title: 'Back to the dashboard',
+    body: 'Click Dashboard to return there and continue the tour.',
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 5, mode: 'inPage' },
+  },
+];
+
+autoStartIfMatches('popup', popupTourSteps);

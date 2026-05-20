@@ -6,6 +6,10 @@
   background: transparent;
 }
 
+#tour-overlay.non-blocking {
+  pointer-events: none;
+}
+
 #tour-spotlight {
   position: fixed;
   z-index: 2001;
@@ -26,6 +30,34 @@
   border-radius: 6px;
   box-shadow: var(--shadow-modal);
   font-size: var(--font-base);
+}
+
+#tour-tooltip-arrow {
+  display: none;
+  position: absolute;
+  top: -10px;
+  right: 24px;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid var(--color-border);
+}
+
+#tour-tooltip-arrow::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: -8px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid var(--color-bg);
+}
+
+#tour-tooltip.has-arrow-up #tour-tooltip-arrow {
+  display: block;
 }
 
 #tour-tooltip-title {

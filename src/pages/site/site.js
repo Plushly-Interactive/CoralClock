@@ -7,6 +7,7 @@ import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.j
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
+import { autoStartIfMatches } from '../../shared/tour.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -467,3 +468,39 @@ function renderSubpages(range) {
   }
   document.querySelector('#subpages-count').textContent = `${merged.length} page${merged.length !== 1 ? 's' : ''}`;
 }
+
+const siteTourSteps = [
+  {
+    selector: '#site-title',
+    title: 'Site details',
+    body: 'This page shows everything BiteGuard tracks for a single site. The site name and ID are shown here.',
+  },
+  {
+    selector: '#time-chart-container',
+    title: 'Time spent',
+    body: 'Active browsing time and audio playback on this site, per day in the selected range.',
+  },
+  {
+    selector: '#stats-container',
+    title: 'Overview',
+    body: 'Aggregate stats for the range: daily average, peak day, total time and more.',
+  },
+  {
+    selector: '#visits-chart-container',
+    title: 'Visits',
+    body: 'Number of separate visits to this site per day.',
+  },
+  {
+    selector: '#hourly-chart-container',
+    title: 'Average per clock hour',
+    body: 'Your typical browsing pattern on this site across the 24 hours of the day.',
+  },
+  {
+    selector: '#subpages-container',
+    title: 'Page activity',
+    body: 'Every subpage under this site. Click a row to drill into a subpage.',
+    handoff: { nextSurface: 'path', mode: 'inPage' },
+  },
+];
+
+autoStartIfMatches('site', siteTourSteps);
