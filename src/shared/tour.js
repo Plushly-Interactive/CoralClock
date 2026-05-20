@@ -297,7 +297,22 @@ export function runTour({ surface, steps, startIndex = 0, onClose }) {
     if (onClose) onClose({ skipped });
   }
 
-  function onKeydown(_e) {}
+  function onKeydown(e) {
+    const tag = e.target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (!currentStep) return;
+    const advanceOnClick = currentStep.advanceOn === 'click';
+    const isHandoff = !!currentStep.handoff;
+    if (e.key === 'ArrowRight' || e.key === 'Enter') {
+      if (advanceOnClick || isHandoff) return;
+      e.preventDefault();
+      showStep(currentIndex + 1);
+    } else if (e.key === 'ArrowLeft') {
+      if (currentIndex === 0) return;
+      e.preventDefault();
+      showStep(currentIndex - 1);
+    }
+  }
 
   function onStorageChanged(changes, area) {
     if (area !== 'local' || !changes[TOUR_KEY]) return;
