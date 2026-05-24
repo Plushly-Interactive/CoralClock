@@ -130,11 +130,11 @@ Existing rules without `mode` are backfilled to `active`.
 
 Smallest shippable slice first:
 
-1. **Schema + form** — add `matchType` and `mode` to the rule shape, the popup form, and the rule-list render. Add the `v3→v4` migration backfilling both fields. No blocking behavior yet.
-2. **Limit checker** — `computeOverage(rules, { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour }, now)`. Wire into the flush alarm but only `console.log` the overage set for verification.
-3. **DNR publisher** — diff overage sets, call `updateDynamicRules`, redirect to `blocked.html`. First real blocking; verify in browser per match type.
-4. **`blocked.html` polish** — read `?rule=&site=&path=`, show which limit was hit and when it resets. Supersedes the current `?host=` param.
-5. **Navigation-time short-circuit** *(optional, v1.1)* — `webNavigation.onBeforeNavigate` consults a cached overage set to block immediately rather than waiting for the next flush.
+1. ✅ **Schema + form** — `matchType` and `mode` on the rule shape, the rules-page form, and the rule-list render; `v3→v4` migration backfills both. No blocking behavior.
+2. ✅ **Limit checker** — pure `computeOverage(rules, { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour }, now)`, wired into the flush alarm.
+3. ✅ **DNR publisher** — `publishOverage` diffs the overage set against `getDynamicRules` and calls `updateDynamicRules`, redirecting matches to `blocked.html`. First real blocking.
+4. ✅ **`blocked.html` polish** — reads `?rule=&site=&path=`; shows the blocked target, the limit (`<limit> per <period>`), and when the window next resets (local time, calendar-week aware), plus a "Manage rules" link. The inline script was moved to `blocked.js` (MV3 CSP forbids inline scripts).
+5. ~~**Navigation-time short-circuit**~~ — **dropped.** Consulting the *cached* overage set at nav time is redundant: the DNR rules from the last `publishOverage` already block matching navigations. The only value would be catching a mid-flush-window crossing ~1 min sooner, which requires a live-usage-aware check (flushed storage + the tracker's in-memory pending ranges) — a second matching path to keep consistent with `computeOverage`, not worth the complexity for a sub-minute overshoot. Revisit only if the ≤1-flush delay proves a problem in practice; a cheaper mitigation is shortening the flush interval.
 
 ## Edge cases
 

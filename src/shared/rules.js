@@ -3,6 +3,7 @@ import { formatMs } from './timeUtils.js';
 export const RULE_MULTIPLIERS = { minutes: 60000, hours: 3600000, days: 86400000 };
 
 const MODE_LABELS = { active: 'active', audio: 'audio', 'active+audio': 'active + audio' };
+const SCOPE_LABELS = { host: 'This host only', subdomain: 'Whole site', pathPrefix: 'A specific page' };
 
 function matchLabel(rule) {
   if (rule.matchType === 'subdomain') return `*.${rule.target}`;
@@ -81,7 +82,7 @@ export function renderRuleList(listEl, rules) {
     <li class="${rule.enabled ? '' : 'disabled'}">
       <div class="rule-info">
         <strong>${matchLabel(rule)}</strong>
-        <span>${formatMs(limitMs)} per ${rule.period} · ${MODE_LABELS[rule.mode]}</span>
+        <span>${SCOPE_LABELS[rule.matchType]} · ${formatMs(limitMs)} per ${rule.period} · ${MODE_LABELS[rule.mode]}</span>
       </div>
       <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
       <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>

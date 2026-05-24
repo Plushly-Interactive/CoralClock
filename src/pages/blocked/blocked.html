@@ -19,11 +19,17 @@
       }
       h1 { font-size: 2rem; margin-bottom: 8px; }
       p { color: var(--color-text-secondary); margin: 0; }
+      #detail { margin-top: 12px; max-width: 32rem; text-align: center; }
+      #reset { margin-top: 4px; }
+      #manage-link { margin-top: 24px; }
     </style>
   </head>
   <body>
     <h1>🦈 Time's up</h1>
     <p id="msg">You've reached your limit.</p>
-    <script src="./blocked.js"></script>
+    <p id="detail" class="text-meta" hidden></p>
+    <p id="reset" class="text-meta" hidden></p>
+    <a id="manage-link" class="btn" href="../rules/rules.html">Manage rules</a>
+    <script type="module" src="./blocked.js"></script>
   </body>
 </html>
