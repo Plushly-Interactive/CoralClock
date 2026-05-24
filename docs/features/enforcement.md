@@ -83,7 +83,7 @@ flowchart TD
   dnr --> blocked
 ```
 
-1. **Limit checker** — runs at the end of each flush alarm. For each enabled rule: compute the period window (`hour` → current `hourKey`; `day` → today's `dayKey`; `week` → last 7 `dayKey`s), sum the matching usage over that window (see [Matching against tracking data](#matching-against-tracking-data)), apply the mode formula, compare to `limit × unitMultiplier`. Produces the overage set: `Map<ruleId, { target, matchType, path, overBy }>`. Pure and unit-testable — no chrome APIs.
+1. **Limit checker** — runs at the end of each flush alarm. For each enabled rule: compute the period window (`hour` → current `hourKey`; `day` → today's `dayKey`; `week` → the `dayKey`s from this Monday through today, a calendar week that resets at the week boundary), sum the matching usage over that window (see [Matching against tracking data](#matching-against-tracking-data)), apply the mode formula, compare to `limit × unitMultiplier`. Produces the overage set: `Map<ruleId, { target, matchType, path, overBy }>`. Pure and unit-testable — no chrome APIs.
 2. **DNR publisher** — diffs the new overage set against the previously published one. Added entries register a dynamic redirect rule to `blocked.html?rule=<id>&site=<host>&path=<path>`; removed entries are deleted. Uses `chrome.declarativeNetRequest.updateDynamicRules`. `urlFilter` shape per match type:
    - `host` → `regexFilter: ^https?://<target>(?:/|$)` (RE2). DNR's `||` domain anchor and `requestDomains` are both subdomain-inclusive by design ([Chrome docs](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest)), so an exact-host block is only achievable via an anchored `regexFilter`. The `<target>` dot must be escaped (`reddit\.com`); the host is punycode-encoded for matching.
    - `subdomain` → `urlFilter: ||<target>^` (the natural DNR domain anchor — matches apex + all subdomains).
@@ -148,7 +148,9 @@ Smallest shippable slice first:
 
 - **Popup rework** — the popup adopts `src/shared/rules.js` but keeps its own inline form layout. Reworking it into a launcher that opens the dedicated rules page is deferred. Until then both surfaces write the same `rules` key.
 - **Rules entry-point placement** — the rules page is reached from a button in the dashboard's `#header-left` for now. This is a stopgap; a better-positioned entry point may replace it later.
-- **Regex / arbitrary URL-pattern matching** (`regexFilter`) — only the three structural match types ship.
+- **User-supplied regex matching** — the three structural scopes ship. (The publisher uses `regexFilter` internally for `host`/`pathPrefix`, but users can't enter arbitrary patterns.)
+- **Rolling-7-day week** — `week` is a calendar week (Monday-start, resets at the boundary) for v1, consistent with how `day`/`hour` reset. A rolling 7-day window (sliding daily, matching the dashboard's "Last 7 days") is a deferred variant; revisit if users find the weekly reset surprising.
+- **Week-start user setting** — the calendar week starts on Monday (hardcoded) for v1. A user setting to choose Monday vs Sunday (and any other locale-sensitive week start) is deferred; `windowKeys` in [enforcement.js](../../src/background/enforcement.js) would read it instead of assuming Monday.
 - **Pre-emptive blocking** — predicting a crossing from in-memory tracker state before the flush. Reactive only.
 - **Rule uniqueness validation** — no enforced dedupe of `(target, matchType, period)`. Noted in [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
 - **Target/hostname validation at save time** — malformed targets aren't rejected yet. Noted in [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
