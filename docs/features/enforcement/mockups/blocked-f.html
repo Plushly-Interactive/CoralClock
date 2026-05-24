@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Blocked (mockup F)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg);
+        color: var(--color-text);
+        padding: 24px;
+      }
+      #card {
+        max-width: 24rem;
+        width: 100%;
+        padding: 28px;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+      }
+      #top { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+      #ring {
+        position: relative;
+        width: 56px;
+        height: 56px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        /* progress ring: filled past 100% → solid accent */
+        background: conic-gradient(var(--color-accent) 100%, var(--color-border) 0);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #ring::after {
+        content: "🦈";
+        font-size: 1.4rem;
+        width: 42px; height: 42px;
+        background: var(--color-bg);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+      }
+      #headline { font-size: 1.2rem; }
+      #target { color: var(--color-accent-light); font-weight: 600; font-size: var(--font-md); }
+
+      /* Receipt-style labeled rows. */
+      .row { display: flex; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--color-border); }
+      .row-label { color: var(--color-text-secondary); font-size: var(--font-sm); }
+      .row-value { font-size: var(--font-md); }
+      #manage-link { margin-top: 20px; width: 100%; justify-content: center; }
+    </style>
+  </head>
+  <body>
+    <div id="card">
+      <div id="top">
+        <div id="ring"></div>
+        <div>
+          <div id="headline">Time's up</div>
+          <div id="target">google.com</div>
+        </div>
+      </div>
+
+      <div class="row"><span class="row-label">Spent</span><span class="row-value" id="spent">32m</span></div>
+      <div class="row"><span class="row-label">Limit</span><span class="row-value" id="limit">30m per day</span></div>
+      <div class="row"><span class="row-label">Scope</span><span class="row-value" id="scope">Whole site</span></div>
+      <div class="row"><span class="row-label">Counting</span><span class="row-value" id="mode">active time</span></div>
+      <div class="row"><span class="row-label">Unlocks</span><span class="row-value" id="reset">in 3h 24m</span></div>
+
+      <a id="manage-link" class="btn" href="#">Manage rules</a>
+    </div>
+  </body>
+</html>

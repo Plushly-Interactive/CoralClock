@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Blocked (mockup B)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg);
+        color: var(--color-text);
+      }
+      #card {
+        max-width: 30rem;
+        width: 100%;
+        margin: 16px;
+        padding: 28px;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+      }
+      #head { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+      #head .emoji { font-size: 2rem; }
+      #headline { font-size: 1.4rem; }
+      #target { color: var(--color-accent-light); font-weight: 600; }
+
+      /* Usage vs limit, with an over-limit bar. */
+      #usage-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+      #usage-spent { font-size: var(--font-lg); font-weight: 600; }
+      #bar-track { height: 8px; border-radius: 4px; background: var(--color-border); overflow: hidden; }
+      #bar-fill { height: 100%; width: 100%; background: var(--color-accent); }
+
+      #meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 24px;
+        margin: 24px 0;
+      }
+      .meta-label { font-size: var(--font-sm); color: var(--color-text-secondary); }
+      .meta-value { font-size: var(--font-md); }
+      #actions { display: flex; gap: 10px; }
+    </style>
+  </head>
+  <body>
+    <div id="card">
+      <div id="head">
+        <span class="emoji">🦈</span>
+        <div>
+          <div id="headline">Time's up</div>
+          <div id="target">google.com</div>
+        </div>
+      </div>
+
+      <div id="usage-row">
+        <span id="usage-spent">32m spent</span>
+        <span class="text-meta" id="usage-limit">of 30m limit</span>
+      </div>
+      <div id="bar-track"><div id="bar-fill"></div></div>
+
+      <div id="meta-grid">
+        <div>
+          <div class="meta-label">Scope</div>
+          <div class="meta-value" id="scope">Whole site</div>
+        </div>
+        <div>
+          <div class="meta-label">Counting</div>
+          <div class="meta-value" id="mode">active time</div>
+        </div>
+        <div>
+          <div class="meta-label">Period</div>
+          <div class="meta-value" id="period">per day</div>
+        </div>
+        <div>
+          <div class="meta-label">Resets</div>
+          <div class="meta-value" id="reset">at midnight</div>
+        </div>
+      </div>
+
+      <div id="actions">
+        <a id="manage-link" class="btn" href="#">Manage rules</a>
+        <a id="dashboard-link" class="btn" href="#">View dashboard</a>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Blocked (mockup D)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background: var(--color-bg);
+        color: var(--color-text);
+        padding: 24px;
+      }
+      #shark { font-size: 2.5rem; }
+      #headline { font-size: 1.3rem; margin: 8px 0 2px; }
+      #target { color: var(--color-accent-light); font-weight: 600; margin-bottom: 32px; }
+
+      /* Hero countdown on a calm background. */
+      #countdown-label { font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-secondary); }
+      #countdown { font-size: 3rem; font-weight: 700; line-height: 1.1; color: var(--color-accent-light); }
+
+      /* Usage bar underneath. */
+      #usage { width: 100%; max-width: 24rem; margin: 28px 0; }
+      #usage-row { display: flex; justify-content: space-between; font-size: var(--font-sm); margin-bottom: 6px; }
+      #bar-track { height: 8px; border-radius: 4px; background: var(--color-border); overflow: hidden; }
+      #bar-fill { height: 100%; width: 100%; background: var(--color-accent); }
+      #limit-note { color: var(--color-text-secondary); }
+
+      #manage-link { margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div id="shark">🦈</div>
+    <div id="headline">Time's up on</div>
+    <div id="target">google.com</div>
+
+    <div id="countdown-label">Unlocks in</div>
+    <div id="countdown">3h 24m</div>
+
+    <div id="usage">
+      <div id="usage-row">
+        <span id="usage-spent">32m spent</span>
+        <span class="text-meta" id="usage-limit">30m limit · per day</span>
+      </div>
+      <div id="bar-track"><div id="bar-fill"></div></div>
+    </div>
+
+    <a id="manage-link" class="btn" href="#">Manage rules</a>
+  </body>
+</html>

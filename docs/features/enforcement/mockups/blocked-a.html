@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Blocked (mockup A)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg);
+        color: var(--color-text);
+      }
+      #card {
+        text-align: center;
+        max-width: 28rem;
+        padding: 40px;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        background: var(--color-bg);
+      }
+      #shark { font-size: 3rem; line-height: 1; }
+      #headline { font-size: 1.6rem; margin: 12px 0 4px; }
+      #target { font-size: var(--font-md); color: var(--color-accent-light); font-weight: 600; }
+      #facts {
+        display: flex;
+        justify-content: center;
+        gap: 32px;
+        margin: 28px 0;
+      }
+      .fact-label { display: block; font-size: var(--font-sm); color: var(--color-text-secondary); }
+      .fact-value { font-size: var(--font-lg); font-weight: 600; }
+      #manage-link { margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div id="card">
+      <div id="shark">🦈</div>
+      <h1 id="headline">Time's up</h1>
+      <div id="target">google.com</div>
+
+      <div id="facts">
+        <div>
+          <span class="fact-label">Your limit</span>
+          <span class="fact-value" id="limit">30m / day</span>
+        </div>
+        <div>
+          <span class="fact-label">Unlocks</span>
+          <span class="fact-value" id="reset">at midnight</span>
+        </div>
+      </div>
+
+      <a id="manage-link" class="btn" href="#">Manage rules</a>
+    </div>
+  </body>
+</html>
