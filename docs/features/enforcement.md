@@ -1,85 +1,125 @@
-# Enforcement (planned)
+# Enforcement
 
-## Status
+Blocking sites once they cross a configured limit. BiteGuard already tracks time per site; enforcement reads the existing `rules` and analytics, computes which sites are over their limit, and redirects further requests to a `blocked.html` page until the period rolls over. The enforcement half was implemented in an earlier iteration and deliberately removed during the tracking redesign (see [docs/archive/REDESIGN_ISSUES.md](../archive/REDESIGN_ISSUES.md)); analytics has since stabilized and this rebuilds enforcement on top of it.
 
-The enforcement half of BiteGuard - blocking sites once they cross a configured limit - was implemented in an earlier iteration and **deliberately removed** during the tracking redesign. The legacy storage keys (`timeRecords`, `dailyRecords`) and legacy functions (`checkAndBlock`, `resetPeriod`) are gone. See [docs/archive/REDESIGN_ISSUES.md](archive/REDESIGN_ISSUES.md) for the removal context. Analytics has since been redesigned and is stable; enforcement is the next slot to rebuild.
+## User stories
 
-## What's already in place
+- As a user, I want a site blocked once I exceed my configured limit over the chosen period, so the limit is actually enforced and not just measured.
+- As a user, I want to choose what "time spent" means per rule — focused time, audible time, or both — so background audio and active reading can be limited differently.
+- As a user, I want to limit a bare host (`reddit.com`), all its subdomains (`*.reddit.com`), or a specific path (`reddit.com/r/foo`), so I can scope a limit as broadly or narrowly as I need.
+- As a user, when I hit a block I want to see which limit I hit and when it resets, so the block is understandable rather than abrupt.
 
-These don't need to change:
+## Acceptance criteria
 
-- `declarativeNetRequest` permission in [manifest.json:28](../manifest.json#L28).
-- `src/pages/blocked/blocked.html` exposed as a web-accessible resource ([manifest.json:31-34](../manifest.json#L31-L34)).
-- `rules` storage shape, written by [src/pages/popup/popup.js](../src/pages/popup/popup.js): `{id, target, limit, limitUnit, period, enabled}`.
-- All three accumulators per site - `activeMs`, `audioMs`, `overlapMs` - in `analyticsByDay` / `analyticsByHour`. These are exactly the inputs the planned [three blocking modes](#three-blocking-modes) need (per [docs/archive/TRACKING_REDESIGN.md](archive/TRACKING_REDESIGN.md)).
+- [ ] Adding a rule lets me pick a **match type** (host / subdomain / path) and a **mode** (active / audio / active+audio) alongside target, limit, unit, and period.
+- [ ] A site I have used past its limit over the rule's period redirects to `blocked.html` within one flush cycle (≤ ~1 min).
+- [ ] A `subdomain` rule on `reddit.com` blocks `old.reddit.com`; a `host` rule on `reddit.com` does not.
+- [ ] A `path` rule on `twitch.tv/directory` blocks that path but leaves the rest of `twitch.tv` reachable.
+- [ ] When the period rolls over (usage drops out of the window) or I disable the rule, the block is removed without restarting the browser.
+- [ ] `blocked.html` shows the host/path that was blocked, which limit was hit, and when it resets.
+- [ ] Existing stored rules created before this feature keep working — they behave as `mode: 'active'`, `matchType: 'host'`.
 
-## Missing pieces
+## Scope
 
-1. **No reader of `rules` outside popup.** Background never sees them.
-2. **No `mode` field on rules.** The popup doesn't ask which blocking mode a rule uses, even though analytics support all three.
-3. **No limit checker** - nothing computes "site X has exceeded `rule.limit` over `rule.period`".
-4. **No DNR ruleset publisher** - no `chrome.declarativeNetRequest.updateDynamicRules` call anywhere in the codebase. The permission is declared but unused.
-5. **No redirect to `blocked.html`** - no DNR redirect rule, no `webNavigation` interceptor.
+### Surfaces involved
 
-## Proposed architecture
+| Surface | Role in this feature |
+|---|---|
+| popup | Rule form gains match-type and mode controls; rule list shows them. |
+| background | Reads `rules`, runs the limit checker each flush, publishes DNR rules. |
+| blocked page | Reads query params, shows which limit was hit and reset time. |
+
+### Files likely to change
+
+| File | Change |
+|---|---|
+| `src/pages/popup/popup.html` | Add match-type dropdown and mode dropdown to `#add-form`. |
+| `src/pages/popup/popup.js` | Write `matchType` + `mode` on save; render them in the rule list. |
+| `src/background/background.js` | Wire limit checker + DNR publisher into the flush alarm; read `rules`. |
+| `src/background/enforcement.js` *(new)* | `computeOverage` (pure) + DNR publish/diff helpers. |
+| `src/data/migrations.js` | `v3 → v4`: backfill `mode:'active'` and `matchType:'host'` on every stored rule. |
+| `src/pages/blocked/blocked.html` | Read `?rule=&site=&path=`; show limit + reset time (currently reads `?host=`). |
+
+### Storage / tracking
+
+| Key | Shape | Read by | Written by | Notes |
+|---|---|---|---|---|
+| `rules` | `{ id, target, matchType, limit, limitUnit, period, enabled, mode }` | popup, background | popup, migration | `matchType` + `mode` are new; `v3→v4` migration backfills both. |
+| `analyticsByDay` / `analyticsByHour` | `{ [bucket]: { [host]: { activeMs, audioMs, overlapMs, visits } } }` | limit checker | tracking | Source for `host` / `subdomain` rules. Unchanged. |
+| `subpagesByDay` / `subpagesByHour` | `{ [bucket]: { [host]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }` | limit checker | subpage tracking | Source for `path` rules. Unchanged. |
+| `storageVersion` | `number` | migrations | migrations | Bumped to `4`. |
+
+### What's already in place (no change)
+
+- `declarativeNetRequest` permission ([manifest.json:28](../../manifest.json#L28)) — declared, currently unused.
+- `blocked.html` web-accessible resource ([manifest.json:32](../../manifest.json#L32)).
+- All three accumulators (`activeMs`, `audioMs`, `overlapMs`) per site and per path.
+- The 1-minute `flush` alarm in [background.js](../../src/background/background.js) — the checker hooks onto its tail.
+
+## Architecture
 
 ```mermaid
 flowchart TD
   rules[rules storage]
-  analytics[analyticsByDay / analyticsByHour]
-  checker[Limit checker]
+  analytics[analyticsByDay or analyticsByHour]
+  subpages[subpagesByDay or subpagesByHour]
+  checker[Limit checker computeOverage]
   publisher[DNR ruleset publisher]
-  dnr[chrome.declarativeNetRequest dynamic rules]
+  dnr[declarativeNetRequest dynamic rules]
   blocked[blocked.html]
 
   rules --> checker
   analytics --> checker
+  subpages --> checker
   checker --> publisher
   publisher --> dnr
   dnr --> blocked
 ```
 
-1. **Limit checker** - runs at the end of each flush alarm (1 min) in `background.js`. For each enabled rule:
-   - Compute the relevant period window (e.g. `period=day` -> today's `dayKey`; `period=hour` -> current `hourKey`; `period=week` -> last 7 `dayKey`s).
-   - Apply the rule's `mode` formula on the aggregates over that window.
-   - Compare to `rule.limit * unitMultiplier(rule.limitUnit)`.
-   - Produce the **overage set**: list of `siteId`s currently over their limit (with which `rule.id`).
-2. **DNR ruleset publisher** - diff the new overage set against the previously-published one. For added entries, register a dynamic DNR rule of the form *"redirect requests matching `rule.target` to `blocked.html?rule=<id>&site=<siteId>`"*. For removed entries (limit no longer exceeded - period rolled over, rule disabled), remove the matching rule. Use `chrome.declarativeNetRequest.updateDynamicRules`.
-3. **Period boundaries** - when the local clock crosses an hour / day / week boundary the overage set may shrink (previous window's usage drops out). The flush alarm fires every minute regardless, so the checker picks this up on the next tick. No special boundary handler needed.
-4. **Popup `mode` control** - add a dropdown to the add-form for `active` / `audio` / `active+audio`. Default to `active`. Existing rules without `mode` default to `active` on read.
+1. **Limit checker** — runs at the end of each flush alarm. For each enabled rule: compute the period window (`hour` → current `hourKey`; `day` → today's `dayKey`; `week` → last 7 `dayKey`s), read the matching source (analytics for host/subdomain, subpages for path), apply the mode formula, compare to `limit × unitMultiplier`. Produces the overage set: `Map<ruleId, { target, matchType, path, overBy }>`. Pure and unit-testable — no chrome APIs.
+2. **DNR publisher** — diffs the new overage set against the previously published one. Added entries register a dynamic redirect rule to `blocked.html?rule=<id>&site=<host>&path=<path>`; removed entries are deleted. Uses `chrome.declarativeNetRequest.updateDynamicRules`. `urlFilter` shape per match type:
+   - `host` → `||<target>^` scoped so subdomains do not match.
+   - `subdomain` → domain-anchored filter matching `<target>` and `*.<target>`.
+   - `path` → `||<host><path>`.
+3. **Period boundaries** — the flush alarm fires every minute regardless, so a rolled-over window shrinks the overage set on the next tick. No special boundary handler.
 
-### Three blocking modes
+### Blocking modes
 
 | Mode | Formula | Behavior |
 |---|---|---|
-| `active` | `activeMs` | Counts time the site was in the focused window. |
-| `audio` | `audioMs` | Counts time the site had an audible, unmuted tab - regardless of focus. |
-| `active+audio` | `activeMs + audioMs - overlapMs` | Union of both - useful for "background podcasts shouldn't count, but reading the article should." |
+| `active` | `activeMs` | Time the site was in the focused window. |
+| `audio` | `audioMs` | Time the site had an audible, unmuted tab, regardless of focus. |
+| `active+audio` | `activeMs + audioMs − overlapMs` | Union of both — "background podcasts shouldn't count, but reading the article should." |
 
-## Design decisions to resolve
-
-- **Alarm-tick vs navigation-time checking.** Alarm tick (1 min) is simple but lets a tab cross the limit and stay open until the next flush. Adding a `webNavigation.onBeforeNavigate` short-circuit that consults a cached overage set is small and gives instant blocking on new tabs. Recommendation: alarm tick first, navigation hook second.
-- **Pre-emptive vs reactive blocking within a flush window.** Reactive (block once the post-flush totals cross the limit) is one line of logic. Pre-emptive (predict crossing from in-memory tracker state and block before the flush) is more code. Recommendation: reactive.
-- **Subdomain matching** - `*.reddit.com`. DNR `urlFilter` supports this natively. Defer to v2.
-- **Path-scoped limits** - `reddit.com/r/foo`. Requires moving from domain-level to URL-filter DNR rules and consulting `subpagesByDay/Hour` instead of `analyticsByDay/Hour`. Defer to v2 (already noted in [docs/subpage-tracking/TODO.md](subpage-tracking/TODO.md)).
-- **Rule uniqueness** - no two rules with same `(target, period)`. Validate in popup form on save.
-- **Target validation** - reject malformed hostnames at save time. Listed in [docs/ideas/IDEAS.md](ideas/IDEAS.md).
-- **Migration of existing `rules`** - if any users have stored rules without a `mode` field, the limit checker defaults to `mode='active'` on read. A migration in [src/data/migrations.js](../src/data/migrations.js) could backfill the field for cleanliness.
+Existing rules without `mode` are backfilled to `active`.
 
 ## Implementation order
 
 Smallest shippable slice first:
 
-1. **Add `mode` field to the rule schema** (popup form + storage migration). No behavior change yet.
-2. **Limit checker** - pure function `computeOverage(rules, analytics, now) -> Map<ruleId, {siteId, overBy}>`. Unit-testable, no chrome APIs. Wire into the flush alarm but **don't publish** anywhere yet - just `console.log` for verification.
-3. **DNR publisher** - diff overage sets, call `updateDynamicRules`. Targets only redirect to `blocked.html`. Verify in browser.
-4. **`blocked.html` polish** - read query params (`rule`, `site`), show which limit was hit and when it resets.
-5. **Navigation-time short-circuit** (optional v1.1) - `webNavigation.onBeforeNavigate` consults the cached overage set to block immediately rather than waiting for DNR re-evaluation.
-6. **v2 work** - subdomain matching, path-scoped limits, rule uniqueness, target validation.
+1. **Schema + form** — add `matchType` and `mode` to the rule shape, the popup form, and the rule-list render. Add the `v3→v4` migration backfilling both fields. No blocking behavior yet.
+2. **Limit checker** — `computeOverage(rules, { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour }, now)`. Wire into the flush alarm but only `console.log` the overage set for verification.
+3. **DNR publisher** — diff overage sets, call `updateDynamicRules`, redirect to `blocked.html`. First real blocking; verify in browser per match type.
+4. **`blocked.html` polish** — read `?rule=&site=&path=`, show which limit was hit and when it resets. Supersedes the current `?host=` param.
+5. **Navigation-time short-circuit** *(optional, v1.1)* — `webNavigation.onBeforeNavigate` consults a cached overage set to block immediately rather than waiting for the next flush.
+
+## Edge cases
+
+- **Legacy rule with no `mode`/`matchType`** → migration backfills `active`/`host`; readers can assume the full shape afterward, no defensive defaults.
+- **Period rolls over mid-session** → next flush tick recomputes a smaller overage set and the publisher removes the stale DNR rule.
+- **Rule disabled while over limit** → checker skips disabled rules; publisher removes its DNR rule on the next tick.
+- **Tab already open when the limit is crossed** → reactive blocking means it stays until the next flush (≤ ~1 min) or next navigation; slice 5 closes this gap.
+- **`path` rule but no subpage data for the host** → treated as zero usage; not blocked.
+
+## Out of scope (v1)
+
+- **Regex / arbitrary URL-pattern matching** (`regexFilter`) — only the three structural match types ship.
+- **Pre-emptive blocking** — predicting a crossing from in-memory tracker state before the flush. Reactive only.
+- **Rule uniqueness validation** — no enforced dedupe of `(target, matchType, period)`. Noted in [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
+- **Target/hostname validation at save time** — malformed targets aren't rejected yet. Noted in [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
 
 ## References
 
-- Previous enforcement design (since removed): [docs/archive/TRACKING_REDESIGN.md](archive/TRACKING_REDESIGN.md), [docs/archive/REDESIGN_ISSUES.md](archive/REDESIGN_ISSUES.md).
-- Three blocking modes origin: [docs/ideas/IDEAS.md](ideas/IDEAS.md).
-- Path-scoped limits hint: [docs/subpage-tracking/TODO.md](subpage-tracking/TODO.md).
-- General feature ideas / open questions: [docs/ideas/IDEAS.md](ideas/IDEAS.md).
+- Previous enforcement design (since removed): [docs/archive/TRACKING_REDESIGN.md](../archive/TRACKING_REDESIGN.md), [docs/archive/REDESIGN_ISSUES.md](../archive/REDESIGN_ISSUES.md).
+- Path-scoped limits origin: [docs/features/subpage-tracking/TODO.md](subpage-tracking/TODO.md).
+- General feature ideas / open questions: [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
