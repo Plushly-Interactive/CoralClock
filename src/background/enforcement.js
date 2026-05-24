@@ -1,5 +1,5 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
-import { RULE_MULTIPLIERS } from '../shared/rules.js';
+import { RULE_MULTIPLIERS, describeRule } from '../shared/rules.js';
 
 // Usage contributed by one analytics/subpage cell under the rule's mode.
 function cellUsage(cell, mode) {
@@ -91,4 +91,47 @@ export function computeOverage(rules, stores, now = Date.now()) {
     }
   }
   return overage;
+}
+
+// --- DNR publisher (chrome APIs) ---
+
+// Map a rule UUID to a positive 31-bit integer for use as a DNR rule id.
+// Deterministic, so the same rule always maps to the same dnr id across ticks.
+// Collisions are astronomically unlikely for a handful of rules; acceptable v1.
+function dnrIdFor(uuid) {
+  let h = 0;
+  for (let i = 0; i < uuid.length; i++) h = (Math.imul(31, h) + uuid.charCodeAt(i)) | 0;
+  return (h & 0x7fffffff) || 1;
+}
+
+function blockedUrl(ruleId, entry) {
+  const params = new URLSearchParams({ rule: ruleId, site: entry.target });
+  if (entry.path) params.set('path', entry.path);
+  return chrome.runtime.getURL(`src/pages/blocked/blocked.html?${params}`);
+}
+
+function buildRule(ruleId, entry) {
+  const { kind, value } = describeRule({ target: entry.target, path: entry.path, matchType: entry.matchType });
+  return {
+    id: dnrIdFor(ruleId),
+    priority: 1,
+    action: { type: 'redirect', redirect: { url: blockedUrl(ruleId, entry) } },
+    condition: { [kind]: value, resourceTypes: ['main_frame'] },
+  };
+}
+
+// Reconcile the published DNR rules against the current overage set. Adds rules
+// for newly-over entries, removes rules no longer over. Uses getDynamicRules as
+// the source of truth so it self-heals across service-worker restarts.
+export async function publishOverage(overage) {
+  const existing = await chrome.declarativeNetRequest.getDynamicRules();
+  const existingIds = new Set(existing.map(r => r.id));
+  const desired = new Map([...overage].map(([ruleId, entry]) => [dnrIdFor(ruleId), buildRule(ruleId, entry)]));
+
+  const addRules = [...desired.values()].filter(r => !existingIds.has(r.id));
+  const removeRuleIds = existing.map(r => r.id).filter(id => !desired.has(id));
+
+  if (addRules.length || removeRuleIds.length) {
+    await chrome.declarativeNetRequest.updateDynamicRules({ addRules, removeRuleIds });
+  }
 }

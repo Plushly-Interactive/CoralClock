@@ -24,9 +24,6 @@
   <body>
     <h1>🦈 Time's up</h1>
     <p id="msg">You've reached your limit.</p>
-    <script>
-      const host = new URLSearchParams(location.search).get('host');
-      if (host) document.querySelector('#msg').textContent = `You've reached your limit on ${host}.`;
-    </script>
+    <script src="./blocked.js"></script>
   </body>
 </html>

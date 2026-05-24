@@ -16,7 +16,7 @@ import {
   saveSubpageSnapshot, recoverSubpagesFromSnapshot,
   SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
 } from './subpageTracking.js';
-import { computeOverage } from './enforcement.js';
+import { computeOverage, publishOverage } from './enforcement.js';
 
 console.log('BiteGuard: background started');
 
@@ -304,8 +304,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await checkEnforcement(flushAt);
 });
 
-// Slice 2: compute which rules are over their limit and log them. No blocking
-// yet — the DNR publisher (Slice 3) will consume this overage set.
+// Compute which rules are over their limit and publish DNR redirect rules so
+// over-limit sites are blocked until the period window rolls over.
 async function checkEnforcement(now) {
   const {
     rules = [],
@@ -316,5 +316,5 @@ async function checkEnforcement(now) {
   } = await chrome.storage.local.get(['rules', ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
 
   const overage = computeOverage(rules, { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour }, now);
-  console.log('[enforcement] overage set:', [...overage.entries()]);
+  await publishOverage(overage);
 }
