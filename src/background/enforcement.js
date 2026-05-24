@@ -1,5 +1,6 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
 import { RULE_MULTIPLIERS, describeRule } from '../shared/rules.js';
+import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 
 // Usage contributed by one analytics/subpage cell under the rule's mode.
 function cellUsage(cell, mode) {
@@ -104,9 +105,10 @@ function dnrIdFor(uuid) {
   return (h & 0x7fffffff) || 1;
 }
 
-function blockedUrl(ruleId, entry) {
+function blockedUrl(ruleId, entry, originalUrl) {
   const params = new URLSearchParams({ rule: ruleId, site: entry.target });
   if (entry.path) params.set('path', entry.path);
+  if (originalUrl) params.set('url', originalUrl);
   return chrome.runtime.getURL(`src/pages/blocked/blocked.html?${params}`);
 }
 
@@ -118,6 +120,65 @@ function buildRule(ruleId, entry) {
     action: { type: 'redirect', redirect: { url: blockedUrl(ruleId, entry) } },
     condition: { [kind]: value, resourceTypes: ['main_frame'] },
   };
+}
+
+// Does an open tab's URL fall under this overage entry? Mirrors sumBucket's
+// matching (same siteId/path normalization), so reloaded tabs are exactly the
+// ones DNR will then redirect.
+function tabMatchesEntry(url, entry) {
+  const siteId = siteIdFromUrl(url);
+  if (!siteId) return false;
+  if (entry.matchType === 'subdomain') return siteId === entry.target || siteId.endsWith(`.${entry.target}`);
+  if (entry.matchType === 'pathPrefix') return siteId === entry.target && pathUnder(pathFromUrl(url) ?? '', entry.path);
+  return siteId === entry.target; // host
+}
+
+// DNR redirects new requests, not tabs already sitting on a page. So for any
+// open http(s) tab covered by an over-limit entry, navigate it to the blocked
+// page ourselves — carrying the tab's exact URL so unblock can restore it.
+// Tabs already on blocked.html (a chrome-extension URL) don't match, so there's
+// no loop. Driven by the full overage set so it also catches tabs open before
+// the rule existed (e.g. when a rule is enabled).
+async function reloadMatchingTabs(overage) {
+  const pairs = [...overage]; // [ruleId, entry]
+  if (!pairs.length) return;
+  const tabs = await chrome.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab.url) continue;
+    const hit = pairs.find(([, e]) => tabMatchesEntry(tab.url, e));
+    if (!hit) continue;
+    const [ruleId, entry] = hit;
+    // We know the exact page this tab is on, so send it to the blocked page
+    // ourselves with the original URL preserved — returnUnblockedTabs uses it to
+    // restore the exact page on unblock. (DNR still catches fresh navigations;
+    // those carry no original URL and fall back to the rule target.)
+    chrome.tabs.update(tab.id, { url: blockedUrl(ruleId, entry, tab.url) });
+  }
+}
+
+// Send blocked.html tabs back to their site once their rule is no longer
+// enforced (limit reset, or rule disabled/deleted). A blocked tab carries its
+// origin in ?rule/?site/?path; if that rule id is no longer over-limit, navigate
+// it back. Reconstructs https://<site>[/<path>] — scheme/query aren't preserved.
+async function returnUnblockedTabs(overage) {
+  const prefix = chrome.runtime.getURL('src/pages/blocked/blocked.html');
+  const tabs = await chrome.tabs.query({ url: `${prefix}*` });
+  for (const tab of tabs) {
+    const params = new URLSearchParams(new URL(tab.url).search);
+    const ruleId = params.get('rule');
+    if (!ruleId || overage.has(ruleId)) continue; // still blocked
+    // Prefer the exact original URL (set when we reloaded the tab into the
+    // block); fall back to the rule target for tabs DNR blocked on a fresh nav.
+    const original = params.get('url');
+    if (original?.startsWith('http')) {
+      chrome.tabs.update(tab.id, { url: original });
+      continue;
+    }
+    const site = params.get('site');
+    const path = params.get('path');
+    if (!site) continue;
+    chrome.tabs.update(tab.id, { url: `https://${site}${path ? `/${path}` : ''}` });
+  }
 }
 
 // Reconcile the published DNR rules against the current overage set. Adds rules
@@ -134,4 +195,6 @@ export async function publishOverage(overage) {
   if (addRules.length || removeRuleIds.length) {
     await chrome.declarativeNetRequest.updateDynamicRules({ addRules, removeRuleIds });
   }
+  await reloadMatchingTabs(overage);
+  await returnUnblockedTabs(overage);
 }

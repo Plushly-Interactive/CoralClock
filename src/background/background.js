@@ -304,6 +304,15 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await checkEnforcement(flushAt);
 });
 
+// React to rule edits immediately (enable/disable/add/delete) rather than
+// waiting for the next flush — so disabling unblocks and enabling an
+// already-crossed rule blocks right away.
+chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (area !== 'local' || !changes.rules) return;
+  await bootstrapDone;
+  await checkEnforcement(Date.now());
+});
+
 // Compute which rules are over their limit and publish DNR redirect rules so
 // over-limit sites are blocked until the period window rolls over.
 async function checkEnforcement(now) {

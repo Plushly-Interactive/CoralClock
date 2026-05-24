@@ -8,6 +8,7 @@ const path = params.get('path');
 const target = site && path ? `${site}/${path}` : site;
 if (target) {
   document.querySelector('#msg').textContent = `You've reached your limit on ${target}.`;
+  document.title = `Blocked: ${target} – BiteGuard`;
 }
 
 // When the rule's period window next resets, in local time.
