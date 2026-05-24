@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard – Rules</title>
+    <script src="../../shared/theme.js"></script>
+    <link rel="stylesheet" href="../../shared/theme.css" />
+    <link rel="stylesheet" href="../../shared/rules.css" />
+    <link rel="stylesheet" href="./rules.css" />
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="../dashboard/dashboard.html">
+          <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Rules</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <main id="rules-main">
+      <section id="add-section">
+        <form id="add-form">
+          <input id="form-target" type="text" placeholder="google.com" />
+
+          <div class="scope-cards">
+            <div class="scope-card" id="scope-host" data-scope="host">
+              <h3>This host only</h3>
+              <span class="ex" id="ex-host">google.com</span>
+              <span class="text-meta">Not subdomains</span>
+            </div>
+            <div class="scope-card active" id="scope-subdomain" data-scope="subdomain">
+              <h3>Whole site</h3>
+              <span class="ex" id="ex-subdomain">*.google.com</span>
+              <span class="text-meta">Includes mail., docs., etc.</span>
+            </div>
+            <div class="scope-card" id="scope-page" data-scope="pathPrefix">
+              <h3>A specific page</h3>
+              <span class="ex" id="ex-page">google.com/maps</span>
+              <span class="text-meta">That page + everything under it</span>
+            </div>
+          </div>
+
+          <div class="form-row" id="limit-row">
+            <span>Limit to</span>
+            <input id="form-limit" type="number" value="10" min="1" />
+            <div class="custom-dropdown">
+              <button type="button" class="dropdown-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
+              <div class="dropdown-menu" id="form-unit-menu">
+                <button type="button" value="minutes">min</button>
+                <button type="button" value="hours">hours</button>
+                <button type="button" value="days">days</button>
+              </div>
+            </div>
+            <span>per</span>
+            <div class="custom-dropdown">
+              <button type="button" class="dropdown-btn" id="form-period-btn" data-value="day">day<span class="dropdown-arrow">▼</span></button>
+              <div class="dropdown-menu" id="form-period-menu">
+                <button type="button" value="day">day</button>
+                <button type="button" value="hour">hour</button>
+                <button type="button" value="week">week</button>
+              </div>
+            </div>
+            <span>counting</span>
+            <div class="custom-dropdown">
+              <button type="button" class="dropdown-btn" id="form-mode-btn" data-value="active">active<span class="dropdown-arrow">▼</span></button>
+              <div class="dropdown-menu" id="form-mode-menu">
+                <button type="button" value="active">active</button>
+                <button type="button" value="audio">audio</button>
+                <button type="button" value="active+audio">active + audio</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="rule-preview">
+            <span id="preview-text"></span>
+            <code id="preview-pattern" class="text-meta"></code>
+          </div>
+
+          <button id="save-btn" type="submit" class="btn">Add rule</button>
+        </form>
+      </section>
+
+      <p id="no-rules-message" class="empty-msg text-meta">No rules yet. Add one above to get started.</p>
+      <ul id="rules-list" class="rules-list"></ul>
+    </main>
+
+    <script type="module" src="./rules.js"></script>
+  </body>
+</html>

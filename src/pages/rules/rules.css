@@ -1,0 +1,91 @@
+#rules-main {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+#add-section {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 28px;
+}
+
+#form-target {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--font-lg);
+  margin-bottom: 16px;
+}
+
+#form-target:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.scope-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.scope-card {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.scope-card:hover {
+  background: var(--color-hover-bg);
+}
+
+.scope-card.active {
+  border-color: var(--color-accent);
+  background: var(--color-hover-bg);
+}
+
+.scope-card h3 {
+  font-size: var(--font-base);
+  margin-bottom: 4px;
+}
+
+.scope-card .ex {
+  display: block;
+  margin-bottom: 6px;
+  font-family: monospace;
+  font-size: var(--font-sm);
+  color: var(--color-accent-light);
+  word-break: break-all;
+}
+
+#limit-row {
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+#rule-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: var(--color-hover-bg);
+  border-left: 3px solid var(--color-accent);
+}
+
+#preview-pattern {
+  font-family: monospace;
+}
+
+#no-rules-message {
+  padding: 24px 0;
+  text-align: center;
+}

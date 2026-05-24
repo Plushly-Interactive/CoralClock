@@ -87,8 +87,7 @@ flowchart TD
 2. **DNR publisher** — diffs the new overage set against the previously published one. Added entries register a dynamic redirect rule to `blocked.html?rule=<id>&site=<host>&path=<path>`; removed entries are deleted. Uses `chrome.declarativeNetRequest.updateDynamicRules`. `urlFilter` shape per match type:
    - `host` → `regexFilter: ^https?://<target>(?:/|$)` (RE2). DNR's `||` domain anchor and `requestDomains` are both subdomain-inclusive by design ([Chrome docs](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest)), so an exact-host block is only achievable via an anchored `regexFilter`. The `<target>` dot must be escaped (`reddit\.com`); the host is punycode-encoded for matching.
    - `subdomain` → `urlFilter: ||<target>^` (the natural DNR domain anchor — matches apex + all subdomains).
-   - `pathPrefix` with a path → `regexFilter: ^https?://<target>/<path>(?:[/?]|$)` (RE2). A bare `urlFilter: ||<target>/<path>` would over-block sibling paths sharing a prefix (`/r/news` matching `/r/newsletter`), so the boundary `(?:[/?]|$)` is anchored to a path separator, query, or end — matching the analytics boundary rule exactly. Both `<target>` and `<path>` have regex metacharacters escaped.
-   - `pathPrefix` with **empty path** → the **root page only**: `regexFilter: ^https?://(?:www\.)?<target>/?$`. Blocks `<target>` and `<target>/` but not `<target>/anything`. This is the one reliable exact-page case (the root path `/` has no query-string ambiguity), and it fills the gap between "this host only" (whole host, all pages) and a deep page rule.
+   - `pathPrefix` → `regexFilter: ^https?://<target>/<path>(?:[/?]|$)` (RE2). A bare `urlFilter: ||<target>/<path>` would over-block sibling paths sharing a prefix (`/maps` matching `/maps-beta`), so the boundary `(?:[/?]|$)` is anchored to a path separator, query, or end — matching the analytics boundary rule exactly. Both `<target>` and `<path>` have regex metacharacters escaped. A `pathPrefix` rule always carries a non-empty path (enforced by the form).
 
    This makes the three scopes genuinely distinct at the block level (not only in usage counting). Two of the three (`host`, `pathPrefix`) use `regexFilter`, which is capped (≤1000 per ruleset, <2KB compiled each); these rules are simple and well under the limits.
 
@@ -108,10 +107,9 @@ Consequences the checker must honor:
 |---|---|
 | `host` | Exact `analytics[bucket][target]` only. Does **not** include subdomains — `old.reddit.com` is a different key. |
 | `subdomain` | Sum every `analytics[bucket][k]` where `k === target` **or** `k` ends with `.${target}`. Includes the apex. A scan of the bucket's keys, not a lookup. |
-| `pathPrefix` (path) | Sum every `subpages[bucket][target][p]` where `p === '/'+rule.path` **or** `p` starts with `'/'+rule.path` followed by `/`, `?`, or end. |
-| `pathPrefix` (empty path) | Root page only: sum `subpages[bucket][target]['/']` exactly. |
+| `pathPrefix` | Sum every `subpages[bucket][target][p]` where `p === '/'+rule.path` **or** `p` starts with `'/'+rule.path` followed by `/`, `?`, or end. Always carries a non-empty path. |
 
-Exact-path matching for *deep* paths was considered and dropped: stored subpage keys include the query string (`/r/news?sort=top`), so an exact deep path rarely matches a real visit — hence deep page rules are always prefix. The **root** is the exception: its key is exactly `'/'`, with no query-string ambiguity, so an empty-path page rule is exact and reliable.
+Exact-path matching was considered and dropped: stored subpage keys include the query string (`/maps?q=x`), so an exact path rarely matches a real visit — hence page rules are always prefix.
 
 Two design facts this surfaces, both reflected in the form and the out-of-scope list:
 

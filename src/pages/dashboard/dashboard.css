@@ -4,6 +4,10 @@ body {
   flex-direction: column;
 }
 
+#header-left {
+  gap: 16px;
+}
+
 #dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
