@@ -6,15 +6,16 @@ Blocking sites once they cross a configured limit. BiteGuard already tracks time
 
 - As a user, I want a site blocked once I exceed my configured limit over the chosen period, so the limit is actually enforced and not just measured.
 - As a user, I want to choose what "time spent" means per rule — focused time, audible time, or both — so background audio and active reading can be limited differently.
-- As a user, I want to limit a bare host (`reddit.com`), all its subdomains (`*.reddit.com`), or a specific path (`reddit.com/r/foo`), so I can scope a limit as broadly or narrowly as I need.
+- As a user, I want to limit a bare host (`reddit.com`), all its subdomains (`*.reddit.com`), an exact path (`reddit.com/r/foo`), or a path and everything under it (`reddit.com/r/foo*`), so I can scope a limit as broadly or narrowly as I need.
 - As a user, when I hit a block I want to see which limit I hit and when it resets, so the block is understandable rather than abrupt.
 
 ## Acceptance criteria
 
-- [ ] Adding a rule lets me pick a **match type** (host / subdomain / path) and a **mode** (active / audio / active+audio) alongside target, limit, unit, and period.
+- [ ] Adding a rule lets me pick a **scope** (this site / this site + subdomains / a specific page) and a **mode** (active / audio / active+audio) alongside the host, limit, unit, and period.
+- [ ] The form shows a live preview of what the rule will block — a plain-English line plus the resolved URL-filter pattern.
 - [ ] A site I have used past its limit over the rule's period redirects to `blocked.html` within one flush cycle (≤ ~1 min).
 - [ ] A `subdomain` rule on `reddit.com` blocks `old.reddit.com`; a `host` rule on `reddit.com` does not.
-- [ ] A `path` rule on `twitch.tv/directory` blocks that path but leaves the rest of `twitch.tv` reachable.
+- [ ] A `pathPrefix` rule on `twitch.tv` with path `directory` blocks that path and everything beneath it (`/directory/game/...`) but leaves the rest of `twitch.tv` reachable.
 - [ ] When the period rolls over (usage drops out of the window) or I disable the rule, the block is removed without restarting the browser.
 - [ ] `blocked.html` shows the host/path that was blocked, which limit was hit, and when it resets.
 - [ ] Existing stored rules created before this feature keep working — they behave as `mode: 'active'`, `matchType: 'host'`.
@@ -25,16 +26,22 @@ Blocking sites once they cross a configured limit. BiteGuard already tracks time
 
 | Surface | Role in this feature |
 |---|---|
-| popup | Rule form gains match-type and mode controls; rule list shows them. |
+| rules page *(new)* | Full-page rule management: add/edit/list rules with match-type and mode controls. |
 | background | Reads `rules`, runs the limit checker each flush, publishes DNR rules. |
 | blocked page | Reads query params, shows which limit was hit and reset time. |
+
+The dedicated rules page is where rule management lives for v1. The existing popup rule UI is left as-is for now; reworking the popup into a launcher to this page is deferred (see Out of scope).
 
 ### Files likely to change
 
 | File | Change |
 |---|---|
-| `src/pages/popup/popup.html` | Add match-type dropdown and mode dropdown to `#add-form`. |
-| `src/pages/popup/popup.js` | Write `matchType` + `mode` on save; render them in the rule list. |
+| `src/pages/rules/rules.html` *(new)* | Full-page rule form (host, scope, optional path, limit, unit, period, mode) + live block preview + rule list, reusing the shared header. |
+| `src/pages/rules/rules.js` *(new)* | Page wiring: scope→path-field toggle, live preview, form submit, list render. Rule logic comes from the shared module. |
+| `src/pages/rules/rules.css` *(new)* | Page-specific layout; reuse shared classes from `theme.css`. |
+| `src/shared/rules.js` *(new)* | Extracted rule logic shared by the rules page and the popup: add/toggle/delete, render a rule list, custom-dropdown init. |
+| `src/pages/popup/popup.js` | Adopt `src/shared/rules.js` for save/toggle/delete/render; drop the duplicated inline logic. |
+| `src/pages/dashboard/dashboard.html` | Add a "Rules" entry button to `#header-left` to reach the rules page. |
 | `src/background/background.js` | Wire limit checker + DNR publisher into the flush alarm; read `rules`. |
 | `src/background/enforcement.js` *(new)* | `computeOverage` (pure) + DNR publish/diff helpers. |
 | `src/data/migrations.js` | `v3 → v4`: backfill `mode:'active'` and `matchType:'host'` on every stored rule. |
@@ -44,7 +51,7 @@ Blocking sites once they cross a configured limit. BiteGuard already tracks time
 
 | Key | Shape | Read by | Written by | Notes |
 |---|---|---|---|---|
-| `rules` | `{ id, target, matchType, limit, limitUnit, period, enabled, mode }` | popup, background | popup, migration | `matchType` + `mode` are new; `v3→v4` migration backfills both. |
+| `rules` | `{ id, target, path?, matchType, limit, limitUnit, period, enabled, mode }` | rules page, popup, background | rules page, popup, migration | `target` is always a bare host; `path` is set only for `path`/`pathPrefix` rules. `matchType` + `mode` are new; `v3→v4` migration backfills both. |
 | `analyticsByDay` / `analyticsByHour` | `{ [bucket]: { [host]: { activeMs, audioMs, overlapMs, visits } } }` | limit checker | tracking | Source for `host` / `subdomain` rules. Unchanged. |
 | `subpagesByDay` / `subpagesByHour` | `{ [bucket]: { [host]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }` | limit checker | subpage tracking | Source for `path` rules. Unchanged. |
 | `storageVersion` | `number` | migrations | migrations | Bumped to `4`. |
@@ -76,12 +83,40 @@ flowchart TD
   dnr --> blocked
 ```
 
-1. **Limit checker** — runs at the end of each flush alarm. For each enabled rule: compute the period window (`hour` → current `hourKey`; `day` → today's `dayKey`; `week` → last 7 `dayKey`s), read the matching source (analytics for host/subdomain, subpages for path), apply the mode formula, compare to `limit × unitMultiplier`. Produces the overage set: `Map<ruleId, { target, matchType, path, overBy }>`. Pure and unit-testable — no chrome APIs.
+1. **Limit checker** — runs at the end of each flush alarm. For each enabled rule: compute the period window (`hour` → current `hourKey`; `day` → today's `dayKey`; `week` → last 7 `dayKey`s), sum the matching usage over that window (see [Matching against tracking data](#matching-against-tracking-data)), apply the mode formula, compare to `limit × unitMultiplier`. Produces the overage set: `Map<ruleId, { target, matchType, path, overBy }>`. Pure and unit-testable — no chrome APIs.
 2. **DNR publisher** — diffs the new overage set against the previously published one. Added entries register a dynamic redirect rule to `blocked.html?rule=<id>&site=<host>&path=<path>`; removed entries are deleted. Uses `chrome.declarativeNetRequest.updateDynamicRules`. `urlFilter` shape per match type:
-   - `host` → `||<target>^` scoped so subdomains do not match.
-   - `subdomain` → domain-anchored filter matching `<target>` and `*.<target>`.
-   - `path` → `||<host><path>`.
+   - `host` → `regexFilter: ^https?://<target>(?:/|$)` (RE2). DNR's `||` domain anchor and `requestDomains` are both subdomain-inclusive by design ([Chrome docs](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest)), so an exact-host block is only achievable via an anchored `regexFilter`. The `<target>` dot must be escaped (`reddit\.com`); the host is punycode-encoded for matching.
+   - `subdomain` → `urlFilter: ||<target>^` (the natural DNR domain anchor — matches apex + all subdomains).
+   - `pathPrefix` with a path → `regexFilter: ^https?://<target>/<path>(?:[/?]|$)` (RE2). A bare `urlFilter: ||<target>/<path>` would over-block sibling paths sharing a prefix (`/r/news` matching `/r/newsletter`), so the boundary `(?:[/?]|$)` is anchored to a path separator, query, or end — matching the analytics boundary rule exactly. Both `<target>` and `<path>` have regex metacharacters escaped.
+   - `pathPrefix` with **empty path** → the **root page only**: `regexFilter: ^https?://(?:www\.)?<target>/?$`. Blocks `<target>` and `<target>/` but not `<target>/anything`. This is the one reliable exact-page case (the root path `/` has no query-string ambiguity), and it fills the gap between "this host only" (whole host, all pages) and a deep page rule.
+
+   This makes the three scopes genuinely distinct at the block level (not only in usage counting). Two of the three (`host`, `pathPrefix`) use `regexFilter`, which is capped (≤1000 per ruleset, <2KB compiled each); these rules are simple and well under the limits.
+
+   **`www.` handling:** tracking strips a leading `www.` ([siteResolution.js](../../src/background/siteResolution.js)), so `www.reddit.com` counts as `reddit.com`. But the literal `host` regex above would not match a `www.reddit.com` *URL*. To keep blocking consistent with counting, the `host` regex should allow an optional `www.`: `^https?://(?:www\.)?<target>(?:/|$)`.
 3. **Period boundaries** — the flush alarm fires every minute regardless, so a rolled-over window shrinks the overage set on the next tick. No special boundary handler.
+
+### Matching against tracking data
+
+The checker sums usage from tracking storage, whose key shapes are fixed by [siteResolution.js](../../src/background/siteResolution.js) and must be matched exactly:
+
+- **Site keys** (`analyticsByDay[bucket][siteId]`) are the full hostname with only a leading `www.` stripped — `siteIdFromUrl`. So `reddit.com`, `old.reddit.com`, `m.reddit.com` are **separate keys**; `www.reddit.com` collapses to `reddit.com`.
+- **Subpage keys** (`subpagesByDay[bucket][siteId][path]`) use `pathFromUrl`: `pathname` with any trailing slash stripped (except root `/`), **with the query string appended** (`/r/news?sort=top`).
+
+Consequences the checker must honor:
+
+| Match type | How usage is summed |
+|---|---|
+| `host` | Exact `analytics[bucket][target]` only. Does **not** include subdomains — `old.reddit.com` is a different key. |
+| `subdomain` | Sum every `analytics[bucket][k]` where `k === target` **or** `k` ends with `.${target}`. Includes the apex. A scan of the bucket's keys, not a lookup. |
+| `pathPrefix` (path) | Sum every `subpages[bucket][target][p]` where `p === '/'+rule.path` **or** `p` starts with `'/'+rule.path` followed by `/`, `?`, or end. |
+| `pathPrefix` (empty path) | Root page only: sum `subpages[bucket][target]['/']` exactly. |
+
+Exact-path matching for *deep* paths was considered and dropped: stored subpage keys include the query string (`/r/news?sort=top`), so an exact deep path rarely matches a real visit — hence deep page rules are always prefix. The **root** is the exception: its key is exactly `'/'`, with no query-string ambiguity, so an empty-path page rule is exact and reliable.
+
+Two design facts this surfaces, both reflected in the form and the out-of-scope list:
+
+- **`host` does not mean "whole site."** It matches one hostname. A user wanting all of reddit (including `old.reddit.com`) needs `subdomain`. The form copy must not call `host` "the entire site."
+- **`host` requires `regexFilter`, not `||`.** Because DNR's `||`/`requestDomains` are subdomain-inclusive, the exact-host block and the exact-host usage sum line up only when the DNR rule uses the anchored `regexFilter` above. The two site scopes (`host`, `subdomain`) therefore compile to genuinely different DNR rules.
 
 ### Blocking modes
 
@@ -113,6 +148,8 @@ Smallest shippable slice first:
 
 ## Out of scope (v1)
 
+- **Popup rework** — the popup adopts `src/shared/rules.js` but keeps its own inline form layout. Reworking it into a launcher that opens the dedicated rules page is deferred. Until then both surfaces write the same `rules` key.
+- **Rules entry-point placement** — the rules page is reached from a button in the dashboard's `#header-left` for now. This is a stopgap; a better-positioned entry point may replace it later.
 - **Regex / arbitrary URL-pattern matching** (`regexFilter`) — only the three structural match types ship.
 - **Pre-emptive blocking** — predicting a crossing from in-memory tracker state before the flush. Reactive only.
 - **Rule uniqueness validation** — no enforced dedupe of `(target, matchType, period)`. Noted in [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
