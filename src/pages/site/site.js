@@ -351,7 +351,7 @@ function buildDepthToggle(paths) {
   toggle.innerHTML = '';
   for (let d = 1; d <= shownMax; d++) {
     const btn = document.createElement('button');
-    btn.className = 'seg-btn';
+    btn.className = 'seg-btn depth-num-btn';
     btn.textContent = String(d);
     btn.onclick = () => setDepth(d, btn);
     if (currentDepth === d) btn.classList.add('active');

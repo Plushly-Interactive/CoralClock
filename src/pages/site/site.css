@@ -77,6 +77,9 @@
 }
 
 #sort-toggle { margin-left: auto; }
+#sort-toggle .seg-btn { width: 48px; justify-content: center; }
+#depth-toggle .seg-btn { width: 38px; justify-content: center; }
+#depth-toggle .depth-num-btn { width: 22px; padding-left: 0; padding-right: 0; }
 
 #subpages-list {
   flex: 1;
