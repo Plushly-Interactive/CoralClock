@@ -69,7 +69,7 @@ tabBtns.keyword.addEventListener('click', () => selectTab('keyword'));
 // ── URL form logic (carried over from previous rules.js) ──
 
 function parseTarget(raw) {
-  const clean = raw.trim().replace(/^https?:\/\//, '').replace(/^www\./, '');
+  const clean = raw.trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/#.*$/, '');
   const slash = clean.indexOf('/');
   if (slash === -1) return { host: clean.toLowerCase(), path: '' };
   return { host: clean.slice(0, slash).toLowerCase(), path: clean.slice(slash + 1) };
