@@ -1,4 +1,5 @@
-import { formatMs, RULE_MULTIPLIERS } from '../../shared/rules.js';
+import { RULE_MULTIPLIERS } from '../../shared/rules.js';
+import { formatMs } from '../../shared/timeUtils.js';
 import { navButton } from '../../shared/utils.js';
 
 navButton(document.querySelector('#manage-link'), '../rules/rules.html');
