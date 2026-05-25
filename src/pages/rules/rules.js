@@ -41,6 +41,48 @@ function isValidHost(host) {
   return !!getDomain(host);
 }
 
+const UNIT_MAX = {
+  minutes: { hour: 60,   day: 1440,  week: 10080 },
+  hours:   {             day: 24,    week: 168   },
+  days:    {                         week: 7     },
+};
+
+// Keep unit and period menus mutually consistent and clamp the limit value.
+// Called after any change to unit, period, or on init.
+function constrainLimitForm() {
+  const unitBtn   = document.querySelector('#form-unit-btn');
+  const periodBtn = document.querySelector('#form-period-btn');
+  const limitInput = document.querySelector('#form-limit');
+  const unit   = unitBtn.dataset.value;
+  const period = periodBtn.dataset.value;
+
+  // Which periods are valid for the current unit?
+  const validPeriods = Object.keys(UNIT_MAX[unit] ?? {});
+  document.querySelectorAll('#form-period-menu button').forEach(opt => {
+    opt.disabled = !validPeriods.includes(opt.value);
+  });
+
+  // Which units are valid for the current period?
+  document.querySelectorAll('#form-unit-menu button').forEach(opt => {
+    opt.disabled = !(UNIT_MAX[opt.value] ?? {})[period];
+  });
+
+  // If current period is now invalid for the unit, switch to first valid one.
+  if (!validPeriods.includes(period)) {
+    const next = validPeriods[0];
+    periodBtn.firstChild.textContent = document.querySelector(`#form-period-menu button[value="${next}"]`).textContent;
+    periodBtn.dataset.value = next;
+  }
+
+  // Clamp the limit to the max for the (possibly corrected) combo.
+  const effectivePeriod = periodBtn.dataset.value;
+  const max = (UNIT_MAX[unit] ?? {})[effectivePeriod];
+  if (max !== undefined) {
+    limitInput.max = max;
+    if (parseInt(limitInput.value) > max) limitInput.value = max;
+  }
+}
+
 // The limit/unit/period/mode the form currently has selected.
 function formLimitFields() {
   return {
@@ -236,7 +278,7 @@ function editDropdown(id, options, selected) {
 }
 
 const UNIT_OPTIONS = [{ value: 'minutes', label: 'min' }, { value: 'hours', label: 'hours' }, { value: 'days', label: 'days' }];
-const PERIOD_OPTIONS = [{ value: 'day', label: 'day' }, { value: 'hour', label: 'hour' }, { value: 'week', label: 'week' }];
+const PERIOD_OPTIONS = [{ value: 'hour', label: 'hour' }, { value: 'day', label: 'day' }, { value: 'week', label: 'week' }];
 
 // Swap a rule row into an inline editor for its limit + period (target/scope/mode
 // aren't editable — change those by deleting and re-adding).
@@ -285,14 +327,22 @@ rulesList.addEventListener('click', async (e) => {
 });
 
 initCustomDropdowns();
+constrainLimitForm();
 // Limit, unit, period and mode all feed the dedupe/redundancy check, so re-run
 // the preview when any of them changes. The dropdown option handler in
 // initCustomDropdowns calls stopPropagation, so listen on the option buttons
 // directly; registered after initCustomDropdowns so its handler sets
 // dataset.value first, before ours reads it.
-document.querySelectorAll('#form-unit-menu button, #form-period-menu button, #form-mode-menu button')
-  .forEach(opt => opt.addEventListener('click', refreshPreview));
-document.querySelector('#form-limit').addEventListener('input', refreshPreview);
+document.querySelectorAll('#form-unit-menu button, #form-period-menu button').forEach(opt => {
+  opt.addEventListener('click', () => { constrainLimitForm(); refreshPreview(); });
+});
+document.querySelectorAll('#form-mode-menu button').forEach(opt => opt.addEventListener('click', refreshPreview));
+document.querySelector('#form-limit').addEventListener('input', () => {
+  const el = document.querySelector('#form-limit');
+  const max = parseInt(el.max);
+  if (max && parseInt(el.value) > max) el.value = max;
+  refreshPreview();
+});
 const prefillTarget = new URLSearchParams(location.search).get('target');
 if (prefillTarget) {
   formTarget.value = prefillTarget;

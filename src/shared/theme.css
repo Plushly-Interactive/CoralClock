@@ -338,6 +338,12 @@ button:disabled {
   background: var(--color-hover-bg);
 }
 
+.dropdown-menu button:disabled {
+  color: var(--color-text-secondary);
+  cursor: default;
+  pointer-events: none;
+}
+
 .dropdown-menu button:first-child {
   border-radius: 4px 4px 0 0;
 }
