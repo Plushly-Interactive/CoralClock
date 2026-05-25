@@ -1,5 +1,5 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
-import { RULE_MULTIPLIERS, describeRule, BLOCKS_DAY_KEY } from '../shared/rules.js';
+import { RULE_MULTIPLIERS, describeRule, BLOCKS_DAY_KEY, blockKey } from '../shared/rules.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 
 // Usage contributed by one analytics/subpage cell under the rule's mode.
@@ -202,9 +202,10 @@ export async function publishOverage(overage) {
     const today = blocksByDay[dayKey] ?? {};
     // addRules contains newly-triggered blocks; find which ruleIds they correspond to.
     const addedDnrIds = new Set(addRules.map(r => r.id));
-    for (const [ruleId, _entry] of overage) {
+    for (const [ruleId, entry] of overage) {
       if (addedDnrIds.has(dnrIdFor(ruleId))) {
-        today[ruleId] = (today[ruleId] ?? 0) + 1;
+        const key = blockKey(entry);
+        today[key] = (today[key] ?? 0) + 1;
       }
     }
     blocksByDay[dayKey] = today;

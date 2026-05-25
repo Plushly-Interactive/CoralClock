@@ -1,4 +1,4 @@
-import { getRules, addRule, toggleRule, deleteRule, updateRule, renderRuleList, initCustomDropdowns, describeRule, findCoveringRule, findRedundantRules, disableRules, matchLabel, BLOCKS_DAY_KEY } from '../../shared/rules.js';
+import { getRules, addRule, toggleRule, deleteRule, updateRule, renderRuleList, initCustomDropdowns, describeRule, findCoveringRule, findRedundantRules, disableRules, matchLabel, BLOCKS_DAY_KEY, blockKey } from '../../shared/rules.js';
 import { getDomain } from '../../vendor/tldts.js';
 import { localDayKey } from '../../shared/timeUtils.js';
 
@@ -371,22 +371,22 @@ async function renderStats() {
   // Overview card
   const weekKeys = thisWeekKeys();
   let weekTotal = 0;
-  const blocksByRule = {};
+  const blocksByRuleKey = {};
   for (const dayKey of weekKeys) {
     const day = blocksByDay[dayKey] ?? {};
-    for (const [ruleId, count] of Object.entries(day)) {
+    for (const [key, count] of Object.entries(day)) {
       weekTotal += count;
-      blocksByRule[ruleId] = (blocksByRule[ruleId] ?? 0) + count;
+      blocksByRuleKey[key] = (blocksByRuleKey[key] ?? 0) + count;
     }
   }
 
   const activeCount = rules.filter(r => r.enabled).length;
 
-  // Most blocked: rule id with highest week count, resolved to its label
+  // Most blocked: stable key with highest week count, resolved to its label
   let mostBlocked = '—';
-  if (Object.keys(blocksByRule).length) {
-    const topId = Object.entries(blocksByRule).sort((a, b) => b[1] - a[1])[0][0];
-    const topRule = rules.find(r => r.id === topId);
+  if (Object.keys(blocksByRuleKey).length) {
+    const topKey = Object.entries(blocksByRuleKey).sort((a, b) => b[1] - a[1])[0][0];
+    const topRule = rules.find(r => blockKey(r) === topKey);
     mostBlocked = topRule ? matchLabel(topRule) : '—';
   }
 

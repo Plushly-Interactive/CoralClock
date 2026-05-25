@@ -3,6 +3,10 @@ import { formatMs } from './timeUtils.js';
 export const RULE_MULTIPLIERS = { minutes: 60000, hours: 3600000, days: 86400000 };
 export const BLOCKS_DAY_KEY = 'blocksByDay';
 
+export function blockKey(rule) {
+  return `${rule.target}|${rule.matchType}|${rule.path ?? ''}`;
+}
+
 const MODE_LABELS = { active: 'active', audio: 'audio', 'active+audio': 'active + audio' };
 const SCOPE_LABELS = { host: 'This host only', subdomain: 'Whole site', pathPrefix: 'A specific page' };
 
