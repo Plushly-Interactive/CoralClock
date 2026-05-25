@@ -2,19 +2,6 @@
 
 Organized by feature area. Within each area, items are grouped by status: **Done**, **In design** (scoped in a feature doc), and **Backlog**.
 
-## Enforcement (blocking rules)
-
-In design — see [enforcement.md](../features/enforcement.md):
-
-- Three blocking rule modes (active / audio / active+audio). Tracking accumulators (`activeMs`, `audioMs`, `overlapMs`) already exist; rule `mode` field and enforcement pipeline not yet built.
-- Enforce rule uniqueness: no two rules with the same hostname + period.
-- Validate the target format before saving a rule (reject invalid URLs/hostnames, ideally test reachability).
-- Subdomain-scoped blocking rules (e.g. `*.reddit.com`) and path-scoped blocking rules (e.g. `reddit.com/r/foo`).
-
-Backlog:
-
-- Block url/page title keywords.
-
 ## Tracking
 
 - Track side panels?

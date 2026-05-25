@@ -157,6 +157,8 @@ Smallest shippable slice first:
 
 - **Rules entry-point placement** — the rules page is reached from a button in the dashboard's `#header-left` for now. This is a stopgap; a better-positioned entry point may replace it later.
 - **User-supplied regex matching** — the three structural scopes ship. (The publisher uses `regexFilter` internally for `host`/`pathPrefix`, but users can't enter arbitrary patterns.)
+- **Keyword / page-title blocking** — rules match by host/subdomain/path only. Blocking by URL or page-title keyword is a future idea, not designed.
+- **Reachability check on save** — the target is validated as a registrable domain (`tldts` `getDomain`), but we don't test that the site actually resolves/responds.
 - **Rolling-7-day week** — `week` is a calendar week (Monday-start, resets at the boundary) for v1, consistent with how `day`/`hour` reset. A rolling 7-day window (sliding daily, matching the dashboard's "Last 7 days") is a deferred variant; revisit if users find the weekly reset surprising.
 - **Week-start user setting** — the calendar week starts on Monday (hardcoded) for v1. A user setting to choose Monday vs Sunday (and any other locale-sensitive week start) is deferred; `windowKeys` in [enforcement.js](../../src/background/enforcement.js) would read it instead of assuming Monday.
 - **Pre-emptive blocking** — predicting a crossing from in-memory tracker state before the flush. Reactive only.
