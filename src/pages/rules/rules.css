@@ -11,9 +11,8 @@
 #left-col {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
   min-height: 0;
-  overflow-y: auto;
 }
 
 #left-col .chart-container {
@@ -25,102 +24,6 @@
 
 #stats-grid { grid-template-columns: repeat(2, auto); }
 
-/* Sparkline */
-#spark-wrap {
-  display: grid;
-  grid-template-columns: 28px 1fr;
-  flex: 1;
-  min-height: 0;
-  align-items: stretch;
-}
-
-#spark-yaxis {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-end;
-  padding-bottom: 18px;
-  padding-right: 4px;
-}
-
-.y-tick {
-  font-size: 10px;
-  color: var(--color-text-secondary);
-  line-height: 1;
-}
-
-#spark-chart-col {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-#sparkline-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 5px;
-  flex: 1;
-  min-height: 0;
-  position: relative;
-}
-
-#sparkline-bars::before {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; top: 0; bottom: 0;
-  background: linear-gradient(
-    to bottom,
-    var(--color-border) 0px, var(--color-border) 1px,
-    transparent 1px, transparent calc(50% - 0.5px),
-    var(--color-border) calc(50% - 0.5px), var(--color-border) calc(50% + 0.5px),
-    transparent calc(50% + 0.5px), transparent calc(100% - 1px),
-    var(--color-border) calc(100% - 1px), var(--color-border) 100%
-  );
-  pointer-events: none;
-  z-index: 0;
-}
-
-.spark-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  position: relative;
-  z-index: 1;
-}
-
-.spark-bar-wrap {
-  flex: 1;
-  width: 100%;
-  display: flex;
-  align-items: flex-end;
-}
-
-.spark-bar {
-  width: 100%;
-  background: var(--color-accent);
-  border-radius: 2px 2px 0 0;
-  min-height: 2px;
-}
-
-.spark-bar.today { background: var(--color-accent-light); }
-
-#spark-day-row {
-  display: flex;
-  gap: 5px;
-  margin-top: 4px;
-}
-
-.spark-day {
-  font-size: 10px;
-  color: var(--color-text-secondary);
-  flex: 1;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.spark-day.today { color: var(--color-accent); }
 
 /* Right column */
 #right-col {
@@ -128,7 +31,7 @@
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  gap: 16px;
+  gap: 24px;
 }
 
 /* Add rule card */

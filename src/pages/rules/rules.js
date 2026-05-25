@@ -1,6 +1,7 @@
 import { getRules, addRule, toggleRule, deleteRule, updateRule, renderRuleList, initCustomDropdowns, describeRule, findCoveringRule, findRedundantRules, disableRules, matchLabel, BLOCKS_DAY_KEY, blockKey } from '../../shared/rules.js';
 import { getDomain } from '../../vendor/tldts.js';
 import { localDayKey } from '../../shared/timeUtils.js';
+import { drawBarChart } from '../../shared/utils.js';
 
 const formTarget     = document.querySelector('#form-target');
 const cards          = [...document.querySelectorAll('.scope-card')];
@@ -405,31 +406,32 @@ async function renderStats() {
   document.querySelector('#stat-avg').textContent = avgPerDay;
 
   // Sparkline
-  const maxCount = Math.max(...dailyCounts, 1);
-  const BAR_HEIGHT = 72; // px track height
-  const todayKey = localDayKey(Date.now());
   const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const rootStyle = getComputedStyle(document.documentElement);
 
-  const barsHtml = days7.map((k, i) => {
-    const h = Math.round((dailyCounts[i] / maxCount) * BAR_HEIGHT);
-    const isToday = k === todayKey;
-    return `<div class="spark-col">
-      <div class="spark-bar-wrap"><div class="spark-bar${isToday ? ' today' : ''}" style="height:${h}px"></div></div>
-    </div>`;
-  }).join('');
+  const sparkData = days7.map((k, i) => {
+    const d = new Date(k + 'T12:00:00');
+    const dow = (d.getDay() + 6) % 7;
+    return {
+      label: DAY_LABELS[dow],
+      range: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      count: dailyCounts[i],
+    };
+  });
 
-  const daysHtml = days7.map((k, _i) => {
-    const isToday = k === todayKey;
-    const dow = (new Date(k + 'T12:00:00').getDay() + 6) % 7;
-    return `<span class="spark-day${isToday ? ' today' : ''}">${DAY_LABELS[dow]}</span>`;
-  }).join('');
+  const hasData = dailyCounts.some(n => n > 0);
+  document.querySelector('#spark-chart').style.display = hasData ? '' : 'none';
+  document.querySelector('#spark-no-data').style.display = hasData ? 'none' : '';
 
-  document.querySelector('#sparkline-bars').innerHTML = barsHtml;
-  document.querySelector('#spark-day-row').innerHTML = daysHtml;
-
-  const mid = Math.round(maxCount / 2);
-  document.querySelector('#spark-max-label').textContent = maxCount;
-  document.querySelector('#spark-mid-label').textContent = mid;
+  drawBarChart({
+    svgEl: document.querySelector('#spark-chart'),
+    tooltipEl: document.querySelector('#spark-tooltip'),
+    data: sparkData,
+    maxVal: Math.max(...dailyCounts, 1),
+    getValue: d => d.count,
+    formatVal: v => String(Math.round(v)),
+    color: rootStyle.getPropertyValue('--color-accent').trim(),
+  });
 }
 
 // ── Init ──

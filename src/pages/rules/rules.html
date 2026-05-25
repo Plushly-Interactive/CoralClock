@@ -49,17 +49,9 @@
 
         <div class="chart-container" id="sparkline-card">
           <h2 class="chart-heading">Blocks per day</h2>
-          <div id="spark-wrap">
-            <div id="spark-yaxis">
-              <span class="y-tick" id="spark-max-label">0</span>
-              <span class="y-tick" id="spark-mid-label">0</span>
-              <span class="y-tick">0</span>
-            </div>
-            <div id="spark-chart-col">
-              <div id="sparkline-bars"></div>
-              <div id="spark-day-row"></div>
-            </div>
-          </div>
+          <svg id="spark-chart" class="chart-svg"></svg>
+          <div class="tooltip text-meta" id="spark-tooltip"></div>
+          <p id="spark-no-data" class="text-meta" style="display:none">No data for this period.</p>
         </div>
 
       </div><!-- /left-col -->
