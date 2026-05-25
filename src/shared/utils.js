@@ -18,6 +18,18 @@ export function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// Make a <button> navigate like a link: plain click → same tab, middle-click or
+// ctrl/cmd-click → new tab (so we don't lose those affordances by not using <a>).
+export function navButton(btnEl, url) {
+  btnEl.addEventListener('click', (e) => {
+    if (e.ctrlKey || e.metaKey) window.open(url, '_blank');
+    else window.location.href = url;
+  });
+  btnEl.addEventListener('auxclick', (e) => {
+    if (e.button === 1) window.open(url, '_blank'); // middle click
+  });
+}
+
 export function showNotification(message, durationMs = 3000) {
   const el = document.querySelector('#notification');
   el.textContent = message;

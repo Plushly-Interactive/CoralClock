@@ -1,4 +1,7 @@
 import { formatMs, RULE_MULTIPLIERS } from '../../shared/rules.js';
+import { navButton } from '../../shared/utils.js';
+
+navButton(document.querySelector('#manage-link'), '../rules/rules.html');
 
 const params = new URLSearchParams(location.search);
 const ruleId = params.get('rule');

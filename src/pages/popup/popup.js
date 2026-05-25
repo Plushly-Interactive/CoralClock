@@ -1,8 +1,5 @@
-import { getRules, addRule, toggleRule, deleteRule, renderRuleList, initCustomDropdowns } from '../../shared/rules.js';
+import { getRules, renderRuleList } from '../../shared/rules.js';
 import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
-
-const addBtn = document.querySelector('#add-btn');
-const formTarget = document.querySelector('#form-target');
 
 document.querySelector('#dashboard-btn').addEventListener('click', async () => {
   const state = await readTourState();
@@ -22,67 +19,30 @@ document.querySelector('#dashboard-btn').addEventListener('click', async () => {
   window.close();
 });
 
-const addForm = document.querySelector('#add-form');
 const rulesList = document.querySelector('#rules-list');
 
-addBtn.addEventListener('click', async () => {
-  addForm.classList.toggle('visible');
-
-  if (addForm.classList.contains('visible')) {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.url?.startsWith('http')) {
-      formTarget.value = new URL(tab.url).hostname;
-    }
-    formTarget.focus();
-    formTarget.select();
-  }
-});
-
-document.querySelector('#save-btn').addEventListener('click', async () => {
-  const target = formTarget.value.trim();
-  const limit = parseInt(document.querySelector('#form-limit').value);
-  if (!target || !limit) return;
-
-  await addRule({
-    target,
-    matchType: 'host',
-    limit,
-    limitUnit: document.querySelector('#form-unit-btn').dataset.value,
-    period: document.querySelector('#form-period-btn').dataset.value,
-    mode: 'active',
-  });
-
-  formTarget.value = '';
-  document.querySelector('#form-limit').value = '10';
-  addForm.classList.remove('visible');
-  renderRules();
-});
-
-rulesList.addEventListener('click', async (e) => {
-  const id = e.target.dataset.id;
-  if (!id) return;
-  if (e.target.classList.contains('toggle-btn')) await toggleRule(id);
-  if (e.target.classList.contains('delete-btn')) await deleteRule(id);
-  renderRules();
+// The popup is a glanceable list + launcher; all rule editing lives on the
+// dedicated rules page, opened here.
+document.querySelector('#manage-btn').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('src/pages/rules/rules.html') });
+  window.close();
 });
 
 async function renderRules() {
-  const rules = await getRules();
+  const rules = (await getRules()).filter(r => r.enabled);
   const noRulesMsg = document.querySelector('#no-rules-message');
 
   if (rules.length === 0) {
-    noRulesMsg.textContent = 'No rules yet. Add one to get started!';
+    noRulesMsg.textContent = 'No active rules. Click Manage rules to add one.';
     noRulesMsg.classList.add('visible', 'text-meta');
   } else {
     noRulesMsg.classList.remove('visible', 'text-meta');
   }
 
-  renderRuleList(rulesList, rules);
+  renderRuleList(rulesList, rules, { readonly: true });
 }
 
 renderRules();
-
-initCustomDropdowns();
 
 const themeBtn = document.querySelector('#theme-btn');
 const themeDropdown = document.querySelector('#theme-dropdown');
@@ -109,9 +69,9 @@ const popupTourSteps = [
     body: 'You can open this popup from your browser toolbar at any time to manage rules.',
   },
   {
-    selector: '#add-btn',
-    title: 'Add a rule',
-    body: 'Click here to add a rule that limits your time on a specific site.',
+    selector: '#manage-btn',
+    title: 'Manage your rules',
+    body: 'Click here to open the rules page, where you can add and edit limits for specific sites.',
     keepTooltipPosition: true,
   },
   {

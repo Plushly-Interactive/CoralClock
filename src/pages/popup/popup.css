@@ -75,20 +75,3 @@ html.dark #sun-icon {
   align-items: center;
   justify-content: center;
 }
-
-
-/* Popup-local: form is hidden until "+ Add" toggles .visible.
-   Layout/field styling comes from shared/rules.css (.add-form, .form-row).
-   .add-form is display:flex; we hide it without an id selector so the
-   shared flex props (column direction, gap) keep applying when shown. */
-.add-form:not(.visible) {
-  display: none;
-}
-
-#add-form {
-  padding: 16px 16px 0 16px;
-}
-
-.form-row {
-  justify-content: space-between;
-}

@@ -32,10 +32,11 @@ Blocking sites once they cross a configured limit. BiteGuard already tracks time
 | Surface | Role in this feature |
 |---|---|
 | rules page *(new)* | Full-page rule management: add/edit/list rules with match-type and mode controls. |
+| popup | Glanceable read-only list of the **enabled** rules plus a "Manage rules" button that opens the rules page. No inline editing. |
 | background | Reads `rules`, runs the limit checker each flush (and on `rules` changes), publishes DNR rules, and navigates open/blocked tabs in/out of the block. |
 | blocked page | Reads query params; shows the blocked target, which limit was hit, and reset time; sets the tab title. |
 
-The dedicated rules page is where rule management lives for v1. The existing popup rule UI is left as-is for now; reworking the popup into a launcher to this page is deferred (see Out of scope).
+The dedicated rules page is where all rule management lives. The popup is a launcher: it lists the enabled rules read-only and opens the rules page to add or edit.
 
 ### Files likely to change
 
@@ -45,7 +46,7 @@ The dedicated rules page is where rule management lives for v1. The existing pop
 | `src/pages/rules/rules.js` *(new)* | Page wiring: scope→path toggle, live preview, target normalization (strip scheme + `www.`) and validation (via `tldts` `getDomain`), form submit, list render. Rule logic comes from the shared module. |
 | `src/pages/rules/rules.css` *(new)* | Page-specific layout; reuse shared classes from `theme.css`. |
 | `src/shared/rules.js` *(new)* | Extracted rule logic shared by the rules page and the popup: add/toggle/delete, render a rule list, custom-dropdown init. |
-| `src/pages/popup/popup.js` | Adopt `src/shared/rules.js` for save/toggle/delete/render; drop the duplicated inline logic. |
+| `src/pages/popup/popup.{html,js,css}` | Reworked into a launcher: removed the inline add-form; renders the **enabled** rules read-only via `renderRuleList(..., { readonly: true })`; a "Manage rules" button opens the rules page. |
 | `src/pages/dashboard/dashboard.html` | Add a "Rules" entry button to `#header-left` to reach the rules page. |
 | `src/background/background.js` | Wire the checker + publisher into the flush alarm; also re-run it on `storage.onChanged` for the `rules` key so rule edits take effect immediately. |
 | `src/background/enforcement.js` *(new)* | `computeOverage` (pure), the DNR publisher, and tab side-effects (`reloadMatchingTabs`, `returnUnblockedTabs`). |
@@ -154,7 +155,6 @@ Smallest shippable slice first:
 
 ## Out of scope (v1)
 
-- **Popup rework** — the popup adopts `src/shared/rules.js` but keeps its own inline form layout. Reworking it into a launcher that opens the dedicated rules page is deferred. Until then both surfaces write the same `rules` key.
 - **Rules entry-point placement** — the rules page is reached from a button in the dashboard's `#header-left` for now. This is a stopgap; a better-positioned entry point may replace it later.
 - **User-supplied regex matching** — the three structural scopes ship. (The publisher uses `regexFilter` internally for `host`/`pathPrefix`, but users can't enter arbitrary patterns.)
 - **Rolling-7-day week** — `week` is a calendar week (Monday-start, resets at the boundary) for v1, consistent with how `day`/`hour` reset. A rolling 7-day window (sliding daily, matching the dashboard's "Last 7 days") is a deferred variant; revisit if users find the weekly reset surprising.

@@ -392,7 +392,7 @@ button:disabled {
 
 .data-table td {
   padding: 10px 20px;
-  font-size: var(--font-lg);
+  font-size: var(--font-md);
   border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
 }

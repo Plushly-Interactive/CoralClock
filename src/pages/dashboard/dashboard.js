@@ -1,5 +1,5 @@
 import { formatMs, localDayKey } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar } from '../../shared/utils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
@@ -10,6 +10,7 @@ import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.
 import { openModal, closeModal } from '../../data/importData.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
 document.querySelector('#prune-btn').addEventListener('click', () => {
   location.href = '../storage-pruning/storage-pruning.html';
 });

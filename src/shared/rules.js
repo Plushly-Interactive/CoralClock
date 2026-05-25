@@ -146,17 +146,20 @@ export async function disableRules(ids) {
   });
 }
 
-export function renderRuleList(listEl, rules) {
+// readonly omits the toggle/delete buttons — used by the popup, which is a
+// glanceable list + launcher to the rules page rather than an editor.
+export function renderRuleList(listEl, rules, { readonly = false } = {}) {
   listEl.innerHTML = rules.map(rule => {
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
+    const actions = readonly ? '' : `
+      <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
+      <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>`;
     return `
     <li id="rule-${rule.id}" class="${rule.enabled ? '' : 'disabled'}">
       <div class="rule-info">
-        <strong>${matchLabel(rule)}</strong>
-        <span>${SCOPE_LABELS[rule.matchType]} · ${formatMs(limitMs)} per ${rule.period} · ${MODE_LABELS[rule.mode]}</span>
-      </div>
-      <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
-      <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>
+        <span class="site-label">${matchLabel(rule)}</span>
+        <span class="text-meta">${SCOPE_LABELS[rule.matchType]} · ${formatMs(limitMs)} per ${rule.period} · ${MODE_LABELS[rule.mode]}</span>
+      </div>${actions}
     </li>`;
   }).join('');
 }

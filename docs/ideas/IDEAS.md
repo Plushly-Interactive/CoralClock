@@ -28,6 +28,7 @@ Backlog:
 
 ## UX / UI
 
+- Apply the `navButton` helper (`src/shared/utils.js`) to all navigation `<button class="btn">`s so they support middle-click / ctrl-cmd-click → open in a new tab (the affordance lost by using `<button>` instead of `<a>`). Currently wired only on the dashboard `#rules-btn` and the blocked page `#manage-link`; audit other header/nav buttons (e.g. popup `#dashboard-btn`, `#manage-btn`).
 - Dynamically constrain the limit unit dropdown based on the selected period (e.g. period=hour → only minutes allowed).
 - Add a "Tutorial": guided app tour that explains each UI button/user action step by step with a popup for each step — see [guided-tour.md](../features/guided-tour.md)
 - Add a "week" level in the drills, compatible with keyboard navigation.
