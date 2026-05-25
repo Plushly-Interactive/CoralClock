@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
-import { formatWithSmallSub, STAT_LABELS, escapeHtml, CHART_LEGEND_HTML } from '../../shared/utils.js';
+import { formatWithSmallSub, STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
@@ -17,6 +17,12 @@ const isMerged = !!siteIds;
 let effectiveSiteIds = isMerged ? siteIds : [siteId];
 let isAggregatedEtld1 = false;
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+const limitBtn = document.querySelector('#limit-btn');
+if (isMerged) {
+  limitBtn.style.display = 'none';
+} else {
+  navButton(limitBtn, `../rules/rules.html?target=${encodeURIComponent(siteId)}`);
+}
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
 const timeTooltip = document.querySelector('#time-tooltip');

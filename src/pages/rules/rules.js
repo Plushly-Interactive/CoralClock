@@ -293,5 +293,9 @@ initCustomDropdowns();
 document.querySelectorAll('#form-unit-menu button, #form-period-menu button, #form-mode-menu button')
   .forEach(opt => opt.addEventListener('click', refreshPreview));
 document.querySelector('#form-limit').addEventListener('input', refreshPreview);
+const prefillTarget = new URLSearchParams(location.search).get('target');
+if (prefillTarget) {
+  formTarget.value = prefillTarget;
+}
 refreshPreview();
 render();
