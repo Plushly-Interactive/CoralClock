@@ -67,3 +67,13 @@
   font-size: var(--font-sm);
   color: var(--color-text-secondary);
 }
+
+/* Briefly highlight a rule the user was linked to (e.g. from the dedupe hint). */
+.rules-list li.flash {
+  animation: rule-flash 1.2s ease-out;
+}
+
+@keyframes rule-flash {
+  from { background: var(--color-accent); }
+  to { background: transparent; }
+}

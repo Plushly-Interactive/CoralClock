@@ -20,6 +20,7 @@ Blocking sites once they cross a configured limit. BiteGuard already tracks time
 - [ ] `blocked.html` shows the host/path that was blocked, which limit was hit, and when it resets.
 - [ ] The target field accepts a pasted URL: a leading `http(s)://` and `www.` are stripped, so `https://www.reddit.com/r/news` becomes host `reddit.com` + path `r/news`.
 - [ ] A target that isn't a valid registrable domain (e.g. `dfdsf`) shows an inline message and the Add button stays disabled.
+- [ ] If an existing rule already covers the one I'm adding for the same period — a whole-site rule covering a host or page on it, a host rule covering a page on it, or a page rule covering a nested page — the preview says so, links to the covering rule (clicking it scrolls to and flashes that row), and the Add button stays disabled.
 - [ ] Existing stored rules created before this feature keep working — they behave as `mode: 'active'`, `matchType: 'host'`.
 
 ## Scope
@@ -157,7 +158,7 @@ Smallest shippable slice first:
 - **Rolling-7-day week** — `week` is a calendar week (Monday-start, resets at the boundary) for v1, consistent with how `day`/`hour` reset. A rolling 7-day window (sliding daily, matching the dashboard's "Last 7 days") is a deferred variant; revisit if users find the weekly reset surprising.
 - **Week-start user setting** — the calendar week starts on Monday (hardcoded) for v1. A user setting to choose Monday vs Sunday (and any other locale-sensitive week start) is deferred; `windowKeys` in [enforcement.js](../../src/background/enforcement.js) would read it instead of assuming Monday.
 - **Pre-emptive blocking** — predicting a crossing from in-memory tracker state before the flush. Reactive only.
-- **Rule uniqueness validation** — no enforced dedupe of `(target, matchType, period)`. Noted in [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
+- **Pruning rules a new one subsumes** — the form refuses a rule an *existing* one already covers (see Acceptance criteria), but adding a *broader* rule that covers existing narrower ones is still allowed and leaves both in place; the narrower ones aren't offered for removal. Overlapping rules that don't cover each other (different scopes that partly intersect) also coexist by design.
 
 ## References
 

@@ -257,20 +257,6 @@ body {
   border-radius: 2px;
 }
 
-.link-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-accent);
-  font-size: var(--font-base);
-  font-weight: 600;
-  line-height: 1;
-}
-
-.link-btn:hover {
-  color: var(--color-accent-light);
-}
-
 #drill-month-link {
   display: none;
   padding: 0 20px;

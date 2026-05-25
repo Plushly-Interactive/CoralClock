@@ -5,7 +5,7 @@ export const RULE_MULTIPLIERS = { minutes: 60000, hours: 3600000, days: 86400000
 const MODE_LABELS = { active: 'active', audio: 'audio', 'active+audio': 'active + audio' };
 const SCOPE_LABELS = { host: 'This host only', subdomain: 'Whole site', pathPrefix: 'A specific page' };
 
-function matchLabel(rule) {
+export function matchLabel(rule) {
   if (rule.matchType === 'subdomain') return `*.${rule.target}`;
   if (rule.matchType === 'pathPrefix') return rule.path ? `${rule.target}/${rule.path}` : `${rule.target}/`;
   return rule.target;
@@ -40,6 +40,35 @@ export function describeRule({ target, path, matchType }) {
     text: `${host} only (not subdomains)`,
     kind: 'regexFilter', value: `^https?://(?:www\\.)?${reEsc(host)}(?:/|$)`,
   };
+}
+
+// Does existing rule `a` already cover candidate `b` (same period)? If so, b is
+// redundant — a blocks everything b would. Coverage by scope, all on period:
+//  - subdomain (whole site) covers any rule whose target is the apex or a
+//    subdomain of it (host, pathPrefix, or another subdomain).
+//  - host covers host/pathPrefix on the same exact host.
+//  - pathPrefix covers a pathPrefix whose path sits under its own path.
+// Equal rules are covered by all three branches (a == b ⇒ redundant).
+function coversRule(a, b) {
+  if (a.period !== b.period) return false;
+  if (a.matchType === 'subdomain') {
+    return b.target === a.target || b.target.endsWith(`.${a.target}`);
+  }
+  if (b.target !== a.target) return false;
+  if (a.matchType === 'host') return b.matchType === 'host' || b.matchType === 'pathPrefix';
+  // a is pathPrefix: only covers a page rule nested under it.
+  if (b.matchType !== 'pathPrefix') return false;
+  const base = (a.path || '').replace(/^\//, '');
+  const sub = (b.path || '').replace(/^\//, '');
+  return sub === base || sub.startsWith(`${base}/`);
+}
+
+// The first existing rule that covers `candidate` for the same period (broader
+// or equal scope), or undefined. limit/mode are ignored — the covering rule
+// fires first and would block everything the candidate would. The form's live
+// preview uses this to refuse a redundant rule and link to the one at fault.
+export function findCoveringRule(rules, candidate) {
+  return rules.find(r => coversRule(r, candidate));
 }
 
 export async function getRules() {
@@ -79,7 +108,7 @@ export function renderRuleList(listEl, rules) {
   listEl.innerHTML = rules.map(rule => {
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
     return `
-    <li class="${rule.enabled ? '' : 'disabled'}">
+    <li id="rule-${rule.id}" class="${rule.enabled ? '' : 'disabled'}">
       <div class="rule-info">
         <strong>${matchLabel(rule)}</strong>
         <span>${SCOPE_LABELS[rule.matchType]} · ${formatMs(limitMs)} per ${rule.period} · ${MODE_LABELS[rule.mode]}</span>

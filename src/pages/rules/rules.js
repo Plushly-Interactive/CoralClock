@@ -1,4 +1,4 @@
-import { getRules, addRule, toggleRule, deleteRule, renderRuleList, initCustomDropdowns, describeRule } from '../../shared/rules.js';
+import { getRules, addRule, toggleRule, deleteRule, renderRuleList, initCustomDropdowns, describeRule, findCoveringRule, matchLabel } from '../../shared/rules.js';
 import { getDomain } from '../../vendor/tldts.js';
 
 const addForm = document.querySelector('#add-form');
@@ -11,6 +11,9 @@ const rulesList = document.querySelector('#rules-list');
 const noRulesMsg = document.querySelector('#no-rules-message');
 
 let scope = 'subdomain';
+// Cached so refreshPreview can check the typed rule against existing ones
+// without an async storage read on every keystroke. render() keeps it fresh.
+let currentRules = [];
 
 // Split a typed address into { host, path }: strip any scheme and a leading
 // www. (tracking collapses www. into the apex), then everything before the
@@ -67,6 +70,16 @@ function refreshPreview() {
     saveBtn.disabled = true;
     return;
   }
+  const period = document.querySelector('#form-period-btn').dataset.value;
+  const covering = findCoveringRule(currentRules, { target: host, path, matchType: scope, period });
+  if (covering) {
+    previewText.innerHTML =
+      `An existing ${period} rule (<a href="#rule-${covering.id}" id="covering-link" class="link-btn">${matchLabel(covering)}</a>) already covers this.`;
+    previewPattern.textContent = '';
+    saveBtn.disabled = true;
+    return;
+  }
+
   const { text, value } = describeRule({ target: host, path, matchType: scope });
   previewText.textContent = `Will block ${text}.`;
   previewPattern.textContent = value;
@@ -76,10 +89,26 @@ function refreshPreview() {
 cards.forEach(card => card.addEventListener('click', () => selectScope(card.dataset.scope)));
 formTarget.addEventListener('input', refreshPreview);
 
+// The dedupe hint links to the covering rule (#covering-link → #rule-<id>).
+// Delegated because the link is rebuilt on every keystroke. Scroll to that row
+// and flash it instead of a jarring jump.
+previewText.addEventListener('click', (e) => {
+  const link = e.target.closest('#covering-link');
+  if (!link) return;
+  e.preventDefault();
+  const row = document.querySelector(link.getAttribute('href'));
+  if (!row) return;
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  row.classList.remove('flash');
+  void row.offsetWidth; // restart the animation if it's already flashing
+  row.classList.add('flash');
+});
+
 async function render() {
-  const rules = await getRules();
-  noRulesMsg.style.display = rules.length === 0 ? '' : 'none';
-  renderRuleList(rulesList, rules);
+  currentRules = await getRules();
+  noRulesMsg.style.display = currentRules.length === 0 ? '' : 'none';
+  renderRuleList(rulesList, currentRules);
+  refreshPreview(); // re-check the typed rule against the refreshed list
 }
 
 addForm.addEventListener('submit', async (e) => {
@@ -88,6 +117,8 @@ addForm.addEventListener('submit', async (e) => {
   const limit = parseInt(document.querySelector('#form-limit').value);
   if (!host || !limit || !isValidHost(host)) return;
   if (scope === 'pathPrefix' && !path) return;
+  const period = document.querySelector('#form-period-btn').dataset.value;
+  if (findCoveringRule(currentRules, { target: host, path, matchType: scope, period })) return;
 
   await addRule({
     target: host,
@@ -95,7 +126,7 @@ addForm.addEventListener('submit', async (e) => {
     matchType: scope,
     limit,
     limitUnit: document.querySelector('#form-unit-btn').dataset.value,
-    period: document.querySelector('#form-period-btn').dataset.value,
+    period,
     mode: document.querySelector('#form-mode-btn').dataset.value,
   });
 
@@ -114,5 +145,11 @@ rulesList.addEventListener('click', async (e) => {
 });
 
 initCustomDropdowns();
+// Re-check the preview when the period changes (it's part of the dedupe key).
+// The option handler in initCustomDropdowns calls stopPropagation, so listen on
+// the option buttons directly; registered after initCustomDropdowns so its
+// handler sets dataset.value first, before ours reads it.
+document.querySelectorAll('#form-period-menu button').forEach(
+  opt => opt.addEventListener('click', refreshPreview));
 refreshPreview();
 render();

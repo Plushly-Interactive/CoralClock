@@ -139,6 +139,21 @@ input[type="checkbox"] {
   border-color: var(--color-accent-light);
 }
 
+.link-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-accent);
+  font-size: var(--font-base);
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.link-btn:hover {
+  color: var(--color-accent-light);
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
