@@ -70,19 +70,43 @@
   margin-bottom: 16px;
 }
 
-#rule-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-bottom: 16px;
+.callout {
   padding: 12px 14px;
   border-radius: 6px;
   background: var(--color-hover-bg);
   border-left: 3px solid var(--color-accent);
 }
 
+#rule-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 16px;
+}
+
+#redundant-prompt {
+  margin-bottom: 16px;
+}
+
+#redundant-prompt #redundant-list {
+  margin: 8px 0;
+}
+
 #preview-pattern {
   font-family: monospace;
+}
+
+/* The header reuses .data-table th styling; just push Status to the right. */
+#sort-status {
+  text-align: right;
+}
+
+/* Fixed-width arrow slot so the active header doesn't shift when sorted. */
+#sort-bar th::after {
+  content: attr(data-arrow);
+  display: inline-block;
+  width: 1em;
+  text-align: right;
 }
 
 #no-rules-message {

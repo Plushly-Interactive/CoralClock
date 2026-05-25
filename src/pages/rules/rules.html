@@ -64,7 +64,7 @@
             </div>
             <span>counting</span>
             <div class="custom-dropdown">
-              <button type="button" class="dropdown-btn" id="form-mode-btn" data-value="active">active<span class="dropdown-arrow">▼</span></button>
+              <button type="button" class="dropdown-btn" id="form-mode-btn" data-value="active+audio">active + audio<span class="dropdown-arrow">▼</span></button>
               <div class="dropdown-menu" id="form-mode-menu">
                 <button type="button" value="active">active</button>
                 <button type="button" value="audio">audio</button>
@@ -73,7 +73,7 @@
             </div>
           </div>
 
-          <div id="rule-preview">
+          <div id="rule-preview" class="callout">
             <span id="preview-text"></span>
             <code id="preview-pattern" class="text-meta"></code>
           </div>
@@ -82,7 +82,24 @@
         </form>
       </section>
 
+      <div id="redundant-prompt" class="callout" hidden>
+        <p id="redundant-text"></p>
+        <ul id="redundant-list" class="rules-list"></ul>
+        <div class="form-row">
+          <button id="redundant-disable-btn" type="button" class="btn">Disable them</button>
+          <button id="redundant-keep-btn" type="button" class="link-btn">Keep all</button>
+        </div>
+      </div>
+
       <p id="no-rules-message" class="empty-msg text-meta">No rules yet. Add one above to get started.</p>
+      <table id="sort-bar" class="data-table" hidden>
+        <thead>
+          <tr>
+            <th id="sort-site">Site</th>
+            <th id="sort-status">Status</th>
+          </tr>
+        </thead>
+      </table>
       <ul id="rules-list" class="rules-list"></ul>
     </main>
 

@@ -42,15 +42,13 @@ export function describeRule({ target, path, matchType }) {
   };
 }
 
-// Does existing rule `a` already cover candidate `b` (same period)? If so, b is
-// redundant — a blocks everything b would. Coverage by scope, all on period:
+// Does rule `a`'s URL scope cover rule `b`'s (ignoring period/limit)?
 //  - subdomain (whole site) covers any rule whose target is the apex or a
 //    subdomain of it (host, pathPrefix, or another subdomain).
 //  - host covers host/pathPrefix on the same exact host.
 //  - pathPrefix covers a pathPrefix whose path sits under its own path.
-// Equal rules are covered by all three branches (a == b ⇒ redundant).
-function coversRule(a, b) {
-  if (a.period !== b.period) return false;
+// Equal scope is covered by all three branches (a == b ⇒ true).
+function coversScope(a, b) {
   if (a.matchType === 'subdomain') {
     return b.target === a.target || b.target.endsWith(`.${a.target}`);
   }
@@ -63,12 +61,46 @@ function coversRule(a, b) {
   return sub === base || sub.startsWith(`${base}/`);
 }
 
-// The first existing rule that covers `candidate` for the same period (broader
-// or equal scope), or undefined. limit/mode are ignored — the covering rule
-// fires first and would block everything the candidate would. The form's live
-// preview uses this to refuse a redundant rule and link to the one at fault.
+// The first existing rule that makes `candidate` a no-op — same period, scope
+// covers it, and the existing limit is no looser than the candidate's, so adding
+// it would change nothing. (A *stricter* candidate isn't a no-op: it's allowed
+// in, and findRedundantRules then offers to disable the looser existing rule.)
+// mode must match too. The form's live preview uses this to refuse a true
+// duplicate and link to the rule at fault.
 export function findCoveringRule(rules, candidate) {
-  return rules.find(r => coversRule(r, candidate));
+  const candMs = limitMsOf(candidate);
+  return rules.find(r =>
+    r.enabled && // a disabled rule blocks nothing, so it can't cover anything
+    r.period === candidate.period &&
+    r.mode === candidate.mode &&
+    coversScope(r, candidate) &&
+    limitMsOf(r) <= candMs);
+}
+
+function limitMsOf(rule) {
+  return rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
+}
+
+// Periods ordered shortest → longest, for cross-period subsumption.
+const PERIOD_RANK = { hour: 0, day: 1, week: 2 };
+
+// Existing enabled rules that `newRule` makes redundant — it would always block
+// them first, so they can never trigger. Beyond scope coverage and matching mode
+// (active/audio/active+audio measure different usage), the new rule must be at
+// least as strict in every window: a smaller-or-equal limit (`Lₙ ≤ Lₒ`) over a
+// longer-or-equal period (`Pₙ ≥ Pₒ`). A budget of Lₙ over a long window caps any
+// shorter sub-window at Lₙ ≤ Lₒ too, so the old rule never binds. Conservative:
+// e.g. 5m/day subsumes 5m/hour, but 10m/day does not (its limit is looser).
+export function findRedundantRules(rules, newRule) {
+  const newMs = limitMsOf(newRule);
+  const newRank = PERIOD_RANK[newRule.period];
+  return rules.filter(r =>
+    r.enabled &&
+    r.id !== newRule.id &&
+    r.mode === newRule.mode &&
+    coversScope(newRule, r) &&
+    newMs <= limitMsOf(r) &&
+    newRank >= PERIOD_RANK[r.period]);
 }
 
 export async function getRules() {
@@ -102,6 +134,16 @@ export async function toggleRule(id) {
 export async function deleteRule(id) {
   const rules = await getRules();
   await chrome.storage.local.set({ rules: rules.filter(r => r.id !== id) });
+}
+
+// Disable several rules in one write (used when a newly-added rule makes them
+// redundant). Disable rather than delete so the choice is reversible.
+export async function disableRules(ids) {
+  const set = new Set(ids);
+  const rules = await getRules();
+  await chrome.storage.local.set({
+    rules: rules.map(r => set.has(r.id) ? { ...r, enabled: false } : r),
+  });
 }
 
 export function renderRuleList(listEl, rules) {

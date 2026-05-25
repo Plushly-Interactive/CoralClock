@@ -1,4 +1,4 @@
-import { getRules, addRule, toggleRule, deleteRule, renderRuleList, initCustomDropdowns, describeRule, findCoveringRule, matchLabel } from '../../shared/rules.js';
+import { getRules, addRule, toggleRule, deleteRule, renderRuleList, initCustomDropdowns, describeRule, findCoveringRule, findRedundantRules, disableRules, matchLabel } from '../../shared/rules.js';
 import { getDomain } from '../../vendor/tldts.js';
 
 const addForm = document.querySelector('#add-form');
@@ -9,11 +9,21 @@ const previewPattern = document.querySelector('#preview-pattern');
 const saveBtn = document.querySelector('#save-btn');
 const rulesList = document.querySelector('#rules-list');
 const noRulesMsg = document.querySelector('#no-rules-message');
+const redundantPrompt = document.querySelector('#redundant-prompt');
+const redundantText = document.querySelector('#redundant-text');
+const redundantList = document.querySelector('#redundant-list');
+const redundantDisableBtn = document.querySelector('#redundant-disable-btn');
+const redundantKeepBtn = document.querySelector('#redundant-keep-btn');
+const sortBar = document.querySelector('#sort-bar');
+const sortSiteBtn = document.querySelector('#sort-site');
+const sortStatusBtn = document.querySelector('#sort-status');
 
 let scope = 'subdomain';
 // Cached so refreshPreview can check the typed rule against existing ones
 // without an async storage read on every keystroke. render() keeps it fresh.
 let currentRules = [];
+// List sort, session-only (resets on reload). Default: site A–Z.
+let sort = { key: 'site', dir: 1 };
 
 // Split a typed address into { host, path }: strip any scheme and a leading
 // www. (tracking collapses www. into the apex), then everything before the
@@ -29,6 +39,16 @@ function parseTarget(raw) {
 // words like "dfdsf", but accepts reddit.com, sub.example.co.uk, etc.).
 function isValidHost(host) {
   return !!getDomain(host);
+}
+
+// The limit/unit/period/mode the form currently has selected.
+function formLimitFields() {
+  return {
+    limit: parseInt(document.querySelector('#form-limit').value),
+    limitUnit: document.querySelector('#form-unit-btn').dataset.value,
+    period: document.querySelector('#form-period-btn').dataset.value,
+    mode: document.querySelector('#form-mode-btn').dataset.value,
+  };
 }
 
 // Update each card's example to reflect the typed host/path.
@@ -70,8 +90,9 @@ function refreshPreview() {
     saveBtn.disabled = true;
     return;
   }
-  const period = document.querySelector('#form-period-btn').dataset.value;
-  const covering = findCoveringRule(currentRules, { target: host, path, matchType: scope, period });
+  const candidate = { target: host, path, matchType: scope, ...formLimitFields() };
+  const period = candidate.period;
+  const covering = findCoveringRule(currentRules, candidate);
   if (covering) {
     previewText.innerHTML =
       `An existing ${period} rule (<a href="#rule-${covering.id}" id="covering-link" class="link-btn">${matchLabel(covering)}</a>) already covers this.`;
@@ -104,36 +125,102 @@ previewText.addEventListener('click', (e) => {
   row.classList.add('flash');
 });
 
+// A copy of the rules sorted by the current sort. 'site' is A–Z by target (with
+// path as tiebreak); 'status' puts enabled rules first. dir flips the order.
+function sortedRules() {
+  const cmp = sort.key === 'status'
+    ? (a, b) => Number(b.enabled) - Number(a.enabled)
+    : (a, b) => (a.target + (a.path || '')).localeCompare(b.target + (b.path || ''));
+  return [...currentRules].sort((a, b) => sort.dir * cmp(a, b));
+}
+
+// Mark the active sort header .sorted and set its arrow via a data attribute —
+// a fixed-width ::after slot so the label doesn't shift when the arrow appears.
+function updateSortArrows() {
+  for (const [key, btn] of [['site', sortSiteBtn], ['status', sortStatusBtn]]) {
+    const isSorted = sort.key === key;
+    btn.dataset.arrow = isSorted ? (sort.dir === 1 ? '↑' : '↓') : '';
+    btn.classList.toggle('sorted', isSorted);
+  }
+}
+
+// Click a header: switch to its key (ascending), or flip direction if already on it.
+function setSort(key) {
+  if (sort.key === key) sort.dir *= -1;
+  else sort = { key, dir: 1 };
+  updateSortArrows();
+  renderRuleList(rulesList, sortedRules());
+}
+
 async function render() {
   currentRules = await getRules();
-  noRulesMsg.style.display = currentRules.length === 0 ? '' : 'none';
-  renderRuleList(rulesList, currentRules);
+  const empty = currentRules.length === 0;
+  noRulesMsg.style.display = empty ? '' : 'none';
+  sortBar.removeAttribute('hidden'); // clear the static initial hidden state once
+  sortBar.style.display = empty ? 'none' : '';
+  updateSortArrows();
+  renderRuleList(rulesList, sortedRules());
   refreshPreview(); // re-check the typed rule against the refreshed list
 }
+
+sortSiteBtn.addEventListener('click', () => setSort('site'));
+sortStatusBtn.addEventListener('click', () => setSort('status'));
 
 addForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const { host, path } = parseTarget(formTarget.value);
-  const limit = parseInt(document.querySelector('#form-limit').value);
-  if (!host || !limit || !isValidHost(host)) return;
+  const fields = formLimitFields();
+  if (!host || !fields.limit || !isValidHost(host)) return;
   if (scope === 'pathPrefix' && !path) return;
-  const period = document.querySelector('#form-period-btn').dataset.value;
-  if (findCoveringRule(currentRules, { target: host, path, matchType: scope, period })) return;
 
-  await addRule({
+  const newRule = {
     target: host,
     path: scope === 'pathPrefix' ? path : undefined,
     matchType: scope,
-    limit,
-    limitUnit: document.querySelector('#form-unit-btn').dataset.value,
-    period,
-    mode: document.querySelector('#form-mode-btn').dataset.value,
-  });
+    ...fields,
+  };
+  if (findCoveringRule(currentRules, newRule)) return;
+  // Existing rules this one makes redundant (it's stricter and covers them) —
+  // computed against the pre-add list, before render() refreshes currentRules.
+  const redundant = findRedundantRules(currentRules, newRule);
+
+  await addRule(newRule);
 
   formTarget.value = '';
   document.querySelector('#form-limit').value = '10';
   refreshPreview();
+  await render();
+
+  showRedundantPrompt(redundant);
+});
+
+// Offer to disable rules the just-added rule made redundant. Disabling (not
+// deleting) keeps the choice reversible via the rule's own toggle.
+function showRedundantPrompt(redundant) {
+  if (!redundant.length) {
+    redundantPrompt.style.display = 'none';
+    return;
+  }
+  const n = redundant.length;
+  redundantText.textContent =
+    `The rule you just added is stricter than ${n} existing ${n === 1 ? 'rule' : 'rules'} and would always block first. Disable ${n === 1 ? 'it' : 'them'}?`;
+  // Plain read-only labels — not renderRuleList, which would duplicate the
+  // rule-<id> anchors and emit dead toggle/delete buttons.
+  redundantList.innerHTML = redundant.map(r => `<li>${matchLabel(r)}</li>`).join('');
+  redundantDisableBtn.dataset.ids = redundant.map(r => r.id).join(',');
+  redundantPrompt.removeAttribute('hidden');
+  redundantPrompt.style.display = '';
+}
+
+redundantDisableBtn.addEventListener('click', async () => {
+  const ids = redundantDisableBtn.dataset.ids.split(',');
+  await disableRules(ids);
+  redundantPrompt.style.display = 'none';
   render();
+});
+
+redundantKeepBtn.addEventListener('click', () => {
+  redundantPrompt.style.display = 'none';
 });
 
 rulesList.addEventListener('click', async (e) => {
@@ -145,11 +232,13 @@ rulesList.addEventListener('click', async (e) => {
 });
 
 initCustomDropdowns();
-// Re-check the preview when the period changes (it's part of the dedupe key).
-// The option handler in initCustomDropdowns calls stopPropagation, so listen on
-// the option buttons directly; registered after initCustomDropdowns so its
-// handler sets dataset.value first, before ours reads it.
-document.querySelectorAll('#form-period-menu button').forEach(
-  opt => opt.addEventListener('click', refreshPreview));
+// Limit, unit, period and mode all feed the dedupe/redundancy check, so re-run
+// the preview when any of them changes. The dropdown option handler in
+// initCustomDropdowns calls stopPropagation, so listen on the option buttons
+// directly; registered after initCustomDropdowns so its handler sets
+// dataset.value first, before ours reads it.
+document.querySelectorAll('#form-unit-menu button, #form-period-menu button, #form-mode-menu button')
+  .forEach(opt => opt.addEventListener('click', refreshPreview));
+document.querySelector('#form-limit').addEventListener('input', refreshPreview);
 refreshPreview();
 render();
