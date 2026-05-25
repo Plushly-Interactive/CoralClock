@@ -136,6 +136,16 @@ export async function deleteRule(id) {
   await chrome.storage.local.set({ rules: rules.filter(r => r.id !== id) });
 }
 
+// Patch an existing rule's editable fields (limit/limitUnit/period). target,
+// scope and mode define what the rule is and aren't edited — change those by
+// deleting and re-adding.
+export async function updateRule(id, fields) {
+  const rules = await getRules();
+  await chrome.storage.local.set({
+    rules: rules.map(r => r.id === id ? { ...r, ...fields } : r),
+  });
+}
+
 // Disable several rules in one write (used when a newly-added rule makes them
 // redundant). Disable rather than delete so the choice is reversible.
 export async function disableRules(ids) {
@@ -152,6 +162,7 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
   listEl.innerHTML = rules.map(rule => {
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
     const actions = readonly ? '' : `
+      <button class="edit-btn square-btn" data-id="${rule.id}">✎</button>
       <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
       <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>`;
     return `

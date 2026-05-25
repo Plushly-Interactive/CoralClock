@@ -1,4 +1,4 @@
-import { getRules, addRule, toggleRule, deleteRule, renderRuleList, initCustomDropdowns, describeRule, findCoveringRule, findRedundantRules, disableRules, matchLabel } from '../../shared/rules.js';
+import { getRules, addRule, toggleRule, deleteRule, updateRule, renderRuleList, initCustomDropdowns, describeRule, findCoveringRule, findRedundantRules, disableRules, matchLabel } from '../../shared/rules.js';
 import { getDomain } from '../../vendor/tldts.js';
 
 const addForm = document.querySelector('#add-form');
@@ -223,9 +223,62 @@ redundantKeepBtn.addEventListener('click', () => {
   redundantPrompt.style.display = 'none';
 });
 
+// A unit/period dropdown for the inline row editor, with `selected` pre-chosen.
+// Mirrors the add-form dropdowns so initCustomDropdowns wires it the same way.
+function editDropdown(id, options, selected) {
+  const label = options.find(o => o.value === selected)?.label ?? selected;
+  const items = options.map(o => `<button type="button" value="${o.value}">${o.label}</button>`).join('');
+  return `
+    <div class="custom-dropdown">
+      <button type="button" class="dropdown-btn" id="${id}-btn" data-value="${selected}">${label}<span class="dropdown-arrow">▼</span></button>
+      <div class="dropdown-menu" id="${id}-menu">${items}</div>
+    </div>`;
+}
+
+const UNIT_OPTIONS = [{ value: 'minutes', label: 'min' }, { value: 'hours', label: 'hours' }, { value: 'days', label: 'days' }];
+const PERIOD_OPTIONS = [{ value: 'day', label: 'day' }, { value: 'hour', label: 'hour' }, { value: 'week', label: 'week' }];
+
+// Swap a rule row into an inline editor for its limit + period (target/scope/mode
+// aren't editable — change those by deleting and re-adding).
+function openRowEditor(id) {
+  const rule = currentRules.find(r => r.id === id);
+  const li = document.querySelector(`#rule-${id}`);
+  if (!rule || !li) return;
+  // Keep the two info lines so the row height doesn't change; replace only the
+  // action buttons with the limit/period controls (in a .form-row to reuse the
+  // create-form's narrow number-input styling).
+  li.querySelectorAll('.edit-btn, .toggle-btn, .delete-btn').forEach(b => b.remove());
+  li.insertAdjacentHTML('beforeend', `
+    <div class="form-row" id="edit-controls">
+      <input id="edit-limit" type="number" value="${rule.limit}" min="1" />
+      ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
+      <span>per</span>
+      ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
+      <button class="save-edit-btn square-btn" data-id="${id}">✓</button>
+      <button class="cancel-edit-btn square-btn">↩</button>
+    </div>`);
+  initCustomDropdowns(li);
+  li.querySelector('#edit-limit').focus();
+}
+
 rulesList.addEventListener('click', async (e) => {
+  if (e.target.classList.contains('cancel-edit-btn')) { render(); return; }
+  if (e.target.classList.contains('save-edit-btn')) {
+    const id = e.target.dataset.id;
+    const limit = parseInt(rulesList.querySelector('#edit-limit').value);
+    if (!limit) return;
+    await updateRule(id, {
+      limit,
+      limitUnit: rulesList.querySelector('#edit-unit-btn').dataset.value,
+      period: rulesList.querySelector('#edit-period-btn').dataset.value,
+    });
+    render();
+    return;
+  }
+
   const id = e.target.dataset.id;
   if (!id) return;
+  if (e.target.classList.contains('edit-btn')) { await render(); openRowEditor(id); return; }
   if (e.target.classList.contains('toggle-btn')) await toggleRule(id);
   if (e.target.classList.contains('delete-btn')) await deleteRule(id);
   render();

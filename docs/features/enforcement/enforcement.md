@@ -13,7 +13,7 @@ Blocking sites once they cross a configured limit. BiteGuard already tracks time
 
 - [ ] Adding a rule lets me pick a **scope** (this site / this site + subdomains / a specific page) and a **mode** (active / audio / active+audio, defaulting to active+audio) alongside the host, limit, unit, and period.
 - [ ] The form shows a live preview of what the rule will block — a plain-English line plus the resolved URL-filter pattern.
-- [ ] A site I have used past its limit over the rule's period redirects to `blocked.html` within one flush cycle (≤ ~1 min).
+- [ ] A site I have used past its limit over the rule's period redirects to `blocked.html`. Navigating (re-loading the site, clicking a link, opening it in a new tab) flushes current usage and re-checks, so a fresh crossing blocks at navigation time rather than waiting up to a minute for the flush tick.
 - [ ] A `subdomain` rule on `reddit.com` blocks `old.reddit.com`; a `host` rule on `reddit.com` does not.
 - [ ] A `pathPrefix` rule on `twitch.tv` with path `directory` blocks that path and everything beneath it (`/directory/game/...`) but leaves the rest of `twitch.tv` reachable.
 - [ ] When the period rolls over (usage drops out of the window) or I disable the rule, the block is removed without restarting the browser.
@@ -23,6 +23,7 @@ Blocking sites once they cross a configured limit. BiteGuard already tracks time
 - [ ] If an **enabled** existing rule already makes the one I'm adding a no-op — same scope-coverage, period, and mode, with an equal-or-stricter limit — the preview says so, links to the covering rule (clicking it scrolls to and flashes that row), and the Add button stays disabled. A disabled rule never blocks the add.
 - [ ] Adding a rule that is *stricter* than existing ones it covers is allowed; afterward a prompt lists the now-redundant rules and offers to **disable** them (reversible, not deleted). Redundancy holds across periods too: a `5m/day` rule makes a `5m/hour` rule redundant (a tight budget over a longer window caps every shorter window), but a `10m/day` rule does not (looser limit), and mode must match.
 - [ ] The rules list has a sortable header (reusing the dashboard table-header style): clicking **Site** or **Status** sorts by that column, clicking again reverses; the active column shows a ↑/↓ arrow. Sort is session-only.
+- [ ] Each rule row has an edit (✎) button that swaps the row's actions for inline **limit + period** controls (target/scope/mode aren't editable — delete and re-add to change those); ✓ saves, ↩ cancels. The row keeps both its lines so its height doesn't change, and only one row edits at a time.
 - [ ] Existing stored rules created before this feature keep working — they behave as `mode: 'active'`, `matchType: 'host'`.
 
 ## Scope
@@ -43,12 +44,12 @@ The dedicated rules page is where all rule management lives. The popup is a laun
 | File | Change |
 |---|---|
 | `src/pages/rules/rules.html` *(new)* | Full-page rule form (host, scope, optional path, limit, unit, period, mode) + live block preview + rule list, reusing the shared header. |
-| `src/pages/rules/rules.js` *(new)* | Page wiring: scope→path toggle, live preview, target normalization (strip scheme + `www.`) and validation (via `tldts` `getDomain`), form submit, list render. Rule logic comes from the shared module. |
+| `src/pages/rules/rules.js` *(new)* | Page wiring: scope→path toggle, live preview, target normalization (strip scheme + `www.`) and validation (via `tldts` `getDomain`), form submit, list sort, inline row editor (limit + period), list render. Rule logic comes from the shared module. |
 | `src/pages/rules/rules.css` *(new)* | Page-specific layout; reuse shared classes from `theme.css`. |
-| `src/shared/rules.js` *(new)* | Extracted rule logic shared by the rules page and the popup: add/toggle/delete, render a rule list, custom-dropdown init. |
+| `src/shared/rules.js` *(new)* | Extracted rule logic shared by the rules page and the popup: add/toggle/delete/update, coverage + redundancy checks, render a rule list (optionally read-only), custom-dropdown init. |
 | `src/pages/popup/popup.{html,js,css}` | Reworked into a launcher: removed the inline add-form; renders the **enabled** rules read-only via `renderRuleList(..., { readonly: true })`; a "Manage rules" button opens the rules page. |
 | `src/pages/dashboard/dashboard.html` | Add a "Rules" entry button to `#header-left` to reach the rules page. |
-| `src/background/background.js` | Wire the checker + publisher into the flush alarm; also re-run it on `storage.onChanged` for the `rules` key so rule edits take effect immediately. |
+| `src/background/background.js` | Wire the checker + publisher into the flush alarm; re-run on `storage.onChanged` for `rules` so edits apply immediately; and on `webNavigation.onBeforeNavigate` (main frame) flush + re-check so a fresh crossing blocks at navigation time. |
 | `src/background/enforcement.js` *(new)* | `computeOverage` (pure), the DNR publisher, and tab side-effects (`reloadMatchingTabs`, `returnUnblockedTabs`). |
 | `src/data/migrations.js` | `v3 → v4`: backfill `mode:'active'` and `matchType:'host'` on every stored rule. |
 | `src/pages/blocked/blocked.html` + `blocked.js` | External module (MV3 CSP forbids inline scripts); reads `?rule=&site=&path=&url=`, shows the blocked target, limit, reset time, a "Manage rules" link, and sets the tab title to the blocked site. |
@@ -142,26 +143,25 @@ Smallest shippable slice first:
 6. ✅ **React to rule edits immediately** — a `chrome.storage.onChanged` listener on the `rules` key re-runs the check outside the flush cadence, so enabling/disabling/adding/deleting a rule takes effect at once instead of on the next tick.
 7. ✅ **Return tabs on unblock** — `returnUnblockedTabs` finds `blocked.html` tabs whose `?rule` id is no longer in the overage set (limit reset, rule disabled/deleted) and navigates them back. When a tab was blocked by our own `reloadMatchingTabs` (the common case — a tab already open on the site when the limit crossed), it carries the exact pre-block URL in `&url=` and returns there precisely. For a tab that DNR redirected on a *fresh* navigation, there's no `&url=` (DNR's static redirect can't carry the requested URL), so return falls back to reconstructing `https://<site>[/<path>]` — the rule target rather than the exact sub-page. Reliable exact return for that fresh-nav case would need DNR `regexSubstitution` (`\0`) or stashing the pre-block URL; deferred.
 
-   ~~**Navigation-time short-circuit**~~ — **dropped.** A nav-time check against the *cached* overage set is redundant with DNR. Catching a mid-flush-window crossing sooner would need a live-usage-aware check (flushed storage + the tracker's in-memory pending ranges) — not worth the complexity for a sub-minute overshoot. The remaining delay is the flush tick (≤1 min) before a crossing is recorded; shorten the flush interval if it matters in practice.
+8. ✅ **Pre-emptive block at navigation time** — a `chrome.webNavigation.onBeforeNavigate` listener (main frame, http(s)) runs `flushToStorage` + `flushSubpagesToStorage` then `checkEnforcement` before the page settles. `flushToStorage` drains the tracker's pending in-memory ranges up to *now*, so the check sees usage as current as this instant — catching a crossing that accrued since the last flush, which the flush-tick alone wouldn't surface for up to a minute. No tracking-internals access needed: it reuses the existing flush entry point. The freshly-published DNR rule plus `reloadMatchingTabs` then block the site immediately. (The earlier plan to read pending ranges directly was unnecessary once `flushToStorage` is called first.)
 
 ## Edge cases
 
 - **Legacy rule with no `mode`/`matchType`** → migration backfills `active`/`host`; readers can assume the full shape afterward, no defensive defaults.
 - **Period rolls over mid-session** → next flush tick recomputes a smaller overage set; the publisher removes the stale DNR rule and `returnUnblockedTabs` sends blocked tabs back.
 - **Rule disabled/deleted while over limit** → the `storage.onChanged` listener re-runs the check immediately; the DNR rule is removed and blocked tabs return without waiting for a flush.
-- **Tab already open when the limit is crossed** → `reloadMatchingTabs` navigates it into the block on the same tick the rule is published (flush, ≤ ~1 min). The remaining delay is recording the crossing to storage, not the block itself.
+- **Tab already open when the limit is crossed** → `reloadMatchingTabs` navigates it into the block on the same tick the rule is published. With pre-emptive blocking (slice 8) the next navigation flushes + re-checks first, so a crossing accrued since the last flush is caught at navigation time rather than waiting up to a minute for the flush alarm.
 - **`path`/`pathPrefix` rule but no subpage data for the host** → treated as zero usage; not blocked.
 - **Tab DNR-redirected on a fresh navigation** → blocked correctly, but on unblock returns to the rule target rather than the exact pre-block URL (see slice 7 limitation).
 
 ## Out of scope (v1)
 
-- **Rules entry-point placement** — the rules page is reached from a button in the dashboard's `#header-left` for now. This is a stopgap; a better-positioned entry point may replace it later.
+- **Rules entry-point placement** — the rules page is reached from a button in the dashboard's `#header-left`, and from the popup's "Manage rules". This is the entry point for v1; no other placement is planned.
 - **User-supplied regex matching** — the three structural scopes ship. (The publisher uses `regexFilter` internally for `host`/`pathPrefix`, but users can't enter arbitrary patterns.)
 - **Keyword / page-title blocking** — rules match by host/subdomain/path only. Blocking by URL or page-title keyword is a future idea, not designed.
 - **Reachability check on save** — the target is validated as a registrable domain (`tldts` `getDomain`), but we don't test that the site actually resolves/responds.
-- **Rolling-7-day week** — `week` is a calendar week (Monday-start, resets at the boundary) for v1, consistent with how `day`/`hour` reset. A rolling 7-day window (sliding daily, matching the dashboard's "Last 7 days") is a deferred variant; revisit if users find the weekly reset surprising.
-- **Week-start user setting** — the calendar week starts on Monday (hardcoded) for v1. A user setting to choose Monday vs Sunday (and any other locale-sensitive week start) is deferred; `windowKeys` in [enforcement.js](../../src/background/enforcement.js) would read it instead of assuming Monday.
-- **Pre-emptive blocking** — predicting a crossing from in-memory tracker state before the flush. Reactive only.
+- **Rolling-7-day week** — `week` is a calendar week (Monday-start, resets at the boundary), consistent with how `day`/`hour` reset. A rolling 7-day window (sliding daily, matching the dashboard's "Last 7 days") is not offered; the calendar week is the intended semantics.
+- **Week-start user setting** — the calendar week starts on Monday. A user setting to choose Monday vs Sunday is not planned; `windowKeys` in [enforcement.js](../../src/background/enforcement.js) hardcodes Monday.
 - **Redundancy beyond the add-time prompt** — the disable-redundant prompt fires only when *adding* a rule; existing rules aren't continuously re-checked against each other (e.g. loosening a rule later won't resurface a previously-disabled one). Overlapping rules that don't cover each other (different scopes that only partly intersect) coexist by design.
 
 ## References

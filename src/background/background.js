@@ -27,6 +27,15 @@ let cachedSubpagesByHour = null;
 let bootstrapAt;
 let coldStart = false;
 
+// Drop the in-memory analytics caches after storage is rewritten (flush), so
+// the next query re-reads fresh data.
+function invalidateAnalyticsCache() {
+  cachedByDay = null;
+  cachedByHour = null;
+  cachedSubpagesByDay = null;
+  cachedSubpagesByHour = null;
+}
+
 chrome.alarms.get('flush').then(existing => {
   if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
 });
@@ -79,10 +88,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg.type === 'invalidateAnalyticsCache') {
-    cachedByDay = null;
-    cachedByHour = null;
-    cachedSubpagesByDay = null;
-    cachedSubpagesByHour = null;
+    invalidateAnalyticsCache();
     sendResponse(true);
     return true;
   }
@@ -296,10 +302,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await flushSubpagesToStorage(flushAt);
   await saveSnapshot(flushAt);
   await saveSubpageSnapshot(flushAt);
-  cachedByDay = null;
-  cachedByHour = null;
-  cachedSubpagesByDay = null;
-  cachedSubpagesByHour = null;
+  invalidateAnalyticsCache();
 
   await checkEnforcement(flushAt);
 });
@@ -327,3 +330,20 @@ async function checkEnforcement(now) {
   const overage = computeOverage(rules, { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour }, now);
   await publishOverage(overage);
 }
+
+// Pre-emptive block: on a main-frame navigation, flush the tracker's accrued
+// usage to storage and re-check limits *before* relying on the next flush tick.
+// flushToStorage drains the pending in-memory ranges up to `now`, so the check
+// sees usage as current as this instant — catching a crossing that happened
+// since the last flush. The freshly-published DNR rule plus reloadMatchingTabs
+// then block the site without waiting up to a minute for the flush alarm.
+chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
+  if (details.frameId !== 0) return; // main frame only
+  if (!details.url?.startsWith('http')) return;
+  await bootstrapDone;
+  const now = Date.now();
+  await flushToStorage(now);
+  await flushSubpagesToStorage(now);
+  invalidateAnalyticsCache();
+  await checkEnforcement(now);
+});

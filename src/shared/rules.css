@@ -22,7 +22,7 @@
 .form-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .form-row input[type="number"] {
