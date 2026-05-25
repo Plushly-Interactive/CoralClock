@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<!--
+  D2: seg-btn with icons (hybrid)
+  Joined segmented-control track from site.html (depth/sort toggle pattern),
+  taller padding than the drill variant, icon + label on each segment.
+  The selector lives at the top of the form card body, not in a separate header.
+  Stats strip same as D1. Grid: 3fr 2fr.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Rules v2 (D2 · seg-btn icons)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      body { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+      #rules-grid {
+        display: grid;
+        grid-template-columns: 3fr 2fr;
+        gap: 24px;
+        padding: 24px;
+        flex: 1;
+        min-height: 0;
+      }
+
+      /* ── LEFT ── */
+      #left-col { display: flex; flex-direction: column; gap: 20px; min-height: 0; overflow: hidden; }
+
+      .chart-container { position: relative; padding: 16px; border: 1px solid var(--color-border); border-radius: 6px; flex-shrink: 0; }
+
+      .blocked-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+      .blocked-bar-row { display: flex; align-items: center; gap: 10px; }
+      .blocked-bar-site { width: 160px; font-size: var(--font-base); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .blocked-bar-track { flex: 1; height: 13px; background: var(--color-border); border-radius: 3px; overflow: hidden; }
+      .blocked-bar-fill { height: 100%; background: var(--color-accent); border-radius: 3px; }
+      .blocked-bar-val { width: 60px; font-size: var(--font-sm); color: var(--color-text-secondary); }
+
+      #list-section { display: flex; flex-direction: column; min-height: 0; flex: 1; overflow: hidden; border: 1px solid var(--color-border); border-radius: 6px; }
+
+      #sort-bar { width: 100%; border-collapse: collapse; table-layout: fixed; flex-shrink: 0; }
+      #sort-bar th { text-align: left; padding: 8px 16px; font-size: var(--font-sm); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); cursor: pointer; user-select: none; }
+      #sort-bar th.sorted { color: var(--color-accent); }
+      #sort-bar th:last-child { text-align: right; }
+
+      #rules-list { list-style: none; overflow-y: auto; flex: 1; min-height: 0; }
+      .rule-item { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--color-border); gap: 10px; }
+      .rule-item:last-child { border-bottom: none; }
+      .rule-info { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+      .rule-target { font-size: var(--font-md); font-weight: 500; display: flex; align-items: center; gap: 7px; }
+      .rule-detail { font-size: var(--font-sm); color: var(--color-text-secondary); }
+      .rule-actions { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+      .rule-status { font-size: var(--font-sm); color: var(--color-text-secondary); min-width: 52px; text-align: right; }
+      .rule-status.over { color: var(--color-accent); font-weight: 600; }
+
+      .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; flex-shrink: 0; }
+      .badge-url   { background: color-mix(in srgb, var(--color-accent) 18%, transparent); color: var(--color-accent); }
+      .badge-regex { background: color-mix(in srgb, var(--color-secondary) 28%, transparent); color: var(--color-secondary); }
+      .badge-kw    { background: color-mix(in srgb, var(--color-accent-light) 18%, transparent); color: var(--color-accent-light); }
+
+      .edit-inputs { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+      .edit-input  { width: 54px; padding: 3px 6px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); font-size: var(--font-sm); }
+      .edit-row    { background: var(--color-hover-bg); }
+
+      /* ── RIGHT ── */
+      #right-col { display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow-y: auto; }
+
+      /* stats strip — same as D1 */
+      #stats-strip {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        background: var(--color-border);
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      .stat-cell { background: var(--color-bg); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; align-items: center; text-align: center; }
+      .stat-cell .stat-value { font-size: var(--font-lg); font-weight: 600; }
+      .stat-cell .stat-sub { font-size: var(--font-sm); color: var(--color-text-secondary); }
+
+      /* add card */
+      #add-card { border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+
+      /* ── SEG-BTN WITH ICONS (D2 selector) ── */
+      /* Outer track: same background-panel pattern as site.html #depth-toggle / #sort-toggle */
+      #type-toggle {
+        display: inline-flex;
+        width: 100%;                   /* full-width inside card body */
+        background: var(--color-border);
+        padding: 3px;
+        border-radius: 7px;
+        gap: 2px;
+        margin-bottom: 16px;
+        box-sizing: border-box;
+      }
+
+      .type-seg {
+        flex: 1;                       /* equal-width segments */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 7px 8px;              /* taller than drill's 3px — more prominent */
+        border-radius: 5px;
+        font-size: var(--font-sm);
+        font-weight: 500;
+        color: var(--color-text-secondary);
+        line-height: 1.4;
+        white-space: nowrap;
+        transition: background 0.1s, color 0.1s;
+      }
+      .type-seg:hover:not(.active) {
+        color: var(--color-text);
+      }
+      .type-seg.active {
+        background: var(--color-accent);
+        color: var(--color-button-text);
+        font-weight: 700;
+      }
+      /* icon: monospace .* for regex, emoji for others */
+      .seg-icon {
+        font-size: 13px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      /* tint inactive icons */
+      #tab-url:not(.active)     .seg-icon { color: var(--color-accent); }
+      #tab-regex:not(.active)   .seg-icon { color: var(--color-secondary); font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; }
+      #tab-keyword:not(.active) .seg-icon { color: var(--color-accent-light); }
+
+      #add-card-body { padding: 16px; }
+
+      #form-target { width: 100%; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); font-size: var(--font-lg); margin-bottom: 14px; }
+      #form-target:focus { outline: none; border-color: var(--color-accent); }
+
+      .scope-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+      .scope-card { border: 1px solid var(--color-border); border-radius: 6px; padding: 10px; cursor: pointer; }
+      .scope-card.active { border-color: var(--color-accent); background: var(--color-hover-bg); }
+      .scope-card h3 { font-size: var(--font-sm); font-weight: 600; margin-bottom: 3px; }
+      .scope-card .ex { display: block; margin-bottom: 3px; font-family: monospace; font-size: 11px; color: var(--color-accent-light); }
+      .scope-card .sm { font-size: 11px; color: var(--color-text-secondary); }
+
+      .form-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; font-size: var(--font-sm); }
+
+      .callout { padding: 10px 12px; border-radius: 6px; background: var(--color-hover-bg); border-left: 3px solid var(--color-accent); margin-bottom: 14px; font-size: var(--font-sm); display: flex; flex-direction: column; gap: 2px; }
+      .callout code { font-family: monospace; font-size: 11px; }
+
+      #regex-form textarea { width: 100%; height: 64px; padding: 9px 10px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); font-family: monospace; font-size: var(--font-sm); resize: vertical; margin-bottom: 10px; }
+
+      .kw-match-row { display: flex; gap: 14px; margin-bottom: 12px; }
+      .kw-match-row label { display: flex; align-items: center; gap: 5px; font-size: var(--font-sm); cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="#">
+          <img src="../../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Rules</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <div id="rules-grid">
+
+      <!-- ══ LEFT: chart + list ══ -->
+      <div id="left-col">
+
+        <div class="chart-container">
+          <h2 class="chart-heading">Most blocked <span class="chart-subheading text-meta">last 7 days</span></h2>
+          <div class="blocked-bars">
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">reddit.com</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:100%"></div></div>
+              <span class="blocked-bar-val text-meta">47 blocks</span>
+            </div>
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">twitter.com</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:68%"></div></div>
+              <span class="blocked-bar-val text-meta">32 blocks</span>
+            </div>
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">youtube.com</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:51%"></div></div>
+              <span class="blocked-bar-val text-meta">24 blocks</span>
+            </div>
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">news.ycombinator.com</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:32%"></div></div>
+              <span class="blocked-bar-val text-meta">15 blocks</span>
+            </div>
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">twitch.tv</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:15%"></div></div>
+              <span class="blocked-bar-val text-meta">7 blocks</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="list-section">
+          <table id="sort-bar">
+            <thead>
+              <tr>
+                <th id="sort-site" class="sorted">Site ↑</th>
+                <th id="sort-status" style="text-align:right">Status</th>
+              </tr>
+            </thead>
+          </table>
+          <ul id="rules-list">
+            <li class="rule-item">
+              <div class="rule-info">
+                <span class="rule-target">*.reddit.com <span class="badge badge-url">URL</span></span>
+                <span class="rule-detail">30 min/day · active + audio · whole site</span>
+              </div>
+              <div class="rule-actions">
+                <span class="rule-status over">Over limit</span>
+                <button class="square-btn" id="edit-r1">✎</button>
+                <button class="square-btn" id="toggle-r1">⏸</button>
+                <button class="square-btn" id="delete-r1">✕</button>
+              </div>
+            </li>
+            <li class="rule-item edit-row">
+              <div class="rule-info">
+                <span class="rule-target"><code style="font-size:11px">.*\.reddit\.com/r/gaming</code> <span class="badge badge-regex">Regex</span></span>
+                <div class="edit-inputs">
+                  <input class="edit-input" type="number" value="20" />
+                  <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:3px 8px;font-size:11px">min <span class="dropdown-arrow">▼</span></button></div>
+                  <span style="font-size:var(--font-sm)">per</span>
+                  <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:3px 8px;font-size:11px">hour <span class="dropdown-arrow">▼</span></button></div>
+                </div>
+              </div>
+              <div class="rule-actions">
+                <button class="square-btn" id="save-r2">✓</button>
+                <button class="square-btn" id="cancel-r2">↩</button>
+              </div>
+            </li>
+            <li class="rule-item" style="opacity:0.5">
+              <div class="rule-info">
+                <span class="rule-target">crypto <span class="badge badge-kw">Keyword</span></span>
+                <span class="rule-detail">5 min/day · URL + title · disabled</span>
+              </div>
+              <div class="rule-actions">
+                <span class="rule-status">Disabled</span>
+                <button class="square-btn" id="toggle-r3">▶</button>
+                <button class="square-btn" id="delete-r3">✕</button>
+              </div>
+            </li>
+            <li class="rule-item">
+              <div class="rule-info">
+                <span class="rule-target">youtube.com <span class="badge badge-url">URL</span></span>
+                <span class="rule-detail">60 min/day · active · host only</span>
+              </div>
+              <div class="rule-actions">
+                <span class="rule-status">OK</span>
+                <button class="square-btn" id="edit-r4">✎</button>
+                <button class="square-btn" id="toggle-r4">⏸</button>
+                <button class="square-btn" id="delete-r4">✕</button>
+              </div>
+            </li>
+            <li class="rule-item">
+              <div class="rule-info">
+                <span class="rule-target">twitch.tv/directory <span class="badge badge-url">URL</span></span>
+                <span class="rule-detail">45 min/day · active + audio · path prefix</span>
+              </div>
+              <div class="rule-actions">
+                <span class="rule-status">OK</span>
+                <button class="square-btn" id="edit-r5">✎</button>
+                <button class="square-btn" id="toggle-r5">⏸</button>
+                <button class="square-btn" id="delete-r5">✕</button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+      </div><!-- /left-col -->
+
+      <!-- ══ RIGHT: stats + form ══ -->
+      <div id="right-col">
+
+        <!-- stats strip -->
+        <div id="stats-strip">
+          <div class="stat-cell">
+            <span class="stat-value">125</span>
+            <span class="stat-sub">blocks this week</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-value">4 <span class="stat-sub">/ 5</span></span>
+            <span class="stat-sub">active rules</span>
+          </div>
+          <div class="stat-cell">
+            <span class="stat-value">reddit.com</span>
+            <span class="stat-sub">most blocked</span>
+          </div>
+        </div>
+
+        <!-- form card — type selector lives inside the card body as first element -->
+        <div id="add-card">
+          <div id="add-card-body">
+
+            <!-- seg-btn type selector, full-width, icon + label -->
+            <div id="type-toggle">
+              <button id="tab-url" class="type-seg active">
+                <span class="seg-icon">🔗</span> URL / host
+              </button>
+              <button id="tab-regex" class="type-seg">
+                <span class="seg-icon">.*</span> Regex
+              </button>
+              <button id="tab-keyword" class="type-seg">
+                <span class="seg-icon">🔍</span> Keyword
+              </button>
+            </div>
+
+            <!-- URL / host -->
+            <div id="url-form">
+              <input id="form-target" type="text" placeholder="reddit.com" value="reddit.com" />
+              <div class="scope-cards">
+                <div class="scope-card" id="scope-host">
+                  <h3>Host only</h3>
+                  <span class="ex">reddit.com</span>
+                  <span class="sm">No subdomains</span>
+                </div>
+                <div class="scope-card active" id="scope-subdomain">
+                  <h3>Whole site</h3>
+                  <span class="ex">*.reddit.com</span>
+                  <span class="sm">Incl. subdomains</span>
+                </div>
+                <div class="scope-card" id="scope-page">
+                  <h3>Path prefix</h3>
+                  <span class="ex">reddit.com/r/…</span>
+                  <span class="sm">Path + children</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <span>Limit to</span>
+                <input id="form-limit" type="number" value="30" min="1" style="width:56px;padding:5px 7px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);" />
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" id="form-unit-btn" style="min-width:0;padding:5px 10px;font-size:var(--font-sm)">min <span class="dropdown-arrow">▼</span></button></div>
+                <span>per</span>
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" id="form-period-btn" style="min-width:0;padding:5px 10px;font-size:var(--font-sm)">day <span class="dropdown-arrow">▼</span></button></div>
+                <span>counting</span>
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" id="form-mode-btn" style="min-width:0;padding:5px 10px;font-size:var(--font-sm)">active+audio <span class="dropdown-arrow">▼</span></button></div>
+              </div>
+              <div class="callout">
+                <span id="preview-text">Block *.reddit.com after 30 min/day of active + audio time.</span>
+                <code id="preview-pattern">urlFilter: ||reddit.com^</code>
+              </div>
+              <button id="save-btn" class="btn">Add rule</button>
+            </div>
+
+            <!-- Regex -->
+            <div id="regex-form" style="display:none">
+              <p class="text-hint" style="margin-bottom:10px;font-size:var(--font-sm)">RE2 regex matched against the full URL at navigation time.</p>
+              <textarea id="form-regex">^https?://.*\.reddit\.com/r/gaming(/|$)</textarea>
+              <div class="callout">
+                <span>Matches: <code>reddit.com/r/gaming</code>, <code>old.reddit.com/r/gaming/top</code></span>
+                <span class="text-meta" style="font-size:11px">No match: reddit.com/r/gamingsuggestions</span>
+              </div>
+              <div class="form-row">
+                <span>Limit to</span>
+                <input type="number" value="20" min="1" style="width:56px;padding:5px 7px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);" />
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:5px 10px;font-size:var(--font-sm)">min <span class="dropdown-arrow">▼</span></button></div>
+                <span>per</span>
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:5px 10px;font-size:var(--font-sm)">hour <span class="dropdown-arrow">▼</span></button></div>
+                <span>counting</span>
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:5px 10px;font-size:var(--font-sm)">active+audio <span class="dropdown-arrow">▼</span></button></div>
+              </div>
+              <button class="btn">Add regex rule</button>
+            </div>
+
+            <!-- Keyword -->
+            <div id="keyword-form" style="display:none">
+              <p class="text-hint" style="margin-bottom:10px;font-size:var(--font-sm)">Block pages whose URL or title contains the keyword.</p>
+              <input id="form-keyword" type="text" placeholder="crypto" value="crypto"
+                style="width:100%;padding:10px 12px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);font-size:var(--font-lg);margin-bottom:12px;" />
+              <div class="kw-match-row">
+                <label><input type="checkbox" id="kw-url" checked> URL</label>
+                <label><input type="checkbox" id="kw-title" checked> Page title</label>
+              </div>
+              <div class="callout">
+                <span>Blocks: <code>coinbase.com</code>, page titled "Top 10 crypto picks"</span>
+              </div>
+              <div class="form-row">
+                <span>Limit to</span>
+                <input type="number" value="5" style="width:56px;padding:5px 7px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);" />
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:5px 10px;font-size:var(--font-sm)">min <span class="dropdown-arrow">▼</span></button></div>
+                <span>per</span>
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:5px 10px;font-size:var(--font-sm)">day <span class="dropdown-arrow">▼</span></button></div>
+              </div>
+              <button class="btn">Add keyword rule</button>
+            </div>
+
+          </div><!-- /add-card-body -->
+        </div><!-- /add-card -->
+
+      </div><!-- /right-col -->
+    </div><!-- /rules-grid -->
+  </body>
+</html>

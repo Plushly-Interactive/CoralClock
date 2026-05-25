@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<!--
+  Option A: vertical flow
+  Rule type is chosen via a tab strip above the add-form card.
+  Most-blocked chart sits between the form and the list.
+  Single-column, same max-width as today's rules page.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Rules v2 (option A)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      #rules-main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+      }
+
+      /* --- type tab strip --- */
+      #add-header { display: flex; align-items: center; justify-content: space-between; }
+      #add-header-label { font-size: var(--font-sm); font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+      #rule-type-tabs { display: flex; border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
+      .rule-tab {
+        padding: 7px 16px;
+        border: none;
+        border-right: 1px solid var(--color-border);
+        background: none;
+        cursor: pointer;
+        font-size: var(--font-base);
+        color: var(--color-text);
+      }
+      .rule-tab:last-child { border-right: none; }
+      .rule-tab.active { background: var(--color-accent); color: var(--color-button-text); font-weight: 600; }
+      .rule-tab:hover:not(.active) { background: var(--color-hover-bg); }
+
+      /* --- add card --- */
+      #add-section { border: 1px solid var(--color-border); border-radius: 8px; padding: 20px; }
+
+      #form-target {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-size: var(--font-lg);
+        margin-bottom: 16px;
+      }
+      #form-target:focus { outline: none; border-color: var(--color-accent); }
+
+      .scope-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .scope-card { border: 1px solid var(--color-border); border-radius: 6px; padding: 12px; cursor: pointer; }
+      .scope-card.active { border-color: var(--color-accent); background: var(--color-hover-bg); }
+      .scope-card h3 { font-size: var(--font-base); margin-bottom: 4px; }
+      .scope-card .ex { display: block; margin-bottom: 6px; font-family: monospace; font-size: var(--font-sm); color: var(--color-accent-light); }
+
+      .form-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+
+      .callout {
+        padding: 12px 14px;
+        border-radius: 6px;
+        background: var(--color-hover-bg);
+        border-left: 3px solid var(--color-accent);
+        margin-bottom: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      /* regex form */
+      #regex-form textarea {
+        width: 100%;
+        height: 68px;
+        padding: 10px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-family: monospace;
+        font-size: var(--font-base);
+        resize: vertical;
+        margin-bottom: 10px;
+      }
+
+      /* keyword form */
+      .kw-match-row { display: flex; gap: 16px; margin-bottom: 14px; }
+      .kw-match-row label { display: flex; align-items: center; gap: 6px; font-size: var(--font-base); cursor: pointer; }
+
+      /* --- most blocked chart --- */
+      .blocked-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+      .blocked-bar-row { display: flex; align-items: center; gap: 10px; }
+      .blocked-bar-site { width: 150px; font-size: var(--font-base); text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .blocked-bar-track { flex: 1; height: 14px; background: var(--color-border); border-radius: 3px; overflow: hidden; }
+      .blocked-bar-fill { height: 100%; background: var(--color-accent); border-radius: 3px; }
+      .blocked-bar-val { width: 64px; font-size: var(--font-sm); color: var(--color-text-secondary); }
+
+      /* --- sort bar --- */
+      #sort-bar { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      #sort-bar th {
+        text-align: left;
+        padding: 8px 16px;
+        font-size: var(--font-sm);
+        color: var(--color-text-secondary);
+        border-bottom: 1px solid var(--color-border);
+        cursor: pointer;
+        user-select: none;
+      }
+      #sort-bar th.sorted { color: var(--color-accent); }
+      #sort-bar th:last-child { text-align: right; }
+
+      /* --- rule rows --- */
+      .rules-list { list-style: none; }
+      .rule-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--color-border); gap: 12px; }
+      .rule-item:last-child { border-bottom: none; }
+      .rule-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+      .rule-target { font-size: var(--font-md); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+      .rule-detail { font-size: var(--font-sm); color: var(--color-text-secondary); }
+      .rule-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+      .rule-status { font-size: var(--font-sm); color: var(--color-text-secondary); min-width: 55px; text-align: right; }
+      .rule-status.over { color: var(--color-accent); font-weight: 600; }
+
+      /* type badge */
+      .badge {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        flex-shrink: 0;
+      }
+      .badge-url { background: color-mix(in srgb, var(--color-accent) 18%, transparent); color: var(--color-accent); }
+      .badge-regex { background: color-mix(in srgb, var(--color-secondary) 25%, transparent); color: var(--color-secondary); }
+      .badge-kw { background: color-mix(in srgb, var(--color-accent-light) 18%, transparent); color: var(--color-accent-light); }
+
+      /* inline edit row */
+      .edit-inputs { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+      .edit-input { width: 60px; padding: 4px 6px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); font-size: var(--font-sm); }
+      .edit-row { background: var(--color-hover-bg); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="#">
+          <img src="../../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Rules</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <main id="rules-main">
+
+      <!-- type tabs above card -->
+      <div>
+        <div id="add-header">
+          <span id="add-header-label">New rule</span>
+          <div id="rule-type-tabs">
+            <button id="tab-url"     class="rule-tab active">URL / host</button>
+            <button id="tab-regex"   class="rule-tab">Regex</button>
+            <button id="tab-keyword" class="rule-tab">Keyword</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- add card -->
+      <section id="add-section">
+
+        <!-- URL / host form -->
+        <div id="url-form">
+          <input id="form-target" type="text" placeholder="reddit.com" value="reddit.com" />
+
+          <div class="scope-cards">
+            <div class="scope-card" id="scope-host">
+              <h3>This host only</h3>
+              <span class="ex">reddit.com</span>
+              <span class="text-meta">Not subdomains</span>
+            </div>
+            <div class="scope-card active" id="scope-subdomain">
+              <h3>Whole site</h3>
+              <span class="ex">*.reddit.com</span>
+              <span class="text-meta">Includes old., i., etc.</span>
+            </div>
+            <div class="scope-card" id="scope-page">
+              <h3>Specific path</h3>
+              <span class="ex">reddit.com/r/gaming</span>
+              <span class="text-meta">That path + everything under it</span>
+            </div>
+          </div>
+
+          <div class="form-row" id="limit-row">
+            <span>Limit to</span>
+            <input id="form-limit" type="number" value="30" min="1" style="width:64px;padding:6px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);" />
+            <div class="custom-dropdown">
+              <button type="button" class="dropdown-btn" id="form-unit-btn">min <span class="dropdown-arrow">▼</span></button>
+            </div>
+            <span>per</span>
+            <div class="custom-dropdown">
+              <button type="button" class="dropdown-btn" id="form-period-btn">day <span class="dropdown-arrow">▼</span></button>
+            </div>
+            <span>counting</span>
+            <div class="custom-dropdown">
+              <button type="button" class="dropdown-btn" id="form-mode-btn">active + audio <span class="dropdown-arrow">▼</span></button>
+            </div>
+          </div>
+
+          <div id="rule-preview" class="callout">
+            <span id="preview-text">Block *.reddit.com after 30 min/day of active + audio time.</span>
+            <code id="preview-pattern" class="text-meta">urlFilter: ||reddit.com^</code>
+          </div>
+
+          <button id="save-btn" class="btn">Add rule</button>
+        </div>
+
+        <!-- Regex form -->
+        <div id="regex-form" style="display:none">
+          <p class="text-hint" style="margin-bottom:10px">Match any URL against a RE2 regex. The tab is counted and blocked when the address matches.</p>
+          <textarea id="form-regex" placeholder="^https?://.*\.reddit\.com/r/gaming(/|$)">^https?://.*\.reddit\.com/r/gaming(/|$)</textarea>
+
+          <div class="callout">
+            <span>Matches: <code>reddit.com/r/gaming</code>, <code>old.reddit.com/r/gaming/top</code></span>
+            <span class="text-meta">Does not match: reddit.com/r/gamingsuggestions</span>
+          </div>
+
+          <div class="form-row" style="margin-top:4px">
+            <span>Limit to</span>
+            <input type="number" value="20" min="1" style="width:64px;padding:6px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);" />
+            <div class="custom-dropdown"><button type="button" class="dropdown-btn">min <span class="dropdown-arrow">▼</span></button></div>
+            <span>per</span>
+            <div class="custom-dropdown"><button type="button" class="dropdown-btn">hour <span class="dropdown-arrow">▼</span></button></div>
+            <span>counting</span>
+            <div class="custom-dropdown"><button type="button" class="dropdown-btn">active + audio <span class="dropdown-arrow">▼</span></button></div>
+          </div>
+          <button class="btn">Add regex rule</button>
+        </div>
+
+        <!-- Keyword form -->
+        <div id="keyword-form" style="display:none">
+          <p class="text-hint" style="margin-bottom:12px">Block any page whose URL or title contains the keyword. Checked at navigation time.</p>
+          <input id="form-keyword" type="text" placeholder="crypto" value="crypto"
+            style="width:100%;padding:10px 12px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);font-size:var(--font-lg);margin-bottom:12px;" />
+
+          <div class="kw-match-row">
+            <label><input type="checkbox" id="kw-url" checked> URL</label>
+            <label><input type="checkbox" id="kw-title" checked> Page title</label>
+          </div>
+
+          <div class="callout">
+            <span>Blocks pages with "crypto" in the URL or title — e.g. <code>coinbase.com</code>, <code>"Top 10 crypto picks"</code></span>
+          </div>
+
+          <div class="form-row" style="margin-top:4px">
+            <span>Limit to</span>
+            <input type="number" value="5" min="1" style="width:64px;padding:6px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);" />
+            <div class="custom-dropdown"><button type="button" class="dropdown-btn">min <span class="dropdown-arrow">▼</span></button></div>
+            <span>per</span>
+            <div class="custom-dropdown"><button type="button" class="dropdown-btn">day <span class="dropdown-arrow">▼</span></button></div>
+          </div>
+          <button class="btn">Add keyword rule</button>
+        </div>
+
+      </section>
+
+      <!-- most blocked chart -->
+      <div class="chart-container">
+        <h2 class="chart-heading">Most blocked <span class="chart-subheading text-meta">last 7 days</span></h2>
+        <div id="blocked-chart" class="blocked-bars">
+          <div class="blocked-bar-row">
+            <span class="blocked-bar-site text-meta">reddit.com</span>
+            <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:100%"></div></div>
+            <span class="blocked-bar-val text-meta">47 blocks</span>
+          </div>
+          <div class="blocked-bar-row">
+            <span class="blocked-bar-site text-meta">twitter.com</span>
+            <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:68%"></div></div>
+            <span class="blocked-bar-val text-meta">32 blocks</span>
+          </div>
+          <div class="blocked-bar-row">
+            <span class="blocked-bar-site text-meta">youtube.com</span>
+            <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:51%"></div></div>
+            <span class="blocked-bar-val text-meta">24 blocks</span>
+          </div>
+          <div class="blocked-bar-row">
+            <span class="blocked-bar-site text-meta">news.ycombinator.com</span>
+            <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:32%"></div></div>
+            <span class="blocked-bar-val text-meta">15 blocks</span>
+          </div>
+          <div class="blocked-bar-row">
+            <span class="blocked-bar-site text-meta">twitch.tv</span>
+            <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:15%"></div></div>
+            <span class="blocked-bar-val text-meta">7 blocks</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- rules list -->
+      <div>
+        <table id="sort-bar">
+          <thead>
+            <tr>
+              <th id="sort-site" class="sorted">Site ↑</th>
+              <th id="sort-type">Type</th>
+              <th id="sort-status" style="text-align:right">Status</th>
+            </tr>
+          </thead>
+        </table>
+        <ul id="rules-list" class="rules-list">
+
+          <li class="rule-item">
+            <div class="rule-info">
+              <span class="rule-target"><span class="badge badge-url">URL</span> *.reddit.com</span>
+              <span class="rule-detail">30 min/day · active + audio · whole site</span>
+            </div>
+            <div class="rule-actions">
+              <span class="rule-status over">Over limit</span>
+              <button class="square-btn" id="edit-r1">✎</button>
+              <button class="square-btn" id="toggle-r1">⏸</button>
+              <button class="square-btn" id="delete-r1">✕</button>
+            </div>
+          </li>
+
+          <li class="rule-item edit-row">
+            <div class="rule-info">
+              <span class="rule-target"><span class="badge badge-regex">Regex</span> <code style="font-size:var(--font-sm)">.*\.reddit\.com/r/gaming</code></span>
+              <div class="edit-inputs">
+                <input class="edit-input" type="number" value="20" />
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:4px 8px;font-size:var(--font-sm)">min <span class="dropdown-arrow">▼</span></button></div>
+                <span style="font-size:var(--font-sm)">per</span>
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:4px 8px;font-size:var(--font-sm)">hour <span class="dropdown-arrow">▼</span></button></div>
+              </div>
+            </div>
+            <div class="rule-actions">
+              <button class="square-btn" id="save-edit-r2">✓</button>
+              <button class="square-btn" id="cancel-edit-r2">↩</button>
+            </div>
+          </li>
+
+          <li class="rule-item" style="opacity:0.5">
+            <div class="rule-info">
+              <span class="rule-target"><span class="badge badge-kw">Keyword</span> crypto</span>
+              <span class="rule-detail">5 min/day · URL + title · disabled</span>
+            </div>
+            <div class="rule-actions">
+              <span class="rule-status">Disabled</span>
+              <button class="square-btn" id="toggle-r3">▶</button>
+              <button class="square-btn" id="delete-r3">✕</button>
+            </div>
+          </li>
+
+          <li class="rule-item">
+            <div class="rule-info">
+              <span class="rule-target"><span class="badge badge-url">URL</span> youtube.com</span>
+              <span class="rule-detail">60 min/day · active · host only</span>
+            </div>
+            <div class="rule-actions">
+              <span class="rule-status">OK</span>
+              <button class="square-btn" id="edit-r4">✎</button>
+              <button class="square-btn" id="toggle-r4">⏸</button>
+              <button class="square-btn" id="delete-r4">✕</button>
+            </div>
+          </li>
+
+        </ul>
+      </div>
+
+    </main>
+  </body>
+</html>
