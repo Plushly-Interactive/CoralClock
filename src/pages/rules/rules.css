@@ -1,107 +1,254 @@
-#rules-main {
-  max-width: 820px;
-  margin: 0 auto;
-  padding: 24px 16px;
+#rules-grid {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 24px;
+  padding: 24px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
-#add-section {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 28px;
+#left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
-#form-target {
+#left-col .chart-container {
+  flex: 1;
+  min-height: 0;
+}
+
+#overview-card { display: grid; grid-template-rows: auto 1fr; }
+
+#stats-grid { grid-template-columns: repeat(2, auto); }
+
+/* Sparkline */
+#spark-wrap {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+
+#spark-yaxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 18px;
+  padding-right: 4px;
+}
+
+.y-tick {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  line-height: 1;
+}
+
+#spark-chart-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+#sparkline-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+#sparkline-bars::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--color-border) 0px, var(--color-border) 1px,
+    transparent 1px, transparent calc(50% - 0.5px),
+    var(--color-border) calc(50% - 0.5px), var(--color-border) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px), transparent calc(100% - 1px),
+    var(--color-border) calc(100% - 1px), var(--color-border) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.spark-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.spark-bar-wrap {
+  flex: 1;
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-size: var(--font-lg);
-  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-end;
 }
 
-#form-target:focus {
-  outline: none;
-  border-color: var(--color-accent);
+.spark-bar {
+  width: 100%;
+  background: var(--color-accent);
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
 }
+
+.spark-bar.today { background: var(--color-accent-light); }
+
+#spark-day-row {
+  display: flex;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.spark-day {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.spark-day.today { color: var(--color-accent); }
+
+/* Right column */
+#right-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  gap: 16px;
+}
+
+/* Add rule card */
+#add-card {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+#add-card-toggle .chart-heading,
+#list-header .chart-heading { margin: 0; }
+
+#add-card-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+#add-card-toggle:hover { background: var(--color-hover-bg); }
+
+#add-toggle-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.seg-icon { font-size: 12px; line-height: 1; flex-shrink: 0; }
+.seg-icon-regex { font-family: ui-monospace, monospace; font-size: 11px; }
+
+#tab-url:not(.active) .seg-icon     { color: var(--color-accent); }
+#tab-regex:not(.active) .seg-icon   { color: var(--color-secondary); }
+#tab-keyword:not(.active) .seg-icon { color: var(--color-accent-light); }
+
+#add-toggle-arrow {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+#add-card.open #add-toggle-arrow { transform: rotate(180deg); }
+
+#add-card-body {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+#form-target { margin-bottom: 12px; margin-top: 14px; }
 
 .scope-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .scope-card {
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  padding: 12px;
+  padding: 9px;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 
-.scope-card:hover {
-  background: var(--color-hover-bg);
-}
+.scope-card:hover { background: var(--color-hover-bg); }
 
 .scope-card.active {
   border-color: var(--color-accent);
   background: var(--color-hover-bg);
 }
 
-.scope-card h3 {
-  font-size: var(--font-base);
-  margin-bottom: 4px;
-}
+.scope-card h3 { font-size: var(--font-sm); font-weight: 600; margin-bottom: 3px; }
 
 .scope-card .ex {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 3px;
   font-family: monospace;
-  font-size: var(--font-sm);
+  font-size: 11px;
   color: var(--color-accent-light);
   word-break: break-all;
 }
 
-#limit-row {
-  flex-wrap: wrap;
-  margin-bottom: 16px;
+#limit-row { flex-wrap: wrap; margin-bottom: 12px; }
+
+#rule-preview { margin-bottom: 12px; }
+#redundant-prompt { margin-bottom: 12px; }
+#redundant-prompt #redundant-list { margin: 8px 0; }
+#preview-pattern { font-family: monospace; }
+
+.form-submit-row {
+  display: flex;
+  justify-content: flex-end;
 }
 
-.callout {
-  padding: 12px 14px;
-  border-radius: 6px;
-  background: var(--color-hover-bg);
-  border-left: 3px solid var(--color-accent);
-}
-
-#rule-preview {
+/* Rules list area */
+#list-area {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
 }
 
-#redundant-prompt {
-  margin-bottom: 16px;
+#list-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px 0;
+  flex-shrink: 0;
 }
 
-#redundant-prompt #redundant-list {
-  margin: 8px 0;
-}
+#sort-bar { flex-shrink: 0; margin-top: 6px; }
 
-#preview-pattern {
-  font-family: monospace;
-}
+#sort-status { text-align: right; }
 
-/* The header reuses .data-table th styling; just push Status to the right. */
-#sort-status {
-  text-align: right;
-}
-
-/* Fixed-width arrow slot so the active header doesn't shift when sorted. */
 #sort-bar th::after {
   content: attr(data-arrow);
   display: inline-block;
@@ -109,7 +256,9 @@
   text-align: right;
 }
 
+#rules-list { overflow-y: auto; flex: 1; min-height: 0; }
+
 #no-rules-message {
-  padding: 24px 0;
+  padding: 24px;
   text-align: center;
 }

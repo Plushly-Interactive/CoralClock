@@ -1,5 +1,5 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
-import { RULE_MULTIPLIERS, describeRule } from '../shared/rules.js';
+import { RULE_MULTIPLIERS, describeRule, BLOCKS_DAY_KEY } from '../shared/rules.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 
 // Usage contributed by one analytics/subpage cell under the rule's mode.
@@ -195,6 +195,22 @@ export async function publishOverage(overage) {
   if (addRules.length || removeRuleIds.length) {
     await chrome.declarativeNetRequest.updateDynamicRules({ addRules, removeRuleIds });
   }
+
+  if (addRules.length) {
+    const dayKey = localDayKey(Date.now());
+    const { [BLOCKS_DAY_KEY]: blocksByDay = {} } = await chrome.storage.local.get(BLOCKS_DAY_KEY);
+    const today = blocksByDay[dayKey] ?? {};
+    // addRules contains newly-triggered blocks; find which ruleIds they correspond to.
+    const addedDnrIds = new Set(addRules.map(r => r.id));
+    for (const [ruleId, _entry] of overage) {
+      if (addedDnrIds.has(dnrIdFor(ruleId))) {
+        today[ruleId] = (today[ruleId] ?? 0) + 1;
+      }
+    }
+    blocksByDay[dayKey] = today;
+    await chrome.storage.local.set({ [BLOCKS_DAY_KEY]: blocksByDay });
+  }
+
   await reloadMatchingTabs(overage);
   await returnUnblockedTabs(overage);
 }

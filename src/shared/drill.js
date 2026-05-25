@@ -28,10 +28,10 @@ const DRILL_INNER_HTML = `
     <div id="drill-legend" class="time-legend text-meta" style="display: none;">${CHART_LEGEND_HTML}</div>
     <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn"> Enhance readbility (&radic;x scale)</label>
     <div id="drill-stats" class="text-meta"></div>
-    <div id="drill-toggle">
-      <button id="drill-time-btn" class="drill-toggle-btn active">Time</button>
-      <button id="drill-visits-btn" class="drill-toggle-btn">Visits</button>
-      <button id="drill-hour-btn" class="drill-toggle-btn">Hourly avg.</button>
+    <div id="drill-toggle" class="seg-control">
+      <button id="drill-time-btn" class="drill-toggle-btn seg-btn active">Time</button>
+      <button id="drill-visits-btn" class="drill-toggle-btn seg-btn">Visits</button>
+      <button id="drill-hour-btn" class="drill-toggle-btn seg-btn">Hourly avg.</button>
     </div>
   </div>
   <div id="drill-chart-wrapper">

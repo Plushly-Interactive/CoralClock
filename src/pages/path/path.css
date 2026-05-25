@@ -1,3 +1,7 @@
+#stats-list {
+  grid-template-columns: repeat(3, auto);
+}
+
 #path-subheader {
   position: relative;
   display: flex;
