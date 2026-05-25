@@ -1,4 +1,5 @@
 import { getRules, addRule, toggleRule, deleteRule, renderRuleList, initCustomDropdowns, describeRule } from '../../shared/rules.js';
+import { getDomain } from '../../vendor/tldts.js';
 
 const addForm = document.querySelector('#add-form');
 const formTarget = document.querySelector('#form-target');
@@ -11,13 +12,20 @@ const noRulesMsg = document.querySelector('#no-rules-message');
 
 let scope = 'subdomain';
 
-// Split a typed address into { host, path }: everything before the first slash
-// is the host, the rest (if any) is the path.
+// Split a typed address into { host, path }: strip any scheme and a leading
+// www. (tracking collapses www. into the apex), then everything before the
+// first slash is the host and the rest is the path.
 function parseTarget(raw) {
-  const clean = raw.trim().replace(/^https?:\/\//, '');
+  const clean = raw.trim().replace(/^https?:\/\//, '').replace(/^www\./, '');
   const slash = clean.indexOf('/');
-  if (slash === -1) return { host: clean, path: '' };
-  return { host: clean.slice(0, slash), path: clean.slice(slash + 1) };
+  if (slash === -1) return { host: clean.toLowerCase(), path: '' };
+  return { host: clean.slice(0, slash).toLowerCase(), path: clean.slice(slash + 1) };
+}
+
+// A host is valid if tldts resolves it to a registrable domain (rejects bare
+// words like "dfdsf", but accepts reddit.com, sub.example.co.uk, etc.).
+function isValidHost(host) {
+  return !!getDomain(host);
 }
 
 // Update each card's example to reflect the typed host/path.
@@ -47,6 +55,12 @@ function refreshPreview() {
     saveBtn.disabled = true;
     return;
   }
+  if (!isValidHost(host)) {
+    previewText.textContent = `"${host}" doesn't look like a valid site (e.g. reddit.com).`;
+    previewPattern.textContent = '';
+    saveBtn.disabled = true;
+    return;
+  }
   if (scope === 'pathPrefix' && !path) {
     previewText.textContent = 'Add a /path to limit a specific page.';
     previewPattern.textContent = '';
@@ -72,7 +86,7 @@ addForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const { host, path } = parseTarget(formTarget.value);
   const limit = parseInt(document.querySelector('#form-limit').value);
-  if (!host || !limit) return;
+  if (!host || !limit || !isValidHost(host)) return;
   if (scope === 'pathPrefix' && !path) return;
 
   await addRule({

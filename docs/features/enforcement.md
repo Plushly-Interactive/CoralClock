@@ -18,6 +18,8 @@ Blocking sites once they cross a configured limit. BiteGuard already tracks time
 - [ ] A `pathPrefix` rule on `twitch.tv` with path `directory` blocks that path and everything beneath it (`/directory/game/...`) but leaves the rest of `twitch.tv` reachable.
 - [ ] When the period rolls over (usage drops out of the window) or I disable the rule, the block is removed without restarting the browser.
 - [ ] `blocked.html` shows the host/path that was blocked, which limit was hit, and when it resets.
+- [ ] The target field accepts a pasted URL: a leading `http(s)://` and `www.` are stripped, so `https://www.reddit.com/r/news` becomes host `reddit.com` + path `r/news`.
+- [ ] A target that isn't a valid registrable domain (e.g. `dfdsf`) shows an inline message and the Add button stays disabled.
 - [ ] Existing stored rules created before this feature keep working — they behave as `mode: 'active'`, `matchType: 'host'`.
 
 ## Scope
@@ -27,8 +29,8 @@ Blocking sites once they cross a configured limit. BiteGuard already tracks time
 | Surface | Role in this feature |
 |---|---|
 | rules page *(new)* | Full-page rule management: add/edit/list rules with match-type and mode controls. |
-| background | Reads `rules`, runs the limit checker each flush, publishes DNR rules. |
-| blocked page | Reads query params, shows which limit was hit and reset time. |
+| background | Reads `rules`, runs the limit checker each flush (and on `rules` changes), publishes DNR rules, and navigates open/blocked tabs in/out of the block. |
+| blocked page | Reads query params; shows the blocked target, which limit was hit, and reset time; sets the tab title. |
 
 The dedicated rules page is where rule management lives for v1. The existing popup rule UI is left as-is for now; reworking the popup into a launcher to this page is deferred (see Out of scope).
 
@@ -37,15 +39,15 @@ The dedicated rules page is where rule management lives for v1. The existing pop
 | File | Change |
 |---|---|
 | `src/pages/rules/rules.html` *(new)* | Full-page rule form (host, scope, optional path, limit, unit, period, mode) + live block preview + rule list, reusing the shared header. |
-| `src/pages/rules/rules.js` *(new)* | Page wiring: scope→path-field toggle, live preview, form submit, list render. Rule logic comes from the shared module. |
+| `src/pages/rules/rules.js` *(new)* | Page wiring: scope→path toggle, live preview, target normalization (strip scheme + `www.`) and validation (via `tldts` `getDomain`), form submit, list render. Rule logic comes from the shared module. |
 | `src/pages/rules/rules.css` *(new)* | Page-specific layout; reuse shared classes from `theme.css`. |
 | `src/shared/rules.js` *(new)* | Extracted rule logic shared by the rules page and the popup: add/toggle/delete, render a rule list, custom-dropdown init. |
 | `src/pages/popup/popup.js` | Adopt `src/shared/rules.js` for save/toggle/delete/render; drop the duplicated inline logic. |
 | `src/pages/dashboard/dashboard.html` | Add a "Rules" entry button to `#header-left` to reach the rules page. |
-| `src/background/background.js` | Wire limit checker + DNR publisher into the flush alarm; read `rules`. |
-| `src/background/enforcement.js` *(new)* | `computeOverage` (pure) + DNR publish/diff helpers. |
+| `src/background/background.js` | Wire the checker + publisher into the flush alarm; also re-run it on `storage.onChanged` for the `rules` key so rule edits take effect immediately. |
+| `src/background/enforcement.js` *(new)* | `computeOverage` (pure), the DNR publisher, and tab side-effects (`reloadMatchingTabs`, `returnUnblockedTabs`). |
 | `src/data/migrations.js` | `v3 → v4`: backfill `mode:'active'` and `matchType:'host'` on every stored rule. |
-| `src/pages/blocked/blocked.html` | Read `?rule=&site=&path=`; show limit + reset time (currently reads `?host=`). |
+| `src/pages/blocked/blocked.html` + `blocked.js` | External module (MV3 CSP forbids inline scripts); reads `?rule=&site=&path=&url=`, shows the blocked target, limit, reset time, a "Manage rules" link, and sets the tab title to the blocked site. |
 
 ### Storage / tracking
 
@@ -84,14 +86,12 @@ flowchart TD
 ```
 
 1. **Limit checker** — runs at the end of each flush alarm. For each enabled rule: compute the period window (`hour` → current `hourKey`; `day` → today's `dayKey`; `week` → the `dayKey`s from this Monday through today, a calendar week that resets at the week boundary), sum the matching usage over that window (see [Matching against tracking data](#matching-against-tracking-data)), apply the mode formula, compare to `limit × unitMultiplier`. Produces the overage set: `Map<ruleId, { target, matchType, path, overBy }>`. Pure and unit-testable — no chrome APIs.
-2. **DNR publisher** — diffs the new overage set against the previously published one. Added entries register a dynamic redirect rule to `blocked.html?rule=<id>&site=<host>&path=<path>`; removed entries are deleted. Uses `chrome.declarativeNetRequest.updateDynamicRules`. `urlFilter` shape per match type:
-   - `host` → `regexFilter: ^https?://<target>(?:/|$)` (RE2). DNR's `||` domain anchor and `requestDomains` are both subdomain-inclusive by design ([Chrome docs](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest)), so an exact-host block is only achievable via an anchored `regexFilter`. The `<target>` dot must be escaped (`reddit\.com`); the host is punycode-encoded for matching.
+2. **DNR publisher** — `publishOverage` diffs the new overage set against the currently-published dynamic rules (each rule's DNR id is a deterministic 31-bit hash of its UUID, `dnrIdFor`). Added entries register a dynamic redirect rule to `blocked.html?rule=<id>&site=<host>[&path=<path>]`; removed entries are deleted. Uses `chrome.declarativeNetRequest.updateDynamicRules`. The matcher per scope (from `describeRule` in [src/shared/rules.js](../../src/shared/rules.js)):
+   - `host` → `regexFilter: ^https?://(?:www\.)?<target>(?:/|$)` (RE2). DNR's `||` domain anchor and `requestDomains` are both subdomain-inclusive by design ([Chrome docs](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest)), so an exact-host block needs an anchored `regexFilter`. The optional `www.` keeps the block consistent with tracking, which collapses `www.` into the apex. `<target>` is regex-escaped.
    - `subdomain` → `urlFilter: ||<target>^` (the natural DNR domain anchor — matches apex + all subdomains).
-   - `pathPrefix` → `regexFilter: ^https?://<target>/<path>(?:[/?]|$)` (RE2). A bare `urlFilter: ||<target>/<path>` would over-block sibling paths sharing a prefix (`/maps` matching `/maps-beta`), so the boundary `(?:[/?]|$)` is anchored to a path separator, query, or end — matching the analytics boundary rule exactly. Both `<target>` and `<path>` have regex metacharacters escaped. A `pathPrefix` rule always carries a non-empty path (enforced by the form).
+   - `pathPrefix` → `regexFilter: ^https?://<target>/<path>(?:[/?]|$)` (RE2). A bare `urlFilter: ||<target>/<path>` would over-block sibling paths sharing a prefix (`/maps` matching `/maps-beta`), so the boundary `(?:[/?]|$)` is anchored to a path separator, query, or end — matching the analytics boundary rule exactly. `<target>` and `<path>` are regex-escaped. A `pathPrefix` rule always carries a non-empty path (enforced by the form).
 
-   This makes the three scopes genuinely distinct at the block level (not only in usage counting). Two of the three (`host`, `pathPrefix`) use `regexFilter`, which is capped (≤1000 per ruleset, <2KB compiled each); these rules are simple and well under the limits.
-
-   **`www.` handling:** tracking strips a leading `www.` ([siteResolution.js](../../src/background/siteResolution.js)), so `www.reddit.com` counts as `reddit.com`. But the literal `host` regex above would not match a `www.reddit.com` *URL*. To keep blocking consistent with counting, the `host` regex should allow an optional `www.`: `^https?://(?:www\.)?<target>(?:/|$)`.
+   This makes the three scopes genuinely distinct at the block level (not only in usage counting). The `regexFilter` rules are capped (≤1000 per ruleset, <2KB compiled each); these are simple and well under the limits.
 3. **Period boundaries** — the flush alarm fires every minute regardless, so a rolled-over window shrinks the overage set on the next tick. No special boundary handler.
 
 ### Matching against tracking data
@@ -134,17 +134,20 @@ Smallest shippable slice first:
 2. ✅ **Limit checker** — pure `computeOverage(rules, { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour }, now)`, wired into the flush alarm.
 3. ✅ **DNR publisher** — `publishOverage` diffs the overage set against `getDynamicRules` and calls `updateDynamicRules`, redirecting matches to `blocked.html`. First real blocking.
 4. ✅ **`blocked.html` polish** — reads `?rule=&site=&path=`; shows the blocked target, the limit (`<limit> per <period>`), and when the window next resets (local time, calendar-week aware), plus a "Manage rules" link. The inline script was moved to `blocked.js` (MV3 CSP forbids inline scripts).
-5. ✅ **Block already-open tabs** — DNR only redirects new requests, so a tab already sitting on a page isn't blocked when its rule is published. `publishOverage` reloads open tabs matching a newly-added rule (`reloadMatchingTabs`, matching via the same `siteIdFromUrl`/`pathFromUrl` normalization as the checker); the reload's request is then redirected to `blocked.html`. The active tab blocks automatically, no manual reload.
+5. ✅ **Block already-open tabs** — DNR only redirects new requests, so a tab already sitting on a page isn't blocked when its rule is published. After publishing, `reloadMatchingTabs` scans all open tabs against the **full** overage set (matching via the same `siteIdFromUrl`/`pathFromUrl` normalization as the checker) and navigates each match straight to its `blocked.html` URL — carrying the tab's exact current URL as `&url=`. Tabs already on `blocked.html` (a `chrome-extension://` URL) don't match, so there's no loop.
+6. ✅ **React to rule edits immediately** — a `chrome.storage.onChanged` listener on the `rules` key re-runs the check outside the flush cadence, so enabling/disabling/adding/deleting a rule takes effect at once instead of on the next tick.
+7. ✅ **Return tabs on unblock** — `returnUnblockedTabs` finds `blocked.html` tabs whose `?rule` id is no longer in the overage set (limit reset, rule disabled/deleted) and navigates them back. When a tab was blocked by our own `reloadMatchingTabs` (the common case — a tab already open on the site when the limit crossed), it carries the exact pre-block URL in `&url=` and returns there precisely. For a tab that DNR redirected on a *fresh* navigation, there's no `&url=` (DNR's static redirect can't carry the requested URL), so return falls back to reconstructing `https://<site>[/<path>]` — the rule target rather than the exact sub-page. Reliable exact return for that fresh-nav case would need DNR `regexSubstitution` (`\0`) or stashing the pre-block URL; deferred.
 
    ~~**Navigation-time short-circuit**~~ — **dropped.** A nav-time check against the *cached* overage set is redundant with DNR. Catching a mid-flush-window crossing sooner would need a live-usage-aware check (flushed storage + the tracker's in-memory pending ranges) — not worth the complexity for a sub-minute overshoot. The remaining delay is the flush tick (≤1 min) before a crossing is recorded; shorten the flush interval if it matters in practice.
 
 ## Edge cases
 
 - **Legacy rule with no `mode`/`matchType`** → migration backfills `active`/`host`; readers can assume the full shape afterward, no defensive defaults.
-- **Period rolls over mid-session** → next flush tick recomputes a smaller overage set and the publisher removes the stale DNR rule.
-- **Rule disabled while over limit** → checker skips disabled rules; publisher removes its DNR rule on the next tick.
-- **Tab already open when the limit is crossed** → reactive blocking means it stays until the next flush (≤ ~1 min) or next navigation; slice 5 closes this gap.
-- **`path` rule but no subpage data for the host** → treated as zero usage; not blocked.
+- **Period rolls over mid-session** → next flush tick recomputes a smaller overage set; the publisher removes the stale DNR rule and `returnUnblockedTabs` sends blocked tabs back.
+- **Rule disabled/deleted while over limit** → the `storage.onChanged` listener re-runs the check immediately; the DNR rule is removed and blocked tabs return without waiting for a flush.
+- **Tab already open when the limit is crossed** → `reloadMatchingTabs` navigates it into the block on the same tick the rule is published (flush, ≤ ~1 min). The remaining delay is recording the crossing to storage, not the block itself.
+- **`path`/`pathPrefix` rule but no subpage data for the host** → treated as zero usage; not blocked.
+- **Tab DNR-redirected on a fresh navigation** → blocked correctly, but on unblock returns to the rule target rather than the exact pre-block URL (see slice 7 limitation).
 
 ## Out of scope (v1)
 
@@ -155,7 +158,6 @@ Smallest shippable slice first:
 - **Week-start user setting** — the calendar week starts on Monday (hardcoded) for v1. A user setting to choose Monday vs Sunday (and any other locale-sensitive week start) is deferred; `windowKeys` in [enforcement.js](../../src/background/enforcement.js) would read it instead of assuming Monday.
 - **Pre-emptive blocking** — predicting a crossing from in-memory tracker state before the flush. Reactive only.
 - **Rule uniqueness validation** — no enforced dedupe of `(target, matchType, period)`. Noted in [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
-- **Target/hostname validation at save time** — malformed targets aren't rejected yet. Noted in [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
 
 ## References
 
