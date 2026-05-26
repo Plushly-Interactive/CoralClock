@@ -21,7 +21,7 @@ export function createTrackingModule({
     const windows = await chrome.windows.getAll({ populate: true });
     console.log('[BG-DBG] init: windows count=', windows.length);
     for (const w of windows) {
-      if (w.state === 'minimized') { console.log('[BG-DBG] init: window', w.id, 'minimized, skip'); continue; }
+      if (w.state === 'minimized') { console.log('[BG-DBG] init: window', w.id, 'minimized, skip'); tracker.markMinimized(w.id); continue; }
       const tab = w.tabs?.find(t => t.active);
       const key = urlToKey(tab?.url);
       console.log('[BG-DBG] init: window', w.id, 'activeTab url=', tab?.url, '→ key=', key);
@@ -40,7 +40,7 @@ export function createTrackingModule({
     const liveById = new Map(windows.map(w => [w.id, w]));
     for (const id of tracker.getTrackedWindowIds()) {
       const w = liveById.get(id);
-      if (!w || w.state === 'minimized') tracker.removeWindow(id);
+      if (!w || w.state === 'minimized') tracker.removeWindow(id, w?.state === 'minimized');
     }
     for (const w of windows) {
       if (w.state === 'minimized') continue;
@@ -142,6 +142,7 @@ export function createTrackingModule({
   return {
     setWindow: tracker.setWindow,
     removeWindow: tracker.removeWindow,
+    markMinimized: tracker.markMinimized,
     addAudibleTab: tracker.addAudibleTab,
     removeAudibleTab: tracker.removeAudibleTab,
     init, reconcile,
@@ -152,6 +153,7 @@ export function createTrackingModule({
 export function createRangeTracker() {
   const states = new Map();
   const windowToKey = new Map();
+  const minimizedWindowIds = new Set();
   const audibleTabToKey = new Map();
   const pendingActive = new Map();
   const pendingAudio = new Map();
@@ -201,8 +203,10 @@ export function createRangeTracker() {
     }
   }
 
-  function removeWindow(windowId) {
+  function removeWindow(windowId, minimized = false) {
     const key = windowToKey.get(windowId);
+    if (minimized) minimizedWindowIds.add(windowId);
+    else minimizedWindowIds.delete(windowId);
     if (!key) return;
     windowToKey.delete(windowId);
     const s = states.get(key);
@@ -221,9 +225,10 @@ export function createRangeTracker() {
     if (!oldKey && !key) { console.log('[BG-DBG] setWindow: both null, return'); return; }
     if (oldKey) removeWindow(windowId);
     if (key) {
+      const wasMinimized = minimizedWindowIds.delete(windowId);
       const existing = states.get(key);
-      const wasTracked = !!existing && (existing.wasActive || existing.wasAudible);
-      console.log('[BG-DBG] setWindow: existing state for', key, '?', !!existing, 'wasTracked=', wasTracked);
+      const wasTracked = wasMinimized || (!!existing && (existing.wasActive || existing.wasAudible));
+      console.log('[BG-DBG] setWindow: existing state for', key, '?', !!existing, 'wasTracked=', wasTracked, 'wasMinimized=', wasMinimized);
       addWindow(windowId, key);
       if (!wasTracked) {
         pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
@@ -311,7 +316,7 @@ export function createRangeTracker() {
   }
 
   return {
-    setWindow, addWindow, removeWindow, addAudibleTab, removeAudibleTab,
+    setWindow, addWindow, removeWindow, markMinimized: (id) => minimizedWindowIds.add(id), addAudibleTab, removeAudibleTab,
     flushAllElapsed, getActiveKeys, getAudibleKeys,
     getTrackedWindowIds, getTrackedAudibleTabIds, isWindowTracked,
     pushRange, clearPending,

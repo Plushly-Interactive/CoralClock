@@ -32,8 +32,8 @@ const mod = createTrackingModule({
 export function setWindowPath(windowId, siteId, path) {
   mod.setWindow(windowId, siteId && path ? makeKey(siteId, path) : null);
 }
-export function removeWindowPath(windowId) {
-  mod.removeWindow(windowId);
+export function removeWindowPath(windowId, minimized = false) {
+  mod.removeWindow(windowId, minimized);
 }
 export function addAudibleTabPath(tabId, siteId, path, countVisit = true) {
   if (!siteId || !path) return;
