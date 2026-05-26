@@ -5,28 +5,36 @@
     <title>Blocked – BiteGuard</title>
     <script src="../../shared/theme.js"></script>
     <link rel="stylesheet" href="../../shared/theme.css" />
-    <style>
-      body {
-        margin: 0;
-        font-family: system-ui, sans-serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        background: var(--color-accent-light);
-        color: var(--color-text);
-      }
-      h1 { font-size: 2rem; margin-bottom: 8px; }
-      p { color: var(--color-text-secondary); margin: 0; }
-    </style>
+    <link rel="stylesheet" href="./blocked.css" />
   </head>
   <body>
-    <h1>🦈 Time's up</h1>
-    <p id="msg">You've reached your limit.</p>
-    <script>
-      const host = new URLSearchParams(location.search).get('host');
-      if (host) document.querySelector('#msg').textContent = `You've reached your limit on ${host}.`;
-    </script>
+    <div id="card">
+      <img id="logo" alt="BiteGuard" />
+      <div id="headline">Time's up</div>
+      <div id="target"></div>
+
+      <div id="stats-grid" class="stats-list">
+        <div class="stat-item">
+          <span class="stat-label">Spent today</span>
+          <span class="stat-value" id="stat-spent">—</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Limit</span>
+          <span class="stat-value" id="stat-limit">—</span>
+        </div>
+        <hr id="stats-divider">
+        <div class="stat-item">
+          <span class="stat-label">Visits today</span>
+          <span class="stat-value" id="stat-visits">—</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Unlocks in</span>
+          <span class="stat-value" id="stat-countdown">—</span>
+        </div>
+      </div>
+
+      <p id="quote" hidden><span id="quote-text"></span><span id="quote-author-wrapper"></span></p>
+    </div>
+    <script type="module" src="./blocked.js"></script>
   </body>
 </html>

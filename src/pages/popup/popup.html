@@ -7,6 +7,7 @@
   <script src="../../shared/theme.js"></script>
   <link rel="stylesheet" href="../../shared/theme.css" />
   <link rel="stylesheet" href="../../shared/tour.css" />
+  <link rel="stylesheet" href="../../shared/rules.css" />
   <link rel="stylesheet" href="./popup.css" />
 </head>
 
@@ -49,37 +50,12 @@
   </header>
 
   <div id="rules-header">
-    <h2 id="rules-title">Rules</h2>
-    <button id="add-btn" class="btn">+ Add a rule</button>
-  </div>
-
-  <div id="add-form">
-    <input id="form-target" type="text" placeholder="google.com" />
-    <div class="form-row">
-      <input id="form-limit" type="number" value="10" min="1" />
-      <div class="custom-dropdown">
-        <button class="dropdown-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
-        <div class="dropdown-menu" id="form-unit-menu">
-          <button value="minutes">min</button>
-          <button value="hours">hours</button>
-          <button value="days">days</button>
-        </div>
-      </div>
-      <span>per</span>
-      <div class="custom-dropdown">
-        <button class="dropdown-btn" id="form-period-btn" data-value="day">day<span class="dropdown-arrow">▼</span></button>
-        <div class="dropdown-menu" id="form-period-menu">
-          <button value="day">day</button>
-          <button value="hour">hour</button>
-          <button value="week">week</button>
-        </div>
-      </div>
-    </div>
-    <button id="save-btn" class="btn">Save</button>
+    <h2 id="rules-title">Active rules</h2>
+    <button id="manage-btn" class="btn">Manage rules</button>
   </div>
 
   <div id="no-rules-message"></div>
-  <ul id="rules-list"></ul>
+  <ul id="rules-list" class="rules-list"></ul>
 
   <script type="module" src="./popup.js"></script>
 </body>

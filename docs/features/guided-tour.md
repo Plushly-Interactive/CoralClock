@@ -190,6 +190,56 @@ recent write before merging.
 inProgress: null }` — auto-start fires on the next dashboard
 open following a fresh `onInstalled` event.
 
+## Adding new steps in a future version
+
+When a feature ships and you want returning users to see new tour steps
+automatically on extension reload, follow these steps:
+
+1. **Bump `TOUR_VERSION`** in `src/shared/tour.js`.
+
+2. **Mark each new step** with `newInVersion: TOUR_VERSION`:
+   ```js
+   {
+     selector: '#my-new-element',
+     title: 'New feature',
+     body: 'Here is what it does.',
+     newInVersion: 3,   // ← set to the new TOUR_VERSION value
+   }
+   ```
+   Insert the marked steps *before* any existing handoff step on the
+   same surface so that replay (full tour) includes them in order.
+
+3. **Set `TOUR_UPDATE_ENTRY`** in `src/background/background.js` to
+   the HTML path of the first surface that has new steps, e.g.:
+   ```js
+   const TOUR_UPDATE_ENTRY = 'src/pages/rules/rules.html';
+   ```
+   On extension reload `onInstalled` opens this page automatically for
+   users whose `completedVersion` is below the new `TOUR_VERSION`.
+
+4. **Chain surfaces** (optional). If new steps span more than one
+   navigable surface (rules → dashboard, dashboard → storage-pruning),
+   pass `nextUpdateSurface` to `autoStartIfMatches` on the earlier
+   surface so the update tour hands off automatically:
+   ```js
+   autoStartIfMatches('rules', rulesTourSteps, {
+     nextUpdateSurface: 'dashboard',
+   });
+   ```
+   `autoStartIfMatches` injects a "Continue →" handoff on the last new
+   step and opens the next surface when the user clicks it.
+
+**What happens automatically** (no extra work needed):
+
+- `autoStartIfMatches` finds the first step where `newInVersion >
+  completedVersion` and slices from there, so you never hardcode an
+  index.
+- The dashboard does the same scan via `dashboardNewStepRange`, so
+  update-tour resume works correctly after a page reload mid-tour.
+- Surfaces that cannot be opened directly (site, path, popup) cannot
+  be the `TOUR_UPDATE_ENTRY` or a `nextUpdateSurface` target, but new
+  steps added there are picked up automatically during full tour replay.
+
 ## Out of scope (v1)
 
 - Translations / i18n of tour copy (English only).

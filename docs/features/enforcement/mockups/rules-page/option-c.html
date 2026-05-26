@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Rules (mockup C, interactive)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      #rules-main { max-width: 820px; margin: 0 auto; padding: 24px 16px; }
+
+      #add-card { border: 1px solid var(--color-border); border-radius: 8px; padding: 20px; margin-bottom: 28px; }
+
+      #form-target {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-size: var(--font-lg);
+        margin-bottom: 16px;
+      }
+
+      /* Scope as radio cards — most guided, each shows a concrete example. */
+      .scope-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+      .scope-card {
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        padding: 12px;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      .scope-card:hover { background: var(--color-hover-bg); }
+      .scope-card.active { border-color: var(--color-accent); background: var(--color-hover-bg); }
+      .scope-card.disabled { opacity: 0.4; cursor: not-allowed; }
+      .scope-card h3 { font-size: var(--font-base); margin-bottom: 4px; }
+      .scope-card .ex { font-family: monospace; font-size: var(--font-sm); color: var(--color-accent-light); display: block; margin-bottom: 6px; word-break: break-all; }
+
+      .limit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+      .limit-row input[type="number"] { width: 64px; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); }
+
+      #preview { padding: 12px 14px; border-radius: 6px; background: var(--color-hover-bg); border-left: 3px solid var(--color-accent); margin-bottom: 16px; }
+      #preview-pattern { font-family: monospace; display: block; margin-top: 4px; }
+      #preview.invalid { border-left-color: var(--color-text-secondary); }
+
+      .rules-list { list-style: none; }
+      .rules-list li { display: flex; align-items: center; gap: 12px; padding: 14px 8px; border-bottom: 1px solid var(--color-border); }
+      .rules-list li.disabled .rule-main { opacity: 0.4; }
+      .rule-main { flex: 1; }
+      .rule-target { font-size: var(--font-md); font-weight: 600; }
+      #empty-msg { padding: 24px 0; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="../../../../src/pages/dashboard/dashboard.html">
+          <img src="../../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Rules</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <main id="rules-main">
+      <section id="add-card">
+        <input id="form-target" type="text" value="reddit.com" placeholder="Enter a site or page address" />
+
+        <div class="scope-cards">
+          <div class="scope-card" id="scope-host" data-scope="host">
+            <h3>This host only</h3>
+            <span class="ex" id="ex-host">reddit.com</span>
+            <span class="text-meta">Not subdomains</span>
+          </div>
+          <div class="scope-card active" id="scope-subdomain" data-scope="subdomain">
+            <h3>Whole site</h3>
+            <span class="ex" id="ex-subdomain">*.reddit.com</span>
+            <span class="text-meta">Includes old., m., www.</span>
+          </div>
+          <div class="scope-card" id="scope-page" data-scope="pathPrefix">
+            <h3>A specific page</h3>
+            <span class="ex" id="ex-page">reddit.com/r/news</span>
+            <span class="text-meta">A page + under it, or just the homepage</span>
+          </div>
+        </div>
+
+        <div class="limit-row">
+          <span class="text-meta">Limit to</span>
+          <input id="form-limit" type="number" value="30" min="1" />
+          <div class="custom-dropdown"><button class="dropdown-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button></div>
+          <span class="text-meta">per</span>
+          <div class="custom-dropdown"><button class="dropdown-btn" id="form-period-btn" data-value="day">day<span class="dropdown-arrow">▼</span></button></div>
+          <span class="text-meta">counting</span>
+          <div class="custom-dropdown"><button class="dropdown-btn" id="form-mode-btn" data-value="active">active<span class="dropdown-arrow">▼</span></button></div>
+        </div>
+
+        <div id="preview">
+          <span id="preview-text"></span>
+          <code id="preview-pattern" class="text-meta"></code>
+        </div>
+
+        <button id="add-btn" class="btn">Add rule</button>
+      </section>
+
+      <p id="empty-msg" class="empty-msg text-meta" hidden>No rules yet. Add one above.</p>
+      <ul class="rules-list" id="rules-list"></ul>
+    </main>
+
+    <script>
+      // ---- Throwaway demo logic (no chrome APIs, no storage) ----
+
+      const targetInput = document.querySelector('#form-target');
+      const cards = [...document.querySelectorAll('.scope-card')];
+      const pageCard = document.querySelector('#scope-page');
+      const preview = document.querySelector('#preview');
+      const previewText = document.querySelector('#preview-text');
+      const previewPattern = document.querySelector('#preview-pattern');
+      const rulesList = document.querySelector('#rules-list');
+      const emptyMsg = document.querySelector('#empty-msg');
+
+      let scope = 'subdomain'; // currently selected card
+
+      // Split a typed address into { host, path }. Everything before the first
+      // slash is the host; the rest (if any) is the path.
+      function parseTarget(raw) {
+        const clean = raw.trim().replace(/^https?:\/\//, '');
+        const slash = clean.indexOf('/');
+        if (slash === -1) return { host: clean, path: '' };
+        return { host: clean.slice(0, slash), path: clean.slice(slash + 1) };
+      }
+
+      // Escape RE2 metacharacters in a literal host/path fragment.
+      const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      function describe(scope, host, path) {
+        const h = host || 'reddit.com';
+        if (scope === 'subdomain') {
+          // Subdomains are wanted here — DNR's || anchor is naturally inclusive.
+          return { text: `<strong>${h}</strong> and all its subdomains`, pattern: `||${h}^` };
+        }
+        if (scope === 'pathPrefix') {
+          if (!path) {
+            // Empty path = the root page only (reddit.com/), not the whole host.
+            return {
+              text: `only the <strong>${h}</strong> homepage (not its other pages)`,
+              pattern: `^https?://(?:www\\.)?${reEsc(h)}/?$`,
+            };
+          }
+          // Boundary-anchored so /r/news doesn't also catch /r/newsletter.
+          return {
+            text: `<strong>${h}/${path}</strong> and everything under it`,
+            pattern: `^https?://${reEsc(h)}/${reEsc(path)}(?:[/?]|$)`,
+          };
+        }
+        // Exact host — regexFilter excludes subdomains; optional www. matches tracking.
+        return {
+          text: `<strong>${h}</strong> only (not subdomains)`,
+          pattern: `^https?://(?:www\\.)?${reEsc(h)}(?:/|$)`,
+        };
+      }
+
+      // Update example text on each card to reflect the typed host/path.
+      function refreshExamples(host, path) {
+        const h = host || 'reddit.com';
+        document.querySelector('#ex-host').textContent = h;
+        document.querySelector('#ex-subdomain').textContent = `*.${h}`;
+        // Empty path on the page card means the homepage only.
+        document.querySelector('#ex-page').textContent = path ? `${h}/${path}` : `${h}/`;
+      }
+
+      function refresh() {
+        const { host, path } = parseTarget(targetInput.value);
+
+        // Auto-detect: a path in the input implies page scope.
+        if (path && scope !== 'pathPrefix') selectScope('pathPrefix', { silent: true });
+
+        refreshExamples(host, path);
+
+        if (!host) {
+          preview.classList.add('invalid');
+          previewText.innerHTML = 'Enter a site address above.';
+          previewPattern.textContent = '';
+          return;
+        }
+        preview.classList.remove('invalid');
+        const { text, pattern } = describe(scope, host, path);
+        previewText.innerHTML = `Will block ${text}.`;
+        previewPattern.textContent = pattern;
+      }
+
+      function selectScope(next, { silent } = {}) {
+        scope = next;
+        cards.forEach(c => c.classList.toggle('active', c.dataset.scope === next));
+        if (!silent) refresh();
+      }
+
+      cards.forEach(card => card.addEventListener('click', () => selectScope(card.dataset.scope)));
+      targetInput.addEventListener('input', refresh);
+
+      // ---- In-memory rule list so add/toggle/delete feel real ----
+      let rules = [
+        { id: 1, label: 'youtube.com/feed/subscriptions', scopeText: 'Specific page', limit: '1 h per day · active + audio', enabled: true },
+      ];
+
+      function scopeText(scope) {
+        return scope === 'subdomain' ? 'Whole site' : scope === 'pathPrefix' ? 'Specific page' : 'This host only';
+      }
+
+      function renderRules() {
+        emptyMsg.hidden = rules.length > 0;
+        rulesList.innerHTML = rules.map(r => `
+          <li class="${r.enabled ? '' : 'disabled'}">
+            <div class="rule-main">
+              <span class="rule-target">${r.label}</span>
+              <div class="text-meta">${r.scopeText} · ${r.limit}</div>
+            </div>
+            <button class="square-btn" data-toggle="${r.id}">${r.enabled ? '●' : '○'}</button>
+            <button class="square-btn" data-delete="${r.id}">✕</button>
+          </li>`).join('');
+      }
+
+      document.querySelector('#add-btn').addEventListener('click', () => {
+        const { host, path } = parseTarget(targetInput.value);
+        if (!host) return;
+        const label = scope === 'pathPrefix' && path ? `${host}/${path}` : host;
+        const unit = document.querySelector('#form-unit-btn').dataset.value;
+        const period = document.querySelector('#form-period-btn').dataset.value;
+        const mode = document.querySelector('#form-mode-btn').dataset.value;
+        const limit = document.querySelector('#form-limit').value;
+        rules.push({ id: Date.now(), label, scopeText: scopeText(scope), limit: `${limit} ${unit} per ${period} · ${mode}`, enabled: true });
+        renderRules();
+      });
+
+      rulesList.addEventListener('click', (e) => {
+        const t = e.target.dataset.toggle, d = e.target.dataset.delete;
+        if (t) { const r = rules.find(x => x.id == t); r.enabled = !r.enabled; renderRules(); }
+        if (d) { rules = rules.filter(x => x.id != d); renderRules(); }
+      });
+
+      refresh();
+      renderRules();
+    </script>
+  </body>
+</html>

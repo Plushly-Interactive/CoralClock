@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Blocked page mockups – v2</title>
+    <script src="../../../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../../../src/shared/theme.css" />
+    <style>
+      body {
+        height: auto;
+        overflow: auto;
+        padding: 40px;
+        display: block;
+      }
+      h1 { font-size: 1.4rem; margin-bottom: 8px; }
+      p { color: var(--color-text-secondary); margin-bottom: 32px; }
+      .variants {
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+        max-width: 48rem;
+      }
+      .variant {
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .variant-label {
+        padding: 10px 16px;
+        background: var(--color-border);
+        font-size: var(--font-sm);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .variant-label a {
+        color: var(--color-accent-light);
+        font-size: var(--font-sm);
+        text-decoration: none;
+      }
+      iframe {
+        width: 100%;
+        border: none;
+        height: 320px;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Blocked page – v2 mockups</h1>
+    <p>Shows: rule target · spent today · limit · unlock countdown. No manage-rules button.</p>
+
+    <div class="variants">
+      <div class="variant">
+        <div class="variant-label">
+          <span>A — Card with two-row facts</span>
+          <a href="blocked-v2a.html" target="_blank">open full page</a>
+        </div>
+        <iframe src="blocked-v2a.html"></iframe>
+      </div>
+
+      <div class="variant">
+        <div class="variant-label">
+          <span>B — Full-screen accent, large countdown</span>
+          <a href="blocked-v2b.html" target="_blank">open full page</a>
+        </div>
+        <iframe src="blocked-v2b.html"></iframe>
+      </div>
+
+      <div class="variant">
+        <div class="variant-label">
+          <span>C — Split card (why / when)</span>
+          <a href="blocked-v2c.html" target="_blank">open full page</a>
+        </div>
+        <iframe src="blocked-v2c.html"></iframe>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,5 +1,6 @@
 import { localDayKey } from '../shared/timeUtils.js';
 import { ensureStorageVersion } from '../data/migrations.js';
+import { TOUR_VERSION } from '../shared/tour.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import {
   setWindowSite, removeWindowSite,
@@ -16,6 +17,13 @@ import {
   saveSubpageSnapshot, recoverSubpagesFromSnapshot,
   SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
 } from './subpageTracking.js';
+import { computeOverage, publishOverage } from './enforcement.js';
+import {
+  MSG_GET_ANALYTICS_BY_DAY, MSG_GET_ANALYTICS_BY_HOUR_TODAY,
+  MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
+  MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
+  MSG_INVALIDATE_ANALYTICS_CACHE,
+} from '../shared/msgTypes.js';
 
 console.log('BiteGuard: background started');
 
@@ -25,6 +33,15 @@ let cachedSubpagesByDay = null;
 let cachedSubpagesByHour = null;
 let bootstrapAt;
 let coldStart = false;
+
+// Drop the in-memory analytics caches after storage is rewritten (flush), so
+// the next query re-reads fresh data.
+function invalidateAnalyticsCache() {
+  cachedByDay = null;
+  cachedByHour = null;
+  cachedSubpagesByDay = null;
+  cachedSubpagesByHour = null;
+}
 
 chrome.alarms.get('flush').then(existing => {
   if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
@@ -36,8 +53,19 @@ chrome.runtime.onStartup.addListener(() => {
   chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
 });
 
-chrome.runtime.onInstalled.addListener((details) => {
+// First page to open for the update tour. The tour hands off between surfaces
+// via nextUpdateSurface — only the entry point needs to be opened here.
+const TOUR_UPDATE_ENTRY = 'src/pages/rules/rules.html';
+
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason !== 'install' && details.reason !== 'update') return;
+  if (details.reason === 'update') {
+    const { tour = {} } = await chrome.storage.local.get('tour');
+    if (tour.completed && (tour.completedVersion ?? 0) < TOUR_VERSION) {
+      chrome.tabs.create({ url: chrome.runtime.getURL(TOUR_UPDATE_ENTRY) });
+      return;
+    }
+  }
   chrome.tabs.create({
     url: chrome.runtime.getURL('src/pages/dashboard/dashboard.html?tour=1'),
   });
@@ -53,35 +81,32 @@ async function bootstrap() {
 // --- Messages ---
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === 'getAnalyticsByDay') {
+  if (msg.type === MSG_GET_ANALYTICS_BY_DAY) {
     getByDay().then(sendResponse);
     return true;
   }
-  if (msg.type === 'getAnalyticsByHourToday') {
+  if (msg.type === MSG_GET_ANALYTICS_BY_HOUR_TODAY) {
     getByHourToday().then(sendResponse);
     return true;
   }
-  if (msg.type === 'getAvgPerClockHour') {
+  if (msg.type === MSG_GET_AVG_PER_CLOCK_HOUR) {
     getAvgPerClockHour(msg.siteIds, msg.range, msg.dayKeys).then(sendResponse);
     return true;
   }
-  if (msg.type === 'getAnalyticsByHourForDay') {
+  if (msg.type === MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY) {
     getByHourForDay(msg.dayKey).then(sendResponse);
     return true;
   }
-  if (msg.type === 'getSubpagesByDay') {
+  if (msg.type === MSG_GET_SUBPAGES_BY_DAY) {
     getSubpagesByDay().then(sendResponse);
     return true;
   }
-  if (msg.type === 'getSubpagesByHour') {
+  if (msg.type === MSG_GET_SUBPAGES_BY_HOUR) {
     getSubpagesByHour().then(sendResponse);
     return true;
   }
-  if (msg.type === 'invalidateAnalyticsCache') {
-    cachedByDay = null;
-    cachedByHour = null;
-    cachedSubpagesByDay = null;
-    cachedSubpagesByHour = null;
+  if (msg.type === MSG_INVALIDATE_ANALYTICS_CACHE) {
+    invalidateAnalyticsCache();
     sendResponse(true);
     return true;
   }
@@ -295,8 +320,48 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await flushSubpagesToStorage(flushAt);
   await saveSnapshot(flushAt);
   await saveSubpageSnapshot(flushAt);
-  cachedByDay = null;
-  cachedByHour = null;
-  cachedSubpagesByDay = null;
-  cachedSubpagesByHour = null;
+  invalidateAnalyticsCache();
+
+  await checkEnforcement(flushAt);
+});
+
+// React to rule edits immediately (enable/disable/add/delete) rather than
+// waiting for the next flush — so disabling unblocks and enabling an
+// already-crossed rule blocks right away.
+chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (area !== 'local' || !changes.rules) return;
+  await bootstrapDone;
+  await checkEnforcement(Date.now());
+});
+
+// Compute which rules are over their limit and publish DNR redirect rules so
+// over-limit sites are blocked until the period window rolls over.
+async function checkEnforcement(now) {
+  const {
+    rules = [],
+    [ANALYTICS_DAY_KEY]: analyticsByDay = {},
+    [ANALYTICS_HOUR_KEY]: analyticsByHour = {},
+    [SUBPAGES_DAY_KEY]: subpagesByDay = {},
+    [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
+  } = await chrome.storage.local.get(['rules', ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
+
+  const overage = computeOverage(rules, { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour }, now);
+  await publishOverage(overage);
+}
+
+// Pre-emptive block: on a main-frame navigation, flush the tracker's accrued
+// usage to storage and re-check limits *before* relying on the next flush tick.
+// flushToStorage drains the pending in-memory ranges up to `now`, so the check
+// sees usage as current as this instant — catching a crossing that happened
+// since the last flush. The freshly-published DNR rule plus reloadMatchingTabs
+// then block the site without waiting up to a minute for the flush alarm.
+chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
+  if (details.frameId !== 0) return; // main frame only
+  if (!details.url?.startsWith('http')) return;
+  await bootstrapDone;
+  const now = Date.now();
+  await flushToStorage(now);
+  await flushSubpagesToStorage(now);
+  invalidateAnalyticsCache();
+  await checkEnforcement(now);
 });

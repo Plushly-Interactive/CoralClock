@@ -85,6 +85,17 @@ const migrations = [
       [SUBPAGES_HOUR_KEY]: subpagesByHour,
     });
   },
+
+  // v3 → v4: add matchType + mode to enforcement rules
+  // rules[i] = { id, target, matchType, limit, limitUnit, period, enabled, mode }
+  async () => {
+    const { rules = [] } = await chrome.storage.local.get('rules');
+    for (const r of rules) {
+      r.matchType ??= 'host';
+      r.mode ??= 'active';
+    }
+    await chrome.storage.local.set({ rules });
+  },
 ];
 
 export async function ensureStorageVersion() {

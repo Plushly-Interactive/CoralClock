@@ -1,6 +1,9 @@
 import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
 import { showNotification } from '../shared/utils.js';
+import { MSG_INVALIDATE_ANALYTICS_CACHE } from '../shared/msgTypes.js';
+
+export const IMPORT_COMPLETE = 'importcomplete';
 
 function normalizeHost(host) {
   return host.startsWith('www.') ? host.slice(4) : host;
@@ -223,9 +226,9 @@ async function applyTtImport(importData, currentByDay, daysToReplace) {
   }
 
   await chrome.storage.local.set({ [ANALYTICS_DAY_KEY]: currentByDay });
-  await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
+  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_ANALYTICS_CACHE });
   showNotification(`Imported ${daysToTake.size} day(s)`);
-  window.dispatchEvent(new CustomEvent('importcomplete'));
+  window.dispatchEvent(new CustomEvent(IMPORT_COMPLETE));
 }
 
 let pendingImport = null;
@@ -302,9 +305,9 @@ async function applyBgImport(importByDay, importByHour, importSubpagesByDay, imp
     [SUBPAGES_DAY_KEY]: currentSubpagesByDay,
     [SUBPAGES_HOUR_KEY]: currentSubpagesByHour,
   });
-  await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
+  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_ANALYTICS_CACHE });
   showNotification(`Imported ${daysToTake.size} day(s)`);
-  window.dispatchEvent(new CustomEvent('importcomplete'));
+  window.dispatchEvent(new CustomEvent(IMPORT_COMPLETE));
 }
 
 function showConflictView(conflicts) {

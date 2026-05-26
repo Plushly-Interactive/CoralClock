@@ -1,4 +1,5 @@
 import { localDayKey } from '../shared/timeUtils.js';
+import { MSG_INVALIDATE_ANALYTICS_CACHE } from '../shared/msgTypes.js';
 
 const SITES = {
   'youtube.com':          { peaks: [[19,23,1.0],[12,14,0.6],[15,18,0.5]], peakMaxMin: 35, weekendFactor: 1.7, skipDayProb: 0.10, audioFraction: 0.65 },
@@ -93,5 +94,5 @@ export async function seedTestData() {
   }
 
   await chrome.storage.local.set({ analyticsByDay, analyticsByHour });
-  await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' }).catch(() => {});
+  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_ANALYTICS_CACHE }).catch(() => {});
 }

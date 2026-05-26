@@ -1,5 +1,5 @@
 import { formatMs, localDayKey } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar } from '../../shared/utils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
@@ -7,9 +7,12 @@ import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.j
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
 import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
-import { openModal, closeModal } from '../../data/importData.js';
+import { openModal, closeModal, IMPORT_COMPLETE } from '../../data/importData.js';
+import { MSG_GET_ANALYTICS_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
+import { PREF_HIDE_BRIEF, PREF_MERGE_MODE, PREF_GROUP_MODE } from '../../shared/prefKeys.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
 document.querySelector('#prune-btn').addEventListener('click', () => {
   location.href = '../storage-pruning/storage-pruning.html';
 });
@@ -40,18 +43,18 @@ const hourly = createHourlyChart({
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
   loadAvgPerHour: (range) => analyticsRequest({
-    type: 'getAvgPerClockHour', siteIds: null, range,
+    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: null, range,
   }),
 });
 
 let sortCol = 'time';
 let sortDir = 'desc';
 let currentRows = [];
-let groupMode = sessionStorage.getItem('groupMode') === 'true';
+let groupMode = sessionStorage.getItem(PREF_GROUP_MODE) === 'true';
 groupToggle.checked = groupMode;
-let mergeMode = sessionStorage.getItem('mergeMode') !== 'false';
+let mergeMode = sessionStorage.getItem(PREF_MERGE_MODE) !== 'false';
 mergeToggle.checked = mergeMode;
-let hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
+let hideBrief = sessionStorage.getItem(PREF_HIDE_BRIEF) !== 'false';
 hideBriefToggle.checked = hideBrief;
 
 const thName = document.querySelector('#th-name');
@@ -185,19 +188,19 @@ initRangeSelect(rangeSelect, render);
 
 groupToggle.addEventListener('change', () => {
   groupMode = groupToggle.checked;
-  sessionStorage.setItem('groupMode', groupMode);
+  sessionStorage.setItem(PREF_GROUP_MODE, groupMode);
   render();
 });
 
 mergeToggle.addEventListener('change', () => {
   mergeMode = mergeToggle.checked;
-  sessionStorage.setItem('mergeMode', mergeMode);
+  sessionStorage.setItem(PREF_MERGE_MODE, mergeMode);
   render();
 });
 
 hideBriefToggle.addEventListener('change', () => {
   hideBrief = hideBriefToggle.checked;
-  sessionStorage.setItem('hideBrief', hideBrief);
+  sessionStorage.setItem(PREF_HIDE_BRIEF, hideBrief);
   render();
 });
 
@@ -213,11 +216,11 @@ window.addEventListener('storage', (e) => {
 })();
 
 window.addEventListener('pageshow', () => {
-  hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
+  hideBrief = sessionStorage.getItem(PREF_HIDE_BRIEF) !== 'false';
   hideBriefToggle.checked = hideBrief;
-  mergeMode = sessionStorage.getItem('mergeMode') !== 'false';
+  mergeMode = sessionStorage.getItem(PREF_MERGE_MODE) !== 'false';
   mergeToggle.checked = mergeMode;
-  groupMode = sessionStorage.getItem('groupMode') === 'true';
+  groupMode = sessionStorage.getItem(PREF_GROUP_MODE) === 'true';
   groupToggle.checked = groupMode;
   if (currentRows.length) render();
 });
@@ -227,7 +230,7 @@ async function loadAndRender() {
     history.replaceState(null, '', location.pathname);
     await seedTestData();
   }
-  byDayCache = await analyticsRequest({ type: 'getAnalyticsByDay' });
+  byDayCache = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_DAY });
   render();
   renderStorageBar();
 }
@@ -239,7 +242,7 @@ document.querySelector('#seed-btn')?.addEventListener('click', async () => {
   await loadAndRender();
 });
 
-window.addEventListener('importcomplete', async () => {
+window.addEventListener(IMPORT_COMPLETE, async () => {
   byDayCache = null;
   hourly.clearCache();
   await loadAndRender();
@@ -402,6 +405,15 @@ const dashboardTourSteps = [
   },
 ];
 
+// Steps with newInVersion > completedVersion are shown in the update tour.
+// No constant needed — computed at runtime from the step list.
+function dashboardNewStepRange(completedVersion) {
+  const first = dashboardTourSteps.findIndex(s => (s.newInVersion ?? 0) > completedVersion);
+  if (first < 0) return null;
+  const last = dashboardTourSteps.reduce((acc, s, i) => ((s.newInVersion ?? 0) > completedVersion ? i : acc), first);
+  return { first, last };
+}
+
 async function maybeEnableMockMode() {
   const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
   const empty = Object.keys(analyticsByDay).length === 0;
@@ -414,11 +426,12 @@ async function maybeEnableMockMode() {
 let isTourRunning = false;
 let currentTourHandle = null;
 
-async function startDashboardTour(startIndex = 0) {
+async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null) {
   if (isTourRunning) return;
+  const tourState = knownState ?? await readTourState();
+  if (tourState.completed && !tourState.inProgress) return;
   isTourRunning = true;
   if (startIndex === 0) {
-    const tourState = await readTourState();
     const wasMock = tourState.useMockData;
     await maybeEnableMockMode();
     const nowState = await readTourState();
@@ -428,7 +441,7 @@ async function startDashboardTour(startIndex = 0) {
   }
   currentTourHandle = runTour({
     surface: 'dashboard',
-    steps: dashboardTourSteps,
+    steps,
     startIndex,
     onClose: ({ skipped }) => {
       isTourRunning = false;
@@ -439,11 +452,14 @@ async function startDashboardTour(startIndex = 0) {
   });
 }
 
-tourBtn.addEventListener('click', () => startDashboardTour(0));
+tourBtn.addEventListener('click', async () => {
+  await writeTourState({ completed: false, inProgress: null });
+  startDashboardTour(0);
+});
 
 async function checkResume() {
   const state = await readTourState();
-  if (state.inProgress?.surface !== 'dashboard') return;
+  if (state.completed || state.inProgress?.surface !== 'dashboard') return;
   const wantedIndex = state.inProgress.stepIndex || 0;
   if (currentTourHandle) {
     if (currentTourHandle.getIndex() !== wantedIndex) {
@@ -472,12 +488,22 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   const state = await readTourState();
   if (state.inProgress?.surface === 'dashboard') {
-    startDashboardTour(state.inProgress.stepIndex || 0);
+    const stepIndex = state.inProgress.stepIndex || 0;
+    const range = state.completed ? dashboardNewStepRange(state.completedVersion ?? 0) : null;
+    const isUpdateResume = range != null && stepIndex >= range.first && stepIndex <= range.last;
+    const steps = isUpdateResume ? dashboardTourSteps.slice(range.first, range.last + 1) : dashboardTourSteps;
+    const adjustedIndex = isUpdateResume ? stepIndex - range.first : stepIndex;
+    startDashboardTour(adjustedIndex, steps, state);
+    return;
+  }
+  if (state.completed) {
+    const range = dashboardNewStepRange(state.completedVersion ?? 0);
+    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state);
     return;
   }
   const pendingSurface = state.inProgress?.surface;
   if (pendingSurface) {
     const handoffIdx = dashboardTourSteps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
-    if (handoffIdx >= 0) startDashboardTour(handoffIdx);
+    if (handoffIdx >= 0) startDashboardTour(handoffIdx, dashboardTourSteps, state);
   }
 })();

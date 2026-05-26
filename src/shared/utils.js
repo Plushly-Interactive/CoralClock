@@ -9,6 +9,30 @@ export const STAT_LABELS = {
 
 export const CHART_LEGEND_HTML = `<span><span class="chart-legend-time"></span> Active browsing</span><span><span class="chart-legend-audio"></span> Audio playback</span>`;
 
+export const TIME_CHART_HTML = `<div id="time-chart-container" class="chart-container">
+  <div class="chart-header">
+    <h2 class="chart-heading">Time spent</h2>
+    <div id="time-legend" class="time-legend text-meta" style="display: none"></div>
+  </div>
+  <svg id="time-chart" class="chart-svg"></svg>
+  <div id="time-tooltip" class="tooltip text-meta"></div>
+  <p id="time-no-data" class="text-meta" style="display:none">No data for this period.</p>
+</div>`;
+
+export const VISITS_CHART_HTML = `<div id="visits-chart-container" class="chart-container">
+  <h2 class="chart-heading">Visits</h2>
+  <svg id="visits-chart" class="chart-svg"></svg>
+  <div id="visits-tooltip" class="tooltip text-meta"></div>
+  <p id="visits-no-data" class="text-meta" style="display:none">No data for this period.</p>
+</div>`;
+
+export const HOURLY_CHART_HTML = `<div id="hourly-chart-container" class="chart-container">
+  <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading text-meta"></span></h2>
+  <svg id="hourly-chart" class="chart-svg"></svg>
+  <div id="hourly-tooltip" class="tooltip text-meta"></div>
+  <p id="hourly-not-relevant" class="text-meta" style="display:none"></p>
+</div>`;
+
 export function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -16,6 +40,18 @@ export function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// Make a <button> navigate like a link: plain click → same tab, middle-click or
+// ctrl/cmd-click → new tab (so we don't lose those affordances by not using <a>).
+export function navButton(btnEl, url) {
+  btnEl.addEventListener('click', (e) => {
+    if (e.ctrlKey || e.metaKey) window.open(url, '_blank');
+    else window.location.href = url;
+  });
+  btnEl.addEventListener('auxclick', (e) => {
+    if (e.button === 1) window.open(url, '_blank'); // middle click
+  });
 }
 
 export function showNotification(message, durationMs = 3000) {

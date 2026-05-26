@@ -8,6 +8,7 @@ import {
 import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../../background/siteTracking.js';
 import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
 import { mockScanResults, clearMockModeCache } from '../../shared/tourMockData.js';
+import { MSG_INVALIDATE_ANALYTICS_CACHE } from '../../shared/msgTypes.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../../background/subpageTracking.js';
 
 const STORE_LABELS = {
@@ -347,7 +348,7 @@ async function runDelete() {
   if (byStore[SUBPAGES_HOUR_KEY].length) writeback[SUBPAGES_HOUR_KEY] = applySubpageDeletions(stores[SUBPAGES_HOUR_KEY] ?? {}, byStore[SUBPAGES_HOUR_KEY]);
   await chrome.storage.local.set(writeback);
   const bytesAfter = await chrome.storage.local.getBytesInUse(touched);
-  await chrome.runtime.sendMessage({ type: 'invalidateAnalyticsCache' });
+  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_ANALYTICS_CACHE });
   showNotification(`Deleted ${totalRecords} record${totalRecords === 1 ? '' : 's'} — freed ${formatBytes(bytesBefore - bytesAfter)}.`);
   await runScan();
   await renderStorageBar();

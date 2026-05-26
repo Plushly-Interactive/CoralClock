@@ -1,14 +1,20 @@
 import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
-import { formatWithSmallSub, STAT_LABELS, escapeHtml, CHART_LEGEND_HTML } from '../../shared/utils.js';
+import { STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
-import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
+import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
+import {
+  MSG_GET_ANALYTICS_BY_DAY, MSG_GET_ANALYTICS_BY_HOUR_TODAY,
+  MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
+  MSG_GET_AVG_PER_CLOCK_HOUR,
+} from '../../shared/msgTypes.js';
+import { PREF_HIDE_BRIEF, PREF_STRIP_PARAMS } from '../../shared/prefKeys.js';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -17,6 +23,16 @@ const isMerged = !!siteIds;
 let effectiveSiteIds = isMerged ? siteIds : [siteId];
 let isAggregatedEtld1 = false;
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+const chartsGrid = document.querySelector('#charts-grid');
+chartsGrid.insertAdjacentHTML('afterbegin', TIME_CHART_HTML);
+chartsGrid.insertAdjacentHTML('beforeend', VISITS_CHART_HTML);
+chartsGrid.insertAdjacentHTML('beforeend', HOURLY_CHART_HTML);
+const limitBtn = document.querySelector('#limit-btn');
+if (isMerged) {
+  limitBtn.style.display = 'none';
+} else {
+  navButton(limitBtn, `../rules/rules.html?target=${encodeURIComponent(siteId)}`);
+}
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
 const timeTooltip = document.querySelector('#time-tooltip');
@@ -84,12 +100,17 @@ peakItem.addEventListener('mouseleave', () => {
 });
 
 function entrySum(obj) {
-  const zero = { activeMs: 0, audioMs: 0, visits: 0 };
+  const zero = { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
   if (!obj) return zero;
   return effectiveSiteIds.reduce((acc, id) => {
     const e = obj[id];
     if (!e) return acc;
-    return { activeMs: acc.activeMs + (e.activeMs ?? 0), audioMs: acc.audioMs + (e.audioMs ?? 0), visits: acc.visits + (e.visits ?? 0) };
+    return {
+      activeMs: acc.activeMs + (e.activeMs ?? 0),
+      audioMs: acc.audioMs + (e.audioMs ?? 0),
+      overlapMs: acc.overlapMs + (e.overlapMs ?? 0),
+      visits: acc.visits + (e.visits ?? 0),
+    };
   }, { ...zero });
 }
 
@@ -112,25 +133,24 @@ let byHourCache = null;
 let subpagesByDayCache = null;
 let currentDepth = null;
 let currentSort = 'time';
-let stripParams = sessionStorage.getItem('subpagesStripParams') !== 'false';
+let stripParams = sessionStorage.getItem(PREF_STRIP_PARAMS) !== 'false';
 const stripParamsToggle = document.querySelector('#strip-params-toggle');
 stripParamsToggle.checked = stripParams;
 stripParamsToggle.addEventListener('change', () => {
   stripParams = stripParamsToggle.checked;
-  sessionStorage.setItem('subpagesStripParams', stripParams);
+  sessionStorage.setItem(PREF_STRIP_PARAMS, stripParams);
   renderSubpages(rangeSelect.dataset.value);
 });
 
-let hideBriefSubpages = sessionStorage.getItem('hideBrief') !== 'false';
+let hideBriefSubpages = sessionStorage.getItem(PREF_HIDE_BRIEF) !== 'false';
 const hideBriefSubpagesToggle = document.querySelector('#hide-brief-subpages-toggle');
 hideBriefSubpagesToggle.checked = hideBriefSubpages;
 hideBriefSubpagesToggle.addEventListener('change', () => {
   hideBriefSubpages = hideBriefSubpagesToggle.checked;
-  sessionStorage.setItem('hideBrief', hideBriefSubpages);
+  sessionStorage.setItem(PREF_HIDE_BRIEF, hideBriefSubpages);
   renderSubpages(rangeSelect.dataset.value);
 });
 
-const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
 const backBtn = document.querySelector('#back-btn');
 
@@ -151,7 +171,7 @@ const hourly = createHourlyChart({
   allDaysLabel: '(all days from earliest data, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
   loadAvgPerHour: (range) => analyticsRequest({
-    type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range,
+    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
   }),
 });
 
@@ -173,7 +193,7 @@ initDrill({
   rangeSelect,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
-    const hourData = await analyticsRequest({ type: 'getAnalyticsByHourForDay', dayKey });
+    const hourData = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, dayKey });
     const result = {};
     for (let h = 0; h < 24; h++) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
@@ -182,7 +202,7 @@ initDrill({
     return result;
   },
   getAvgPerClockHour: (dayKeys) => analyticsRequest({
-    type: 'getAvgPerClockHour', siteIds: effectiveSiteIds, range: null, dayKeys,
+    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range: null, dayKeys,
   }),
   render,
 });
@@ -190,16 +210,16 @@ initDrill({
 const loadAndRenderPromise = loadAndRender();
 
 window.addEventListener('pageshow', () => {
-  hideBriefSubpages = sessionStorage.getItem('hideBrief') !== 'false';
+  hideBriefSubpages = sessionStorage.getItem(PREF_HIDE_BRIEF) !== 'false';
   hideBriefSubpagesToggle.checked = hideBriefSubpages;
-  stripParams = sessionStorage.getItem('subpagesStripParams') !== 'false';
+  stripParams = sessionStorage.getItem(PREF_STRIP_PARAMS) !== 'false';
   stripParamsToggle.checked = stripParams;
   if (subpagesByDayCache) renderSubpages(rangeSelect.dataset.value);
 });
 
 async function loadAndRender() {
-  byDayCache = await analyticsRequest({ type: 'getAnalyticsByDay' });
-  subpagesByDayCache = await analyticsRequest({ type: 'getSubpagesByDay' });
+  byDayCache = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_DAY });
+  subpagesByDayCache = await analyticsRequest({ type: MSG_GET_SUBPAGES_BY_DAY });
   resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
@@ -221,7 +241,7 @@ function resolveAggregationMode() {
 
 async function loadByHour() {
   if (byHourCache) return;
-  byHourCache = await analyticsRequest({ type: 'getAnalyticsByHourToday' });
+  byHourCache = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_HOUR_TODAY });
 }
 
 function siteDayKeysForRange(range) {
@@ -268,13 +288,12 @@ function render() {
 
 
 function renderStats(data, range) {
-  const todayKey = localDayKey(Date.now());
-  const todayMs = entrySum(byDayCache?.[todayKey]).activeMs;
+  const { totalMs, totalVisits } = renderBaseStats(data, range, byDayCache);
 
-  const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
-  const totalVisits = data.reduce((s, d) => s + d.visits, 0);
-  const activeDays = activeDaysFromRange(range, byDayCache);
-  const avgMs = activeDays > 0 ? totalMs / activeDays : 0;
+  const todayKey = localDayKey(Date.now());
+  const todayEntry = entrySum(byDayCache?.[todayKey]);
+  const todayMs = todayEntry.activeMs + todayEntry.audioMs - (todayEntry.overlapMs ?? 0);
+  document.querySelector('#stat-today').textContent = formatMs(todayMs) || '0m';
 
   let peakMs = 0, peakLabel = '';
   if (range !== 'today' && byDayCache) {
@@ -285,17 +304,10 @@ function renderStats(data, range) {
     })();
     for (const [day, sites] of Object.entries(byDayCache)) {
       if (cutoff && day < cutoff) continue;
-      const ms = entrySum(sites).activeMs;
+      const e = entrySum(sites);
+      const ms = e.activeMs + e.audioMs - (e.overlapMs ?? 0);
       if (ms > peakMs) { peakMs = ms; peakLabel = day; }
     }
-  }
-
-  document.querySelector('#stat-today').textContent = formatMs(todayMs) || '0m';
-  const dailyAvgEl = document.querySelector('#stat-daily-avg');
-  if (activeDays > 0) {
-    dailyAvgEl.innerHTML = formatWithSmallSub(formatMs(avgMs));
-  } else {
-    dailyAvgEl.textContent = '—';
   }
   const peakEl = document.querySelector('#stat-peak');
   peakEl.textContent = peakMs > 0 ? formatMs(peakMs) : '—';
@@ -303,13 +315,7 @@ function renderStats(data, range) {
   peakInfo.style.display = peakMs > 0 ? 'inline' : 'none';
   peakInfo.dataset.date = peakMs > 0 ? peakLabel : '';
   peakInfo.title = '';
-  const totalTimeEl = document.querySelector('#stat-total-time');
-  if (totalMs > 0) {
-    totalTimeEl.innerHTML = formatWithSmallSub(formatMs(totalMs));
-  } else {
-    totalTimeEl.textContent = '—';
-  }
-  document.querySelector('#stat-visits').textContent = totalVisits > 0 ? totalVisits : '—';
+
   document.querySelector('#stat-avg-session').textContent = totalVisits > 0 ? formatMs(totalMs / totalVisits) : '—';
 
   document.querySelector('#overview-subheading').textContent = subheadingText(range);
@@ -345,7 +351,7 @@ function buildDepthToggle(paths) {
   toggle.innerHTML = '';
   for (let d = 1; d <= shownMax; d++) {
     const btn = document.createElement('button');
-    btn.className = 'seg-btn';
+    btn.className = 'seg-btn depth-num-btn';
     btn.textContent = String(d);
     btn.onclick = () => setDepth(d, btn);
     if (currentDepth === d) btn.classList.add('active');
