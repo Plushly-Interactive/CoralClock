@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Subpage UI mockups</title>
+  <script src="../../../src/shared/theme.js"></script>
+  <link rel="stylesheet" href="../../../src/shared/theme.css" />
+  <style>
+    body {
+      padding: 40px;
+      max-width: 760px;
+      margin: 0 auto;
+      font-size: var(--font-md);
+      line-height: 1.5;
+    }
+    h1 { font-size: 22px; margin-bottom: 8px; }
+    p.lede { color: var(--color-text-secondary); margin-bottom: 32px; }
+    ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+    li {
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      padding: 16px 20px;
+    }
+    li a {
+      display: block;
+      color: var(--color-accent);
+      font-weight: 600;
+      font-size: var(--font-lg);
+      text-decoration: none;
+      margin-bottom: 4px;
+    }
+    li a:hover { color: var(--color-accent-light); }
+    .desc { color: var(--color-text-secondary); font-size: var(--font-base); }
+  </style>
+</head>
+<body>
+  <h1>Subpage UI mockups</h1>
+  <p class="lede">Four layout directions for surfacing per-path data on <code>site.html</code>. Each link opens a previewable mockup using the real theme CSS.</p>
+  <ul>
+    <li>
+      <a href="./direction-a.html">A — List below the grid</a>
+      <div class="desc">Existing four-chart grid stays as-is; a ranked path table sits below it. Minimal change, scrollable.</div>
+    </li>
+    <li>
+      <a href="./direction-b.html">B — Tile inside the grid</a>
+      <div class="desc">Adds a fifth tile next to Time / Overview / Visits / Hourly. Everything on one screen but paths are cramped.</div>
+    </li>
+    <li>
+      <a href="./direction-c.html">C — Site ⇄ Pages toggle</a>
+      <div class="desc">Segmented control swaps the whole body between the existing site view and a full-width paths table with filter / sort.</div>
+    </li>
+    <li>
+      <a href="./direction-d-site.html">D — Dedicated path drill page</a>
+      <div class="desc">B-style compact list in the grid tile; each row opens <code>path.html</code> with the full chart set scoped to that path. Breadcrumb subheader shows the parent site.</div>
+    </li>
+  </ul>
+  <p class="lede" style="margin-top:32px;">See <a href="../ui-mockups.md" style="color: var(--color-accent);">ui-mockups.md</a> for the written summary and recommendation.</p>
+</body>
+</html>

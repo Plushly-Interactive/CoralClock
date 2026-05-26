@@ -1,0 +1,141 @@
+#tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+body.tour-modal-step #io-modal-overlay {
+  z-index: 2500;
+}
+
+body.tour-modal-step #io-modal-close {
+  display: none;
+}
+
+body.tour-modal-step .io-section:not(.tour-target) {
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+#tour-spotlight {
+  position: fixed;
+  z-index: 3001;
+  border-radius: 6px;
+  pointer-events: none;
+  outline: 2px solid var(--color-accent);
+  transition: top 0.15s, left 0.15s, width 0.15s, height 0.15s;
+}
+
+#tour-tooltip {
+  position: fixed;
+  z-index: 3002;
+  max-width: 320px;
+  padding: 14px 16px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-modal);
+  font-size: var(--font-base);
+}
+
+#tour-tooltip-arrow {
+  display: none;
+  position: absolute;
+  top: -10px;
+  right: 24px;
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid var(--color-border);
+}
+
+#tour-tooltip-arrow::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: -8px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid var(--color-bg);
+}
+
+#tour-tooltip.has-arrow-up #tour-tooltip-arrow {
+  display: block;
+}
+
+#tour-tooltip-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--color-accent);
+}
+
+#tour-tooltip-body {
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+#tour-tooltip-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#tour-step-counter {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  margin-right: auto;
+}
+
+#tour-close-btn {
+  position: fixed;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  z-index: 3002;
+  width: 42px;
+  height: 42px;
+  font-size: calc(var(--font-lg) * 1.5);
+}
+
+#tour-close-btn:hover {
+  background-color: var(--color-border);
+}
+
+#tour-confirm {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3003;
+  max-width: 360px;
+  padding: 18px 20px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-modal);
+  font-size: var(--font-base);
+}
+
+#tour-confirm[hidden] {
+  display: none;
+}
+
+#tour-confirm-body {
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+#tour-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+

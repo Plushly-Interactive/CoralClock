@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Path</title>
+    <script src="../../shared/theme.js"></script>
+    <link rel="stylesheet" href="../../shared/theme.css" />
+    <link rel="stylesheet" href="../../shared/tour.css" />
+    <link rel="stylesheet" href="../site/site.css" />
+    <link rel="stylesheet" href="./path.css" />
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="#">
+          <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center">
+        <div id="site-title">
+          <span id="site-label" class="site-label"></span>
+          <span id="site-id" class="text-meta"></span>
+        </div>
+      </div>
+    </header>
+
+    <div id="path-subheader">
+      <a id="path-crumb-site" href="#"></a>
+      <span class="path-crumb-link">
+        <a id="path-crumb-path" class="text-meta" href="#" target="_blank" rel="noopener"></a>
+        <button id="path-links-toggle" type="button" aria-expanded="false" style="display:none" title="Show open-link options"><span id="path-links-toggle-label" class="text-hint"></span></button>
+      </span>
+      <div id="path-links" class="text-meta"></div>
+    </div>
+
+    <div id="charts-grid">
+      <div id="stats-container" class="chart-container">
+        <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading text-meta"></span></h2>
+        <div id="stats-list" class="stats-list"></div>
+      </div>
+    </div>
+
+    <div id="drill-view" style="display:none"></div>
+
+    <script type="module" src="./path.js"></script>
+  </body>
+</html>

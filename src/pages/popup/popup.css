@@ -1,0 +1,77 @@
+body {
+  width: 400px;
+  font-size: var(--font-md);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 14px 10px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border);
+}
+
+#popup-header-btns {
+  display: flex;
+  gap: 16px;
+}
+
+#theme-menu {
+  position: relative;
+}
+
+#theme-btn svg {
+  stroke: currentColor;
+}
+
+#moon-icon {
+  display: block;
+}
+
+html.dark #moon-icon {
+  display: none;
+}
+
+#sun-icon {
+  display: none;
+  color: var(--color-accent-light);
+}
+
+html.dark #sun-icon {
+  display: block;
+}
+
+#dashboard-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+#rules-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 0;
+}
+
+#rules-title {
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#no-rules-message {
+  display: none;
+  min-height: 100px;
+  padding: 16px 16px;
+}
+
+#no-rules-message.visible {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

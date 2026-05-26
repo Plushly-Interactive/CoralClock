@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mockup D — site.html</title>
+  <script src="../../../src/shared/theme.js"></script>
+  <link rel="stylesheet" href="../../../src/shared/theme.css" />
+  <link rel="stylesheet" href="../../../src/pages/dashboard/dashboard.css" />
+  <link rel="stylesheet" href="../../../src/pages/site/site.css" />
+  <link rel="stylesheet" href="./_shared.css" />
+  <style>
+    #charts-grid {
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+    #time-chart-container   { grid-column: 1; grid-row: 1; }
+    #stats-container        { grid-column: 2; grid-row: 1; }
+    #subpages-container     { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; min-height: 0; }
+    #hourly-chart-container { grid-column: 1; grid-row: 2; }
+    #visits-chart-container { grid-column: 2; grid-row: 2; }
+
+    #subpages-container { border: 1px solid var(--color-border); border-radius: 6px; padding: 16px; }
+
+    #subpages-header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    #subpages-count { margin-left: auto; }
+
+    #subpages-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    #subpages-controls .text-meta { flex-shrink: 0; }
+
+    /* smaller segmented for tile context */
+    #depth-toggle, #sort-toggle {
+      display: inline-flex;
+      background: var(--color-border);
+      padding: 2px;
+      border-radius: 5px;
+      gap: 1px;
+    }
+    .tile-seg-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: var(--font-sm);
+      color: var(--color-text-secondary);
+      line-height: 1.6;
+    }
+    .tile-seg-btn.active {
+      background: var(--color-accent);
+      color: var(--color-button-text);
+      font-weight: 600;
+    }
+
+    #sort-toggle { margin-left: auto; }
+
+    #subpages-list {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      margin: 0 -4px;
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    #subpages-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--color-border);
+      font-size: var(--font-base);
+    }
+    #subpages-list li:hover { background: color-mix(in srgb, var(--color-border) 30%, transparent); }
+    #subpages-list li:hover .path { color: var(--color-accent); }
+    #subpages-list .path {
+      font-family: ui-monospace, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+    #subpages-list .num {
+      color: var(--color-text-secondary);
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+      font-size: var(--font-sm);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="header-left">
+      <a id="back-btn" href="../index.html">
+        <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+      </a>
+    </div>
+    <div id="header-center">
+      <div id="site-title">
+        <span id="site-label" class="site-label">reddit.com</span>
+        <span id="site-id" class="text-meta">last 7 days</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="charts-grid">
+    <div id="time-chart-container" class="chart-container">
+      <h2 class="chart-heading">Time spent</h2>
+      <div class="mock-chart">time chart</div>
+    </div>
+    <div id="stats-container" class="chart-container">
+      <h2 class="chart-heading">Overview</h2>
+      <div class="mock-stats">
+        <div><div class="mock-stat-label">Total</div><div class="mock-stat-value">8h 14m</div></div>
+        <div><div class="mock-stat-label">Avg/day</div><div class="mock-stat-value">1h 10m</div></div>
+        <div><div class="mock-stat-label">Visits</div><div class="mock-stat-value">142</div></div>
+      </div>
+    </div>
+
+    <div id="subpages-container" class="chart-container">
+      <div id="subpages-header">
+        <h2 class="chart-heading" style="margin:0;">Top pages</h2>
+        <span id="subpages-count" class="text-meta"></span>
+      </div>
+
+      <div id="subpages-controls">
+        <span class="text-meta">Depth</span>
+        <div id="depth-toggle"></div>
+        <div id="sort-toggle">
+          <button class="tile-seg-btn active" onclick="setSort('time', this)">Time</button>
+          <button class="tile-seg-btn" onclick="setSort('visits', this)">Visits</button>
+        </div>
+      </div>
+
+      <ol id="subpages-list"></ol>
+    </div>
+
+    <div id="hourly-chart-container" class="chart-container">
+      <h2 class="chart-heading">Average per clock hour</h2>
+      <div class="mock-chart">hourly chart</div>
+    </div>
+    <div id="visits-chart-container" class="chart-container">
+      <h2 class="chart-heading">Visits</h2>
+      <div class="mock-chart">visits chart</div>
+    </div>
+  </div>
+
+  <div class="mock-note">D — site.html · depth merges paths · click a row to drill in</div>
+
+  <script>
+    const RAW = [
+      { path: '/r/programming',                           ms: 6120000, visits: 23 },
+      { path: '/r/programming/comments/abc123/some-title',ms: 1800000, visits: 8  },
+      { path: '/r/programming/comments/def456/other',     ms:  540000, visits: 3  },
+      { path: '/r/rust',                                  ms: 3480000, visits: 14 },
+      { path: '/r/rust/comments/ghi789/cool-post',        ms:  960000, visits: 5  },
+      { path: '/r/popular',                               ms: 1320000, visits: 9  },
+      { path: '/r/askreddit',                             ms:  840000, visits: 11 },
+      { path: '/r/news',                                  ms:  540000, visits: 6  },
+      { path: '/r/Just%20Chatting',                       ms:  360000, visits: 3  },
+      { path: '/r/webdev',                                ms:  240000, visits: 2  },
+      { path: '/r/javascript',                            ms:  180000, visits: 2  },
+      { path: '/r/typescript',                            ms:  120000, visits: 1  },
+    ];
+
+    let currentDepth = null;
+    let currentSort  = 'time';
+
+    function truncatePath(path, depth) {
+      if (!depth) return path;
+      const parts = path.split('/').filter(Boolean);
+      return '/' + parts.slice(0, depth).join('/');
+    }
+
+    function formatMs(ms) {
+      const m = Math.round(ms / 60000);
+      if (m >= 60) return `${Math.floor(m/60)}h ${m%60}m`;
+      return `${m}m`;
+    }
+
+    function mergePaths(data, depth) {
+      if (!depth) return data.map(r => ({ ...r, truncated: false }));
+      const map = new Map();
+      for (const row of data) {
+        const key = truncatePath(row.path, depth);
+        const wasTruncated = key !== row.path;
+        if (map.has(key)) {
+          const e = map.get(key);
+          e.ms += row.ms;
+          e.visits += row.visits;
+          if (wasTruncated) e.truncated = true;
+        } else {
+          map.set(key, { path: key, ms: row.ms, visits: row.visits, truncated: wasTruncated });
+        }
+      }
+      return [...map.values()];
+    }
+
+    function render() {
+      const merged = mergePaths(RAW, currentDepth);
+      merged.sort((a, b) => currentSort === 'time' ? b.ms - a.ms : b.visits - a.visits);
+
+      const list = document.querySelector('#subpages-list');
+      list.innerHTML = '';
+      for (const row of merged) {
+        const li = document.createElement('li');
+        li.onclick = () => location.href = 'direction-d-path.html';
+        li.innerHTML = `
+          <span class="path">${decodeURIComponent(row.path)}${row.truncated ? '<span style="color:var(--color-text-secondary)">*</span>' : ''}</span>
+          <span class="num">${currentSort === 'time' ? formatMs(row.ms) : row.visits + ' visits'}</span>
+        `;
+        list.appendChild(li);
+      }
+
+      document.querySelector('#subpages-count').textContent = `${merged.length} path${merged.length !== 1 ? 's' : ''}`;
+    }
+
+    function setDepth(depth, btn) {
+      currentDepth = depth;
+      document.querySelectorAll('#depth-toggle .tile-seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    }
+
+    function setSort(sort, btn) {
+      currentSort = sort;
+      document.querySelectorAll('#sort-toggle .tile-seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    }
+
+    function buildDepthToggle() {
+      const actualMax = Math.max(...RAW.map(r => r.path.split('/').filter(Boolean).length));
+      const shownMax = Math.min(5, actualMax - 1);
+      const toggle = document.querySelector('#depth-toggle');
+      toggle.innerHTML = '';
+      for (let d = 1; d <= shownMax; d++) {
+        const btn = document.createElement('button');
+        btn.className = 'tile-seg-btn';
+        btn.textContent = d;
+        btn.onclick = () => setDepth(d, btn);
+        toggle.appendChild(btn);
+      }
+      const full = document.createElement('button');
+      full.className = 'tile-seg-btn active';
+      full.textContent = 'Full';
+      full.onclick = () => setDepth(null, full);
+      toggle.appendChild(full);
+    }
+
+    buildDepthToggle();
+    render();
+  </script>
+</body>
+</html>

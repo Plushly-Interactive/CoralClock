@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mockup D — Dedicated path page</title>
+  <script src="../../../src/shared/theme.js"></script>
+  <link rel="stylesheet" href="../../../src/shared/theme.css" />
+  <link rel="stylesheet" href="../../../src/pages/dashboard/dashboard.css" />
+  <link rel="stylesheet" href="../../../src/pages/site/site.css" />
+  <link rel="stylesheet" href="./_shared.css" />
+  <style>
+    body { height: auto; min-height: 100vh; overflow: auto; }
+    #mock-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--color-border);
+      background: var(--color-bg);
+    }
+    .mock-tab {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: var(--font-base);
+      color: var(--color-text-secondary);
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .mock-tab.active {
+      color: var(--color-accent);
+      border-bottom-color: var(--color-accent);
+      font-weight: 600;
+    }
+    .panel { display: none; }
+    .panel.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    /* site-with-list panel */
+    #panel-site #charts-grid { height: 60vh; }
+    #panel-site #subpages-container {
+      margin: 0 24px 24px;
+      padding: 16px;
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+    }
+    #subpages-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    /* path drill panel */
+    #panel-path header { padding-top: 0; }
+    #panel-path #charts-grid { height: 70vh; }
+    #path-label-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #path-label-row .site-label { font-family: ui-monospace, monospace; }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="header-left">
+      <a id="back-btn" href="#">
+        <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+      </a>
+    </div>
+    <div id="header-center">
+      <div id="site-title">
+        <span id="site-label" class="site-label">reddit.com</span>
+        <span id="site-id" class="text-meta">last 7 days</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="mock-tabs">
+    <button class="mock-tab active" onclick="showPanel('site')">site.html (with list)</button>
+    <button class="mock-tab" onclick="showPanel('path')">path.html?path=/r/programming</button>
+  </div>
+
+  <!-- Panel 1: site.html with clickable list of paths -->
+  <div id="panel-site" class="panel active">
+    <div id="charts-grid">
+      <div id="time-chart-container" class="chart-container">
+        <h2 class="chart-heading">Time spent</h2>
+        <div class="mock-chart">time chart</div>
+      </div>
+      <div id="stats-container" class="chart-container">
+        <h2 class="chart-heading">Overview</h2>
+        <div class="mock-stats">
+          <div><div class="mock-stat-label">Total</div><div class="mock-stat-value">8h 14m</div></div>
+          <div><div class="mock-stat-label">Avg/day</div><div class="mock-stat-value">1h 10m</div></div>
+          <div><div class="mock-stat-label">Visits</div><div class="mock-stat-value">142</div></div>
+        </div>
+      </div>
+      <div id="hourly-chart-container" class="chart-container">
+        <h2 class="chart-heading">Average per clock hour</h2>
+        <div class="mock-chart">hourly chart</div>
+      </div>
+      <div id="visits-chart-container" class="chart-container">
+        <h2 class="chart-heading">Visits</h2>
+        <div class="mock-chart">visits chart</div>
+      </div>
+    </div>
+
+    <div id="subpages-container">
+      <div id="subpages-header">
+        <h2 class="chart-heading" style="margin: 0;">Top pages</h2>
+        <span class="chart-subheading text-meta">click a row to drill in</span>
+      </div>
+      <table class="subpages-table">
+        <thead>
+          <tr><th>Path</th><th class="num">Time</th><th class="num">Visits</th></tr>
+        </thead>
+        <tbody>
+          <tr class="clickable" onclick="showPanel('path')"><td class="path">/r/programming</td><td class="num">1h 42m</td><td class="num">23</td></tr>
+          <tr class="clickable" onclick="showPanel('path')"><td class="path">/r/rust</td><td class="num">58m</td><td class="num">14</td></tr>
+          <tr class="clickable" onclick="showPanel('path')"><td class="path">/r/popular</td><td class="num">22m</td><td class="num">9</td></tr>
+          <tr class="clickable" onclick="showPanel('path')"><td class="path">/r/askreddit</td><td class="num">14m</td><td class="num">11</td></tr>
+          <tr class="clickable" onclick="showPanel('path')"><td class="path">/r/news</td><td class="num">9m</td><td class="num">6</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Panel 2: path.html — same chart set scoped to one path -->
+  <div id="panel-path" class="panel">
+    <header style="border-top: 1px solid var(--color-border);">
+      <div id="header-left">
+        <button id="back-btn" class="link-btn" onclick="showPanel('site')" style="display:flex; align-items:center; gap:4px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          reddit.com
+        </button>
+      </div>
+      <div id="header-center">
+        <div id="path-label-row">
+          <span class="site-label">/r/programming</span>
+          <span class="text-meta">on reddit.com · last 7 days</span>
+        </div>
+      </div>
+    </header>
+
+    <div id="charts-grid">
+      <div id="time-chart-container" class="chart-container">
+        <h2 class="chart-heading">Time spent</h2>
+        <div class="mock-chart">time chart (this path only)</div>
+      </div>
+      <div id="stats-container" class="chart-container">
+        <h2 class="chart-heading">Overview</h2>
+        <div class="mock-stats">
+          <div><div class="mock-stat-label">Total</div><div class="mock-stat-value">1h 42m</div></div>
+          <div><div class="mock-stat-label">Avg/day</div><div class="mock-stat-value">14m</div></div>
+          <div><div class="mock-stat-label">Visits</div><div class="mock-stat-value">23</div></div>
+        </div>
+      </div>
+      <div id="hourly-chart-container" class="chart-container">
+        <h2 class="chart-heading">Average per clock hour</h2>
+        <div class="mock-chart">hourly chart (this path only)</div>
+      </div>
+      <div id="visits-chart-container" class="chart-container">
+        <h2 class="chart-heading">Visits</h2>
+        <div class="mock-chart">visits chart (this path only)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mock-note">Direction D — click row to switch panels</div>
+
+  <script>
+    function showPanel(which) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.mock-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector('#panel-' + which).classList.add('active');
+      document.querySelectorAll('.mock-tab')[which === 'site' ? 0 : 1].classList.add('active');
+      window.scrollTo(0, 0);
+    }
+  </script>
+</body>
+</html>

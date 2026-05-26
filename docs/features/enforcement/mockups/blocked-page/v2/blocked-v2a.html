@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Blocked – BiteGuard (mockup v2A)</title>
+    <script src="../../../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../../../src/shared/theme.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-accent);
+        color: var(--color-button-text);
+      }
+
+      #card {
+        text-align: center;
+        max-width: 26rem;
+        width: 100%;
+        margin: 24px;
+        padding: 36px 32px 32px;
+        border: 1px solid var(--color-border);
+        border-radius: 16px;
+        background: var(--color-bg);
+        color: var(--color-text);
+      }
+
+      #logo {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        margin-bottom: 14px;
+      }
+
+      #headline {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+
+      #target {
+        font-size: var(--font-md);
+        color: var(--color-accent-light);
+        font-weight: 600;
+        margin-bottom: 28px;
+      }
+
+      #stats-grid {
+        grid-template-columns: repeat(2, auto);
+        margin-bottom: 28px;
+      }
+
+#quote {
+        font-size: var(--font-sm);
+        color: var(--color-text-secondary);
+        font-style: italic;
+        line-height: 1.5;
+        max-width: 22rem;
+        margin: 0 auto;
+      }
+
+      #quote-author {
+        display: block;
+        margin-top: 4px;
+        font-style: normal;
+        font-size: var(--font-sm);
+        color: var(--color-text-secondary);
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="card">
+      <img id="logo" src="../../../../../../resources/icons/biteguard-icon-blue-square-128px.png" alt="BiteGuard" />
+      <div id="headline">Time's up</div>
+      <div id="target">*.google.com</div>
+
+      <div id="stats-grid" class="stats-list">
+        <div class="stat-item">
+          <span class="stat-label">Spent today</span>
+          <span class="stat-value">32m</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Limit</span>
+          <span class="stat-value">30m / day</span>
+        </div>
+        <hr id="stats-divider">
+        <div class="stat-item">
+          <span class="stat-label">Visits today</span>
+          <span class="stat-value">4</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Unlocks in</span>
+          <span class="stat-value" id="countdown-value">—</span>
+        </div>
+      </div>
+
+      <p id="quote"><span id="quote-text"></span><span id="quote-author"></span></p>
+    </div>
+
+    <script>
+      const QUOTES = [
+        { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+        { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+        { text: "You will never find time for anything. If you want time, you must make it.", author: "Charles Buxton" },
+        { text: "Either you run the day or the day runs you.", author: "Jim Rohn" },
+        { text: "Lost time is never found again.", author: "Benjamin Franklin" },
+        { text: "Time is what we want most, but what we use worst.", author: "William Penn" },
+        { text: "The two most powerful warriors are patience and time.", author: "Leo Tolstoy" },
+        { text: "Your time is limited, so don't waste it living someone else's life.", author: "Steve Jobs" },
+        { text: "A year from now you may wish you had started today.", author: "Karen Lamb" },
+        { text: "Do something today that your future self will thank you for.", author: "Sean Patrick Flanery" },
+      ];
+
+      const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+      document.querySelector('#quote-text').textContent = `"${q.text}"`;
+      document.querySelector('#quote-author').textContent = `— ${q.author}`;
+
+      function nextMidnight() {
+        const d = new Date();
+        d.setHours(24, 0, 0, 0);
+        return d;
+      }
+
+      function formatCountdown(ms) {
+        if (ms <= 0) return 'now';
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        if (h > 0) return `${h}h ${m}m`;
+        return `${m}m`;
+      }
+
+      const resetDate = nextMidnight();
+      const cdEl = document.querySelector('#countdown-value');
+      function tick() { cdEl.textContent = formatCountdown(resetDate - Date.now()); }
+      tick();
+      setInterval(tick, 30000);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Blocked – BiteGuard (mockup v2B)</title>
+    <script src="../../../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../../../src/shared/theme.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        text-align: center;
+        padding: 32px 24px;
+        background: var(--color-accent);
+        color: var(--color-button-text);
+      }
+
+      #shark { font-size: 3.5rem; line-height: 1; }
+
+      #headline {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-top: 10px;
+      }
+
+      #target {
+        font-size: var(--font-lg);
+        opacity: 0.85;
+        font-weight: 600;
+      }
+
+      #divider {
+        width: 40px;
+        height: 2px;
+        background: var(--color-button-text);
+        opacity: 0.3;
+        margin: 20px auto;
+      }
+
+      #meta {
+        font-size: var(--font-md);
+        opacity: 0.75;
+        margin-bottom: 20px;
+        line-height: 1.6;
+      }
+
+      #countdown-label {
+        font-size: var(--font-sm);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        opacity: 0.6;
+        margin-top: 4px;
+      }
+
+      #countdown {
+        font-size: 3rem;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="shark">🦈</div>
+    <div id="headline">Time's up</div>
+    <div id="target">*.google.com</div>
+
+    <div id="divider"></div>
+
+    <div id="meta">32m spent &nbsp;·&nbsp; limit 30m / day</div>
+
+    <div id="countdown-label">Unlocks in</div>
+    <div id="countdown">—</div>
+
+    <script>
+      function nextMidnight() {
+        const d = new Date();
+        d.setHours(24, 0, 0, 0);
+        return d;
+      }
+
+      function formatCountdown(ms) {
+        if (ms <= 0) return 'now';
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        if (h > 0) return `${h}h ${m}m`;
+        return `${m}m`;
+      }
+
+      const resetDate = nextMidnight();
+      const cdEl = document.querySelector('#countdown');
+
+      function tick() {
+        cdEl.textContent = formatCountdown(resetDate - Date.now());
+      }
+      tick();
+      setInterval(tick, 30000);
+    </script>
+  </body>
+</html>

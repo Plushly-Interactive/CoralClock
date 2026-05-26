@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard – Rules</title>
+    <script src="../../shared/theme.js"></script>
+    <link rel="stylesheet" href="../../shared/theme.css" />
+    <link rel="stylesheet" href="../../shared/tour.css" />
+    <link rel="stylesheet" href="../../shared/rules.css" />
+    <link rel="stylesheet" href="./rules.css" />
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="../dashboard/dashboard.html">
+          <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Rules</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <div id="rules-grid">
+
+      <!-- LEFT COLUMN -->
+      <div id="left-col">
+
+        <div class="chart-container" id="overview-card">
+          <h2 class="chart-heading">Overview</h2>
+          <div id="stats-grid" class="stats-list">
+            <div class="stat-item">
+              <span class="stat-label">Blocks this week</span>
+              <span class="stat-value" id="stat-blocks">—</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Most blocked</span>
+              <span class="stat-value" id="stat-most-blocked">—</span>
+            </div>
+            <hr id="stats-divider">
+            <div class="stat-item">
+              <span class="stat-label">Active rules</span>
+              <span class="stat-value" id="stat-active">—</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Avg blocks / day</span>
+              <span class="stat-value" id="stat-avg">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-container" id="sparkline-card">
+          <h2 class="chart-heading">Blocks per day</h2>
+          <svg id="spark-chart" class="chart-svg"></svg>
+          <div class="tooltip text-meta" id="spark-tooltip"></div>
+          <p id="spark-no-data" class="text-meta" style="display:none">No data for this period.</p>
+        </div>
+
+      </div><!-- /left-col -->
+
+      <!-- RIGHT COLUMN -->
+      <div id="right-col">
+
+        <!-- Add rule card — collapsed by default -->
+        <div id="add-card">
+          <div id="add-card-toggle">
+            <div id="add-toggle-left">
+              <h2 class="chart-heading">Add a rule</h2>
+            </div>
+            <div id="add-toggle-right">
+              <div id="type-toggle" class="seg-control">
+                <button id="tab-url" class="seg-btn active">
+                  <span class="seg-icon">🔗</span> URL / host
+                </button>
+                <button id="tab-regex" class="seg-btn">
+                  <span class="seg-icon seg-icon-regex">.*</span> Regex
+                </button>
+                <button id="tab-keyword" class="seg-btn">
+                  <span class="seg-icon">🔍</span> Keyword
+                </button>
+              </div>
+              <span id="add-toggle-arrow">▼</span>
+            </div>
+          </div>
+
+          <div id="add-card-body" hidden>
+
+            <!-- URL / host form -->
+            <div id="url-form">
+              <input id="form-target" class="text-input" type="text" placeholder="reddit.com" />
+              <div class="scope-cards">
+                <div class="scope-card" id="scope-host" data-scope="host">
+                  <h3>Host only</h3>
+                  <span class="ex" id="ex-host">reddit.com</span>
+                  <span class="text-meta">No subdomains</span>
+                </div>
+                <div class="scope-card active" id="scope-subdomain" data-scope="subdomain">
+                  <h3>Whole site</h3>
+                  <span class="ex" id="ex-subdomain">*.reddit.com</span>
+                  <span class="text-meta">Incl. subdomains</span>
+                </div>
+                <div class="scope-card" id="scope-page" data-scope="pathPrefix">
+                  <h3>Path prefix</h3>
+                  <span class="ex" id="ex-page">reddit.com/r/…</span>
+                  <span class="text-meta">Path + children</span>
+                </div>
+              </div>
+              <div class="form-row" id="limit-row">
+                <span>Limit to</span>
+                <input id="form-limit" class="form-limit" type="number" value="10" min="1" />
+                <div class="custom-dropdown">
+                  <button type="button" class="dropdown-btn form-unit-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
+                  <div class="dropdown-menu form-unit-menu" id="form-unit-menu">
+                    <button type="button" value="minutes">min</button>
+                    <button type="button" value="hours">hours</button>
+                    <button type="button" value="days">days</button>
+                  </div>
+                </div>
+                <span>per</span>
+                <div class="custom-dropdown">
+                  <button type="button" class="dropdown-btn form-period-btn" id="form-period-btn" data-value="hour">hour<span class="dropdown-arrow">▼</span></button>
+                  <div class="dropdown-menu form-period-menu" id="form-period-menu">
+                    <button type="button" value="hour">hour</button>
+                    <button type="button" value="day">day</button>
+                    <button type="button" value="week">week</button>
+                  </div>
+                </div>
+                <span>counting</span>
+                <div class="custom-dropdown">
+                  <button type="button" class="dropdown-btn" id="form-mode-btn" data-value="active+audio">active + audio<span class="dropdown-arrow">▼</span></button>
+                  <div class="dropdown-menu" id="form-mode-menu">
+                    <button type="button" value="active">active</button>
+                    <button type="button" value="audio">audio</button>
+                    <button type="button" value="active+audio">active + audio</button>
+                  </div>
+                </div>
+              </div>
+              <div id="rule-preview" class="callout">
+                <span id="preview-text"></span>
+                <code id="preview-pattern" class="text-meta"></code>
+              </div>
+              <div id="redundant-prompt" class="callout" hidden>
+                <p id="redundant-text"></p>
+                <ul id="redundant-list" class="rules-list"></ul>
+                <div class="form-row">
+                  <button id="redundant-disable-btn" type="button" class="btn">Disable them</button>
+                  <button id="redundant-keep-btn" type="button" class="link-btn">Keep all</button>
+                </div>
+              </div>
+              <div class="form-submit-row">
+                <button id="save-btn" type="button" class="btn">Add rule</button>
+              </div>
+            </div>
+
+            <!-- Regex stub -->
+            <div id="regex-form" hidden>
+              <p class="text-hint">Regex rules are coming soon.</p>
+            </div>
+
+            <!-- Keyword stub -->
+            <div id="keyword-form" hidden>
+              <p class="text-hint">Keyword rules are coming soon.</p>
+            </div>
+
+          </div><!-- /add-card-body -->
+        </div><!-- /add-card -->
+
+        <!-- Rules list -->
+        <div id="list-area" class="chart-container">
+          <div id="list-header">
+            <h2 class="chart-heading">All rules</h2>
+          </div>
+          <table id="sort-bar" class="data-table">
+            <thead>
+              <tr>
+                <th id="sort-site">Site</th>
+                <th id="sort-status">Status</th>
+              </tr>
+            </thead>
+          </table>
+          <p id="no-rules-message" class="empty-msg text-meta" hidden>No rules yet. Add one above to get started.</p>
+          <ul id="rules-list" class="rules-list"></ul>
+        </div>
+
+      </div><!-- /right-col -->
+    </div><!-- /rules-grid -->
+
+    <script type="module" src="./rules.js"></script>
+  </body>
+</html>

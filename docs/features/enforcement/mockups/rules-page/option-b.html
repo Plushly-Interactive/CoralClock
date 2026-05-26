@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Rules (mockup B)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      #rules-main { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+
+      #add-card {
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .field-label { font-size: var(--font-sm); color: var(--color-text-secondary); display: block; margin-bottom: 4px; }
+      #form-target {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-size: var(--font-md);
+      }
+
+      /* Explicit, visible segmented scope control — never inferred. */
+      #scope-seg { display: inline-flex; border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
+      #scope-seg button {
+        padding: 8px 14px;
+        background: var(--color-bg);
+        color: var(--color-text);
+        border: none;
+        border-right: 1px solid var(--color-border);
+        cursor: pointer;
+        font-size: var(--font-base);
+      }
+      #scope-seg button:last-child { border-right: none; }
+      #scope-seg button.active { background: var(--color-accent); color: var(--color-button-text); }
+
+      .limit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .limit-row input[type="number"] { width: 64px; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); }
+
+      #preview { padding: 12px 14px; border-radius: 6px; background: var(--color-hover-bg); border-left: 3px solid var(--color-accent); }
+      #preview-pattern { font-family: monospace; display: block; margin-top: 4px; }
+
+      .rules-list { list-style: none; }
+      .rules-list li { display: flex; align-items: center; gap: 12px; padding: 14px 8px; border-bottom: 1px solid var(--color-border); }
+      .rule-main { flex: 1; }
+      .rule-target { font-size: var(--font-md); font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="../../../../src/pages/dashboard/dashboard.html">
+          <img src="../../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Rules</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <main id="rules-main">
+      <section id="add-card">
+        <div>
+          <label class="field-label" for="form-target">Site or page</label>
+          <input id="form-target" type="text" value="reddit.com" placeholder="reddit.com or reddit.com/r/news" />
+        </div>
+
+        <div>
+          <label class="field-label">Apply to</label>
+          <div id="scope-seg">
+            <button id="scope-host">This host only</button>
+            <button id="scope-subdomain" class="active">Site + subdomains</button>
+            <button id="scope-page">This page + below</button>
+          </div>
+        </div>
+
+        <div class="limit-row">
+          <span class="field-label" style="margin:0">Limit to</span>
+          <input id="form-limit" type="number" value="30" />
+          <div class="custom-dropdown"><button class="dropdown-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button></div>
+          <span class="field-label" style="margin:0">per</span>
+          <div class="custom-dropdown"><button class="dropdown-btn" id="form-period-btn" data-value="day">day<span class="dropdown-arrow">▼</span></button></div>
+          <span class="field-label" style="margin:0">counting</span>
+          <div class="custom-dropdown"><button class="dropdown-btn" id="form-mode-btn" data-value="active">active<span class="dropdown-arrow">▼</span></button></div>
+        </div>
+
+        <div id="preview">
+          <span id="preview-text">Will block <strong>reddit.com</strong> and all its subdomains.</span>
+          <code id="preview-pattern" class="text-meta">||reddit.com^</code>
+        </div>
+
+        <button id="add-btn" class="btn" style="align-self:flex-start">Add rule</button>
+      </section>
+
+      <ul class="rules-list" id="rules-list">
+        <li>
+          <div class="rule-main">
+            <span class="rule-target">reddit.com</span>
+            <div class="text-meta">Site + subdomains · 30 min per day · active</div>
+          </div>
+          <button class="square-btn" id="toggle-1">●</button>
+          <button class="square-btn" id="delete-1">✕</button>
+        </li>
+        <li>
+          <div class="rule-main">
+            <span class="rule-target">youtube.com/feed/subscriptions</span>
+            <div class="text-meta">This page + below · 1 h per day · active + audio</div>
+          </div>
+          <button class="square-btn" id="toggle-2">●</button>
+          <button class="square-btn" id="delete-2">✕</button>
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>

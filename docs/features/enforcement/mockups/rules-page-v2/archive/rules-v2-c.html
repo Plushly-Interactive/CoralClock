@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<!--
+  Option C: collapsible add panel + chart as a sidebar widget
+  The "Add rule" section is a collapsible card (open by default).
+  The most-blocked chart lives in a fixed right-rail sidebar.
+  Rules list fills the main column. Rule type is chosen via an
+  icon+label selector inside the collapsed form header.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Rules v2 (option C)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      body { display: flex; flex-direction: column; }
+
+      #page-body {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 0;
+        align-items: start;
+      }
+
+      /* MAIN COLUMN */
+      #main-col { padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; }
+
+      /* --- collapsible add section --- */
+      #add-section { border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; }
+      #add-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        padding: 14px 16px;
+        background: var(--color-hover-bg);
+        border: none;
+        cursor: pointer;
+        font-size: var(--font-base);
+        font-weight: 600;
+        color: var(--color-text);
+        text-align: left;
+      }
+      #add-toggle:hover { background: color-mix(in srgb, var(--color-border) 35%, transparent); }
+      #toggle-arrow { font-size: var(--font-sm); color: var(--color-text-secondary); transition: transform 0.2s; }
+      #toggle-arrow.open { transform: rotate(180deg); }
+
+      /* type picker bar inside the form */
+      #type-picker {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px 0;
+        border-top: 1px solid var(--color-border);
+      }
+      .type-pill {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 20px;
+        background: none;
+        cursor: pointer;
+        font-size: var(--font-sm);
+        color: var(--color-text);
+      }
+      .type-pill.active { background: var(--color-accent); color: var(--color-button-text); border-color: var(--color-accent); font-weight: 600; }
+      .type-pill:hover:not(.active) { background: var(--color-hover-bg); }
+      .pill-icon { font-size: 13px; }
+
+      #add-form-body { padding: 16px; }
+
+      #form-target {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-size: var(--font-lg);
+        margin-bottom: 14px;
+      }
+      #form-target:focus { outline: none; border-color: var(--color-accent); }
+
+      .scope-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+      .scope-card { border: 1px solid var(--color-border); border-radius: 6px; padding: 10px; cursor: pointer; }
+      .scope-card.active { border-color: var(--color-accent); background: var(--color-hover-bg); }
+      .scope-card h3 { font-size: var(--font-base); margin-bottom: 3px; }
+      .scope-card .ex { display: block; margin-bottom: 4px; font-family: monospace; font-size: var(--font-sm); color: var(--color-accent-light); }
+
+      .form-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; font-size: var(--font-base); }
+
+      .callout {
+        padding: 10px 12px;
+        border-radius: 6px;
+        background: var(--color-hover-bg);
+        border-left: 3px solid var(--color-accent);
+        margin-bottom: 14px;
+        font-size: var(--font-sm);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .callout code { font-family: monospace; font-size: 11px; }
+
+      #regex-form textarea {
+        width: 100%;
+        height: 64px;
+        padding: 9px 10px;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-family: monospace;
+        font-size: var(--font-sm);
+        resize: vertical;
+        margin-bottom: 10px;
+      }
+
+      .kw-match-row { display: flex; gap: 14px; margin-bottom: 12px; }
+      .kw-match-row label { display: flex; align-items: center; gap: 5px; font-size: var(--font-sm); cursor: pointer; }
+
+      /* --- sort bar & list --- */
+      #sort-bar { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      #sort-bar th {
+        text-align: left;
+        padding: 8px 14px;
+        font-size: var(--font-sm);
+        color: var(--color-text-secondary);
+        border-bottom: 1px solid var(--color-border);
+        cursor: pointer;
+        user-select: none;
+      }
+      #sort-bar th.sorted { color: var(--color-accent); }
+      #sort-bar th:last-child { text-align: right; }
+
+      .rules-list { list-style: none; }
+      .rule-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--color-border); gap: 10px; }
+      .rule-item:last-child { border-bottom: none; }
+      .rule-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+      .rule-target { font-size: var(--font-md); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+      .rule-detail { font-size: var(--font-sm); color: var(--color-text-secondary); }
+      .rule-actions { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+      .rule-status { font-size: var(--font-sm); color: var(--color-text-secondary); min-width: 50px; text-align: right; }
+      .rule-status.over { color: var(--color-accent); font-weight: 600; }
+
+      .badge {
+        display: inline-block;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        flex-shrink: 0;
+      }
+      .badge-url   { background: color-mix(in srgb, var(--color-accent) 18%, transparent); color: var(--color-accent); }
+      .badge-regex { background: color-mix(in srgb, var(--color-secondary) 25%, transparent); color: var(--color-secondary); }
+      .badge-kw    { background: color-mix(in srgb, var(--color-accent-light) 18%, transparent); color: var(--color-accent-light); }
+
+      .edit-inputs { display: flex; align-items: center; gap: 5px; margin-top: 4px; }
+      .edit-input { width: 54px; padding: 3px 5px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); font-size: var(--font-sm); }
+      .edit-row { background: var(--color-hover-bg); }
+
+      /* RIGHT RAIL */
+      #right-rail {
+        border-left: 1px solid var(--color-border);
+        padding: 24px 16px;
+        position: sticky;
+        top: 75px;
+        max-height: calc(100vh - 75px);
+        overflow-y: auto;
+      }
+
+      .chart-container { position: relative; padding: 14px; border: 1px solid var(--color-border); border-radius: 6px; }
+      .blocked-bars { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; }
+      .blocked-bar-row { display: flex; align-items: center; gap: 7px; }
+      .blocked-bar-site { width: 100px; font-size: 11px; text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .blocked-bar-track { flex: 1; height: 11px; background: var(--color-border); border-radius: 3px; overflow: hidden; }
+      .blocked-bar-fill { height: 100%; background: var(--color-accent); border-radius: 3px; }
+      .blocked-bar-val { width: 22px; font-size: 11px; color: var(--color-text-secondary); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="#">
+          <img src="../../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Rules</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <div id="page-body">
+
+      <!-- ── MAIN COLUMN ── -->
+      <div id="main-col">
+
+        <!-- collapsible add section -->
+        <div id="add-section">
+          <button id="add-toggle">
+            Add a rule
+            <span id="toggle-arrow" class="open">▼</span>
+          </button>
+
+          <div id="add-panel">
+            <!-- type pill picker -->
+            <div id="type-picker">
+              <button id="tab-url"     class="type-pill active"><span class="pill-icon">🔗</span> URL / host</button>
+              <button id="tab-regex"   class="type-pill"><span class="pill-icon">.*</span> Regex</button>
+              <button id="tab-keyword" class="type-pill"><span class="pill-icon">🔍</span> Keyword</button>
+            </div>
+
+            <div id="add-form-body">
+
+              <!-- URL / host form -->
+              <div id="url-form">
+                <input id="form-target" type="text" placeholder="reddit.com" value="reddit.com" />
+                <div class="scope-cards">
+                  <div class="scope-card" id="scope-host">
+                    <h3>Host only</h3>
+                    <span class="ex">reddit.com</span>
+                    <span class="text-meta">No subdomains</span>
+                  </div>
+                  <div class="scope-card active" id="scope-subdomain">
+                    <h3>Whole site</h3>
+                    <span class="ex">*.reddit.com</span>
+                    <span class="text-meta">Incl. subdomains</span>
+                  </div>
+                  <div class="scope-card" id="scope-page">
+                    <h3>Path prefix</h3>
+                    <span class="ex">reddit.com/r/…</span>
+                    <span class="text-meta">Path + children</span>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <span>Limit to</span>
+                  <input id="form-limit" type="number" value="30" min="1" style="width:60px;padding:6px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);" />
+                  <div class="custom-dropdown"><button type="button" class="dropdown-btn" id="form-unit-btn">min <span class="dropdown-arrow">▼</span></button></div>
+                  <span>per</span>
+                  <div class="custom-dropdown"><button type="button" class="dropdown-btn" id="form-period-btn">day <span class="dropdown-arrow">▼</span></button></div>
+                  <span>counting</span>
+                  <div class="custom-dropdown"><button type="button" class="dropdown-btn" id="form-mode-btn">active + audio <span class="dropdown-arrow">▼</span></button></div>
+                </div>
+                <div id="rule-preview" class="callout">
+                  <span id="preview-text">Block *.reddit.com after 30 min/day of active + audio time.</span>
+                  <code id="preview-pattern">urlFilter: ||reddit.com^</code>
+                </div>
+                <button id="save-btn" class="btn">Add rule</button>
+              </div>
+
+              <!-- Regex form -->
+              <div id="regex-form" style="display:none">
+                <p class="text-hint" style="margin-bottom:10px;font-size:var(--font-sm)">RE2 regex matched against the full URL.</p>
+                <textarea id="form-regex">^https?://.*\.reddit\.com/r/gaming(/|$)</textarea>
+                <div class="callout">
+                  <span>Matches: <code>reddit.com/r/gaming</code>, <code>old.reddit.com/r/gaming/top</code></span>
+                  <span class="text-meta" style="font-size:11px">No match: reddit.com/r/gamingsuggestions</span>
+                </div>
+                <div class="form-row">
+                  <span>Limit to</span>
+                  <input type="number" value="20" min="1" style="width:60px;padding:6px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);" />
+                  <div class="custom-dropdown"><button type="button" class="dropdown-btn">min <span class="dropdown-arrow">▼</span></button></div>
+                  <span>per</span>
+                  <div class="custom-dropdown"><button type="button" class="dropdown-btn">hour <span class="dropdown-arrow">▼</span></button></div>
+                </div>
+                <button class="btn">Add regex rule</button>
+              </div>
+
+              <!-- Keyword form -->
+              <div id="keyword-form" style="display:none">
+                <p class="text-hint" style="margin-bottom:10px;font-size:var(--font-sm)">Block pages whose URL or title contains the keyword.</p>
+                <input id="form-keyword" type="text" placeholder="crypto" value="crypto"
+                  style="width:100%;padding:10px 12px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);font-size:var(--font-lg);margin-bottom:12px;" />
+                <div class="kw-match-row">
+                  <label><input type="checkbox" id="kw-url" checked> URL</label>
+                  <label><input type="checkbox" id="kw-title" checked> Page title</label>
+                </div>
+                <div class="callout">
+                  <span>Blocks: <code>coinbase.com</code>, page titled "Top crypto picks"</span>
+                </div>
+                <div class="form-row">
+                  <span>Limit to</span>
+                  <input type="number" value="5" style="width:60px;padding:6px 8px;border:1px solid var(--color-border);border-radius:4px;background:var(--color-bg);color:var(--color-text);" />
+                  <div class="custom-dropdown"><button type="button" class="dropdown-btn">min <span class="dropdown-arrow">▼</span></button></div>
+                  <span>per</span>
+                  <div class="custom-dropdown"><button type="button" class="dropdown-btn">day <span class="dropdown-arrow">▼</span></button></div>
+                </div>
+                <button class="btn">Add keyword rule</button>
+              </div>
+
+            </div><!-- /add-form-body -->
+          </div><!-- /add-panel -->
+        </div><!-- /add-section -->
+
+        <!-- sort bar -->
+        <table id="sort-bar">
+          <thead>
+            <tr>
+              <th id="sort-site" class="sorted">Site ↑</th>
+              <th id="sort-type">Type</th>
+              <th id="sort-status">Status</th>
+            </tr>
+          </thead>
+        </table>
+
+        <!-- rules list -->
+        <ul id="rules-list" class="rules-list">
+
+          <li class="rule-item">
+            <div class="rule-info">
+              <span class="rule-target"><span class="badge badge-url">URL</span> *.reddit.com</span>
+              <span class="rule-detail">30 min/day · active + audio · whole site</span>
+            </div>
+            <div class="rule-actions">
+              <span class="rule-status over">Over limit</span>
+              <button class="square-btn" id="edit-r1">✎</button>
+              <button class="square-btn" id="toggle-r1">⏸</button>
+              <button class="square-btn" id="delete-r1">✕</button>
+            </div>
+          </li>
+
+          <li class="rule-item edit-row">
+            <div class="rule-info">
+              <span class="rule-target"><span class="badge badge-regex">Regex</span> <code style="font-size:11px">.*\.reddit\.com/r/gaming</code></span>
+              <div class="edit-inputs">
+                <input class="edit-input" type="number" value="20" />
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:3px 8px;font-size:11px">min <span class="dropdown-arrow">▼</span></button></div>
+                <span style="font-size:var(--font-sm)">per</span>
+                <div class="custom-dropdown"><button type="button" class="dropdown-btn" style="min-width:0;padding:3px 8px;font-size:11px">hour <span class="dropdown-arrow">▼</span></button></div>
+              </div>
+            </div>
+            <div class="rule-actions">
+              <button class="square-btn" id="save-edit-r2">✓</button>
+              <button class="square-btn" id="cancel-edit-r2">↩</button>
+            </div>
+          </li>
+
+          <li class="rule-item" style="opacity:0.5">
+            <div class="rule-info">
+              <span class="rule-target"><span class="badge badge-kw">Keyword</span> crypto</span>
+              <span class="rule-detail">5 min/day · URL + title · disabled</span>
+            </div>
+            <div class="rule-actions">
+              <span class="rule-status">Disabled</span>
+              <button class="square-btn" id="toggle-r3">▶</button>
+              <button class="square-btn" id="delete-r3">✕</button>
+            </div>
+          </li>
+
+          <li class="rule-item">
+            <div class="rule-info">
+              <span class="rule-target"><span class="badge badge-url">URL</span> youtube.com</span>
+              <span class="rule-detail">60 min/day · active · host only</span>
+            </div>
+            <div class="rule-actions">
+              <span class="rule-status">OK</span>
+              <button class="square-btn" id="edit-r4">✎</button>
+              <button class="square-btn" id="toggle-r4">⏸</button>
+              <button class="square-btn" id="delete-r4">✕</button>
+            </div>
+          </li>
+
+        </ul>
+      </div><!-- /main-col -->
+
+      <!-- ── RIGHT RAIL ── -->
+      <div id="right-rail">
+        <div class="chart-container">
+          <h2 class="chart-heading">Most blocked <span class="chart-subheading text-meta">7 days</span></h2>
+          <div id="blocked-chart" class="blocked-bars">
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">reddit.com</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:100%"></div></div>
+              <span class="blocked-bar-val text-meta">47</span>
+            </div>
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">twitter.com</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:68%"></div></div>
+              <span class="blocked-bar-val text-meta">32</span>
+            </div>
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">youtube.com</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:51%"></div></div>
+              <span class="blocked-bar-val text-meta">24</span>
+            </div>
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">news.ycombinator.com</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:32%"></div></div>
+              <span class="blocked-bar-val text-meta">15</span>
+            </div>
+            <div class="blocked-bar-row">
+              <span class="blocked-bar-site text-meta">twitch.tv</span>
+              <div class="blocked-bar-track"><div class="blocked-bar-fill" style="width:15%"></div></div>
+              <span class="blocked-bar-val text-meta">7</span>
+            </div>
+          </div>
+        </div>
+      </div><!-- /right-rail -->
+
+    </div><!-- /page-body -->
+
+  </body>
+</html>

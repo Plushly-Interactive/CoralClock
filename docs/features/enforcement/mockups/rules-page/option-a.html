@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Rules (mockup A)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      #rules-main { max-width: 760px; margin: 0 auto; padding: 24px 16px; }
+
+      /* The add form reads as one sentence; scope is inferred, not chosen. */
+      #add-card {
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 28px;
+      }
+      .sentence {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        font-size: var(--font-md);
+      }
+      .sentence input[type="text"] {
+        flex: 1;
+        min-width: 220px;
+        padding: 8px 10px;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background: var(--color-bg);
+        color: var(--color-text);
+        font-size: var(--font-md);
+      }
+      .sentence input[type="number"] {
+        width: 64px;
+        padding: 8px;
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        background: var(--color-bg);
+        color: var(--color-text);
+      }
+
+      /* Live preview — the only thing explaining scope. */
+      #preview {
+        margin-top: 16px;
+        padding: 12px 14px;
+        border-radius: 6px;
+        background: var(--color-hover-bg);
+        border-left: 3px solid var(--color-accent);
+      }
+      #preview-text { display: block; }
+      #preview-pattern { font-family: monospace; }
+      #add-btn { margin-top: 16px; }
+
+      .rules-list { list-style: none; }
+      .rules-list li {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 8px;
+        border-bottom: 1px solid var(--color-border);
+      }
+      .rule-main { flex: 1; }
+      .rule-target { font-size: var(--font-md); font-weight: 600; }
+      .rule-scope-pill {
+        font-size: var(--font-sm);
+        padding: 1px 7px;
+        border-radius: 10px;
+        background: var(--color-hover-bg);
+        margin-left: 8px;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="../../../../src/pages/dashboard/dashboard.html">
+          <img src="../../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Rules</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <main id="rules-main">
+      <section id="add-card">
+        <div class="sentence">
+          <span>Limit</span>
+          <input id="form-target" type="text" value="reddit.com" />
+          <span>to</span>
+          <input id="form-limit" type="number" value="30" />
+          <div class="custom-dropdown">
+            <button class="dropdown-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
+          </div>
+          <span>per</span>
+          <div class="custom-dropdown">
+            <button class="dropdown-btn" id="form-period-btn" data-value="day">day<span class="dropdown-arrow">▼</span></button>
+          </div>
+        </div>
+
+        <div id="preview">
+          <span id="preview-text">Will block <strong>reddit.com</strong>, its subdomains (old.reddit.com, m.reddit.com…), and all its pages.</span>
+          <code id="preview-pattern" class="text-meta">||reddit.com^</code>
+        </div>
+
+        <button id="add-btn" class="btn">Add rule</button>
+      </section>
+
+      <ul class="rules-list" id="rules-list">
+        <li>
+          <div class="rule-main">
+            <span class="rule-target">reddit.com<span class="rule-scope-pill">whole site</span></span>
+            <div class="text-meta">30 min per day · active</div>
+          </div>
+          <button class="square-btn" id="toggle-1">●</button>
+          <button class="square-btn" id="delete-1">✕</button>
+        </li>
+        <li>
+          <div class="rule-main">
+            <span class="rule-target">youtube.com/feed/subscriptions<span class="rule-scope-pill">page + below</span></span>
+            <div class="text-meta">1 h per day · active + audio</div>
+          </div>
+          <button class="square-btn" id="toggle-2">●</button>
+          <button class="square-btn" id="delete-2">✕</button>
+        </li>
+        <li>
+          <div class="rule-main">
+            <span class="rule-target">news.ycombinator.com<span class="rule-scope-pill">this host only</span></span>
+            <div class="text-meta">15 min per hour · active</div>
+          </div>
+          <button class="square-btn" id="toggle-3">○</button>
+          <button class="square-btn" id="delete-3">✕</button>
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>

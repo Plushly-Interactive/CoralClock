@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Site</title>
+    <script src="../../shared/theme.js"></script>
+    <link rel="stylesheet" href="../../shared/theme.css" />
+    <link rel="stylesheet" href="../../shared/tour.css" />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="../dashboard/dashboard.html">
+          <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center">
+        <div id="site-title">
+          <span id="site-label" class="site-label"></span>
+          <span id="site-id" class="text-meta"></span>
+        </div>
+      </div>
+      <div id="header-right">
+        <button id="limit-btn" class="btn">Limit this site</button>
+      </div>
+    </header>
+
+    <div id="charts-grid">
+      <div id="stats-container" class="chart-container">
+        <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading text-meta"></span></h2>
+        <div id="stats-list" class="stats-list"></div>
+        <div class="tooltip text-meta" id="peak-tooltip"></div>
+      </div>
+
+      <div id="subpages-container" class="chart-container">
+        <div id="subpages-header">
+          <h2 class="chart-heading" id="subpages-heading">Page activity
+            <label id="hide-brief-subpages-label" class="table-filter text-meta">
+              <input type="checkbox" id="hide-brief-subpages-toggle" checked> Hide brief (&lt;1m)
+            </label>
+          </h2>
+        </div>
+        <div id="subpages-controls">
+          <span class="text-meta">Depth</span>
+          <div id="depth-toggle" class="seg-control"></div>
+          <div id="sort-toggle" class="seg-control">
+            <button id="sort-time-btn" class="seg-btn active">Time</button>
+            <button id="sort-visits-btn" class="seg-btn">Visits</button>
+          </div>
+        </div>
+        <ol id="subpages-list"></ol>
+        <div id="subpages-footer" class="table-footer">
+          <span id="subpages-count" class="text-meta"></span>
+          <label id="strip-params-label" class="table-filter text-meta">
+            <input type="checkbox" id="strip-params-toggle" checked> Ignore URL params
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="drill-view" style="display:none"></div>
+
+    <script type="module" src="./site.js"></script>
+  </body>
+</html>

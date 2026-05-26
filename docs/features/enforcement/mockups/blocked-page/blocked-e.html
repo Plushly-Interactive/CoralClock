@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Blocked (mockup E)</title>
+    <script src="../../../../src/shared/theme.js"></script>
+    <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg);
+        color: var(--color-text);
+        padding: 24px;
+      }
+      #panel {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        max-width: 40rem;
+        width: 100%;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      /* Left: the why. Right: the when. */
+      #why {
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      #why .emoji { font-size: 2.5rem; }
+      #headline { font-size: 1.4rem; margin: 10px 0 4px; }
+      #target { color: var(--color-accent-light); font-weight: 600; }
+      #why-note { margin-top: 12px; font-size: var(--font-sm); color: var(--color-text-secondary); }
+
+      #when {
+        padding: 32px;
+        background: var(--color-accent);
+        color: var(--color-button-text);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: center;
+      }
+      #countdown-label { font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.8; }
+      #countdown { font-size: 2.2rem; font-weight: 700; margin: 4px 0 16px; }
+      #manage-link {
+        background: var(--color-bg);
+        color: var(--color-text);
+        border-color: var(--color-bg);
+        align-self: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="panel">
+      <div id="why">
+        <span class="emoji">🦈</span>
+        <div id="headline">Time's up</div>
+        <div id="target">google.com</div>
+        <div id="why-note">You hit your limit of 30m per day (whole site, active time).</div>
+      </div>
+      <div id="when">
+        <div id="countdown-label">Unlocks in</div>
+        <div id="countdown">3h 24m</div>
+        <a id="manage-link" class="btn" href="#">Manage rules</a>
+      </div>
+    </div>
+  </body>
+</html>

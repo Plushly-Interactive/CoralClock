@@ -1,0 +1,367 @@
+import { localDayKey } from '../shared/timeUtils.js';
+import { ensureStorageVersion } from '../data/migrations.js';
+import { TOUR_VERSION } from '../shared/tour.js';
+import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
+import {
+  setWindowSite, removeWindowSite,
+  addAudibleTab, removeAudibleTab,
+  flushToStorage, reconcileWindows, initTracking,
+  saveSnapshot, recoverFromSnapshot,
+  ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY,
+} from './siteTracking.js';
+import {
+  setWindowPath, removeWindowPath,
+  addAudibleTabPath, removeAudibleTabPath,
+  initSubpageTracking, reconcileSubpagePaths,
+  flushSubpagesToStorage,
+  saveSubpageSnapshot, recoverSubpagesFromSnapshot,
+  SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
+} from './subpageTracking.js';
+import { computeOverage, publishOverage } from './enforcement.js';
+import {
+  MSG_GET_ANALYTICS_BY_DAY, MSG_GET_ANALYTICS_BY_HOUR_TODAY,
+  MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
+  MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
+  MSG_INVALIDATE_ANALYTICS_CACHE,
+} from '../shared/msgTypes.js';
+
+console.log('BiteGuard: background started');
+
+let cachedByDay = null;
+let cachedByHour = null;
+let cachedSubpagesByDay = null;
+let cachedSubpagesByHour = null;
+let bootstrapAt;
+let coldStart = false;
+
+// Drop the in-memory analytics caches after storage is rewritten (flush), so
+// the next query re-reads fresh data.
+function invalidateAnalyticsCache() {
+  cachedByDay = null;
+  cachedByHour = null;
+  cachedSubpagesByDay = null;
+  cachedSubpagesByHour = null;
+}
+
+chrome.alarms.get('flush').then(existing => {
+  if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
+});
+const bootstrapDone = bootstrap();
+
+chrome.runtime.onStartup.addListener(() => {
+  coldStart = true;
+  chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
+});
+
+// First page to open for the update tour. The tour hands off between surfaces
+// via nextUpdateSurface — only the entry point needs to be opened here.
+const TOUR_UPDATE_ENTRY = 'src/pages/rules/rules.html';
+
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (details.reason !== 'install' && details.reason !== 'update') return;
+  if (details.reason === 'update') {
+    const { tour = {} } = await chrome.storage.local.get('tour');
+    if (tour.completed && (tour.completedVersion ?? 0) < TOUR_VERSION) {
+      chrome.tabs.create({ url: chrome.runtime.getURL(TOUR_UPDATE_ENTRY) });
+      return;
+    }
+  }
+  chrome.tabs.create({
+    url: chrome.runtime.getURL('src/pages/dashboard/dashboard.html?tour=1'),
+  });
+});
+
+async function bootstrap() {
+  await ensureStorageVersion();
+  bootstrapAt = Date.now();
+  await initTracking();
+  await initSubpageTracking();
+}
+
+// --- Messages ---
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.type === MSG_GET_ANALYTICS_BY_DAY) {
+    getByDay().then(sendResponse);
+    return true;
+  }
+  if (msg.type === MSG_GET_ANALYTICS_BY_HOUR_TODAY) {
+    getByHourToday().then(sendResponse);
+    return true;
+  }
+  if (msg.type === MSG_GET_AVG_PER_CLOCK_HOUR) {
+    getAvgPerClockHour(msg.siteIds, msg.range, msg.dayKeys).then(sendResponse);
+    return true;
+  }
+  if (msg.type === MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY) {
+    getByHourForDay(msg.dayKey).then(sendResponse);
+    return true;
+  }
+  if (msg.type === MSG_GET_SUBPAGES_BY_DAY) {
+    getSubpagesByDay().then(sendResponse);
+    return true;
+  }
+  if (msg.type === MSG_GET_SUBPAGES_BY_HOUR) {
+    getSubpagesByHour().then(sendResponse);
+    return true;
+  }
+  if (msg.type === MSG_INVALIDATE_ANALYTICS_CACHE) {
+    invalidateAnalyticsCache();
+    sendResponse(true);
+    return true;
+  }
+});
+
+async function getByDay() {
+  if (!cachedByDay) {
+    const { [ANALYTICS_DAY_KEY]: analyticsByDay = {} } = await chrome.storage.local.get(ANALYTICS_DAY_KEY);
+    cachedByDay = analyticsByDay;
+  }
+  return cachedByDay;
+}
+
+async function getSubpagesByDay() {
+  if (!cachedSubpagesByDay) {
+    const { [SUBPAGES_DAY_KEY]: subpagesByDay = {} } = await chrome.storage.local.get(SUBPAGES_DAY_KEY);
+    cachedSubpagesByDay = subpagesByDay;
+  }
+  return cachedSubpagesByDay;
+}
+
+async function getSubpagesByHour() {
+  if (!cachedSubpagesByHour) {
+    const { [SUBPAGES_HOUR_KEY]: subpagesByHour = {} } = await chrome.storage.local.get(SUBPAGES_HOUR_KEY);
+    cachedSubpagesByHour = subpagesByHour;
+  }
+  return cachedSubpagesByHour;
+}
+
+async function getByHourToday() {
+  if (!cachedByHour) {
+    const { [ANALYTICS_HOUR_KEY]: analyticsByHour = {} } = await chrome.storage.local.get(ANALYTICS_HOUR_KEY);
+    cachedByHour = analyticsByHour;
+  }
+  const todayKey = localDayKey(Date.now());
+  const result = {};
+  for (let h = 0; h < 24; h++) {
+    const hourKey = `${todayKey}T${String(h).padStart(2, '0')}`;
+    if (cachedByHour[hourKey]) result[hourKey] = cachedByHour[hourKey];
+  }
+  return result;
+}
+
+async function getByHourForDay(dayKey) {
+  if (!cachedByHour) {
+    const { [ANALYTICS_HOUR_KEY]: analyticsByHour = {} } = await chrome.storage.local.get(ANALYTICS_HOUR_KEY);
+    cachedByHour = analyticsByHour;
+  }
+  const result = {};
+  for (let h = 0; h < 24; h++) {
+    const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
+    if (cachedByHour[hourKey]) result[hourKey] = cachedByHour[hourKey];
+  }
+  return result;
+}
+
+async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
+  if (!cachedByHour) {
+    const { [ANALYTICS_HOUR_KEY]: analyticsByHour = {} } = await chrome.storage.local.get(ANALYTICS_HOUR_KEY);
+    cachedByHour = analyticsByHour;
+  }
+
+  if (!dayKeys) {
+    const now = new Date();
+    const todayKey = localDayKey(now.getTime());
+
+    if (range === 'all') {
+      const hourKeys = Object.keys(cachedByHour);
+      if (hourKeys.length === 0) {
+        dayKeys = [];
+      } else {
+        const dates = hourKeys.map(k => k.slice(0, 10)).sort();
+        const earliestDateStr = dates[0];
+        const [y, m, d] = earliestDateStr.split('-').map(Number);
+        const earliestDate = new Date(y, m - 1, d);
+        dayKeys = [];
+        for (let date = new Date(earliestDate); ; date.setDate(date.getDate() + 1)) {
+          const k = localDayKey(date.getTime());
+          if (k === todayKey) break;
+          dayKeys.push(k);
+        }
+      }
+    } else {
+      const days = parseInt(range);
+      dayKeys = [];
+      for (let d = 1; d <= days; d++) {
+        const day = new Date(now);
+        day.setDate(day.getDate() - d);
+        dayKeys.push(localDayKey(day.getTime()));
+      }
+    }
+  }
+
+  const D = dayKeys.length;
+  if (D === 0) return new Array(24).fill(0);
+
+  const sums = new Array(24).fill(0);
+  for (const dayKey of dayKeys) {
+    for (let h = 0; h < 24; h++) {
+      const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
+      const bucket = cachedByHour[hourKey];
+      if (!bucket) continue;
+      if (siteIds?.length) {
+        for (const id of siteIds) sums[h] += bucket[id]?.activeMs ?? 0;
+      } else {
+        for (const entry of Object.values(bucket)) sums[h] += entry.activeMs ?? 0;
+      }
+    }
+  }
+  return sums.map(s => s / D);
+}
+
+// --- Tab / window events ---
+
+chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
+  await bootstrapDone;
+  const tab = await chrome.tabs.get(tabId);
+  console.log('[BG-DBG] onActivated: windowId=', windowId, 'tabId=', tabId, 'url=', tab.url, 'pendingUrl=', tab.pendingUrl, 'status=', tab.status, 'discarded=', tab.discarded, 'active=', tab.active);
+  if (!tab.active) return;
+  const siteId = siteIdFromUrl(tab.url);
+  const path = pathFromUrl(tab.url);
+  setWindowSite(windowId, siteId);
+  setWindowPath(windowId, siteId, path);
+});
+
+chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
+  await bootstrapDone;
+  if (changeInfo.status === 'complete' && tab.active) {
+    const siteId = siteIdFromUrl(tab.url);
+    const path = pathFromUrl(tab.url);
+    setWindowSite(tab.windowId, siteId);
+    setWindowPath(tab.windowId, siteId, path);
+  }
+  if (changeInfo.status === 'complete') {
+    // Catches audible tab navigating between sites without going silent (changeInfo.audible won't fire)
+    if (tab.audible && !tab.mutedInfo?.muted) {
+      const siteId = siteIdFromUrl(tab.url);
+      const path = pathFromUrl(tab.url);
+      addAudibleTab(tab.id, siteId);
+      addAudibleTabPath(tab.id, siteId, path);
+    } else {
+      removeAudibleTab(tab.id);
+      removeAudibleTabPath(tab.id);
+    }
+  }
+  if ('audible' in changeInfo) {
+    if (changeInfo.audible && !tab.mutedInfo?.muted) {
+      const siteId = siteIdFromUrl(tab.url);
+      const path = pathFromUrl(tab.url);
+      addAudibleTab(tab.id, siteId);
+      addAudibleTabPath(tab.id, siteId, path);
+    } else {
+      removeAudibleTab(tab.id);
+      removeAudibleTabPath(tab.id);
+    }
+  }
+});
+
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  await bootstrapDone;
+  removeAudibleTab(tabId);
+  removeAudibleTabPath(tabId);
+});
+
+chrome.windows.onCreated.addListener(async (window) => {
+  await bootstrapDone;
+  if (window.state === 'minimized') return;
+  const [tab] = await chrome.tabs.query({ windowId: window.id, active: true });
+  const siteId = siteIdFromUrl(tab?.url);
+  const path = pathFromUrl(tab?.url);
+  setWindowSite(window.id, siteId);
+  setWindowPath(window.id, siteId, path);
+});
+
+chrome.windows.onRemoved.addListener(async (windowId) => {
+  await bootstrapDone;
+  removeWindowSite(windowId);
+  removeWindowPath(windowId);
+});
+
+// SPA navigation — domain unchanged, only path changes. tabs.onUpdated with
+// status:complete handles full loads; this handles history.pushState etc.
+chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
+  await bootstrapDone;
+  if (details.frameId !== 0) return;
+  const tab = await chrome.tabs.get(details.tabId).catch(() => null);
+  if (!tab) return;
+  const siteId = siteIdFromUrl(details.url);
+  const path = pathFromUrl(details.url);
+  if (tab.active) setWindowPath(tab.windowId, siteId, path);
+  if (tab.audible && !tab.mutedInfo?.muted) {
+    addAudibleTabPath(tab.id, siteId, path);
+  }
+});
+
+// --- Flush alarm ---
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== 'flush') return;
+  await bootstrapDone;
+  if (coldStart) {
+    await chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
+    coldStart = false;
+  }
+  await recoverFromSnapshot(bootstrapAt);
+  await recoverSubpagesFromSnapshot(bootstrapAt);
+  await reconcileWindows();
+  await reconcileSubpagePaths();
+  const flushAt = Date.now();
+  await flushToStorage(flushAt);
+  await flushSubpagesToStorage(flushAt);
+  await saveSnapshot(flushAt);
+  await saveSubpageSnapshot(flushAt);
+  invalidateAnalyticsCache();
+
+  await checkEnforcement(flushAt);
+});
+
+// React to rule edits immediately (enable/disable/add/delete) rather than
+// waiting for the next flush — so disabling unblocks and enabling an
+// already-crossed rule blocks right away.
+chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (area !== 'local' || !changes.rules) return;
+  await bootstrapDone;
+  await checkEnforcement(Date.now());
+});
+
+// Compute which rules are over their limit and publish DNR redirect rules so
+// over-limit sites are blocked until the period window rolls over.
+async function checkEnforcement(now) {
+  const {
+    rules = [],
+    [ANALYTICS_DAY_KEY]: analyticsByDay = {},
+    [ANALYTICS_HOUR_KEY]: analyticsByHour = {},
+    [SUBPAGES_DAY_KEY]: subpagesByDay = {},
+    [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
+  } = await chrome.storage.local.get(['rules', ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
+
+  const overage = computeOverage(rules, { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour }, now);
+  await publishOverage(overage);
+}
+
+// Pre-emptive block: on a main-frame navigation, flush the tracker's accrued
+// usage to storage and re-check limits *before* relying on the next flush tick.
+// flushToStorage drains the pending in-memory ranges up to `now`, so the check
+// sees usage as current as this instant — catching a crossing that happened
+// since the last flush. The freshly-published DNR rule plus reloadMatchingTabs
+// then block the site without waiting up to a minute for the flush alarm.
+chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
+  if (details.frameId !== 0) return; // main frame only
+  if (!details.url?.startsWith('http')) return;
+  await bootstrapDone;
+  const now = Date.now();
+  await flushToStorage(now);
+  await flushSubpagesToStorage(now);
+  invalidateAnalyticsCache();
+  await checkEnforcement(now);
+});
