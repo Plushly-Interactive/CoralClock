@@ -287,6 +287,60 @@ export const QUOTES = [
   { text: "Close the tab. The answers will still be generatable tomorrow.",                id: 'gm-n-3', timeOfDay: 'night',     site: 'gemini' },
 
   // ─── SIGNATURE ────────────────────────────────────────────────────────────
-  // Your personal quotes. 10% draw chance. Add below as prompted.
+  // Plushy quotes. 10% draw chance.
+
+  // ─── PWETPWET ─────────────────────────────────────────────────────────────
+
+  { text: "I bit your screen so you would look up. You're welcome.",         author: "PwetPwet 🦈", id: 'sig-m-1', timeOfDay: 'morning',   signature: true },
+  { text: "Good morning. I am watching.",                                    author: "PwetPwet 🦈", id: 'sig-m-2', timeOfDay: 'morning',   signature: true },
+  { text: "I have been assigned to this tab. I take my assignments seriously.", author: "PwetPwet 🦈", id: 'sig-m-3', timeOfDay: 'morning',   signature: true },
+  { text: "Do not let my size fool you. I am extremely in charge.",         author: "PwetPwet 🦈", id: 'sig-m-4', timeOfDay: 'morning',   signature: true },
+  { text: "I patrol these waters so you don't have to.",                    author: "PwetPwet 🦈", id: 'sig-m-5', timeOfDay: 'morning',   signature: true },
+
+  { text: "I have bitten the internet on your behalf. Rest now.",       author: "PwetPwet 🦈", id: 'sig-a-1', timeOfDay: 'afternoon', signature: true },
+  { text: "You were doing so well. Then I had to bite.",                author: "PwetPwet 🦈", id: 'sig-a-2', timeOfDay: 'afternoon', signature: true },
+  { text: "A shark's gotta do what a shark's gotta do.",               author: "PwetPwet 🦈", id: 'sig-a-3', timeOfDay: 'afternoon', signature: true },
+  { text: "Halfway through the day. Time for a break. I have decided.", author: "PwetPwet 🦈", id: 'sig-a-4', timeOfDay: 'afternoon', signature: true },
+  { text: "I am very small. My concern for you is very large.",         author: "PwetPwet 🦈", id: 'sig-a-5', timeOfDay: 'afternoon', signature: true },
+  { text: "Even sharks rest between swims.",                            author: "PwetPwet 🦈", id: 'sig-a-6', timeOfDay: 'afternoon', signature: true },
+
+  { text: "The day is almost done. So is your screen time. Good job to both of us.", author: "PwetPwet 🦈", id: 'sig-e-5', timeOfDay: 'evening',   signature: true },
+  { text: "I did a very small bite. It was very effective.",            author: "PwetPwet 🦈", id: 'sig-e-1', timeOfDay: 'evening',   signature: true },
+  { text: "Small shark. Big responsibility. Evening off.",               author: "PwetPwet 🦈", id: 'sig-e-3', timeOfDay: 'evening',   signature: true },
+  { text: "The biting is done. PwetPwet rests.",                        author: "PwetPwet 🦈", id: 'sig-e-4', timeOfDay: 'evening',   signature: true },
+  { text: "Screens are for daytime. I have decided.",                   author: "PwetPwet 🦈", id: 'sig-e-2', timeOfDay: 'evening',   signature: true },
+
+  { text: "I bite screens so you can dream. That is my purpose.",              author: "PwetPwet 🦈", id: 'sig-n-1', timeOfDay: 'night',     signature: true },
+  { text: "It is very late. Even I am sleepy. Please go to bed.",             author: "PwetPwet 🦈", id: 'sig-n-2', timeOfDay: 'night',     signature: true },
+  { text: "The ocean is still there when you come back. So is the internet.", author: "PwetPwet 🦈", id: 'sig-n-3', timeOfDay: 'night',     signature: true },
+  { text: "The deep-sleep ocean is soft and quiet. You should try it.",              author: "PwetPwet 🦈", id: 'sig-n-4', timeOfDay: 'night',     signature: true },
+  { text: "The tide goes out. The screen goes dark. That is the natural order.", author: "PwetPwet 🦈", id: 'sig-n-5', timeOfDay: 'night',     signature: true },
+  { text: "PwetPwet does not sleep. But you should. One of us has to.",          author: "PwetPwet 🦈", id: 'sig-n-6', timeOfDay: 'night',     signature: true },
+  { text: "Night shift: complete. Your shift is also complete.",                  author: "PwetPwet 🦈", id: 'sig-n-7', timeOfDay: 'night',     signature: true },
+  { text: "What do you call this ocean again... I know! Bed!!",                    author: "PwetPwet 🦈", id: 'sig-n-8', timeOfDay: 'night',     signature: true },
+
+  // ─── TOOT ─────────────────────────────────────────────────────────────────
+
+  { text: "The fox wakes before the forest stirs.",                               author: "Toot 🦊", id: 'sig-toot-m-1', timeOfDay: 'morning',   signature: true },
+  { text: "Toot has arrived. The destination is not here.",                       author: "Toot 🦊", id: 'sig-toot-m-2', timeOfDay: 'morning',   signature: true },
+  { text: "Growth happens in the gaps. This is a gap.",                           author: "Toot 🦊", id: 'sig-toot-m-3', timeOfDay: 'morning',   signature: true },
+  { text: "The forest is wide awake. You could be too.",                          author: "Toot 🦊", id: 'sig-toot-m-4', timeOfDay: 'morning',   signature: true },
+
+  { text: "Not all wandering is lost. But this tab was.",                         author: "Toot 🦊", id: 'sig-toot-a-1', timeOfDay: 'afternoon', signature: true },
+  { text: "Toot knows a better place. Come along.",                               author: "Toot 🦊", id: 'sig-toot-a-2', timeOfDay: 'afternoon', signature: true },
+  { text: "Toot has seen this stop before. It is not the destination.",           author: "Toot 🦊", id: 'sig-toot-a-3', timeOfDay: 'afternoon', signature: true },
+  { text: "You have been circling the same clearing for a while now.",            author: "Toot 🦊", id: 'sig-toot-a-4', timeOfDay: 'afternoon', signature: true },
+  { text: "The internet is a very loud forest. Step out for a moment.",           author: "Toot 🦊", id: 'sig-toot-a-5', timeOfDay: 'afternoon', signature: true },
+
+  { text: "Sit with the quiet for a moment. It will not bite.",                   author: "Toot 🦊", id: 'sig-toot-e-1', timeOfDay: 'evening',   signature: true },
+  { text: "Next stop: somewhere quieter.",                                         author: "Toot 🦊", id: 'sig-toot-e-2', timeOfDay: 'evening',   signature: true },
+  { text: "Silence is not empty. Try to hear it.",                                author: "Toot 🦊", id: 'sig-toot-e-3', timeOfDay: 'evening',   signature: true },
+  { text: "The forest dims. I dim the lights.",                               author: "Toot 🦊", id: 'sig-toot-e-4', timeOfDay: 'evening',   signature: true },
+
+  { text: "Every journey needs a rest stop. This is yours.",                      author: "Toot 🦊", id: 'sig-toot-n-1', timeOfDay: 'night',     signature: true },
+  { text: "End of the line. Please collect your thoughts and exit.",              author: "Toot 🦊", id: 'sig-toot-n-2', timeOfDay: 'night',     signature: true },
+  { text: "The mind wanders so the body can stay.",                               author: "Toot 🦊", id: 'sig-toot-n-3', timeOfDay: 'night',     signature: true },
+  { text: "What you carry into sleep, you carry into tomorrow.",                  author: "Toot 🦊", id: 'sig-toot-n-4', timeOfDay: 'night',     signature: true },
+  { text: "Even Toot parks the bus eventually.",                                  author: "Toot 🦊", id: 'sig-toot-n-5', timeOfDay: 'night',     signature: true },
 
 ];
