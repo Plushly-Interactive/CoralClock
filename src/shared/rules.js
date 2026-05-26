@@ -206,3 +206,81 @@ export function initCustomDropdowns(root = document) {
     root.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
   });
 }
+
+// Compute total spent time for a rule on a given day (active + audio - overlap).
+// dayKey should be in YYYY-MM-DD format (as used in analyticsByDay/subpagesByDay keys).
+export function computeRuleSpent(rule, dayKey, stores) {
+  const { analyticsByDay = {}, subpagesByDay = {} } = stores;
+
+  const siteBucket = analyticsByDay[dayKey];
+  const subpageBucket = subpagesByDay[dayKey];
+
+  function sumCell(cell) {
+    const active = cell?.activeMs ?? 0;
+    const audio = cell?.audioMs ?? 0;
+    const overlap = cell?.overlapMs ?? 0;
+    return active + audio - overlap;
+  }
+
+  if (rule.matchType === 'pathPrefix') {
+    const paths = subpageBucket?.[rule.target];
+    if (!paths) return 0;
+    const base = '/' + (rule.path ?? '').replace(/^\//, '');
+    let activeMs = 0;
+    for (const [p, cell] of Object.entries(paths)) {
+      const under = p === base || (p.startsWith(base) && (p[base.length] === '/' || p[base.length] === '?'));
+      if (!under) continue;
+      activeMs += sumCell(cell);
+    }
+    return activeMs;
+  }
+
+  if (rule.matchType === 'subdomain') {
+    let activeMs = 0;
+    for (const [siteId, cell] of Object.entries(siteBucket ?? {})) {
+      if (siteId === rule.target || siteId.endsWith(`.${rule.target}`)) {
+        activeMs += sumCell(cell);
+      }
+    }
+    return activeMs;
+  }
+
+  // host
+  const cell = siteBucket?.[rule.target];
+  return sumCell(cell);
+}
+
+// Get visit count for a rule on a given day.
+export function computeRuleVisits(rule, dayKey, stores) {
+  const { analyticsByDay = {}, subpagesByDay = {} } = stores;
+
+  const siteBucket = analyticsByDay[dayKey];
+  const subpageBucket = subpagesByDay[dayKey];
+
+  if (rule.matchType === 'pathPrefix') {
+    const paths = subpageBucket?.[rule.target];
+    if (!paths) return 0;
+    const base = '/' + (rule.path ?? '').replace(/^\//, '');
+    let visits = 0;
+    for (const [p, cell] of Object.entries(paths)) {
+      const under = p === base || (p.startsWith(base) && (p[base.length] === '/' || p[base.length] === '?'));
+      if (!under) continue;
+      visits += cell.visits ?? 0;
+    }
+    return visits;
+  }
+
+  if (rule.matchType === 'subdomain') {
+    let visits = 0;
+    for (const [siteId, cell] of Object.entries(siteBucket ?? {})) {
+      if (siteId === rule.target || siteId.endsWith(`.${rule.target}`)) {
+        visits += cell.visits ?? 0;
+      }
+    }
+    return visits;
+  }
+
+  // host
+  const cell = siteBucket?.[rule.target];
+  return cell?.visits ?? 0;
+}

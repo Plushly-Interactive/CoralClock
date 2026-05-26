@@ -1,5 +1,5 @@
-import { RULE_MULTIPLIERS, matchLabel } from '../../shared/rules.js';
-import { formatMs, localDayKey, localHourKey } from '../../shared/timeUtils.js';
+import { RULE_MULTIPLIERS, matchLabel, computeRuleSpent, computeRuleVisits } from '../../shared/rules.js';
+import { formatMs, localDayKey } from '../../shared/timeUtils.js';
 
 document.querySelector('#logo').src =
   chrome.runtime.getURL('resources/icons/biteguard-icon-blue-square-128px.png');
@@ -39,46 +39,6 @@ function formatCountdown(ms) {
   return `${m}m`;
 }
 
-// Sum usage for this rule over today's bucket(s).
-function sumTodayUsage(rule, stores) {
-  const now = Date.now();
-  const dayKey = localDayKey(now);
-  const hourKey = localHourKey(now);
-  const { analyticsByDay = {}, analyticsByHour = {}, subpagesByDay = {}, subpagesByHour = {} } = stores;
-
-  const isHour = rule.period === 'hour';
-  const siteBucket = isHour ? analyticsByHour[hourKey] : analyticsByDay[dayKey];
-  const subpageBucket = isHour ? subpagesByHour[hourKey] : subpagesByDay[dayKey];
-
-  if (rule.matchType === 'pathPrefix') {
-    const paths = subpageBucket?.[rule.target];
-    if (!paths) return { activeMs: 0, visits: 0 };
-    const base = '/' + (rule.path ?? '').replace(/^\//, '');
-    let activeMs = 0, visits = 0;
-    for (const [p, cell] of Object.entries(paths)) {
-      const under = p === base || (p.startsWith(base) && (p[base.length] === '/' || p[base.length] === '?'));
-      if (!under) continue;
-      activeMs += cell.activeMs ?? 0;
-      visits += cell.visits ?? 0;
-    }
-    return { activeMs, visits };
-  }
-
-  if (rule.matchType === 'subdomain') {
-    let activeMs = 0, visits = 0;
-    for (const [siteId, cell] of Object.entries(siteBucket ?? {})) {
-      if (siteId === rule.target || siteId.endsWith(`.${rule.target}`)) {
-        activeMs += cell.activeMs ?? 0;
-        visits += cell.visits ?? 0;
-      }
-    }
-    return { activeMs, visits };
-  }
-
-  // host
-  const cell = siteBucket?.[rule.target];
-  return { activeMs: cell?.activeMs ?? 0, visits: cell?.visits ?? 0 };
-}
 
 (async () => {
   if (!ruleId) return;
@@ -94,7 +54,9 @@ function sumTodayUsage(rule, stores) {
   const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
   document.querySelector('#stat-limit').textContent = `${formatMs(limitMs)} / ${rule.period}`;
 
-  const { activeMs, visits } = sumTodayUsage(rule, stores);
+  const dayKey = localDayKey(Date.now());
+  const activeMs = computeRuleSpent(rule, dayKey, stores);
+  const visits = computeRuleVisits(rule, dayKey, stores);
   document.querySelector('#stat-spent').textContent = formatMs(activeMs) || '0m';
   document.querySelector('#stat-visits').textContent = String(visits);
 
