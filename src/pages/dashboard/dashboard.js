@@ -5,7 +5,7 @@ import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
-import { runTour, readTourState, writeTourState, clearTourProgress, TOUR_VERSION } from '../../shared/tour.js';
+import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
 import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
 import { openModal, closeModal } from '../../data/importData.js';
 
@@ -403,7 +403,14 @@ const dashboardTourSteps = [
   },
 ];
 
-const DASHBOARD_FIRST_NEW_STEP = null; // set to step index when new steps are added in a TOUR_VERSION bump
+// Steps with newInVersion > completedVersion are shown in the update tour.
+// No constant needed — computed at runtime from the step list.
+function dashboardNewStepRange(completedVersion) {
+  const first = dashboardTourSteps.findIndex(s => (s.newInVersion ?? 0) > completedVersion);
+  if (first < 0) return null;
+  const last = dashboardTourSteps.reduce((acc, s, i) => ((s.newInVersion ?? 0) > completedVersion ? i : acc), first);
+  return { first, last };
+}
 
 async function maybeEnableMockMode() {
   const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
@@ -480,17 +487,16 @@ chrome.storage.onChanged.addListener((changes, area) => {
   const state = await readTourState();
   if (state.inProgress?.surface === 'dashboard') {
     const stepIndex = state.inProgress.stepIndex || 0;
-    const DASHBOARD_LAST_NEW_STEP = 11;
-    const isUpdateResume = state.completed && DASHBOARD_FIRST_NEW_STEP != null && stepIndex >= DASHBOARD_FIRST_NEW_STEP && stepIndex <= DASHBOARD_LAST_NEW_STEP;
-    const steps = isUpdateResume ? dashboardTourSteps.slice(DASHBOARD_FIRST_NEW_STEP, DASHBOARD_LAST_NEW_STEP + 1) : dashboardTourSteps;
-    const adjustedIndex = isUpdateResume ? stepIndex - DASHBOARD_FIRST_NEW_STEP : stepIndex;
+    const range = state.completed ? dashboardNewStepRange(state.completedVersion ?? 0) : null;
+    const isUpdateResume = range != null && stepIndex >= range.first && stepIndex <= range.last;
+    const steps = isUpdateResume ? dashboardTourSteps.slice(range.first, range.last + 1) : dashboardTourSteps;
+    const adjustedIndex = isUpdateResume ? stepIndex - range.first : stepIndex;
     startDashboardTour(adjustedIndex, steps);
     return;
   }
   if (state.completed) {
-    if ((state.completedVersion ?? 0) < TOUR_VERSION && DASHBOARD_FIRST_NEW_STEP != null) {
-      startDashboardTour(0, dashboardTourSteps.slice(DASHBOARD_FIRST_NEW_STEP));
-    }
+    const range = dashboardNewStepRange(state.completedVersion ?? 0);
+    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1));
     return;
   }
   const pendingSurface = state.inProgress?.surface;

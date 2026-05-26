@@ -406,25 +406,30 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
   };
 }
 
-// firstNewStep: index of the first step added in the current TOUR_VERSION for
-// this surface. If the user completed an older version, the tour starts here.
-// lastNewStep: index of the last new step (inclusive). Steps after it are
-// dropped so the update tour doesn't replay the full old flow.
-// nextUpdateSurface: if set, the last new step gets a crossDocument handoff to
-// this surface so the update tour continues there seamlessly.
+// Steps marked with `newInVersion: N` are shown in the update tour when a user
+// who completed version < N reloads the extension. To add steps to the update
+// tour: mark each new step with `newInVersion: TOUR_VERSION`, bump TOUR_VERSION,
+// and set TOUR_UPDATE_ENTRY in background.js to the first surface with new steps.
+// nextUpdateSurface: passed by callers that know the next surface in the update
+// chain; autoStartIfMatches injects an updateHandoff on the last new step.
 export async function autoStartIfMatches(surface, steps, options = {}) {
-  const { firstNewStep, lastNewStep, nextUpdateSurface, nextUpdateStepIndex, ...runOptions } = options;
+  const { nextUpdateSurface, nextUpdateStepIndex, ...runOptions } = options;
   const state = await readTourState();
 
   if (state.completed) {
-    if ((state.completedVersion ?? 0) < TOUR_VERSION && firstNewStep != null) {
-      let updateSteps = lastNewStep != null ? steps.slice(firstNewStep, lastNewStep + 1) : steps.slice(firstNewStep);
-      if (nextUpdateSurface) {
-        const last = { ...updateSteps[updateSteps.length - 1] };
-        last.handoff = { nextSurface: nextUpdateSurface, nextStepIndex: nextUpdateStepIndex ?? 0, mode: 'crossDocument', updateHandoff: true };
-        updateSteps = [...updateSteps.slice(0, -1), last];
+    const completedVersion = state.completedVersion ?? 0;
+    if (completedVersion < TOUR_VERSION) {
+      const firstNew = steps.findIndex(s => (s.newInVersion ?? 0) > completedVersion);
+      if (firstNew >= 0) {
+        const lastNew = steps.reduce((acc, s, i) => ((s.newInVersion ?? 0) > completedVersion ? i : acc), firstNew);
+        let updateSteps = steps.slice(firstNew, lastNew + 1);
+        if (nextUpdateSurface) {
+          const last = { ...updateSteps[updateSteps.length - 1] };
+          last.handoff = { nextSurface: nextUpdateSurface, nextStepIndex: nextUpdateStepIndex ?? 0, mode: 'crossDocument', updateHandoff: true };
+          updateSteps = [...updateSteps.slice(0, -1), last];
+        }
+        return runTour({ surface, steps: updateSteps, startIndex: 0, ...runOptions });
       }
-      return runTour({ surface, steps: updateSteps, startIndex: 0, ...runOptions });
     }
     return null;
   }
