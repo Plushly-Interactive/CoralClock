@@ -89,23 +89,23 @@ const UNIT_MAX = {
 };
 
 function constrainLimitForm(prefix = 'form', root = document) {
-  const unitBtn    = root.querySelector(`#${prefix}-unit-btn`);
-  const periodBtn  = root.querySelector(`#${prefix}-period-btn`);
-  const limitInput = root.querySelector(`#${prefix}-limit`);
+  const unitBtn    = root.querySelector(`.${prefix}-unit-btn`);
+  const periodBtn  = root.querySelector(`.${prefix}-period-btn`);
+  const limitInput = root.querySelector(`.${prefix}-limit`);
   const unit   = unitBtn.dataset.value;
   const period = periodBtn.dataset.value;
 
   const validPeriods = Object.keys(UNIT_MAX[unit] ?? {});
-  root.querySelectorAll(`#${prefix}-period-menu button`).forEach(opt => {
+  root.querySelectorAll(`.${prefix}-period-menu button`).forEach(opt => {
     opt.disabled = !validPeriods.includes(opt.value);
   });
-  root.querySelectorAll(`#${prefix}-unit-menu button`).forEach(opt => {
+  root.querySelectorAll(`.${prefix}-unit-menu button`).forEach(opt => {
     opt.disabled = !(UNIT_MAX[opt.value] ?? {})[period];
   });
 
   if (!validPeriods.includes(period)) {
     const next = validPeriods[0];
-    periodBtn.firstChild.textContent = root.querySelector(`#${prefix}-period-menu button[value="${next}"]`).textContent;
+    periodBtn.firstChild.textContent = root.querySelector(`.${prefix}-period-menu button[value="${next}"]`).textContent;
     periodBtn.dataset.value = next;
   }
 
@@ -291,8 +291,8 @@ function editDropdown(id, options, selected) {
   const items = options.map(o => `<button type="button" value="${o.value}">${o.label}</button>`).join('');
   return `
     <div class="custom-dropdown">
-      <button type="button" class="dropdown-btn" id="${id}-btn" data-value="${selected}">${label}<span class="dropdown-arrow">▼</span></button>
-      <div class="dropdown-menu" id="${id}-menu">${items}</div>
+      <button type="button" class="dropdown-btn ${id}-btn" data-value="${selected}">${label}<span class="dropdown-arrow">▼</span></button>
+      <div class="dropdown-menu ${id}-menu">${items}</div>
     </div>`;
 }
 
@@ -305,8 +305,8 @@ function openRowEditor(id) {
   if (!rule || !li) return;
   li.querySelectorAll('.edit-btn, .toggle-btn, .delete-btn').forEach(b => b.remove());
   li.insertAdjacentHTML('beforeend', `
-    <div class="form-row" id="edit-controls">
-      <input id="edit-limit" type="number" value="${rule.limit}" min="1" />
+    <div class="form-row edit-controls">
+      <input class="edit-limit" type="number" value="${rule.limit}" min="1" />
       ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
@@ -315,27 +315,27 @@ function openRowEditor(id) {
     </div>`);
   initCustomDropdowns(li);
   constrainLimitForm('edit', li);
-  li.querySelectorAll('#edit-unit-menu button, #edit-period-menu button').forEach(opt => {
+  li.querySelectorAll('.edit-unit-menu button, .edit-period-menu button').forEach(opt => {
     opt.addEventListener('click', () => constrainLimitForm('edit', li));
   });
-  li.querySelector('#edit-limit').addEventListener('input', () => {
-    const el = li.querySelector('#edit-limit');
+  li.querySelector('.edit-limit').addEventListener('input', () => {
+    const el = li.querySelector('.edit-limit');
     const max = parseInt(el.max);
     if (max && parseInt(el.value) > max) el.value = max;
   });
-  li.querySelector('#edit-limit').focus();
+  li.querySelector('.edit-limit').focus();
 }
 
 rulesList.addEventListener('click', async (e) => {
   if (e.target.classList.contains('cancel-edit-btn')) { render(); return; }
   if (e.target.classList.contains('save-edit-btn')) {
     const id = e.target.dataset.id;
-    const limit = parseInt(rulesList.querySelector('#edit-limit').value);
+    const limit = parseInt(rulesList.querySelector('.edit-limit').value);
     if (!limit) return;
     await updateRule(id, {
       limit,
-      limitUnit: rulesList.querySelector('#edit-unit-btn').dataset.value,
-      period: rulesList.querySelector('#edit-period-btn').dataset.value,
+      limitUnit: rulesList.querySelector('.edit-unit-btn').dataset.value,
+      period: rulesList.querySelector('.edit-period-btn').dataset.value,
     });
     render();
     return;

@@ -211,6 +211,7 @@ tr.clickable:hover td {
 
 .io-btn {
   flex: 1;
+  justify-content: center;
 }
 
 #io-conflict-view {
