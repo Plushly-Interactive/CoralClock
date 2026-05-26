@@ -424,9 +424,9 @@ async function maybeEnableMockMode() {
 let isTourRunning = false;
 let currentTourHandle = null;
 
-async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps) {
+async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null) {
   if (isTourRunning) return;
-  const tourState = await readTourState();
+  const tourState = knownState ?? await readTourState();
   if (tourState.completed && !tourState.inProgress) return;
   isTourRunning = true;
   if (startIndex === 0) {
@@ -491,17 +491,17 @@ chrome.storage.onChanged.addListener((changes, area) => {
     const isUpdateResume = range != null && stepIndex >= range.first && stepIndex <= range.last;
     const steps = isUpdateResume ? dashboardTourSteps.slice(range.first, range.last + 1) : dashboardTourSteps;
     const adjustedIndex = isUpdateResume ? stepIndex - range.first : stepIndex;
-    startDashboardTour(adjustedIndex, steps);
+    startDashboardTour(adjustedIndex, steps, state);
     return;
   }
   if (state.completed) {
     const range = dashboardNewStepRange(state.completedVersion ?? 0);
-    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1));
+    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state);
     return;
   }
   const pendingSurface = state.inProgress?.surface;
   if (pendingSurface) {
     const handoffIdx = dashboardTourSteps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
-    if (handoffIdx >= 0) startDashboardTour(handoffIdx);
+    if (handoffIdx >= 0) startDashboardTour(handoffIdx, dashboardTourSteps, state);
   }
 })();

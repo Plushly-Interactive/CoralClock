@@ -16,6 +16,7 @@ const redundantText         = document.querySelector('#redundant-text');
 const redundantList         = document.querySelector('#redundant-list');
 const redundantDisableBtn   = document.querySelector('#redundant-disable-btn');
 const redundantKeepBtn      = document.querySelector('#redundant-keep-btn');
+const formLimit      = document.querySelector('#form-limit');
 const sortSiteBtn    = document.querySelector('#sort-site');
 const sortStatusBtn  = document.querySelector('#sort-status');
 const addCard        = document.querySelector('#add-card');
@@ -118,7 +119,7 @@ function constrainLimitForm(prefix = 'form', root = document) {
 
 function formLimitFields() {
   return {
-    limit:    parseInt(document.querySelector('#form-limit').value),
+    limit:    parseInt(formLimit.value),
     limitUnit: document.querySelector('#form-unit-btn').dataset.value,
     period:   document.querySelector('#form-period-btn').dataset.value,
     mode:     document.querySelector('#form-mode-btn').dataset.value,
@@ -251,7 +252,7 @@ saveBtn.addEventListener('click', async () => {
   await addRule(newRule);
 
   formTarget.value = '';
-  document.querySelector('#form-limit').value = '10';
+  formLimit.value = '10';
   refreshPreview();
   await render();
 
@@ -461,10 +462,9 @@ document.querySelectorAll('#form-unit-menu button, #form-period-menu button').fo
   opt.addEventListener('click', () => { constrainLimitForm(); refreshPreview(); });
 });
 document.querySelectorAll('#form-mode-menu button').forEach(opt => opt.addEventListener('click', refreshPreview));
-document.querySelector('#form-limit').addEventListener('input', () => {
-  const el = document.querySelector('#form-limit');
-  const max = parseInt(el.max);
-  if (max && parseInt(el.value) > max) el.value = max;
+formLimit.addEventListener('input', () => {
+  const max = parseInt(formLimit.max);
+  if (max && parseInt(formLimit.value) > max) formLimit.value = max;
   refreshPreview();
 });
 
