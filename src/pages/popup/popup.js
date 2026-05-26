@@ -1,5 +1,5 @@
 import { getRules, renderRuleList } from '../../shared/rules.js';
-import { autoStartIfMatches, readTourState, TOUR_VERSION } from '../../shared/tour.js';
+import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
 
 document.querySelector('#dashboard-btn').addEventListener('click', async () => {
   const state = await readTourState();
@@ -84,6 +84,6 @@ const popupTourSteps = [
 
 (async () => {
   const state = await readTourState();
-  if ((state.completed && (state.completedVersion ?? 0) >= TOUR_VERSION) || state.inProgress?.surface !== 'popup') return;
+  if (state.completed || state.inProgress?.surface !== 'popup') return;
   autoStartIfMatches('popup', popupTourSteps, { showCloseButton: false });
 })();

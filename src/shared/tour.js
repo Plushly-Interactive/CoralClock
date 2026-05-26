@@ -1,5 +1,5 @@
 const TOUR_KEY = 'tour';
-export const TOUR_VERSION = 2;
+export const TOUR_VERSION = 6;
 
 const DEFAULT_STATE = { completed: false, completedAt: null, completedVersion: 0, inProgress: null, useMockData: false };
 
@@ -233,9 +233,10 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     prevBtn.disabled = index === 0;
 
     const isHandoff = !!step.handoff;
+    const isUpdateHandoff = step.handoff?.updateHandoff === true;
     const advanceOnClick = step.advanceOn === 'click';
-    nextBtn.style.display = (isHandoff || advanceOnClick) ? 'none' : '';
-    nextBtn.textContent = index === steps.length - 1 ? 'Finish' : 'Next';
+    nextBtn.style.display = (isHandoff && !isUpdateHandoff) || advanceOnClick ? 'none' : '';
+    nextBtn.textContent = isUpdateHandoff ? 'Continue →' : index === steps.length - 1 ? 'Finish' : 'Next';
 
     tooltip.classList.toggle('has-arrow-up', step.arrow === 'up');
     const wasModalStep = document.body.classList.contains('tour-modal-step');
@@ -318,6 +319,14 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     confirm.remove();
     if (skipped || !handoffEngaged) {
       await markTourCompleted();
+    } else if (currentStep?.handoff?.updateHandoff) {
+      const surfaceUrls = {
+        dashboard: 'src/pages/dashboard/dashboard.html',
+        rules: 'src/pages/rules/rules.html',
+        'storage-pruning': 'src/pages/storage-pruning/storage-pruning.html',
+      };
+      const url = surfaceUrls[currentStep.handoff.nextSurface];
+      if (url) chrome.tabs.create({ url: chrome.runtime.getURL(url) });
     }
     if (onClose) onClose({ skipped });
   }
@@ -398,14 +407,24 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
 }
 
 // firstNewStep: index of the first step added in the current TOUR_VERSION for
-// this surface. If the user completed an older version, the tour resumes here.
+// this surface. If the user completed an older version, the tour starts here.
+// lastNewStep: index of the last new step (inclusive). Steps after it are
+// dropped so the update tour doesn't replay the full old flow.
+// nextUpdateSurface: if set, the last new step gets a crossDocument handoff to
+// this surface so the update tour continues there seamlessly.
 export async function autoStartIfMatches(surface, steps, options = {}) {
-  const { firstNewStep, ...runOptions } = options;
+  const { firstNewStep, lastNewStep, nextUpdateSurface, nextUpdateStepIndex, ...runOptions } = options;
   const state = await readTourState();
 
   if (state.completed) {
     if ((state.completedVersion ?? 0) < TOUR_VERSION && firstNewStep != null) {
-      return runTour({ surface, steps, startIndex: firstNewStep, ...runOptions });
+      let updateSteps = lastNewStep != null ? steps.slice(firstNewStep, lastNewStep + 1) : steps.slice(firstNewStep);
+      if (nextUpdateSurface) {
+        const last = { ...updateSteps[updateSteps.length - 1] };
+        last.handoff = { nextSurface: nextUpdateSurface, nextStepIndex: nextUpdateStepIndex ?? 0, mode: 'crossDocument', updateHandoff: true };
+        updateSteps = [...updateSteps.slice(0, -1), last];
+      }
+      return runTour({ surface, steps: updateSteps, startIndex: 0, ...runOptions });
     }
     return null;
   }

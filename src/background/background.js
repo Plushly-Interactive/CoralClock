@@ -1,5 +1,6 @@
 import { localDayKey } from '../shared/timeUtils.js';
 import { ensureStorageVersion } from '../data/migrations.js';
+import { TOUR_VERSION } from '../shared/tour.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import {
   setWindowSite, removeWindowSite,
@@ -46,8 +47,19 @@ chrome.runtime.onStartup.addListener(() => {
   chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
 });
 
-chrome.runtime.onInstalled.addListener((details) => {
+// First page to open for the update tour. The tour hands off between surfaces
+// via nextUpdateSurface — only the entry point needs to be opened here.
+const TOUR_UPDATE_ENTRY = 'src/pages/rules/rules.html';
+
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason !== 'install' && details.reason !== 'update') return;
+  if (details.reason === 'update') {
+    const { tour = {} } = await chrome.storage.local.get('tour');
+    if (tour.completed && (tour.completedVersion ?? 0) < TOUR_VERSION) {
+      chrome.tabs.create({ url: chrome.runtime.getURL(TOUR_UPDATE_ENTRY) });
+      return;
+    }
+  }
   chrome.tabs.create({
     url: chrome.runtime.getURL('src/pages/dashboard/dashboard.html?tour=1'),
   });

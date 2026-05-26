@@ -396,12 +396,29 @@ const dashboardTourSteps = [
     handoff: { nextSurface: 'site', mode: 'inPage' },
   },
   {
+    selector: '#tour-btn',
+    title: 'TEST NEW STEP (v5)',
+    body: 'This step was added in v5 to test multi-surface update flow. Revert me!',
+  },
+  {
+    selector: '#range-select',
+    title: 'TEST NEW STEP A (v6)',
+    body: 'First new dashboard step in v6. Revert me!',
+  },
+  {
+    selector: '#top-chart-container',
+    title: 'TEST NEW STEP B (v6)',
+    body: 'Second new dashboard step in v6. Revert me!',
+  },
+  {
     selector: '#prune-btn',
     title: 'Open Storage pruning',
     body: 'Click Storage pruning to see how BiteGuard manages its storage and remove low-value entries.',
     handoff: { nextSurface: 'storage-pruning', mode: 'inPage' },
   },
 ];
+
+const DASHBOARD_FIRST_NEW_STEP = 9; // index of first new step added in current TOUR_VERSION
 
 async function maybeEnableMockMode() {
   const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
@@ -415,10 +432,10 @@ async function maybeEnableMockMode() {
 let isTourRunning = false;
 let currentTourHandle = null;
 
-async function startDashboardTour(startIndex = 0) {
+async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps) {
   if (isTourRunning) return;
   const tourState = await readTourState();
-  if (tourState.completed && (tourState.completedVersion ?? 0) >= TOUR_VERSION) return;
+  if (tourState.completed && !tourState.inProgress) return;
   isTourRunning = true;
   if (startIndex === 0) {
     const wasMock = tourState.useMockData;
@@ -430,7 +447,7 @@ async function startDashboardTour(startIndex = 0) {
   }
   currentTourHandle = runTour({
     surface: 'dashboard',
-    steps: dashboardTourSteps,
+    steps,
     startIndex,
     onClose: ({ skipped }) => {
       isTourRunning = false;
@@ -448,7 +465,7 @@ tourBtn.addEventListener('click', async () => {
 
 async function checkResume() {
   const state = await readTourState();
-  if ((state.completed && (state.completedVersion ?? 0) >= TOUR_VERSION) || state.inProgress?.surface !== 'dashboard') return;
+  if (state.completed || state.inProgress?.surface !== 'dashboard') return;
   const wantedIndex = state.inProgress.stepIndex || 0;
   if (currentTourHandle) {
     if (currentTourHandle.getIndex() !== wantedIndex) {
@@ -476,9 +493,19 @@ chrome.storage.onChanged.addListener((changes, area) => {
     return;
   }
   const state = await readTourState();
-  if (state.completed && (state.completedVersion ?? 0) >= TOUR_VERSION) return;
   if (state.inProgress?.surface === 'dashboard') {
-    startDashboardTour(state.inProgress.stepIndex || 0);
+    const stepIndex = state.inProgress.stepIndex || 0;
+    const DASHBOARD_LAST_NEW_STEP = 11;
+    const isUpdateResume = state.completed && DASHBOARD_FIRST_NEW_STEP != null && stepIndex >= DASHBOARD_FIRST_NEW_STEP && stepIndex <= DASHBOARD_LAST_NEW_STEP;
+    const steps = isUpdateResume ? dashboardTourSteps.slice(DASHBOARD_FIRST_NEW_STEP, DASHBOARD_LAST_NEW_STEP + 1) : dashboardTourSteps;
+    const adjustedIndex = isUpdateResume ? stepIndex - DASHBOARD_FIRST_NEW_STEP : stepIndex;
+    startDashboardTour(adjustedIndex, steps);
+    return;
+  }
+  if (state.completed) {
+    if ((state.completedVersion ?? 0) < TOUR_VERSION && DASHBOARD_FIRST_NEW_STEP != null) {
+      startDashboardTour(0, dashboardTourSteps.slice(DASHBOARD_FIRST_NEW_STEP));
+    }
     return;
   }
   const pendingSurface = state.inProgress?.surface;

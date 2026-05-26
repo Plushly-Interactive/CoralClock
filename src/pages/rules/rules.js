@@ -481,6 +481,26 @@ const rulesTourSteps = [
     body: 'This chart shows how often your rules triggered a block over the last 7 days.',
   },
   {
+    selector: '#overview-card',
+    title: 'TEST NEW STEP (v3)',
+    body: 'This step was added in version 3 to test the update flow. Revert me!',
+  },
+  {
+    selector: '#stats-grid',
+    title: 'TEST NEW STEP (v4)',
+    body: 'This step was added in version 4 to test the update flow. Revert me!',
+  },
+  {
+    selector: '#overview-card',
+    title: 'TEST NEW STEP A (v6)',
+    body: 'First new rules step in v6. Revert me!',
+  },
+  {
+    selector: '#sparkline-card',
+    title: 'TEST NEW STEP B (v6)',
+    body: 'Second new rules step in v6. Revert me!',
+  },
+  {
     selector: '#back-btn',
     title: 'Back to the dashboard',
     body: 'Click the BiteGuard logo to return to the dashboard and continue the tour.',
@@ -488,4 +508,12 @@ const rulesTourSteps = [
   },
 ];
 
-autoStartIfMatches('rules', rulesTourSteps, { firstNewStep: 0 });
+(async () => {
+  const testVersion = new URLSearchParams(location.search).get('testTourVersion');
+  if (testVersion) {
+    await chrome.storage.local.set({ tour: { completed: true, completedVersion: parseInt(testVersion), inProgress: null, useMockData: false } });
+    location.replace(location.pathname);
+    return;
+  }
+  autoStartIfMatches('rules', rulesTourSteps, { firstNewStep: 4, lastNewStep: 5, nextUpdateSurface: 'dashboard', nextUpdateStepIndex: 9 });
+})();
