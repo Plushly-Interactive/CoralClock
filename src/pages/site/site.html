@@ -27,27 +27,10 @@
     </header>
 
     <div id="charts-grid">
-      <div id="time-chart-container" class="chart-container">
-        <div class="chart-header">
-          <h2 class="chart-heading">Time spent</h2>
-          <div id="time-legend" class="time-legend text-meta" style="display: none"></div>
-        </div>
-        <svg id="time-chart" class="chart-svg"></svg>
-        <div id="time-tooltip" class="tooltip text-meta"></div>
-        <p id="time-no-data" class="text-meta" style="display:none">No data for this period.</p>
-      </div>
-
       <div id="stats-container" class="chart-container">
         <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading text-meta"></span></h2>
         <div id="stats-list" class="stats-list"></div>
         <div class="tooltip text-meta" id="peak-tooltip"></div>
-      </div>
-
-      <div id="visits-chart-container" class="chart-container">
-        <h2 class="chart-heading">Visits</h2>
-        <svg id="visits-chart" class="chart-svg"></svg>
-        <div id="visits-tooltip" class="tooltip text-meta"></div>
-        <p id="visits-no-data" class="text-meta" style="display:none">No data for this period.</p>
       </div>
 
       <div id="subpages-container" class="chart-container">
@@ -73,13 +56,6 @@
             <input type="checkbox" id="strip-params-toggle" checked> Ignore URL params
           </label>
         </div>
-      </div>
-
-      <div id="hourly-chart-container" class="chart-container">
-        <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading text-meta"></span></h2>
-        <svg id="hourly-chart" class="chart-svg"></svg>
-        <div id="hourly-tooltip" class="tooltip text-meta"></div>
-        <p id="hourly-not-relevant" class="text-meta" style="display:none"></p>
       </div>
     </div>
 

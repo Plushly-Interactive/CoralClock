@@ -1,5 +1,5 @@
 import { localDayKey, formatMs } from './timeUtils.js';
-import { drawBarChart } from './utils.js';
+import { drawBarChart, formatWithSmallSub } from './utils.js';
 
 const SUBHEADINGS = {
   today: '(today)',
@@ -133,6 +133,25 @@ export function drawVisitsChart({ svgEl, tooltipEl, data, maxVal, onBarClick, sc
     scale,
     gridLineWidth,
   });
+}
+
+export function renderBaseStats(data, range, byDayCache) {
+  const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
+  const totalVisits = data.reduce((s, d) => s + d.visits, 0);
+  const activeDays = activeDaysFromRange(range, byDayCache);
+  const avgMs = activeDays > 0 ? totalMs / activeDays : 0;
+
+  const totalTimeEl = document.querySelector('#stat-total-time');
+  if (totalMs > 0) totalTimeEl.innerHTML = formatWithSmallSub(formatMs(totalMs));
+  else totalTimeEl.textContent = '—';
+
+  const dailyAvgEl = document.querySelector('#stat-daily-avg');
+  if (activeDays > 0 && totalMs > 0) dailyAvgEl.innerHTML = formatWithSmallSub(formatMs(avgMs));
+  else dailyAvgEl.textContent = '—';
+
+  document.querySelector('#stat-visits').textContent = totalVisits > 0 ? totalVisits : '—';
+
+  return { totalMs, totalVisits, activeDays, avgMs };
 }
 
 export function drawOverviewCharts({

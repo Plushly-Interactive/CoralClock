@@ -7,7 +7,9 @@ import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.j
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
 import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
-import { openModal, closeModal } from '../../data/importData.js';
+import { openModal, closeModal, IMPORT_COMPLETE } from '../../data/importData.js';
+import { MSG_GET_ANALYTICS_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
+import { PREF_HIDE_BRIEF, PREF_MERGE_MODE, PREF_GROUP_MODE } from '../../shared/prefKeys.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
@@ -41,18 +43,18 @@ const hourly = createHourlyChart({
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
   loadAvgPerHour: (range) => analyticsRequest({
-    type: 'getAvgPerClockHour', siteIds: null, range,
+    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: null, range,
   }),
 });
 
 let sortCol = 'time';
 let sortDir = 'desc';
 let currentRows = [];
-let groupMode = sessionStorage.getItem('groupMode') === 'true';
+let groupMode = sessionStorage.getItem(PREF_GROUP_MODE) === 'true';
 groupToggle.checked = groupMode;
-let mergeMode = sessionStorage.getItem('mergeMode') !== 'false';
+let mergeMode = sessionStorage.getItem(PREF_MERGE_MODE) !== 'false';
 mergeToggle.checked = mergeMode;
-let hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
+let hideBrief = sessionStorage.getItem(PREF_HIDE_BRIEF) !== 'false';
 hideBriefToggle.checked = hideBrief;
 
 const thName = document.querySelector('#th-name');
@@ -186,19 +188,19 @@ initRangeSelect(rangeSelect, render);
 
 groupToggle.addEventListener('change', () => {
   groupMode = groupToggle.checked;
-  sessionStorage.setItem('groupMode', groupMode);
+  sessionStorage.setItem(PREF_GROUP_MODE, groupMode);
   render();
 });
 
 mergeToggle.addEventListener('change', () => {
   mergeMode = mergeToggle.checked;
-  sessionStorage.setItem('mergeMode', mergeMode);
+  sessionStorage.setItem(PREF_MERGE_MODE, mergeMode);
   render();
 });
 
 hideBriefToggle.addEventListener('change', () => {
   hideBrief = hideBriefToggle.checked;
-  sessionStorage.setItem('hideBrief', hideBrief);
+  sessionStorage.setItem(PREF_HIDE_BRIEF, hideBrief);
   render();
 });
 
@@ -214,11 +216,11 @@ window.addEventListener('storage', (e) => {
 })();
 
 window.addEventListener('pageshow', () => {
-  hideBrief = sessionStorage.getItem('hideBrief') !== 'false';
+  hideBrief = sessionStorage.getItem(PREF_HIDE_BRIEF) !== 'false';
   hideBriefToggle.checked = hideBrief;
-  mergeMode = sessionStorage.getItem('mergeMode') !== 'false';
+  mergeMode = sessionStorage.getItem(PREF_MERGE_MODE) !== 'false';
   mergeToggle.checked = mergeMode;
-  groupMode = sessionStorage.getItem('groupMode') === 'true';
+  groupMode = sessionStorage.getItem(PREF_GROUP_MODE) === 'true';
   groupToggle.checked = groupMode;
   if (currentRows.length) render();
 });
@@ -228,7 +230,7 @@ async function loadAndRender() {
     history.replaceState(null, '', location.pathname);
     await seedTestData();
   }
-  byDayCache = await analyticsRequest({ type: 'getAnalyticsByDay' });
+  byDayCache = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_DAY });
   render();
   renderStorageBar();
 }
@@ -240,7 +242,7 @@ document.querySelector('#seed-btn')?.addEventListener('click', async () => {
   await loadAndRender();
 });
 
-window.addEventListener('importcomplete', async () => {
+window.addEventListener(IMPORT_COMPLETE, async () => {
   byDayCache = null;
   hourly.clearCache();
   await loadAndRender();

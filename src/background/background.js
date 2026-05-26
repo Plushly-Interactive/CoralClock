@@ -18,6 +18,12 @@ import {
   SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
 } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
+import {
+  MSG_GET_ANALYTICS_BY_DAY, MSG_GET_ANALYTICS_BY_HOUR_TODAY,
+  MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
+  MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
+  MSG_INVALIDATE_ANALYTICS_CACHE,
+} from '../shared/msgTypes.js';
 
 console.log('BiteGuard: background started');
 
@@ -75,31 +81,31 @@ async function bootstrap() {
 // --- Messages ---
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === 'getAnalyticsByDay') {
+  if (msg.type === MSG_GET_ANALYTICS_BY_DAY) {
     getByDay().then(sendResponse);
     return true;
   }
-  if (msg.type === 'getAnalyticsByHourToday') {
+  if (msg.type === MSG_GET_ANALYTICS_BY_HOUR_TODAY) {
     getByHourToday().then(sendResponse);
     return true;
   }
-  if (msg.type === 'getAvgPerClockHour') {
+  if (msg.type === MSG_GET_AVG_PER_CLOCK_HOUR) {
     getAvgPerClockHour(msg.siteIds, msg.range, msg.dayKeys).then(sendResponse);
     return true;
   }
-  if (msg.type === 'getAnalyticsByHourForDay') {
+  if (msg.type === MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY) {
     getByHourForDay(msg.dayKey).then(sendResponse);
     return true;
   }
-  if (msg.type === 'getSubpagesByDay') {
+  if (msg.type === MSG_GET_SUBPAGES_BY_DAY) {
     getSubpagesByDay().then(sendResponse);
     return true;
   }
-  if (msg.type === 'getSubpagesByHour') {
+  if (msg.type === MSG_GET_SUBPAGES_BY_HOUR) {
     getSubpagesByHour().then(sendResponse);
     return true;
   }
-  if (msg.type === 'invalidateAnalyticsCache') {
+  if (msg.type === MSG_INVALIDATE_ANALYTICS_CACHE) {
     invalidateAnalyticsCache();
     sendResponse(true);
     return true;

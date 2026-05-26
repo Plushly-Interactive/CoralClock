@@ -1,6 +1,11 @@
 import { readTourState } from './tour.js';
 import { localDayKey } from './timeUtils.js';
 import { scanSiteBucket, scanSubpageBucket } from '../data/prune.js';
+import {
+  MSG_GET_ANALYTICS_BY_DAY, MSG_GET_ANALYTICS_BY_HOUR_TODAY,
+  MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
+  MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
+} from './msgTypes.js';
 
 const MIN = 60_000;
 const HOUR = 3_600_000;
@@ -167,12 +172,12 @@ function hourBucketForDay(dayKey) {
 function mockAnswer(msg) {
   const f = fixture();
   switch (msg.type) {
-    case 'getAnalyticsByDay': return f.analyticsByDay;
-    case 'getAnalyticsByHourToday': return {};
-    case 'getAnalyticsByHourForDay': return hourBucketForDay(msg.dayKey);
-    case 'getSubpagesByDay': return f.subpagesByDay;
-    case 'getSubpagesByHour': return f.subpagesByHour;
-    case 'getAvgPerClockHour': return avgPerClockHour(msg.siteIds, msg.range, msg.dayKeys);
+    case MSG_GET_ANALYTICS_BY_DAY: return f.analyticsByDay;
+    case MSG_GET_ANALYTICS_BY_HOUR_TODAY: return {};
+    case MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY: return hourBucketForDay(msg.dayKey);
+    case MSG_GET_SUBPAGES_BY_DAY: return f.subpagesByDay;
+    case MSG_GET_SUBPAGES_BY_HOUR: return f.subpagesByHour;
+    case MSG_GET_AVG_PER_CLOCK_HOUR: return avgPerClockHour(msg.siteIds, msg.range, msg.dayKeys);
     default: return null;
   }
 }

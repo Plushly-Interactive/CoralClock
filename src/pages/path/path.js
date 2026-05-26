@@ -1,13 +1,14 @@
-import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
-import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from '../../shared/utils.js';
+import { localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
+import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
 import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
-import { buildOverviewData, drawOverviewCharts, subheadingText, activeDaysFromRange } from '../../shared/overview.js';
+import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
+import { MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR } from '../../shared/msgTypes.js';
 
 const drill = JSON.parse(sessionStorage.getItem('subpageDrill') || 'null');
 if (!drill) {
@@ -19,6 +20,10 @@ const siteId = siteIds[0];
 const isMerged = siteIds.length > 1;
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+const chartsGrid = document.querySelector('#charts-grid');
+chartsGrid.insertAdjacentHTML('afterbegin', TIME_CHART_HTML);
+chartsGrid.insertAdjacentHTML('beforeend', VISITS_CHART_HTML);
+chartsGrid.insertAdjacentHTML('beforeend', HOURLY_CHART_HTML);
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
 const timeTooltip = document.querySelector('#time-tooltip');
@@ -182,7 +187,6 @@ stats.forEach(s => {
 
 timeLegend.innerHTML = CHART_LEGEND_HTML;
 
-const chartsGrid = document.querySelector('#charts-grid');
 const drillView = document.querySelector('#drill-view');
 
 let byDayCache = null;
@@ -263,8 +267,8 @@ const loadAndRenderPromise = loadAndRender();
 
 async function loadAndRender() {
   [byDayCache, byHourCache] = await Promise.all([
-    analyticsRequest({ type: 'getSubpagesByDay' }),
-    analyticsRequest({ type: 'getSubpagesByHour' }),
+    analyticsRequest({ type: MSG_GET_SUBPAGES_BY_DAY }),
+    analyticsRequest({ type: MSG_GET_SUBPAGES_BY_HOUR }),
   ]);
   if (isMerged) setCrumbDomain(resolveOwningDomain());
   renderPathLinks(resolveOwningEntries());
@@ -287,20 +291,7 @@ function render() {
 }
 
 function renderStats(data, range) {
-  const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
-  const totalVisits = data.reduce((s, d) => s + d.visits, 0);
-  const activeDays = activeDaysFromRange(range, byDayCache);
-  const avgMs = activeDays > 0 ? totalMs / activeDays : 0;
-
-  const totalEl = document.querySelector('#stat-total-time');
-  if (totalMs > 0) totalEl.innerHTML = formatWithSmallSub(formatMs(totalMs));
-  else totalEl.textContent = '—';
-
-  const avgEl = document.querySelector('#stat-daily-avg');
-  if (activeDays > 0 && totalMs > 0) avgEl.innerHTML = formatWithSmallSub(formatMs(avgMs));
-  else avgEl.textContent = '—';
-
-  document.querySelector('#stat-visits').textContent = totalVisits > 0 ? totalVisits : '—';
+  renderBaseStats(data, range, byDayCache);
   document.querySelector('#overview-subheading').textContent = subheadingText(range);
 }
 
