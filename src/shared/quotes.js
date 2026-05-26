@@ -27,7 +27,7 @@ export function selectQuote(siteTarget = '', seenIds = []) {
 
   let pool;
   if (signature.length && Math.random() < 0.10) pool = signature;
-  else if (siteMatch.length && Math.random() < 0.25) pool = siteMatch;
+  else if (siteMatch.length && Math.random() < 0.5) pool = siteMatch;
   else if (regular.length) pool = regular;
   else pool = inTimeOfDay; // fallback: anything in this time of day
 

@@ -13,7 +13,7 @@ A quote is displayed at the bottom of the blocked page card. Every quote belongs
 - [ ] A quote is displayed on every blocked page load.
 - [ ] Every quote has a `bucket`; the draw prefers quotes matching the current time of day.
 - [ ] Signature quotes (`signature: true`) have a 10% chance of being selected; they are drawn first, before site-specific and regular quotes.
-- [ ] Site-specific quotes (`site` field set) within the current bucket have a 25% chance of being selected when the blocked site matches.
+- [ ] Site-specific quotes (`site` field set) within the current bucket have a 50% chance of being selected when the blocked site matches.
 - [ ] Otherwise a regular quote from the current bucket is drawn.
 - [ ] In all three tiers (signature / site / regular), unseen quotes are preferred; when all quotes in a tier+bucket are exhausted, `seenQuoteIds` resets and cycling begins again.
 - [ ] If a quote has no author, only the quote text is shown (no "— " attribution line).
@@ -66,7 +66,7 @@ Time-of-day ranges (local hour):
 Given the current bucket `B` and blocked site target `T`:
 
 1. **Signature tier** — if `Math.random() < 0.10`: draw from signature quotes in bucket `B`, preferring unseen.
-2. **Site tier** — else if any site quotes in bucket `B` match `T` and `Math.random() < 0.25`: draw from those, preferring unseen.
+2. **Site tier** — else if any site quotes in bucket `B` match `T` and `Math.random() < 0.5`: draw from those, preferring unseen.
 3. **Regular tier** — else: draw from non-signature, non-site quotes in bucket `B`, preferring unseen.
 4. In each tier, "preferring unseen" means: filter to IDs not in `seenQuoteIds`; if none remain, reset `seenQuoteIds` to `[]` and use the full tier set.
 5. Save the drawn quote's `id` to `seenQuoteIds`.

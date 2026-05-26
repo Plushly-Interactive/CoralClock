@@ -37,6 +37,7 @@ Authors must be ethically sound. Exclude authors with documented:
 - Controversial personal conduct that contradicts their public message
 
 **Background checks:** Before adding an author, research their public history, statements, and conduct. Look for:
+
 - News articles about ethical concerns
 - Academic/professional misconduct records
 - Public controversies or scandals
@@ -80,12 +81,14 @@ Balance across author types and demographics:
 Every quote must have a `source` URL where the quote itself can be verified. The source must be a **primary or authoritative document** — not a quote aggregator.
 
 **Accepted source types:**
+
 - **Living authors:** Official author site with the quote, publisher excerpt, interview transcript, or the author's own social media post
 - **Historical figures:** Internet Archive digitization of the original book, Wikiquote (only if it cites a specific book and page number), academic editions
 - **Proverbs:** Institutional or academic sources — university cultural centers, linguist-maintained collections, culturally authentic organizations; never blogs or aggregators without cited origins
 - **Scientists/researchers:** The actual research paper or book (Internet Archive, open-access journal)
 
 **Rejected source types:**
+
 - Goodreads, BrainyQuote, AZQuotes, QuoteFancy, or any aggregator that does not explicitly state its own source — treat these as misinformation
 - Wikipedia as a source for the quote text itself (Wikipedia is acceptable only for `philosophySource`)
 - Any page that does not visibly contain the quote text
@@ -122,15 +125,15 @@ Every quote should optionally include a `philosophySource` URL that reveals the 
 
 **Two-field approach:**
 
-- **`source`** (`↗` link after quote text) — Points to where the quote appears and can be verified. Must visibly contain the quote text. See accepted/rejected source types in criterion 6.
-
-- **`philosophySource`** (`(discover ↗)` link on author line, optional) — Points to author's broader work and philosophy. Secondary sources (Wikipedia, publisher pages) are acceptable here since the goal is context, not quote verification:
+- `**source`** (`↗` link after quote text) — Points to where the quote appears and can be verified. Must visibly contain the quote text. See accepted/rejected source types in criterion 6.
+- `**philosophySource**` (`(discover ↗)` link on author line, optional) — Points to author's broader work and philosophy. Secondary sources (Wikipedia, publisher pages) are acceptable here since the goal is context, not quote verification:
   - Living authors: Official website, TED talks, research pages
   - Historical figures: Wikipedia biography
   - Proverbs: Wikipedia article on the culture or proverb tradition
   - Scientists: Academic institution page or lab site
 
 **UI rendering:**
+
 - Quote text renders on the first line in main text color, followed by a `↗` link opening `source` in a new tab
 - Author attribution renders on the second line in secondary text color, optionally followed by `(discover ↗)` opening `philosophySource` in a new tab
 
@@ -154,7 +157,7 @@ Quotes are grouped by local time to match user context:
 The `selectQuote()` function implements tiered selection:
 
 1. **Signature tier** — 10% chance to draw user's personal quotes first (if any exist)
-2. **Site tier** — 25% chance to draw site-specific quotes if the blocked site matches (e.g., YouTube quotes for youtube.com)
+2. **Site tier** — 50% chance to draw site-specific quotes if the blocked site matches (e.g., YouTube quotes for youtube.com)
 3. **Regular tier** — Draw from general, time-of-day matched quotes
 4. **Seen tracking** — Within each tier, prefer unseen quotes; cycle resets when all are exhausted
 
@@ -186,16 +189,16 @@ Before finalizing any new quote batch:
 ## Examples of Rejected Quotes & Why
 
 
-| Quote                                                                 | Author            | Reason                                                                        |
-| --------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------- |
-| "Time is money"                                                       | Benjamin Franklin | Productivity scarcity mindset                                                 |
-| "Be patient with yourself. Self-growth is tender; it's holy ground."  | Stephen Covey     | Explicit religious language ("holy ground")                                   |
-| "Rest is not idleness. Rest is what lets you do the next hard thing." | Anonymous         | No verified author                                                            |
-| "Life is a balance between holding on and letting go."                | Rumi              | Apocryphal — no Persian manuscript equivalent found; confirmed by Rumi scholars |
-| "The best time to plant a tree was twenty years ago."                 | Chinese proverb   | Not a Chinese proverb — earliest known use is a 1967 American newspaper (Quote Investigator) |
-| "Let things flow naturally forward in whatever way they like."        | Lao Tzu           | Not in any classical Tao Te Ching translation; likely a modern paraphrase     |
-| "Procrastination is about managing your emotions, not your time."     | Tamar Gendler     | Misattribution — idea belongs to Tim Pychyl's procrastination research        |
-| "Mindfulness meditation improves emotion regulation and reduces stress." | Neuroscience research | Paraphrase of research findings, not a verbatim quote — not admissible      |
+| Quote                                                                    | Author                | Reason                                                                                       |
+| ------------------------------------------------------------------------ | --------------------- | -------------------------------------------------------------------------------------------- |
+| "Time is money"                                                          | Benjamin Franklin     | Productivity scarcity mindset                                                                |
+| "Be patient with yourself. Self-growth is tender; it's holy ground."     | Stephen Covey         | Explicit religious language ("holy ground")                                                  |
+| "Rest is not idleness. Rest is what lets you do the next hard thing."    | Anonymous             | No verified author                                                                           |
+| "Life is a balance between holding on and letting go."                   | Rumi                  | Apocryphal — no Persian manuscript equivalent found; confirmed by Rumi scholars              |
+| "The best time to plant a tree was twenty years ago."                    | Chinese proverb       | Not a Chinese proverb — earliest known use is a 1967 American newspaper (Quote Investigator) |
+| "Let things flow naturally forward in whatever way they like."           | Lao Tzu               | Not in any classical Tao Te Ching translation; likely a modern paraphrase                    |
+| "Procrastination is about managing your emotions, not your time."        | Tamar Gendler         | Misattribution — idea belongs to Tim Pychyl's procrastination research                       |
+| "Mindfulness meditation improves emotion regulation and reduces stress." | Neuroscience research | Paraphrase of research findings, not a verbatim quote — not admissible                       |
 
 
 ## Future Maintenance
