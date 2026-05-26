@@ -5,7 +5,7 @@ import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
-import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
+import { runTour, readTourState, writeTourState, clearTourProgress, TOUR_VERSION } from '../../shared/tour.js';
 import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
 import { openModal, closeModal } from '../../data/importData.js';
 
@@ -417,9 +417,10 @@ let currentTourHandle = null;
 
 async function startDashboardTour(startIndex = 0) {
   if (isTourRunning) return;
+  const tourState = await readTourState();
+  if (tourState.completed && (tourState.completedVersion ?? 0) >= TOUR_VERSION) return;
   isTourRunning = true;
   if (startIndex === 0) {
-    const tourState = await readTourState();
     const wasMock = tourState.useMockData;
     await maybeEnableMockMode();
     const nowState = await readTourState();
@@ -440,11 +441,14 @@ async function startDashboardTour(startIndex = 0) {
   });
 }
 
-tourBtn.addEventListener('click', () => startDashboardTour(0));
+tourBtn.addEventListener('click', async () => {
+  await writeTourState({ completed: false, inProgress: null });
+  startDashboardTour(0);
+});
 
 async function checkResume() {
   const state = await readTourState();
-  if (state.inProgress?.surface !== 'dashboard') return;
+  if ((state.completed && (state.completedVersion ?? 0) >= TOUR_VERSION) || state.inProgress?.surface !== 'dashboard') return;
   const wantedIndex = state.inProgress.stepIndex || 0;
   if (currentTourHandle) {
     if (currentTourHandle.getIndex() !== wantedIndex) {
@@ -472,6 +476,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
     return;
   }
   const state = await readTourState();
+  if (state.completed && (state.completedVersion ?? 0) >= TOUR_VERSION) return;
   if (state.inProgress?.surface === 'dashboard') {
     startDashboardTour(state.inProgress.stepIndex || 0);
     return;

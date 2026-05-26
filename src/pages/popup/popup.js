@@ -1,5 +1,5 @@
 import { getRules, renderRuleList } from '../../shared/rules.js';
-import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
+import { autoStartIfMatches, readTourState, TOUR_VERSION } from '../../shared/tour.js';
 
 document.querySelector('#dashboard-btn').addEventListener('click', async () => {
   const state = await readTourState();
@@ -75,15 +75,15 @@ const popupTourSteps = [
     keepTooltipPosition: true,
   },
   {
-    selector: '#dashboard-btn',
-    title: 'Back to the dashboard',
-    body: 'Click Dashboard to return there and continue the tour.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'inPage' },
+    selector: '#manage-btn',
+    title: 'Rules page',
+    body: 'Click Manage rules to open the rules page and continue the tour.',
+    handoff: { nextSurface: 'rules', mode: 'crossDocument' },
   },
 ];
 
 (async () => {
   const state = await readTourState();
-  if (state.inProgress?.surface !== 'popup') return;
+  if ((state.completed && (state.completedVersion ?? 0) >= TOUR_VERSION) || state.inProgress?.surface !== 'popup') return;
   autoStartIfMatches('popup', popupTourSteps, { showCloseButton: false });
 })();

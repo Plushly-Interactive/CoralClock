@@ -2,6 +2,7 @@ import { getRules, addRule, toggleRule, deleteRule, updateRule, renderRuleList, 
 import { getDomain } from '../../vendor/tldts.js';
 import { localDayKey } from '../../shared/timeUtils.js';
 import { drawBarChart } from '../../shared/utils.js';
+import { autoStartIfMatches } from '../../shared/tour.js';
 
 const formTarget     = document.querySelector('#form-target');
 const cards          = [...document.querySelectorAll('.scope-card')];
@@ -460,3 +461,31 @@ document.querySelector('#form-limit').addEventListener('input', () => {
 
 refreshPreview();
 render();
+
+// ── Tour ──
+
+const rulesTourSteps = [
+  {
+    selector: '#add-card',
+    title: 'Add a rule',
+    body: 'Use this form to set a time limit for any site. Choose the scope, set a limit, and click Add rule.',
+  },
+  {
+    selector: '#list-area',
+    title: 'Your rules',
+    body: 'All your active rules are listed here. You can toggle, edit, or delete each one.',
+  },
+  {
+    selector: '#sparkline-card',
+    title: 'Blocks per day',
+    body: 'This chart shows how often your rules triggered a block over the last 7 days.',
+  },
+  {
+    selector: '#back-btn',
+    title: 'Back to the dashboard',
+    body: 'Click the BiteGuard logo to return to the dashboard and continue the tour.',
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'crossDocument' },
+  },
+];
+
+autoStartIfMatches('rules', rulesTourSteps, { firstNewStep: 0 });

@@ -1,6 +1,7 @@
 const TOUR_KEY = 'tour';
+export const TOUR_VERSION = 2;
 
-const DEFAULT_STATE = { completed: false, completedAt: null, inProgress: null, useMockData: false };
+const DEFAULT_STATE = { completed: false, completedAt: null, completedVersion: 0, inProgress: null, useMockData: false };
 
 export async function readTourState() {
   const { [TOUR_KEY]: state } = await chrome.storage.local.get(TOUR_KEY);
@@ -23,6 +24,7 @@ export function markTourCompleted() {
   return writeTourState({
     completed: true,
     completedAt: new Date().toISOString(),
+    completedVersion: TOUR_VERSION,
     inProgress: null,
     useMockData: false,
   });
@@ -186,6 +188,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
   function isStepClickThrough(step) {
     return step.advanceOn === 'click'
       || step.handoff?.mode === 'inPage'
+      || step.handoff?.mode === 'crossDocument'
       || step.nonBlocking === true;
   }
 
@@ -344,6 +347,11 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     const newSurface = newState.inProgress?.surface;
     if (!newSurface || newSurface === surface) return;
     if (newSurface === handoffTarget) return;
+    // If we handed off via crossDocument, keep the overlay alive while the user
+    // navigates through other surfaces — only close when the surface returns to
+    // this one (handled above) or the tour completes.
+    const currentStep = steps[currentIndex];
+    if (currentStep?.handoff?.mode === 'crossDocument') return;
     closeQuietly();
   }
 
@@ -389,8 +397,19 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
   };
 }
 
+// firstNewStep: index of the first step added in the current TOUR_VERSION for
+// this surface. If the user completed an older version, the tour resumes here.
 export async function autoStartIfMatches(surface, steps, options = {}) {
+  const { firstNewStep, ...runOptions } = options;
   const state = await readTourState();
+
+  if (state.completed) {
+    if ((state.completedVersion ?? 0) < TOUR_VERSION && firstNewStep != null) {
+      return runTour({ surface, steps, startIndex: firstNewStep, ...runOptions });
+    }
+    return null;
+  }
+
   const pendingSurface = state.inProgress?.surface;
   if (!pendingSurface) return null;
   if (pendingSurface === surface) {
@@ -398,7 +417,7 @@ export async function autoStartIfMatches(surface, steps, options = {}) {
       surface,
       steps,
       startIndex: state.inProgress.stepIndex || 0,
-      ...options,
+      ...runOptions,
     });
   }
   const handoffIdx = steps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
@@ -407,7 +426,7 @@ export async function autoStartIfMatches(surface, steps, options = {}) {
       surface,
       steps,
       startIndex: handoffIdx,
-      ...options,
+      ...runOptions,
     });
   }
   return null;
