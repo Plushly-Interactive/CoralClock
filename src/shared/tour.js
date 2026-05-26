@@ -1,5 +1,5 @@
 const TOUR_KEY = 'tour';
-export const TOUR_VERSION = 6;
+export const TOUR_VERSION = 2;
 
 const DEFAULT_STATE = { completed: false, completedAt: null, completedVersion: 0, inProgress: null, useMockData: false };
 

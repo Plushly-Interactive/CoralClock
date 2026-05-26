@@ -396,21 +396,6 @@ const dashboardTourSteps = [
     handoff: { nextSurface: 'site', mode: 'inPage' },
   },
   {
-    selector: '#tour-btn',
-    title: 'TEST NEW STEP (v5)',
-    body: 'This step was added in v5 to test multi-surface update flow. Revert me!',
-  },
-  {
-    selector: '#range-select',
-    title: 'TEST NEW STEP A (v6)',
-    body: 'First new dashboard step in v6. Revert me!',
-  },
-  {
-    selector: '#top-chart-container',
-    title: 'TEST NEW STEP B (v6)',
-    body: 'Second new dashboard step in v6. Revert me!',
-  },
-  {
     selector: '#prune-btn',
     title: 'Open Storage pruning',
     body: 'Click Storage pruning to see how BiteGuard manages its storage and remove low-value entries.',
@@ -418,7 +403,7 @@ const dashboardTourSteps = [
   },
 ];
 
-const DASHBOARD_FIRST_NEW_STEP = 9; // index of first new step added in current TOUR_VERSION
+const DASHBOARD_FIRST_NEW_STEP = null; // set to step index when new steps are added in a TOUR_VERSION bump
 
 async function maybeEnableMockMode() {
   const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
