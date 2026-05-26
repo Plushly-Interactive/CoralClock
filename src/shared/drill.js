@@ -271,7 +271,7 @@ async function renderDrillChart() {
   ctx.drillChart.style.display = hasData ? 'block' : 'none';
   ctx.drillLegend.style.display = 'none';
 
-  const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
+  const totalMs = data.reduce((s, d) => s + d.activeMs + (d.audioMs ?? 0) - (d.overlapMs ?? 0), 0);
   const totalVisits = data.reduce((s, d) => s + d.visits, 0);
   const stats = [];
   if (totalMs > 0) stats.push({ label: STAT_LABELS.totalTime, value: formatMs(totalMs) });

@@ -198,7 +198,7 @@ function matchesPath(key) {
 }
 
 function entryFor(cache, key) {
-  const acc = { activeMs: 0, audioMs: 0, visits: 0 };
+  const acc = { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
   const data = cache?.[key];
   if (!data) return acc;
   for (const sid of siteIds) {
@@ -208,6 +208,7 @@ function entryFor(cache, key) {
       if (!matchesPath(k)) continue;
       acc.activeMs += d.activeMs || 0;
       acc.audioMs += d.audioMs || 0;
+      acc.overlapMs += d.overlapMs || 0;
       acc.visits += d.visits || 0;
     }
   }

@@ -100,12 +100,17 @@ peakItem.addEventListener('mouseleave', () => {
 });
 
 function entrySum(obj) {
-  const zero = { activeMs: 0, audioMs: 0, visits: 0 };
+  const zero = { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
   if (!obj) return zero;
   return effectiveSiteIds.reduce((acc, id) => {
     const e = obj[id];
     if (!e) return acc;
-    return { activeMs: acc.activeMs + (e.activeMs ?? 0), audioMs: acc.audioMs + (e.audioMs ?? 0), visits: acc.visits + (e.visits ?? 0) };
+    return {
+      activeMs: acc.activeMs + (e.activeMs ?? 0),
+      audioMs: acc.audioMs + (e.audioMs ?? 0),
+      overlapMs: acc.overlapMs + (e.overlapMs ?? 0),
+      visits: acc.visits + (e.visits ?? 0),
+    };
   }, { ...zero });
 }
 
@@ -286,7 +291,8 @@ function renderStats(data, range) {
   const { totalMs, totalVisits } = renderBaseStats(data, range, byDayCache);
 
   const todayKey = localDayKey(Date.now());
-  const todayMs = entrySum(byDayCache?.[todayKey]).activeMs;
+  const todayEntry = entrySum(byDayCache?.[todayKey]);
+  const todayMs = todayEntry.activeMs + todayEntry.audioMs - (todayEntry.overlapMs ?? 0);
   document.querySelector('#stat-today').textContent = formatMs(todayMs) || '0m';
 
   let peakMs = 0, peakLabel = '';
@@ -298,7 +304,8 @@ function renderStats(data, range) {
     })();
     for (const [day, sites] of Object.entries(byDayCache)) {
       if (cutoff && day < cutoff) continue;
-      const ms = entrySum(sites).activeMs;
+      const e = entrySum(sites);
+      const ms = e.activeMs + e.audioMs - (e.overlapMs ?? 0);
       if (ms > peakMs) { peakMs = ms; peakLabel = day; }
     }
   }

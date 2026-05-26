@@ -57,9 +57,10 @@ export function buildOverviewData({ range, dayKeys, getDayEntry, getHourEntry })
         return {
           activeMs: acc.activeMs + e.activeMs,
           audioMs: acc.audioMs + e.audioMs,
+          overlapMs: acc.overlapMs + (e.overlapMs ?? 0),
           visits: acc.visits + e.visits,
         };
-      }, { activeMs: 0, audioMs: 0, visits: 0 });
+      }, { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 });
       return { label: month, range: month, ...totals };
     });
   }
@@ -136,7 +137,7 @@ export function drawVisitsChart({ svgEl, tooltipEl, data, maxVal, onBarClick, sc
 }
 
 export function renderBaseStats(data, range, byDayCache) {
-  const totalMs = data.reduce((s, d) => s + d.activeMs, 0);
+  const totalMs = data.reduce((s, d) => s + d.activeMs + (d.audioMs ?? 0) - (d.overlapMs ?? 0), 0);
   const totalVisits = data.reduce((s, d) => s + d.visits, 0);
   const activeDays = activeDaysFromRange(range, byDayCache);
   const avgMs = activeDays > 0 ? totalMs / activeDays : 0;
