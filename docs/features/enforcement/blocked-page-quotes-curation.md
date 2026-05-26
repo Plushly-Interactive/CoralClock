@@ -160,6 +160,10 @@ The `selectQuote()` function implements tiered selection:
 
 This ensures variety and feels intentional rather than random.
 
+## Site-Specific Quotes
+
+Site-specific quotes (e.g., YouTube, Reddit) are original content crafted by the BiteGuard team. They do not require author attribution or sourcing because they are contextual nudges written in BiteGuard's voice, addressing friction points specific to each platform (algorithms, comment sections, autoplay, scrolling patterns). They reinforce the app's wellbeing-first philosophy without leveraging external authority — the message comes from BiteGuard's understanding of these platforms' behavioral design.
+
 ## Audit Checklist
 
 Before finalizing any new quote batch:

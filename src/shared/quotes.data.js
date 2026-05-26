@@ -54,135 +54,135 @@ export const QUOTES = [
 
   // ─── YOUTUBE ──────────────────────────────────────────────────────────────
 
-  { text: "Starting the day with YouTube is starting the day on someone else's terms.",    id: 'yt-m-1', timeOfDay: 'morning',   site: 'youtube' },
-  { text: "The algorithm does not have your best interests at heart. Especially not at this hour.", id: 'yt-m-2', timeOfDay: 'morning', site: 'youtube' },
-  { text: "Whatever you were 'just going to watch one video' of — it worked.",             id: 'yt-m-3', timeOfDay: 'morning',   site: 'youtube' },
+  { text: "YouTube's algorithm decides what morning content you see.",                    id: 'yt-m-1', timeOfDay: 'morning',   site: 'youtube' },
+  { text: "The algorithm prioritizes watch time. Morning is when it matters most.", id: 'yt-m-2', timeOfDay: 'morning', site: 'youtube' },
+  { text: "YouTube's morning algorithm starts before you do.",                     id: 'yt-m-3', timeOfDay: 'morning',   site: 'youtube' },
 
-  { text: "The recommended sidebar is not a to-do list.",                                  id: 'yt-a-1', timeOfDay: 'afternoon', site: 'youtube' },
-  { text: "You've watched enough. The creator will still be there tomorrow.",              id: 'yt-a-2', timeOfDay: 'afternoon', site: 'youtube' },
-  { text: "Autoplay is not a plan.",                                                        id: 'yt-a-3', timeOfDay: 'afternoon', site: 'youtube' },
+  { text: "The suggestions keep coming. So does the choice to stop.",                      id: 'yt-a-1', timeOfDay: 'afternoon', site: 'youtube' },
+  { text: "They'll post again tomorrow. You can wait.",                                    id: 'yt-a-2', timeOfDay: 'afternoon', site: 'youtube' },
+  { text: "Autoplay designed the plan, not you.",                                         id: 'yt-a-3', timeOfDay: 'afternoon', site: 'youtube' },
 
   { text: "Just one more video has been a lie every time.",                                 id: 'yt-e-1', timeOfDay: 'evening',   site: 'youtube' },
-  { text: "The comments section will not improve your evening.",                            id: 'yt-e-2', timeOfDay: 'evening',   site: 'youtube' },
-  { text: "You've seen enough content for today. Go make some life instead.",              id: 'yt-e-3', timeOfDay: 'evening',   site: 'youtube' },
+  { text: "Comments sections exist to extend your session, not enhance it.",               id: 'yt-e-2', timeOfDay: 'evening',   site: 'youtube' },
+  { text: "Tonight could be something you create instead of something you watch.",         id: 'yt-e-3', timeOfDay: 'evening',   site: 'youtube' },
 
-  { text: "The algorithm doesn't know it's 2am. You do.",                                  id: 'yt-n-1', timeOfDay: 'night',     site: 'youtube' },
-  { text: "No video has ever been worth losing sleep over.",                                id: 'yt-n-2', timeOfDay: 'night',     site: 'youtube' },
+  { text: "The algorithm doesn't know how late it is. You do.",                           id: 'yt-n-1', timeOfDay: 'night',     site: 'youtube' },
+  { text: "Videos are infinite. Sleep is finite.",                                        id: 'yt-n-2', timeOfDay: 'night',     site: 'youtube' },
   { text: "YouTube will still have videos tomorrow. Promise.",                              id: 'yt-n-3', timeOfDay: 'night',     site: 'youtube' },
 
   // ─── REDDIT ───────────────────────────────────────────────────────────────
 
   { text: "The front page was the same yesterday. And the day before.",                    id: 'rd-m-1', timeOfDay: 'morning',   site: 'reddit' },
-  { text: "Nothing on Reddit requires your attention before coffee.",                       id: 'rd-m-2', timeOfDay: 'morning',   site: 'reddit' },
-  { text: "The discourse will continue without you.",                                       id: 'rd-m-3', timeOfDay: 'morning',   site: 'reddit' },
+  { text: "Reddit's front page is the same. It will still be there later.",               id: 'rd-m-2', timeOfDay: 'morning',   site: 'reddit' },
+  { text: "Reddit threads continue whether or not you're in them.",                      id: 'rd-m-3', timeOfDay: 'morning',   site: 'reddit' },
 
-  { text: "The top comment is not always right. You knew this.",                           id: 'rd-a-1', timeOfDay: 'afternoon', site: 'reddit' },
-  { text: "You were not going to change anyone's mind in that thread.",                    id: 'rd-a-2', timeOfDay: 'afternoon', site: 'reddit' },
+  { text: "The top comment is often not the full story.",                                 id: 'rd-a-1', timeOfDay: 'afternoon', site: 'reddit' },
+  { text: "Arguments in threads rarely feel resolved.",                                  id: 'rd-a-2', timeOfDay: 'afternoon', site: 'reddit' },
   { text: "The subreddit will still be there. The afternoon won't.",                       id: 'rd-a-3', timeOfDay: 'afternoon', site: 'reddit' },
 
-  { text: "Scrolling Reddit is not the same as relaxing.",                                  id: 'rd-e-1', timeOfDay: 'evening',   site: 'reddit' },
-  { text: "Whatever drama unfolded today, it'll be a recap post tomorrow.",                id: 'rd-e-2', timeOfDay: 'evening',   site: 'reddit' },
-  { text: "The upvotes were not going to make the post better.",                           id: 'rd-e-3', timeOfDay: 'evening',   site: 'reddit' },
+  { text: "Reddit scrolling is stimulation. Rest is different.",                          id: 'rd-e-1', timeOfDay: 'evening',   site: 'reddit' },
+  { text: "Whatever drama unfolded today, there will be a recap post tomorrow.",                id: 'rd-e-2', timeOfDay: 'evening',   site: 'reddit' },
+  { text: "Upvotes measure visibility, not truth.",                                      id: 'rd-e-3', timeOfDay: 'evening',   site: 'reddit' },
 
   { text: "Late-night Reddit is a different, worse Reddit.",                                id: 'rd-n-1', timeOfDay: 'night',     site: 'reddit' },
   { text: "The thread will be locked by morning anyway.",                                   id: 'rd-n-2', timeOfDay: 'night',     site: 'reddit' },
-  { text: "No one is posting anything important at this hour. Including you.",             id: 'rd-n-3', timeOfDay: 'night',     site: 'reddit' },
+  { text: "The best posts are waiting for you tomorrow, rested.",                         id: 'rd-n-3', timeOfDay: 'night',     site: 'reddit' },
 
   // ─── TWITCH ───────────────────────────────────────────────────────────────
 
-  { text: "Watching someone else play games before noon is a choice.",                     id: 'tw-m-1', timeOfDay: 'morning',   site: 'twitch' },
+  { text: "Watching someone else play is watching someone else's morning.",               id: 'tw-m-1', timeOfDay: 'morning',   site: 'twitch' },
   { text: "The stream will go on without your viewer count.",                               id: 'tw-m-2', timeOfDay: 'morning',   site: 'twitch' },
-  { text: "Your favourite streamer is probably asleep right now anyway.",                  id: 'tw-m-3', timeOfDay: 'morning',   site: 'twitch' },
+  { text: "Morning streams are running their own schedule, not yours.",                   id: 'tw-m-3', timeOfDay: 'morning',   site: 'twitch' },
 
-  { text: "Chat moves too fast for you to read anyway.",                                    id: 'tw-a-1', timeOfDay: 'afternoon', site: 'twitch' },
-  { text: "You weren't going to clip that moment. Be honest.",                             id: 'tw-a-2', timeOfDay: 'afternoon', site: 'twitch' },
-  { text: "Passive streaming is passive time. You noticed.",                                id: 'tw-a-3', timeOfDay: 'afternoon', site: 'twitch' },
+  { text: "The chat moves faster than any conversation.",                                 id: 'tw-a-1', timeOfDay: 'afternoon', site: 'twitch' },
+  { text: "The stream continues whether or not you're watching it.",                      id: 'tw-a-2', timeOfDay: 'afternoon', site: 'twitch' },
+  { text: "Watching streams is time on someone else's schedule.",                         id: 'tw-a-3', timeOfDay: 'afternoon', site: 'twitch' },
 
-  { text: "The stream will VOD. Your evening won't.",                                       id: 'tw-e-1', timeOfDay: 'evening',   site: 'twitch' },
-  { text: "You can catch the highlights tomorrow.",                                         id: 'tw-e-2', timeOfDay: 'evening',   site: 'twitch' },
-  { text: "Watching someone else have fun is not the same as having fun.",                 id: 'tw-e-3', timeOfDay: 'evening',   site: 'twitch' },
+  { text: "The stream will be archived. The moments you could be having won't be.",        id: 'tw-e-1', timeOfDay: 'evening',   site: 'twitch' },
+  { text: "The highlights will be there to watch tomorrow.",                              id: 'tw-e-2', timeOfDay: 'evening',   site: 'twitch' },
+  { text: "Watching someone else have fun is a different activity than having fun.",      id: 'tw-e-3', timeOfDay: 'evening',   site: 'twitch' },
 
-  { text: "The streamer is being paid to be awake. You are not.",                          id: 'tw-n-1', timeOfDay: 'night',     site: 'twitch' },
-  { text: "Late-night streams are designed to keep you up. Don't.",                        id: 'tw-n-2', timeOfDay: 'night',     site: 'twitch' },
-  { text: "The raid train will happen without you.",                                        id: 'tw-n-3', timeOfDay: 'night',     site: 'twitch' },
+  { text: "The streamer's schedule is not your schedule.",                                id: 'tw-n-1', timeOfDay: 'night',     site: 'twitch' },
+  { text: "Late-night streams are designed to extend into the early morning.",           id: 'tw-n-2', timeOfDay: 'night',     site: 'twitch' },
+  { text: "The hype train will leave the station whether or not you board it.",           id: 'tw-n-3', timeOfDay: 'night',     site: 'twitch' },
 
   // ─── TIKTOK ───────────────────────────────────────────────────────────────
 
-  { text: "The For You page was not curated with your morning in mind.",                   id: 'tt-m-1', timeOfDay: 'morning',   site: 'tiktok' },
-  { text: "You opened TikTok to watch one video. We both know how that goes.",             id: 'tt-m-2', timeOfDay: 'morning',   site: 'tiktok' },
-  { text: "Starting the day in a scroll spiral is optional.",                               id: 'tt-m-3', timeOfDay: 'morning',   site: 'tiktok' },
+  { text: "TikTok knows what keeps you watching. It's not what you think.",              id: 'tt-m-1', timeOfDay: 'morning',   site: 'tiktok' },
+  { text: "TikTok's algorithm learns faster than you wake up.",                         id: 'tt-m-2', timeOfDay: 'morning',   site: 'tiktok' },
+  { text: "The scroll spiral is the designed feature, not a side effect.",               id: 'tt-m-3', timeOfDay: 'morning',   site: 'tiktok' },
 
   { text: "Each video is short. The session is not.",                                       id: 'tt-a-1', timeOfDay: 'afternoon', site: 'tiktok' },
-  { text: "The algorithm has no concept of 'enough'. You do.",                             id: 'tt-a-2', timeOfDay: 'afternoon', site: 'tiktok' },
+  { text: "The algorithm has no stopping point. It's designed to continue.",              id: 'tt-a-2', timeOfDay: 'afternoon', site: 'tiktok' },
   { text: "Fifteen seconds at a time is still time.",                                       id: 'tt-a-3', timeOfDay: 'afternoon', site: 'tiktok' },
 
-  { text: "The FYP will have new content tomorrow. It always does.",                       id: 'tt-e-1', timeOfDay: 'evening',   site: 'tiktok' },
-  { text: "You were never going to find the last video.",                                   id: 'tt-e-2', timeOfDay: 'evening',   site: 'tiktok' },
+  { text: "TikTok's content never runs out. That's the whole point.",                    id: 'tt-e-1', timeOfDay: 'evening',   site: 'tiktok' },
+  { text: "There is no last video.",                                                      id: 'tt-e-2', timeOfDay: 'evening',   site: 'tiktok' },
   { text: "Infinite scroll has no finish line by design.",                                  id: 'tt-e-3', timeOfDay: 'evening',   site: 'tiktok' },
 
-  { text: "TikTok at night is a different timezone's content anyway.",                     id: 'tt-n-1', timeOfDay: 'night',     site: 'tiktok' },
-  { text: "The sound-off scroll at midnight is not relaxing. It's just delay.",            id: 'tt-n-2', timeOfDay: 'night',     site: 'tiktok' },
-  { text: "You set this limit because you knew this moment would come.",                   id: 'tt-n-3', timeOfDay: 'night',     site: 'tiktok' },
+  { text: "TikTok at night shows you what keeps you awake the longest.",                 id: 'tt-n-1', timeOfDay: 'night',     site: 'tiktok' },
+  { text: "Night scrolling is stimulation disguised as relaxation.",                   id: 'tt-n-2', timeOfDay: 'night',     site: 'tiktok' },
+  { text: "This limit exists because nights like this are easy to lose.",                  id: 'tt-n-3', timeOfDay: 'night',     site: 'tiktok' },
 
   // ─── TWITTER / X ──────────────────────────────────────────────────────────
 
   { text: "The discourse started without you and will end without you.",                   id: 'x-m-1', timeOfDay: 'morning',   site: 'twitter' },
-  { text: "Reading hot takes at this hour sets a tone for the day.",                       id: 'x-m-2', timeOfDay: 'morning',   site: 'twitter' },
-  { text: "Nothing trending right now needed your attention before breakfast.",             id: 'x-m-3', timeOfDay: 'morning',   site: 'twitter' },
+  { text: "Hot takes at breakfast time are designed for engagement, not truth.",           id: 'x-m-2', timeOfDay: 'morning',   site: 'twitter' },
+  { text: "What's trending at breakfast time can wait until after breakfast.",             id: 'x-m-3', timeOfDay: 'morning',   site: 'twitter' },
 
   { text: "The ratio will resolve itself without your involvement.",                        id: 'x-a-1', timeOfDay: 'afternoon', site: 'twitter' },
-  { text: "You were not going to write the tweet that changed anyone's mind.",             id: 'x-a-2', timeOfDay: 'afternoon', site: 'twitter' },
-  { text: "Chronological or algorithmic — neither timeline is worth this.",                id: 'x-a-3', timeOfDay: 'afternoon', site: 'twitter' },
+  { text: "The debates on the timeline will continue without your input.",                 id: 'x-a-2', timeOfDay: 'afternoon', site: 'twitter' },
+  { text: "Chronological or algorithmic, neither timeline is worth this.",                id: 'x-a-3', timeOfDay: 'afternoon', site: 'twitter' },
 
   { text: "Evening Twitter is just morning Twitter with more typos.",                       id: 'x-e-1', timeOfDay: 'evening',   site: 'twitter' },
   { text: "The hot take will still be hot tomorrow.",                                       id: 'x-e-2', timeOfDay: 'evening',   site: 'twitter' },
   { text: "Doomscrolling is a description, not a recommendation.",                         id: 'x-e-3', timeOfDay: 'evening',   site: 'twitter' },
 
-  { text: "Late-night posting is almost never a good idea.",                                id: 'x-n-1', timeOfDay: 'night',     site: 'twitter' },
+  { text: "Late-night posting reaches different audiences with different intent.",       id: 'x-n-1', timeOfDay: 'night',     site: 'twitter' },
   { text: "Whatever is trending at this hour will be forgotten by morning.",               id: 'x-n-2', timeOfDay: 'night',     site: 'twitter' },
-  { text: "The reply you were composing was not worth losing sleep over.",                 id: 'x-n-3', timeOfDay: 'night',     site: 'twitter' },
+  { text: "Midnight tweets reach different people than morning tweets.",                 id: 'x-n-3', timeOfDay: 'night',     site: 'twitter' },
 
   // ─── INSTAGRAM ────────────────────────────────────────────────────────────
 
-  { text: "Other people's highlight reels are a bad way to start a day.",                  id: 'ig-m-1', timeOfDay: 'morning',   site: 'instagram' },
-  { text: "The algorithm curated that feed. Your morning deserves better curation.",       id: 'ig-m-2', timeOfDay: 'morning',   site: 'instagram' },
-  { text: "No one's story needed your view before 11am.",                                  id: 'ig-m-3', timeOfDay: 'morning',   site: 'instagram' },
+  { text: "Highlight reels are curated for engagement, not authenticity.",                id: 'ig-m-1', timeOfDay: 'morning',   site: 'instagram' },
+  { text: "The algorithm curated that feed for maximum engagement, not your benefit.",    id: 'ig-m-2', timeOfDay: 'morning',   site: 'instagram' },
+  { text: "Stories will be there when you return from breakfast.",                        id: 'ig-m-3', timeOfDay: 'morning',   site: 'instagram' },
 
   { text: "Reels are TikTok with better lighting. Same spiral.",                           id: 'ig-a-1', timeOfDay: 'afternoon', site: 'instagram' },
   { text: "The posts will still be there. They don't expire.",                             id: 'ig-a-2', timeOfDay: 'afternoon', site: 'instagram' },
-  { text: "Comparing your afternoon to someone else's photoshoot is optional.",            id: 'ig-a-3', timeOfDay: 'afternoon', site: 'instagram' },
+  { text: "The feed is designed to trigger comparison. That's the point.",                id: 'ig-a-3', timeOfDay: 'afternoon', site: 'instagram' },
 
-  { text: "Stories disappear after 24 hours. Your evening does too.",                      id: 'ig-e-1', timeOfDay: 'evening',   site: 'instagram' },
-  { text: "The Explore page was not designed with your wellbeing in mind.",                id: 'ig-e-2', timeOfDay: 'evening',   site: 'instagram' },
-  { text: "You've seen enough curated moments for one day.",                               id: 'ig-e-3', timeOfDay: 'evening',   site: 'instagram' },
+  { text: "Stories vanish but the feed replaces them instantly.",                       id: 'ig-e-1', timeOfDay: 'evening',   site: 'instagram' },
+  { text: "The Explore page is designed for maximum engagement, not rest.",              id: 'ig-e-2', timeOfDay: 'evening',   site: 'instagram' },
+  { text: "Curated moments are designed to feel endless.",                               id: 'ig-e-3', timeOfDay: 'evening',   site: 'instagram' },
 
-  { text: "Late-night Instagram is just loneliness with filters.",                          id: 'ig-n-1', timeOfDay: 'night',     site: 'instagram' },
-  { text: "No one is posting anything real at this hour.",                                  id: 'ig-n-2', timeOfDay: 'night',     site: 'instagram' },
+  { text: "Late-night Instagram is other people's curated lives, not connection.",       id: 'ig-n-1', timeOfDay: 'night',     site: 'instagram' },
+  { text: "Instagram at night is the same feed from hours ago.",                         id: 'ig-n-2', timeOfDay: 'night',     site: 'instagram' },
   { text: "The grid will look the same tomorrow.",                                          id: 'ig-n-3', timeOfDay: 'night',     site: 'instagram' },
 
   // ─── FACEBOOK ─────────────────────────────────────────────────────────────
 
-  { text: "The family group chat was not an urgent notification.",                          id: 'fb-m-1', timeOfDay: 'morning',   site: 'facebook' },
+  { text: "Messages can wait until you're ready for them.",                              id: 'fb-m-1', timeOfDay: 'morning',   site: 'facebook' },
   { text: "Facebook memories are rarely a good morning surprise.",                          id: 'fb-m-2', timeOfDay: 'morning',   site: 'facebook' },
-  { text: "The marketplace listing will still be there after breakfast.",                   id: 'fb-m-3', timeOfDay: 'morning',   site: 'facebook' },
+  { text: "Marketplace listings persist longer than your morning attention span.",        id: 'fb-m-3', timeOfDay: 'morning',   site: 'facebook' },
 
-  { text: "The opinions in your feed were not going to change yours.",                     id: 'fb-a-1', timeOfDay: 'afternoon', site: 'facebook' },
-  { text: "Events you won't attend can wait.",                                              id: 'fb-a-2', timeOfDay: 'afternoon', site: 'facebook' },
+  { text: "Facebook threads are designed for engagement, not understanding.",             id: 'fb-a-1', timeOfDay: 'afternoon', site: 'facebook' },
+  { text: "Event invitations have always waited until you decided.",                      id: 'fb-a-2', timeOfDay: 'afternoon', site: 'facebook' },
   { text: "The engagement bait post does not need your engagement.",                        id: 'fb-a-3', timeOfDay: 'afternoon', site: 'facebook' },
 
   { text: "The group drama will resolve without your input.",                               id: 'fb-e-1', timeOfDay: 'evening',   site: 'facebook' },
   { text: "Suggested posts are not suggestions. They're traps.",                           id: 'fb-e-2', timeOfDay: 'evening',   site: 'facebook' },
-  { text: "You were not going to post anything you'd be proud of right now.",              id: 'fb-e-3', timeOfDay: 'evening',   site: 'facebook' },
+  { text: "Facebook posts made late are rarely reviewed with care.",                     id: 'fb-e-3', timeOfDay: 'evening',   site: 'facebook' },
 
   { text: "Night Facebook is just old content and older arguments.",                        id: 'fb-n-1', timeOfDay: 'night',     site: 'facebook' },
-  { text: "Whatever notification brought you here — it waited this long already.",         id: 'fb-n-2', timeOfDay: 'night',     site: 'facebook' },
-  { text: "The Marketplace deal will still be listed tomorrow.",                            id: 'fb-n-3', timeOfDay: 'night',     site: 'facebook' },
+  { text: "Notifications sent at this hour are designed for insomnia, not priority.",     id: 'fb-n-2', timeOfDay: 'night',     site: 'facebook' },
+  { text: "Late-night Facebook is recycled content from hours before.",                 id: 'fb-n-3', timeOfDay: 'night',     site: 'facebook' },
 
   // ─── AMAZON ───────────────────────────────────────────────────────────────
 
-  { text: "Nothing in your cart needs to be purchased before noon.",                        id: 'az-m-1', timeOfDay: 'morning',   site: 'amazon' },
+  { text: "Amazon's cart is designed to follow you from tab to tab.",                    id: 'az-m-1', timeOfDay: 'morning',   site: 'amazon' },
   { text: "The deal of the day will be replaced by a new deal tomorrow.",                  id: 'az-m-2', timeOfDay: 'morning',   site: 'amazon' },
-  { text: "You opened Amazon to look at one thing. We both know that's not how it goes.", id: 'az-m-3', timeOfDay: 'morning',   site: 'amazon' },
+  { text: "Recommendations appear before you scroll, while you scroll, and after.",        id: 'az-m-3', timeOfDay: 'morning',   site: 'amazon' },
 
   { text: "The reviews section is a rabbit hole with a purchase at the end.",              id: 'az-a-1', timeOfDay: 'afternoon', site: 'amazon' },
   { text: "If you need it, it'll still be available later.",                               id: 'az-a-2', timeOfDay: 'afternoon', site: 'amazon' },
@@ -190,15 +190,15 @@ export const QUOTES = [
 
   { text: "Evening browsing is how wishlists become regrets.",                              id: 'az-e-1', timeOfDay: 'evening',   site: 'amazon' },
   { text: "Prime delivery is fast. Your decision doesn't have to be.",                    id: 'az-e-2', timeOfDay: 'evening',   site: 'amazon' },
-  { text: "The recommended section was built to keep you here. You noticed.",              id: 'az-e-3', timeOfDay: 'evening',   site: 'amazon' },
+  { text: "The recommended section is designed to extend sessions, not end them.",        id: 'az-e-3', timeOfDay: 'evening',   site: 'amazon' },
 
-  { text: "Late-night purchases have a morning-after feeling.",                             id: 'az-n-1', timeOfDay: 'night',     site: 'amazon' },
+  { text: "Late-night Amazon is just one-click away from regret.",                       id: 'az-n-1', timeOfDay: 'night',     site: 'amazon' },
   { text: "Sleep on it. Literally.",                                                        id: 'az-n-2', timeOfDay: 'night',     site: 'amazon' },
   { text: "One-click ordering at midnight is not a superpower.",                            id: 'az-n-3', timeOfDay: 'night',     site: 'amazon' },
 
   // ─── SHOPPING (catch-all) ─────────────────────────────────────────────────
 
-  { text: "A morning purchase is rarely a considered one.",                                 id: 'sh-m-1', timeOfDay: 'morning',   site: 'shop' },
+  { text: "Morning shopping platforms show inventory, not necessity.",                    id: 'sh-m-1', timeOfDay: 'morning',   site: 'shop' },
   { text: "The item will still be listed after you've had breakfast.",                     id: 'sh-m-2', timeOfDay: 'morning',   site: 'shop' },
   { text: "Want and need are different words for a reason.",                                id: 'sh-m-3', timeOfDay: 'morning',   site: 'shop' },
 
@@ -211,7 +211,7 @@ export const QUOTES = [
   { text: "Window shopping online is still shopping.",                                      id: 'sh-e-3', timeOfDay: 'evening',   site: 'shop' },
 
   { text: "Midnight purchases are a category of their own.",                                id: 'sh-n-1', timeOfDay: 'night',     site: 'shop' },
-  { text: "Sleep is free. That thing is not.",                                              id: 'sh-n-2', timeOfDay: 'night',     site: 'shop' },
+  { text: "Sleep is free. Shopping is not.",                                              id: 'sh-n-2', timeOfDay: 'night',     site: 'shop' },
   { text: "The listing will still be there in the morning. You'll see it differently.",    id: 'sh-n-3', timeOfDay: 'night',     site: 'shop' },
 
   // ─── LINKEDIN ─────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ export const QUOTES = [
   { text: "No recruiter is reading your profile right now. Rest.",                         id: 'li-n-2', timeOfDay: 'night',     site: 'linkedin' },
   { text: "The inspirational post will be just as hollow in the morning.",                 id: 'li-n-3', timeOfDay: 'night',     site: 'linkedin' },
 
-  // ─── NEWS ─────────────────────────────────────────────────────────────────
+  // ─── NEWS (catch-all) ─────────────────────────────────────────────────────────────────
 
   { text: "The headlines were written to alarm you. Don't let them.",                      id: 'nw-m-1', timeOfDay: 'morning',   site: 'news' },
   { text: "Informed is good. Saturated before 9am is something else.",                     id: 'nw-m-2', timeOfDay: 'morning',   site: 'news' },
@@ -248,29 +248,29 @@ export const QUOTES = [
 
   { text: "Nothing in the news requires your attention at this hour.",                      id: 'nw-n-1', timeOfDay: 'night',     site: 'news' },
   { text: "The story will still be developing tomorrow. So will you.",                     id: 'nw-n-2', timeOfDay: 'night',     site: 'news' },
-  { text: "Late-night news reading is anxiety with a byline.",                              id: 'nw-n-3', timeOfDay: 'night',     site: 'news' },
+  { text: "News algorithms prioritize urgency. Night is when urgency peaks.",             id: 'nw-n-3', timeOfDay: 'night',     site: 'news' },
 
   // ─── CHATGPT ──────────────────────────────────────────────────────────────
 
-  { text: "You asked an AI to help you be more productive. It's working.",                 id: 'cg-m-1', timeOfDay: 'morning',   site: 'chatgpt' },
+  { text: "You're asking an AI for help. It's working. The question is: are you?",      id: 'cg-m-1', timeOfDay: 'morning',   site: 'chatgpt' },
   { text: "The prompt can wait. So can the answer.",                                        id: 'cg-m-2', timeOfDay: 'morning',   site: 'chatgpt' },
   { text: "Some mornings the most productive thing is to think for yourself first.",       id: 'cg-m-3', timeOfDay: 'morning',   site: 'chatgpt' },
 
-  { text: "You set a limit on an AI assistant. The irony is not lost.",                    id: 'cg-a-1', timeOfDay: 'afternoon', site: 'chatgpt' },
+  { text: "AI assistants can become procrastination tools if you let them.",              id: 'cg-a-1', timeOfDay: 'afternoon', site: 'chatgpt' },
   { text: "The conversation will still be in your history when you return.",               id: 'cg-a-2', timeOfDay: 'afternoon', site: 'chatgpt' },
   { text: "Even AI tools can become avoidance tools.",                                      id: 'cg-a-3', timeOfDay: 'afternoon', site: 'chatgpt' },
 
   { text: "You've used your AI time for today. Trust your own brain for the rest.",        id: 'cg-e-1', timeOfDay: 'evening',   site: 'chatgpt' },
-  { text: "The chatbot will give you the same answer tomorrow.",                            id: 'cg-e-2', timeOfDay: 'evening',   site: 'chatgpt' },
+  { text: "Late prompts are usually abandoned by morning.",                        id: 'cg-e-2', timeOfDay: 'evening',   site: 'chatgpt' },
   { text: "Some problems are better slept on than prompted on.",                            id: 'cg-e-3', timeOfDay: 'evening',   site: 'chatgpt' },
 
   { text: "The AI doesn't need sleep. You do.",                                             id: 'cg-n-1', timeOfDay: 'night',     site: 'chatgpt' },
   { text: "Midnight AI conversations have a way of going nowhere slowly.",                 id: 'cg-n-2', timeOfDay: 'night',     site: 'chatgpt' },
-  { text: "You trained a limit on yourself. Respect it.",                                   id: 'cg-n-3', timeOfDay: 'night',     site: 'chatgpt' },
+  { text: "Late-night AI use extends thinking instead of resolving it.",                 id: 'cg-n-3', timeOfDay: 'night',     site: 'chatgpt' },
 
   // ─── GEMINI ───────────────────────────────────────────────────────────────
 
-  { text: "You asked an AI to help you focus. Consider this it helping.",                  id: 'gm-m-1', timeOfDay: 'morning',   site: 'gemini' },
+  { text: "You asked an AI to help you. Consider this it helping.",                  id: 'gm-m-1', timeOfDay: 'morning',   site: 'gemini' },
   { text: "The model will still be there. Your morning window won't.",                     id: 'gm-m-2', timeOfDay: 'morning',   site: 'gemini' },
   { text: "Some questions are worth sitting with before asking an AI.",                    id: 'gm-m-3', timeOfDay: 'morning',   site: 'gemini' },
 
