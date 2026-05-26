@@ -87,24 +87,24 @@ const UNIT_MAX = {
   days:    {                        week: 7     },
 };
 
-function constrainLimitForm() {
-  const unitBtn    = document.querySelector('#form-unit-btn');
-  const periodBtn  = document.querySelector('#form-period-btn');
-  const limitInput = document.querySelector('#form-limit');
+function constrainLimitForm(prefix = 'form', root = document) {
+  const unitBtn    = root.querySelector(`#${prefix}-unit-btn`);
+  const periodBtn  = root.querySelector(`#${prefix}-period-btn`);
+  const limitInput = root.querySelector(`#${prefix}-limit`);
   const unit   = unitBtn.dataset.value;
   const period = periodBtn.dataset.value;
 
   const validPeriods = Object.keys(UNIT_MAX[unit] ?? {});
-  document.querySelectorAll('#form-period-menu button').forEach(opt => {
+  root.querySelectorAll(`#${prefix}-period-menu button`).forEach(opt => {
     opt.disabled = !validPeriods.includes(opt.value);
   });
-  document.querySelectorAll('#form-unit-menu button').forEach(opt => {
+  root.querySelectorAll(`#${prefix}-unit-menu button`).forEach(opt => {
     opt.disabled = !(UNIT_MAX[opt.value] ?? {})[period];
   });
 
   if (!validPeriods.includes(period)) {
     const next = validPeriods[0];
-    periodBtn.firstChild.textContent = document.querySelector(`#form-period-menu button[value="${next}"]`).textContent;
+    periodBtn.firstChild.textContent = root.querySelector(`#${prefix}-period-menu button[value="${next}"]`).textContent;
     periodBtn.dataset.value = next;
   }
 
@@ -313,6 +313,15 @@ function openRowEditor(id) {
       <button class="cancel-edit-btn square-btn">↩</button>
     </div>`);
   initCustomDropdowns(li);
+  constrainLimitForm('edit', li);
+  li.querySelectorAll('#edit-unit-menu button, #edit-period-menu button').forEach(opt => {
+    opt.addEventListener('click', () => constrainLimitForm('edit', li));
+  });
+  li.querySelector('#edit-limit').addEventListener('input', () => {
+    const el = li.querySelector('#edit-limit');
+    const max = parseInt(el.max);
+    if (max && parseInt(el.value) > max) el.value = max;
+  });
   li.querySelector('#edit-limit').focus();
 }
 
