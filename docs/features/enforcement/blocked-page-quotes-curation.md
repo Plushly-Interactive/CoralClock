@@ -115,8 +115,8 @@ Every quote should optionally include a `philosophySource` URL that reveals the 
   id: string,             // Stable kebab-case slug (e.g., 'gen-m-1', 'yt-a-2')
   timeOfDay: string,      // 'morning' | 'afternoon' | 'evening' | 'night'
   site?: string,          // Optional; substring matched against blocked site (e.g., 'youtube', 'reddit')
-  signature?: true,       // Optional; user's personal quotes, 10% draw chance
-  source?: string,        // URL where the quote can be verified (e.g., Goodreads, book page, transcript) — required for general quotes
+  signature?: true,       // Optional; mascot character quotes (PwetPwet 🦈, Toot 🦊), 10% draw chance — no source required
+  source?: string,        // URL where the quote can be verified (e.g., Goodreads, book page, transcript) — required for general quotes; omit for signature and site-specific quotes
   philosophySource?: string, // URL to author's work/philosophy for deeper exploration (optional)
 }
 ```
@@ -156,7 +156,7 @@ Quotes are grouped by local time to match user context:
 
 The `selectQuote()` function implements tiered selection:
 
-1. **Signature tier** — 10% chance to draw user's personal quotes first (if any exist)
+1. **Signature tier** — 10% chance to draw mascot character quotes (PwetPwet 🦈, Toot 🦊) first (if any exist for the current time of day)
 2. **Site tier** — 50% chance to draw site-specific quotes if the blocked site matches (e.g., YouTube quotes for youtube.com)
 3. **Regular tier** — Draw from general, time-of-day matched quotes
 4. **Seen tracking** — Within each tier, prefer unseen quotes; cycle resets when all are exhausted
@@ -166,6 +166,22 @@ This ensures variety and feels intentional rather than random.
 ## Site-Specific Quotes
 
 Site-specific quotes (e.g., YouTube, Reddit) are original content crafted by the BiteGuard team. They do not require author attribution or sourcing because they are contextual nudges written in BiteGuard's voice, addressing friction points specific to each platform (algorithms, comment sections, autoplay, scrolling patterns). They reinforce the app's wellbeing-first philosophy without leveraging external authority — the message comes from BiteGuard's understanding of these platforms' behavioral design.
+
+## Signature Quotes
+
+Signature quotes are mascot character quotes written by the BiteGuard team, marked with `signature: true`. They have a 10% draw chance across all time slots and are filtered by `timeOfDay` like regular quotes.
+
+**Current mascots:**
+
+- **PwetPwet 🦈** — a tiny shark plushie. Funny, lighthearted, playful, wholesome. Themes: ocean life, shark duty, small-but-serious authority, ocean-as-bed metaphors for sleep.
+- **Toot 🦊** — a tiny fox plushie. Serious, philosophical, self-improvement mindset. Themes: deep forest (= deep sleep), driving a bus (Toot as guide taking you somewhere better), forest stillness, clearing metaphors for distraction.
+
+**Authorship rules for signature quotes:**
+
+- `author` is required and must be the character's name with emoji (e.g., `"PwetPwet 🦈"`, `"Toot 🦊"`)
+- `source` and `philosophySource` are omitted — these are original BiteGuard content
+- IDs follow the pattern `sig-[character]-[timeOfDay]-[n]` (e.g., `sig-toot-n-1`, `sig-m-3` for PwetPwet)
+- Tone must stay in character — do not mix PwetPwet's playfulness with Toot's gravity
 
 ## Audit Checklist
 
@@ -185,6 +201,7 @@ Before finalizing any new quote batch:
 - Gender diversity in named authors is balanced
 - Political/philosophical alignment centers human wellbeing and equity
 - Proverb sources are institutional or academic — not blogs or articles written by authors outside the culture
+- Signature quotes (`signature: true`) are exempt from source/philosophySource requirements — they are original BiteGuard content attributed to mascot characters with emoji (e.g., `"PwetPwet 🦈"`, `"Toot 🦊"`)
 
 ## Examples of Rejected Quotes & Why
 
