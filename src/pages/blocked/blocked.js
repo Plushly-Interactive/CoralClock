@@ -105,21 +105,43 @@ function sumTodayUsage(rule, stores) {
   setInterval(tick, 30000);
 })();
 
-// Quote — simple random draw from a small built-in pool for now.
-// Will be replaced by the full quotes.js system (see blocked-page-quotes spec).
-const QUOTES = [
-  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
-  { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
-  { text: "Either you run the day or the day runs you.", author: "Jim Rohn" },
-  { text: "Lost time is never found again.", author: "Benjamin Franklin" },
-  { text: "Time is what we want most, but what we use worst.", author: "William Penn" },
-  { text: "Your time is limited, so don't waste it living someone else's life.", author: "Steve Jobs" },
-  { text: "A year from now you may wish you had started today.", author: "Karen Lamb" },
-  { text: "Do something today that your future self will thank you for.", author: "Sean Patrick Flanery" },
-];
+import { pickQuote } from '../../shared/quotes.js';
 
-const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-const quoteEl = document.querySelector('#quote');
-document.querySelector('#quote-text').textContent = `"${q.text}"`;
-if (q.author) document.querySelector('#quote-author').textContent = `— ${q.author}`;
-quoteEl.removeAttribute('hidden');
+(async () => {
+  const q = await pickQuote(site ?? '');
+  if (!q) return;
+  const quoteEl = document.querySelector('#quote');
+
+  // Render quote text with source link
+  const textEl = document.querySelector('#quote-text');
+  textEl.textContent = `"${q.text}"`;
+  if (q.source) {
+    const sourceLink = document.createElement('a');
+    sourceLink.className = 'link-btn';
+    sourceLink.textContent = ' ↗';
+    sourceLink.href = q.source;
+    sourceLink.target = '_blank';
+    sourceLink.rel = 'noopener noreferrer';
+    textEl.appendChild(sourceLink);
+  }
+
+  // Render author line with optional philosophy link
+  if (q.author) {
+    const wrapperEl = document.querySelector('#quote-author-wrapper');
+    const authorSpan = document.createElement('span');
+    authorSpan.textContent = `— ${q.author}`;
+    wrapperEl.appendChild(authorSpan);
+
+    if (q.philosophySource) {
+      const discoverLink = document.createElement('a');
+      discoverLink.className = 'link-btn';
+      discoverLink.textContent = ' (discover ↗)';
+      discoverLink.href = q.philosophySource;
+      discoverLink.target = '_blank';
+      discoverLink.rel = 'noopener noreferrer';
+      wrapperEl.appendChild(discoverLink);
+    }
+  }
+
+  quoteEl.removeAttribute('hidden');
+})();

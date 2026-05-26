@@ -1,20 +1,21 @@
 # Blocked page quotes
 
-A quote is displayed at the bottom of the blocked page card. Quotes are drawn from a mixed pool: time-of-day bucketed quotes, self-aware/light quotes, site-specific jokes, and user-defined custom quotes. The system favors quotes the user hasn't seen yet, cycling through the full pool before repeating.
+A quote is displayed at the bottom of the blocked page card. Every quote belongs to a time-of-day bucket (morning / afternoon / evening / night) and may optionally be site-specific or marked as a signature quote. The system favors quotes the user hasn't seen yet, cycling through the full pool before repeating.
 
 ## User stories
 
 - As a user, I want to see a short quote when I'm blocked so the interruption feels intentional rather than punitive.
 - As a user, I want the quotes to vary and eventually cycle so they don't feel stale.
-- As a user, I want to add my own quotes so the feature reflects my own voice.
+- As a user, I want to add my own signature quotes so the feature reflects my own voice.
 
 ## Acceptance criteria
 
 - [ ] A quote is displayed on every blocked page load.
-- [ ] The quote is drawn from the unseen pool first; once all quotes have been shown, the seen list resets and cycling begins again.
-- [ ] Time-of-day bucketing: morning (6–11), afternoon (11–17), evening (17–23), night (23–6) quotes are drawn preferentially from the matching bucket.
-- [ ] If the blocked site matches a site-specific quote pool (rule target substring match), there is a 25% chance the quote is drawn from that pool instead.
-- [ ] Custom quotes (defined in the quotes file) are included in the draw with equal weight to built-in quotes.
+- [ ] Every quote has a `bucket`; the draw prefers quotes matching the current time of day.
+- [ ] Signature quotes (`signature: true`) have a 10% chance of being selected; they are drawn first, before site-specific and regular quotes.
+- [ ] Site-specific quotes (`site` field set) within the current bucket have a 25% chance of being selected when the blocked site matches.
+- [ ] Otherwise a regular quote from the current bucket is drawn.
+- [ ] In all three tiers (signature / site / regular), unseen quotes are preferred; when all quotes in a tier+bucket are exhausted, `seenQuoteIds` resets and cycling begins again.
 - [ ] If a quote has no author, only the quote text is shown (no "— " attribution line).
 - [ ] Seen quote IDs are persisted in `chrome.storage.local` and survive service-worker restarts.
 
@@ -25,51 +26,63 @@ A quote is displayed at the bottom of the blocked page card. Quotes are drawn fr
 | Surface | Role |
 |---|---|
 | `src/pages/blocked/` | Renders the quote and runs the selection logic |
-| `src/shared/quotes.js` | Quote pools (built-in + custom), selection function — new file |
+| `src/shared/quotes.js` | All quote data and selection function — new file |
 
 ### Files likely to change
 
 | File | Change |
 |---|---|
-| `src/pages/blocked/blocked.html` | Add `#quote` and `#quote-author` elements |
-| `src/pages/blocked/blocked.js` | Import and call quote selector, render result |
-| `src/shared/quotes.js` | New file — all quote data and selection logic |
+| `src/pages/blocked/blocked.html` | Already has `#quote` and `#quote-author` elements |
+| `src/pages/blocked/blocked.js` | Replace inline quote array with import from `quotes.js` |
+| `src/shared/quotes.js` | New file — quote data and `pickQuote()` export |
 
 ### Storage / tracking
 
 | Key | Shape | Read by | Written by | Notes |
 |---|---|---|---|---|
-| `seenQuoteIds` | `string[]` | `quotes.js` | `quotes.js` | IDs of quotes shown at least once; reset to `[]` when all quotes have been seen |
+| `seenQuoteIds` | `string[]` | `quotes.js` | `quotes.js` | IDs of quotes shown at least once; reset to `[]` when all non-signature quotes in the active bucket have been seen |
 
-### Quote file format
-
-Each quote object in `src/shared/quotes.js`:
+### Quote object format
 
 ```js
-{ id: 'string', text: 'string', author?: 'string', bucket?: 'morning'|'afternoon'|'evening'|'night', site?: 'string' }
+{
+  id: 'string',           // stable kebab-case slug, never reuse or rename
+  text: 'string',
+  author?: 'string',      // omit for anonymous / joke quotes
+  bucket: 'morning' | 'afternoon' | 'evening' | 'night',
+  site?: 'string',        // substring matched against rule.target (e.g. 'youtube')
+  signature?: true,       // marks user's personal quotes — 10% draw chance
+}
 ```
 
-- `id` — stable unique slug (used for seen-tracking). Never reuse or rename.
-- `bucket` — if set, quote is drawn preferentially when the current hour falls in that range.
-- `site` — if set, quote is eligible for site-specific draw when `rule.target` includes this string (e.g. `'youtube'`).
-- Custom quotes live in the same file under a clearly marked `CUSTOM` section.
+Time-of-day ranges (local hour):
+- **morning** — 6–10
+- **afternoon** — 11–16
+- **evening** — 17–22
+- **night** — 23–5
 
 ### Selection algorithm
 
-1. Build the **eligible pool**: all quotes where `site` is absent or doesn't match the current target.
-2. If the site matches a site-specific pool and `Math.random() < 0.25`, draw from that pool instead (also preferring unseen).
-3. Within the eligible pool, filter to **unseen** quotes first. If none remain, reset `seenQuoteIds` to `[]` and use the full pool.
-4. Among unseen eligible quotes, prefer those whose `bucket` matches the current hour. If none match, use all unseen eligible.
-5. Draw one at random from the result. Save its `id` to `seenQuoteIds`.
+Given the current bucket `B` and blocked site target `T`:
+
+1. **Signature tier** — if `Math.random() < 0.10`: draw from signature quotes in bucket `B`, preferring unseen.
+2. **Site tier** — else if any site quotes in bucket `B` match `T` and `Math.random() < 0.25`: draw from those, preferring unseen.
+3. **Regular tier** — else: draw from non-signature, non-site quotes in bucket `B`, preferring unseen.
+4. In each tier, "preferring unseen" means: filter to IDs not in `seenQuoteIds`; if none remain, reset `seenQuoteIds` to `[]` and use the full tier set.
+5. Save the drawn quote's `id` to `seenQuoteIds`.
+
+### Signature quotes
+
+Signature quotes are added in a clearly marked `// SIGNATURE` section of `quotes.js`. They are written by the user (told to Claude, who adds them with a stable ID). They participate in the same bucket and seen-tracking system as built-in quotes.
 
 ## Edge cases
 
 - No quotes defined: render nothing — `#quote` stays hidden.
-- Storage read fails: fall back to a random draw from the full pool without tracking.
-- All quotes are site-specific for the current site: the 75% general-pool draw still works because site quotes are excluded from the general pool.
+- Storage read fails: fall back to a random draw from the full bucket without tracking.
+- Current bucket has no quotes of the drawn tier: fall through to the next tier rather than showing nothing.
 
 ## Out of scope (v1)
 
-- UI for managing custom quotes (editing, reordering, toggling) — custom quotes are added by editing the file directly.
+- UI for managing signature quotes — added by editing the file directly.
 - Syncing seen quote state across devices.
 - Per-rule quote overrides.
