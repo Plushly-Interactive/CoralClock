@@ -20,6 +20,14 @@ Organized by feature area. Within each area, items are grouped by status: **Done
 - Add a "Tutorial": guided app tour that explains each UI button/user action step by step with a popup for each step — see [guided-tour.md](../features/guided-tour.md)
 - Add a "week" level in the drills, compatible with keyboard navigation.
 
+## Enforcement / Blocked page
+
+Stats currently shown: **Spent today · Limit · Visits today · Unlocks in**
+
+- **Blocked today** — how many times the block triggered on this rule today. Slightly sobering, shows the pattern of coming back repeatedly.
+- **"↑ 2× usual" comparison sub-value** — a small secondary value beneath "Spent today" showing how today compares to the user's average. More insightful on spent time than on block count: "spent 2× your usual" reveals whether today is an outlier, whereas "blocked 2× more" is just a consequence of the limit. Worth revisiting once enough history exists to compute a meaningful average.
+- **Streak** — e.g. "4 / 7 days under limit this week". Motivational, pattern-oriented. Requires per-day limit compliance history.
+
 ## Settings & configuration
 
 - Settings: look for currently fixed, hardcoded values in code that could be user-defined in settings.
