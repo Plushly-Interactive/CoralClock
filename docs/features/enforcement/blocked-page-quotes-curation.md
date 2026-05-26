@@ -106,39 +106,6 @@ Every quote should optionally include a `philosophySource` URL that reveals the 
 
 **Why:** After verifying the quote, curious users can explore why this author/tradition matters. The "Learn more ↗" link provides context without cluttering the primary interaction. Users discover the author's values and philosophy, making the wisdom feel relevant and earned, not imposed.
 
-## Quote Object Structure
-
-```js
-{
-  text: string,           // The quote itself, clear and self-explanatory
-  author?: string,        // Required for all non-proverb quotes; omit only if truly anonymous
-  id: string,             // Stable kebab-case slug (e.g., 'gen-m-1', 'yt-a-2')
-  timeOfDay: string,      // 'morning' | 'afternoon' | 'evening' | 'night'
-  site?: string,          // Optional; substring matched against blocked site (e.g., 'youtube', 'reddit')
-  signature?: true,       // Optional; mascot character quotes (PwetPwet 🦈, Toot 🦊), 10% draw chance — no source required
-  source?: string,        // URL where the quote can be verified (e.g., Goodreads, book page, transcript) — required for general quotes; omit for signature and site-specific quotes
-  philosophySource?: string, // URL to author's work/philosophy for deeper exploration (optional)
-}
-```
-
-### Source Guidelines
-
-**Two-field approach:**
-
-- `**source`** (`↗` link after quote text) — Points to where the quote appears and can be verified. Must visibly contain the quote text. See accepted/rejected source types in criterion 6.
-- `**philosophySource**` (`(discover ↗)` link on author line, optional) — Points to author's broader work and philosophy. Secondary sources (Wikipedia, publisher pages) are acceptable here since the goal is context, not quote verification:
-  - Living authors: Official website, TED talks, research pages
-  - Historical figures: Wikipedia biography
-  - Proverbs: Wikipedia article on the culture or proverb tradition
-  - Scientists: Academic institution page or lab site
-
-**UI rendering:**
-
-- Quote text renders on the first line in main text color, followed by a `↗` link opening `source` in a new tab
-- Author attribution renders on the second line in secondary text color, optionally followed by `(discover ↗)` opening `philosophySource` in a new tab
-
-**Why two fields:** The source link lets users verify the quote is real. The discover link lets curious users explore the author's philosophy without cluttering the primary interaction.
-
 ## Time-of-Day Buckets
 
 Quotes are grouped by local time to match user context:
@@ -151,17 +118,6 @@ Quotes are grouped by local time to match user context:
 | **evening**   | 17–22 | Winding down, reflection           |
 | **night**     | 23–5  | Sleep importance, rest, letting go |
 
-
-## Selection Algorithm
-
-The `selectQuote()` function implements tiered selection:
-
-1. **Signature tier** — 10% chance to draw mascot character quotes (PwetPwet 🦈, Toot 🦊) first (if any exist for the current time of day)
-2. **Site tier** — 50% chance to draw site-specific quotes if the blocked site matches (e.g., YouTube quotes for youtube.com)
-3. **Regular tier** — Draw from general, time-of-day matched quotes
-4. **Seen tracking** — Within each tier, prefer unseen quotes; cycle resets when all are exhausted
-
-This ensures variety and feels intentional rather than random.
 
 ## Site-Specific Quotes
 
@@ -221,7 +177,7 @@ Before finalizing any new quote batch:
 ## Future Maintenance
 
 - **Adding quotes:** Run through all seven criteria before committing
-- **Signature quotes:** User adds directly to the file with stable IDs; participate in same tracking system
+- **Signature quotes:** Team-authored mascot content — add to the `// SIGNATURE` section in `quotes.data.js` with a stable ID following the `sig-[character]-[timeOfDay]-[n]` pattern
 - **Seasonal updates:** Consider rotating quotes by season if user feedback suggests stagnation
 - **Author updates:** If an author's background reveals ethical issues post-publication, remove and replace their quotes
 

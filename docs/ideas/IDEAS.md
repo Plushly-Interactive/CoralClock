@@ -20,6 +20,10 @@ Organized by feature area. Within each area, items are grouped by status: **Done
 - Add a "Tutorial": guided app tour that explains each UI button/user action step by step with a popup for each step — see [guided-tour.md](../features/guided-tour.md)
 - Add a "week" level in the drills, compatible with keyboard navigation.
 
+## Quotes
+
+- **Quote philosophy page** — an in-app page (e.g. accessible from the blocked page or options) that explains the values behind the quote system to users: what makes a quote eligible, why authors are vetted, the mascot characters, and the curation philosophy. Based on the curation doc, keeping only end-user-relevant information (no sourcing rules, no JS field specs).
+
 ## Enforcement / Blocked page
 
 Stats currently shown: **Spent today · Limit · Visits today · Unlocks in**

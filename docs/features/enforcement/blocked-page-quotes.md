@@ -11,7 +11,7 @@ A quote is displayed at the bottom of the blocked page card. Every quote belongs
 ## Acceptance criteria
 
 - [ ] A quote is displayed on every blocked page load.
-- [ ] Every quote has a `bucket`; the draw prefers quotes matching the current time of day.
+- [ ] Every quote has a `timeOfDay`; the draw prefers quotes matching the current time of day.
 - [ ] Signature quotes (`signature: true`) have a 10% chance of being selected; they are drawn first, before site-specific and regular quotes.
 - [ ] Site-specific quotes (`site` field set) within the current bucket have a 50% chance of being selected when the blocked site matches.
 - [ ] Otherwise a regular quote from the current bucket is drawn.
@@ -26,15 +26,17 @@ A quote is displayed at the bottom of the blocked page card. Every quote belongs
 | Surface | Role |
 |---|---|
 | `src/pages/blocked/` | Renders the quote and runs the selection logic |
-| `src/shared/quotes.js` | All quote data and selection function — new file |
+| `src/shared/quotes.js` | Selection logic (`selectQuote`, `pickQuote`) |
+| `src/shared/quotes.data.js` | Quote data array |
 
 ### Files likely to change
 
 | File | Change |
 |---|---|
 | `src/pages/blocked/blocked.html` | Already has `#quote` and `#quote-author` elements |
-| `src/pages/blocked/blocked.js` | Replace inline quote array with import from `quotes.js` |
-| `src/shared/quotes.js` | New file — quote data and `pickQuote()` export |
+| `src/pages/blocked/blocked.js` | Calls `pickQuote()`, renders quote text, source link, author, philosophy link |
+| `src/shared/quotes.js` | `selectQuote()` and `pickQuote()` — selection and storage logic |
+| `src/shared/quotes.data.js` | Quote data array — general, site-specific, and signature quotes |
 
 ### Storage / tracking
 
@@ -46,12 +48,14 @@ A quote is displayed at the bottom of the blocked page card. Every quote belongs
 
 ```js
 {
-  id: 'string',           // stable kebab-case slug, never reuse or rename
+  id: 'string',                // stable kebab-case slug, never reuse or rename
   text: 'string',
-  author?: 'string',      // omit for anonymous / joke quotes
-  bucket: 'morning' | 'afternoon' | 'evening' | 'night',
-  site?: 'string',        // substring matched against rule.target (e.g. 'youtube')
-  signature?: true,       // marks user's personal quotes — 10% draw chance
+  author?: 'string',           // required for general quotes; omit for anonymous; mascot name + emoji for signature quotes
+  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night',
+  site?: 'string',             // substring matched against blocked site (e.g. 'youtube', 'reddit')
+  signature?: true,            // mascot character quotes (PwetPwet 🦈, Toot 🦊) — 10% draw chance
+  source?: 'string',           // URL containing the quote text — required for general quotes; omit for site-specific and signature quotes
+  philosophySource?: 'string', // URL to author's broader work — optional for general quotes; omit for site-specific and signature quotes
 }
 ```
 
@@ -65,7 +69,7 @@ Time-of-day ranges (local hour):
 
 Given the current bucket `B` and blocked site target `T`:
 
-1. **Signature tier** — if `Math.random() < 0.10`: draw from signature quotes in bucket `B`, preferring unseen.
+1. **Signature tier** — if `Math.random() < 0.10`: draw from mascot signature quotes in `timeOfDay` `B`, preferring unseen.
 2. **Site tier** — else if any site quotes in bucket `B` match `T` and `Math.random() < 0.5`: draw from those, preferring unseen.
 3. **Regular tier** — else: draw from non-signature, non-site quotes in bucket `B`, preferring unseen.
 4. In each tier, "preferring unseen" means: filter to IDs not in `seenQuoteIds`; if none remain, reset `seenQuoteIds` to `[]` and use the full tier set.
@@ -73,7 +77,7 @@ Given the current bucket `B` and blocked site target `T`:
 
 ### Signature quotes
 
-Signature quotes are added in a clearly marked `// SIGNATURE` section of `quotes.js`. They are written by the user (told to Claude, who adds them with a stable ID). They participate in the same bucket and seen-tracking system as built-in quotes.
+Signature quotes are mascot character quotes written by the BiteGuard team, added in the `// SIGNATURE` section of `quotes.data.js`. Current mascots: PwetPwet 🦈 (playful tiny shark) and Toot 🦊 (philosophical tiny fox). They participate in the same `timeOfDay` and seen-tracking system as built-in quotes. See the curation doc for authorship rules and character tone guidelines.
 
 ## Edge cases
 
