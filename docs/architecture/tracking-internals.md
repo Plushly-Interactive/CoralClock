@@ -50,6 +50,16 @@ The two entry paths count visits with different dedup rules:
 
 `initTracking` and `reconcileWindows` call `addAudibleTab` with `countVisit=false` — this still records the tab's key in `audibleTabLastVisitKey` (so a later real audible event for the same tab+site isn't recounted) but does not increment visits. They call `addWindowSite` directly, which never increments visits.
 
+### Site vs. subpage visits do not reconcile
+
+Site visits (`sitesBy*`) and subpage visits (`subpagesBy*`) are **independent counters and are not expected to match** — neither per bucket nor summed. Do not reconstruct one from the other; it corrupts correct data. Three structural reasons, all by design:
+
+1. **Subpage tracking is younger than the data.** It was introduced 2026-05-14; buckets before that have site visits with no subpage record at all (`subpageSum = 0, siteVisits > 0`).
+2. **SPA navigation updates subpages only.** `webNavigation.onHistoryStateUpdated` ([background.js](../background.js)) calls `setWindowPath` but not `setWindowSite` (the site is unchanged — same hostname, only the path moved). So path-to-path navigation within a site adds subpage visits without a site visit → `subpageSum > siteVisits`.
+3. **Hour-bucket attribution skew.** A visit is written to the bucket of `localHourKey(now)` at *flush* time, and the site and subpage trackers flush in separate calls. A single session whose site visit and subpage (re)count straddle an hour boundary lands the two counts in adjacent hour buckets — so per-hour counts can diverge in *either* direction, while per-day they roughly reconcile.
+
+A real overcount, by contrast, shows up as a large single-key visit delta in one flush (see the flush ledger under [Flush](#flush)) — not as a steady site/subpage gap.
+
 ## Listener model
 
 All tab/window listeners in [background.js](../background.js) are gated on `await bootstrapDone` before mutating tracking state. This guarantees:
