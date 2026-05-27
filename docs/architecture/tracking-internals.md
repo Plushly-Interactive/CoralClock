@@ -43,12 +43,12 @@ It is called whenever the tracked-state of a site is about to change in a way th
 
 ## Visit semantics
 
-Session-based: a visit is added when a site transitions from fully untracked to tracked.
+The two entry paths count visits with different dedup rules:
 
-- `[addAudibleTab](../tracking.js#L45)` computes `wasTracked = wasActive || wasAudible` *before* mutating the state and increments visits only if `!wasTracked`.
-- `[setWindowSite](../tracking.js#L118)` does the same: reads the existing state's `wasActive || wasAudible` *after* removing the old window (which only affects the old siteId, never the new one), and increments visits only if untracked.
+- **Active path** — `[setWindowSite](../tracking.js#L118)` is session-based: it reads the existing state's `wasActive || wasAudible` *after* removing the old window (which only affects the old siteId, never the new one), and increments visits only if the new site was untracked.
+- **Audio path** — `[addAudibleTab](../tracking.js#L45)` is per-tab: it counts a visit only when the tab's last-counted key differs from the new key, tracked in `audibleTabLastVisitKey: Map<tabId, key>`. This map is **not** cleared by `removeAudibleTab` (only `audibleTabToKey` is), so it survives audible→silent→audible flaps and the `countVisit=false` restore path on SW restart. A tab that keeps playing one site is counted once, regardless of audio interruptions, player reloads, or restarts. The map is cleared only by losing the whole service-worker lifecycle; stale closed-tab entries are harmless (a reused tabId on a different site has a different key).
 
-`initTracking` and `reconcileWindows` call `addAudibleTab` with `countVisit=false` to avoid spurious visits on bootstrap/recovery, and call `addWindowSite` directly (which never increments visits).
+`initTracking` and `reconcileWindows` call `addAudibleTab` with `countVisit=false` — this still records the tab's key in `audibleTabLastVisitKey` (so a later real audible event for the same tab+site isn't recounted) but does not increment visits. They call `addWindowSite` directly, which never increments visits.
 
 ## Listener model
 

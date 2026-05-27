@@ -164,6 +164,11 @@ export function createRangeTracker() {
   const windowToKey = new Map();
   const minimizedWindowIds = new Set();
   const audibleTabToKey = new Map();
+  // Last key each tab was counted as an audio visit for. Unlike audibleTabToKey
+  // (cleared when a tab goes silent), this survives audible→silent→audible flaps
+  // and the countVisit=false restore path on service-worker restart, so a tab
+  // that keeps playing the same site is counted once, not on every resume.
+  const audibleTabLastVisitKey = new Map();
   const pendingActive = new Map();
   const pendingAudio = new Map();
   const pendingOverlap = new Map();
@@ -266,16 +271,18 @@ export function createRangeTracker() {
     recordElapsed(key);
     s.audibleTabIds.add(tabId);
     s.wasAudible = true;
-    if (!wasTracked) {
-      s.startedAt = Date.now();
-      if (countVisit) {
-        pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
-        dbg('addAudibleTab: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
-      } else {
-        dbg('addAudibleTab: untracked but countVisit=false, no visit');
-      }
+    if (!wasTracked) s.startedAt = Date.now();
+    // A visit is "this tab started playing this site", counted once — not on
+    // every audible resume. Gate on the tab's last-seen key (which survives
+    // silent gaps and is restored on SW restart via countVisit=false), so flaps
+    // and restarts don't re-count a tab still on the same site.
+    const alreadyCounted = audibleTabLastVisitKey.get(tabId) === key;
+    audibleTabLastVisitKey.set(tabId, key);
+    if (countVisit && !alreadyCounted) {
+      pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
+      dbg('addAudibleTab: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
     } else {
-      dbg('addAudibleTab: visit NOT counted (already tracked) wasActive=', s.wasActive);
+      dbg('addAudibleTab: visit NOT counted; alreadyCounted=', alreadyCounted, 'countVisit=', countVisit);
     }
   }
 
