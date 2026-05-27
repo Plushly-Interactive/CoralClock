@@ -49,6 +49,9 @@ export function navButton(btnEl, url) {
     if (e.ctrlKey || e.metaKey) window.open(url, '_blank');
     else window.location.href = url;
   });
+  btnEl.addEventListener('mousedown', (e) => {
+    if (e.button === 1) e.preventDefault(); // suppress middle-click autoscroll
+  });
   btnEl.addEventListener('auxclick', (e) => {
     if (e.button === 1) window.open(url, '_blank'); // middle click
   });

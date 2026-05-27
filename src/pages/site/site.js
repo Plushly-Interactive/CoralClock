@@ -444,15 +444,13 @@ function renderSubpages(range) {
     const drill = document.createElement('div');
     drill.className = 'subpage-drill';
     drill.innerHTML = `<span class="subpage-path">${display}${star}</span><span class="subpage-num">${num}</span>`;
-    drill.onclick = () => {
-      sessionStorage.setItem('subpageDrill', JSON.stringify({
-        siteIds: effectiveSiteIds,
-        path: row.path,
-        prefix: row.truncated,
-        stripParams,
-      }));
-      location.href = '../path/path.html';
-    };
+    const params = new URLSearchParams();
+    params.set('ids', effectiveSiteIds.join(','));
+    params.set('path', row.path);
+    if (row.truncated) params.set('prefix', '1');
+    if (stripParams) params.set('stripParams', '1');
+    const pathHref = `../path/path.html?${params}`;
+    navButton(drill, pathHref);
     let openPath = row.path;
     if (row.truncated) {
       const prefix = row.path + '/';

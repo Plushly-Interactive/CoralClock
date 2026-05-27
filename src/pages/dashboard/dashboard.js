@@ -13,9 +13,7 @@ import { PREF_HIDE_BRIEF, PREF_MERGE_MODE, PREF_GROUP_MODE } from '../../shared/
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
-document.querySelector('#prune-btn').addEventListener('click', () => {
-  location.href = '../storage-pruning/storage-pruning.html';
-});
+navButton(document.querySelector('#prune-btn'), '../storage-pruning/storage-pruning.html');
 const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#dashboard-body');
 const emptyMsg = document.querySelector('#empty-msg');
@@ -176,7 +174,7 @@ function renderTable(rows) {
     </tr>`;
   }).join('');
   tbody.querySelectorAll('tr.clickable').forEach(row => {
-    row.addEventListener('click', () => { location.href = row.dataset.href; });
+    navButton(row, row.dataset.href);
   });
   entriesCount.textContent = `${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`;
   updateHeaders();
