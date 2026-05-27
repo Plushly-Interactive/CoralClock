@@ -18,7 +18,7 @@ import {
   SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
 } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
-import { dbg } from './trackingUtils.js';
+import { dbg, isDebug, initDebug } from './trackingUtils.js';
 import {
   MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
@@ -26,7 +26,12 @@ import {
   MSG_INVALIDATE_SITES_CACHE,
 } from '../shared/msgTypes.js';
 
-console.log('BiteGuard: background started');
+// Logged on every service-worker (re)start. A burst of these is the signal that
+// the worker is churning (MV3 idle-suspend, crash-on-load, or dev reload), which
+// can desync in-memory tracking state from live tabs. Unconditional (not gated
+// on _debug): it runs at module load before initDebug() reads the flag, and it
+// carries no URL/sensitive data — just a timestamp.
+console.log(`[BG-DBG ${new Date().toISOString()}] SERVICE WORKER STARTED`);
 
 let cachedByDay = null;
 let cachedByHour = null;
@@ -73,10 +78,22 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 async function bootstrap() {
-  await ensureStorageVersion();
-  bootstrapAt = Date.now();
-  await initTracking();
-  await initSubpageTracking();
+  await initDebug();
+  dbg('bootstrap: start');
+  try {
+    await ensureStorageVersion();
+    bootstrapAt = Date.now();
+    await initTracking();
+    await initSubpageTracking();
+    dbg('bootstrap: done, bootstrapAt=', bootstrapAt);
+    return;
+  } catch (e) {
+    // A throw here means init never restored live tabs into the tracker, so
+    // subsequent events run against empty state (the root of phantom visits we
+    // chased). Surface it loudly instead of failing silently.
+    dbg('bootstrap: FAILED', e?.message ?? e, e?.stack);
+    throw e;
+  }
 }
 
 // --- Messages ---
@@ -235,7 +252,7 @@ chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
 
 chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   await bootstrapDone;
-  dbg('onUpdated: tabId=', _tabId, 'changeInfo=', JSON.stringify(changeInfo), 'url=', tab.url, 'active=', tab.active, 'audible=', tab.audible, 'muted=', tab.mutedInfo?.muted);
+  if (isDebug()) dbg('onUpdated: tabId=', _tabId, 'changeInfo=', JSON.stringify(changeInfo), 'url=', tab.url, 'active=', tab.active, 'audible=', tab.audible, 'muted=', tab.mutedInfo?.muted);
   if (changeInfo.status === 'complete' && tab.active) {
     const siteId = siteIdFromUrl(tab.url);
     const path = pathFromUrl(tab.url);
