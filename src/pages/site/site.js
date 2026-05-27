@@ -393,19 +393,20 @@ function renderSubpages(range) {
   }
   chartsGrid.classList.add('has-subpages');
 
-  if (hideBriefSubpages && !mergePaths(raw, currentDepth).some(r => r.activeMs >= 60_000)) {
+  const getTotalMs = (r) => r.activeMs + r.audioMs - (r.overlapMs ?? 0);
+  if (hideBriefSubpages && !mergePaths(raw, currentDepth).some(r => getTotalMs(r) >= 60_000)) {
     const actualMax = Math.max(...paths.map(p => p.split('/').filter(Boolean).length));
     const shownMax = Math.min(5, actualMax - 1);
     for (let d = shownMax; d >= 1; d--) {
-      if (mergePaths(raw, d).some(r => r.activeMs >= 60_000)) { currentDepth = d; break; }
+      if (mergePaths(raw, d).some(r => getTotalMs(r) >= 60_000)) { currentDepth = d; break; }
     }
   }
 
   buildDepthToggle(paths);
 
   let merged = mergePaths(raw, currentDepth);
-  merged.sort((a, b) => currentSort === 'time' ? b.activeMs - a.activeMs : b.visits - a.visits);
-  if (hideBriefSubpages) merged = merged.filter(r => r.activeMs >= 60_000);
+  merged.sort((a, b) => currentSort === 'time' ? getTotalMs(b) - getTotalMs(a) : b.visits - a.visits);
+  if (hideBriefSubpages) merged = merged.filter(r => getTotalMs(r) >= 60_000);
 
   const pathSiteMs = {};
   if (effectiveSiteIds.length > 1) {
@@ -437,7 +438,7 @@ function renderSubpages(range) {
     const display = escapeHtml(decoded);
     const star = row.truncated ? '<span class="subpage-truncated">*</span>' : '';
     const num = currentSort === 'time'
-      ? formatMs(row.activeMs)
+      ? formatMs(row.activeMs + row.audioMs - (row.overlapMs ?? 0))
       : `${row.visits} visit${row.visits === 1 ? '' : 's'}`;
     li.title = decoded + (row.truncated ? '*' : '');
     const drill = document.createElement('div');
