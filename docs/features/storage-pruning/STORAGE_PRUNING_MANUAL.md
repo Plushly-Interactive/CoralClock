@@ -8,12 +8,14 @@ Manual pruning flips the model: user controls retention, extension monitors size
 
 Four persisted stores, each a single `chrome.storage.local` key:
 
-| Key | Structure | Notes |
-|---|---|---|
-| `analyticsByDay` | `{ [dayKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }` | One entry per site per day |
-| `analyticsByHour` | `{ [hourKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }` | One entry per site per hour-slot visited |
-| `subpagesByDay` | `{ [dayKey]: { [siteId]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }` | One entry per path per site per day |
-| `subpagesByHour` | `{ [hourKey]: { [siteId]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }` | One entry per path per site per hour-slot |
+
+| Key               | Structure                                                                           | Notes                                     |
+| ----------------- | ----------------------------------------------------------------------------------- | ----------------------------------------- |
+| `analyticsByDay`  | `{ [dayKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }`              | One entry per site per day                |
+| `analyticsByHour` | `{ [hourKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }`             | One entry per site per hour-slot visited  |
+| `subpagesByDay`   | `{ [dayKey]: { [siteId]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }`  | One entry per path per site per day       |
+| `subpagesByHour`  | `{ [hourKey]: { [siteId]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }` | One entry per path per site per hour-slot |
+
 
 `dayKey` = `"2026-05-03"`, `hourKey` = `"2026-05-03T14"`.
 
@@ -23,7 +25,7 @@ Subpages are the most expensive store — a site like YouTube can accumulate one
 
 ## Pruning strategies
 
-### 1. Insignificant records (first to implement)
+### 1. Insignificant records (implemented)
 
 Delete records where the tracked time is too low to be meaningful. This is the lowest-risk pruning — it doesn't discard real history, only noise.
 
@@ -33,17 +35,20 @@ A record is insignificant if its total tracked time is below a threshold. Best m
 
 Candidate thresholds:
 
-| Threshold | What it catches |
-|---|---|
-| < 5 s | Accidental navigations, prefetches, instant bounces |
-| < 30 s | Brief tab openings, skimmed-over pages |
-| < 60 s | Conservative; only catches very fast bounces |
+
+| Threshold | What it catches                                     |
+| --------- | --------------------------------------------------- |
+| < 5 s     | Accidental navigations, prefetches, instant bounces |
+| < 30 s    | Brief tab openings, skimmed-over pages              |
+| < 60 s    | Conservative; only catches very fast bounces        |
+
 
 Subpages are the main target here — a YouTube video opened for 3 seconds creates a path record identical in structure to one watched for an hour. Sites are less likely to have truly insignificant records (if you visited a domain at all, something happened).
 
 **Granularity:** insignificant pruning operates at the record level within a bucket, not the whole bucket. A day bucket with 20 sites keeps 19 of them after one insignificant site is pruned.
 
 **Open question:** should insignificant pruning apply to:
+
 - Subpages only (highest impact, lowest risk of surprising the user)
 - Both sites and subpages
 - Configurable per type
@@ -73,10 +78,12 @@ Chrome quota without `unlimitedStorage`: **10 MB**.
 
 ## Alerting thresholds
 
-| Threshold | Action |
-|---|---|
-| 70% (7 MB) | Show warning in options page |
+
+| Threshold    | Action                                             |
+| ------------ | -------------------------------------------------- |
+| 70% (7 MB)   | Show warning in options page                       |
 | 95% (9.5 MB) | Show urgent warning, recommend pruning immediately |
+
 
 ---
 
@@ -85,6 +92,7 @@ Chrome quota without `unlimitedStorage`: **10 MB**.
 ### Where it lives
 
 Options:
+
 - A section in the main settings page
 - A dedicated "Data & Storage" tab
 
@@ -96,17 +104,7 @@ To be decided — see open questions below.
 
 ## Open questions
 
-1. **Insignificant threshold:** which floor — 5 s, 30 s, 60 s? User-configurable or fixed?
-2. **Insignificant scope:** subpages only, or sites too?
-3. **Date retention UI model:** sliders, step-by-step delete, or safe-defaults + expert mode?
-4. **UI location:** settings section or dedicated tab?
-5. **Re-measurement frequency:** on startup only, or also after each flush?
+1. **Date retention UI model:** sliders, step-by-step delete, or safe-defaults + expert mode?
+2. **UI location:** settings section or dedicated tab?
+3. **Re-measurement frequency:** on startup only, or also after each flush?
 
----
-
-## Next steps
-
-- [ ] Implement insignificant-record pruning (define threshold, apply to subpagesByDay + subpagesByHour, optionally analyticsByDay + analyticsByHour)
-- [ ] Implement size measurement via `getBytesInUse`
-- [ ] Design pruning UI page
-- [ ] Implement date-based retention pruning

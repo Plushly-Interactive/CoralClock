@@ -83,12 +83,6 @@ No new storage keys. All four analytics keys change semantics on their outer sit
 - **Label formatter inputs:** for `example.com` (no subdomain part), output is `"Example"` (eTLD+1 only, title-cased). For `a.b.example.com`, output is `"Example B A"` (eTLD+1 first, then subdomain labels in reverse, space-joined). All title-cased.
 - **Site detail page URL stability:** `/site?siteId=google.com` (eTLD+1) keeps working; the page enumerates matching hostnames internally. Linking by hostname (`?siteId=mail.google.com`) is also supported for future "open subdomain" links.
 
-## Out of scope (v1)
-
-- Known-brands override map for the label formatter (e.g. `amazonaws` → "AWS", `ycombinator` → "Hacker News"). Mechanical title-case only in v1; brand mapping is a future idea.
-- Subdomain-level enforcement rules. Rules continue to target `siteId` (which is now a hostname), but no new rule-targeting UI is added. Enforcement is being rebuilt separately per `docs/enforcement.md`.
-- Per-page (site, path) group-by-eTLD+1 toggles. Toggle exists only on the dashboard for v1.
-
 ## Open questions
 
 - **Site detail page placement of the subdomain breakdown.** Options discussed:

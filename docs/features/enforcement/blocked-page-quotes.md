@@ -10,39 +10,45 @@ A quote is displayed at the bottom of the blocked page card. Every quote belongs
 
 ## Acceptance criteria
 
-- [ ] A quote is displayed on every blocked page load.
-- [ ] Every quote has a `timeOfDay`; the draw prefers quotes matching the current time of day.
-- [ ] Signature quotes (`signature: true`) have a 10% chance of being selected; they are drawn first, before site-specific and regular quotes.
-- [ ] Site-specific quotes (`site` field set) within the current bucket have a 50% chance of being selected when the blocked site matches.
-- [ ] Otherwise a regular quote from the current bucket is drawn.
-- [ ] In all three tiers (signature / site / regular), unseen quotes are preferred; when all quotes in a tier+bucket are exhausted, `seenQuoteIds` resets and cycling begins again.
-- [ ] If a quote has no author, only the quote text is shown (no "— " attribution line).
-- [ ] Seen quote IDs are persisted in `chrome.storage.local` and survive service-worker restarts.
+- A quote is displayed on every blocked page load.
+- Every quote has a `timeOfDay`; the draw prefers quotes matching the current time of day.
+- Signature quotes (`signature: true`) have a 10% chance of being selected; they are drawn first, before site-specific and regular quotes.
+- Site-specific quotes (`site` field set) within the current bucket have a 50% chance of being selected when the blocked site matches.
+- Otherwise a regular quote from the current bucket is drawn.
+- In all three tiers (signature / site / regular), unseen quotes are preferred; when all quotes in a tier+bucket are exhausted, `seenQuoteIds` resets and cycling begins again.
+- If a quote has no author, only the quote text is shown (no "— " attribution line).
+- Seen quote IDs are persisted in `chrome.storage.local` and survive service-worker restarts.
 
 ## Scope
 
 ### Surfaces involved
 
-| Surface | Role |
-|---|---|
-| `src/pages/blocked/` | Renders the quote and runs the selection logic |
-| `src/shared/quotes.js` | Selection logic (`selectQuote`, `pickQuote`) |
-| `src/shared/quotes.data.js` | Quote data array |
+
+| Surface                     | Role                                           |
+| --------------------------- | ---------------------------------------------- |
+| `src/pages/blocked/`        | Renders the quote and runs the selection logic |
+| `src/shared/quotes.js`      | Selection logic (`selectQuote`, `pickQuote`)   |
+| `src/shared/quotes.data.js` | Quote data array                               |
+
 
 ### Files likely to change
 
-| File | Change |
-|---|---|
-| `src/pages/blocked/blocked.html` | Already has `#quote` and `#quote-author` elements |
-| `src/pages/blocked/blocked.js` | Calls `pickQuote()`, renders quote text, source link, author, philosophy link |
-| `src/shared/quotes.js` | `selectQuote()` and `pickQuote()` — selection and storage logic |
-| `src/shared/quotes.data.js` | Quote data array — general, site-specific, and signature quotes |
+
+| File                             | Change                                                                        |
+| -------------------------------- | ----------------------------------------------------------------------------- |
+| `src/pages/blocked/blocked.html` | Already has `#quote` and `#quote-author` elements                             |
+| `src/pages/blocked/blocked.js`   | Calls `pickQuote()`, renders quote text, source link, author, philosophy link |
+| `src/shared/quotes.js`           | `selectQuote()` and `pickQuote()` — selection and storage logic               |
+| `src/shared/quotes.data.js`      | Quote data array — general, site-specific, and signature quotes               |
+
 
 ### Storage / tracking
 
-| Key | Shape | Read by | Written by | Notes |
-|---|---|---|---|---|
+
+| Key            | Shape      | Read by     | Written by  | Notes                                                                                                              |
+| -------------- | ---------- | ----------- | ----------- | ------------------------------------------------------------------------------------------------------------------ |
 | `seenQuoteIds` | `string[]` | `quotes.js` | `quotes.js` | IDs of quotes shown at least once; reset to `[]` when all non-signature quotes in the active bucket have been seen |
+
 
 ### Quote object format
 
@@ -60,6 +66,7 @@ A quote is displayed at the bottom of the blocked page card. Every quote belongs
 ```
 
 Time-of-day ranges (local hour):
+
 - **morning** — 6–10
 - **afternoon** — 11–16
 - **evening** — 17–22
@@ -85,8 +92,3 @@ Signature quotes are mascot character quotes written by the BiteGuard team, adde
 - Storage read fails: fall back to a random draw from the full bucket without tracking.
 - Current bucket has no quotes of the drawn tier: fall through to the next tier rather than showing nothing.
 
-## Out of scope (v1)
-
-- UI for managing signature quotes — added by editing the file directly.
-- Syncing seen quote state across devices.
-- Per-rule quote overrides.

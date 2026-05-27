@@ -177,5 +177,4 @@ Smallest shippable slice first:
 ## References
 
 - Previous enforcement design (since removed): [docs/archive/TRACKING_REDESIGN.md](../archive/TRACKING_REDESIGN.md), [docs/archive/REDESIGN_ISSUES.md](../archive/REDESIGN_ISSUES.md).
-- Path-scoped limits origin: [docs/features/subpage-tracking/TODO.md](subpage-tracking/TODO.md).
 - General feature ideas / open questions: [docs/ideas/IDEAS.md](../ideas/IDEAS.md).
