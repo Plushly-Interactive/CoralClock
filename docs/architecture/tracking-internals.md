@@ -20,7 +20,7 @@ Pending ranges, flushed once per minute:
 - `pendingActive`, `pendingAudio`, `pendingOverlap: Map<siteId, [from, to][]>`
 - `pendingVisits: Map<siteId, count>`
 
-All state lives only in the running service worker. Persistence happens via `flushToStorage` writing to `chrome.storage.local` keys `analyticsByDay` and `analyticsByHour`.
+All state lives only in the running service worker. Persistence happens via `flushToStorage` writing to `chrome.storage.local` keys `sitesByDay` and `sitesByHour`.
 
 ## Time recording
 
@@ -39,7 +39,7 @@ It is called whenever the tracked-state of a site is about to change in a way th
 
 `startedAt` is reset on every `recordElapsed` call so that subsequent calls record contiguous, non-overlapping ranges.
 
-`[splitByHour](../tracking.js#L104)` splits a range across hour boundaries when the flusher writes to `analyticsByHour`. Each hour bucket is capped at 3,600,000 ms; overflow is dropped, and the day total only adds the actually-applied delta.
+`[splitByHour](../tracking.js#L104)` splits a range across hour boundaries when the flusher writes to `sitesByHour`. Each hour bucket is capped at 3,600,000 ms; overflow is dropped, and the day total only adds the actually-applied delta.
 
 ## Visit semantics
 
@@ -57,7 +57,7 @@ All tab/window listeners in [background.js](../background.js) are gated on `awai
 - Listeners never run on empty state. By the time a listener executes, `initTracking` has populated `siteStates`/`windowToSite`/`audibleTabToSite` from the live Chrome state.
 - `initTracking` cannot race with a listener that already ran `setWindowSite`. The orphan-`activeWindowIds` race that this used to allow (listener sets `windowToSite[w]=X`, then `initTracking` overwrites it with `addWindowSite(w, Y)` without cleaning X's `activeWindowIds`) is eliminated.
 
-`onMessage` is intentionally not gated — it only reads from `chrome.storage.local` and the in-memory analytics caches, never the tracking state.
+`onMessage` is intentionally not gated — it only reads from `chrome.storage.local` and the in-memory tracking data caches, never the tracking state.
 
 ## Bootstrap
 
@@ -99,7 +99,7 @@ The `flush` alarm fires every minute. The handler in [background.js](../backgrou
 2. If `coldStart`, awaits `chrome.storage.local.remove('_trackingSnapshot')` and clears the flag. See cold-start handling above.
 3. `await recoverFromSnapshot(bootstrapAt)` — runs once per SW lifecycle (idempotent via the `_recovered` flag).
 4. `await reconcileWindows()` — picks up window/tab state changes that may have been missed (minimized windows, closed audible tabs, etc.) and corrects `windowToSite`/`audibleTabToSite`.
-5. `await flushToStorage()` — closes all currently-open ranges via `recordElapsed`, then writes to `analyticsByDay`/`analyticsByHour`.
+5. `await flushToStorage()` — closes all currently-open ranges via `recordElapsed`, then writes to `sitesByDay`/`sitesByHour`.
 6. `await saveSnapshot()` — persists current state for the next recovery.
 7. Invalidates the in-memory `cachedByDay`/`cachedByHour`.
 

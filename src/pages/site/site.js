@@ -8,10 +8,10 @@ import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
+import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
 import {
-  MSG_GET_ANALYTICS_BY_DAY, MSG_GET_ANALYTICS_BY_HOUR_TODAY,
-  MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
+  MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
+  MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
   MSG_GET_AVG_PER_CLOCK_HOUR,
 } from '../../shared/msgTypes.js';
 import { PREF_HIDE_BRIEF, PREF_STRIP_PARAMS } from '../../shared/prefKeys.js';
@@ -170,7 +170,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days from earliest data, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => analyticsRequest({
+  loadAvgPerHour: (range) => fetchTrackingData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
   }),
 });
@@ -193,7 +193,7 @@ initDrill({
   rangeSelect,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
-    const hourData = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, dayKey });
+    const hourData = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_FOR_DAY, dayKey });
     const result = {};
     for (let h = 0; h < 24; h++) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
@@ -201,7 +201,7 @@ initDrill({
     }
     return result;
   },
-  getAvgPerClockHour: (dayKeys) => analyticsRequest({
+  getAvgPerClockHour: (dayKeys) => fetchTrackingData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range: null, dayKeys,
   }),
   render,
@@ -218,8 +218,8 @@ window.addEventListener('pageshow', () => {
 });
 
 async function loadAndRender() {
-  byDayCache = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_DAY });
-  subpagesByDayCache = await analyticsRequest({ type: MSG_GET_SUBPAGES_BY_DAY });
+  byDayCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_DAY });
+  subpagesByDayCache = await fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_DAY });
   resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
@@ -241,7 +241,7 @@ function resolveAggregationMode() {
 
 async function loadByHour() {
   if (byHourCache) return;
-  byHourCache = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_HOUR_TODAY });
+  byHourCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_TODAY });
 }
 
 function siteDayKeysForRange(range) {

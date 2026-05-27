@@ -25,7 +25,7 @@ A manual pruning tool that lets the user find and delete tracked identities (dom
 - Each column header is clickable to sort the group by that column, toggling ascending/descending. Sorting one group does not scroll the page or reset other groups.
 - Each group has a "Selected" header checkbox that selects/deselects every row in the group and shows an indeterminate state when only some rows are selected.
 - A running summary shows count of selected identities, total record count behind them, and an estimated bytes-saved figure (computed by simulating the deletion against a clone of the scanned stores).
-- A `Delete selected` button at the bottom of the results applies the deletions, sends `invalidateAnalyticsCache` to the background so other UI views reflect the change, shows a transient notification with the **actual** freed bytes (from `chrome.storage.local.getBytesInUse` before/after), then re-runs the scan and refreshes the list.
+- A `Delete selected` button at the bottom of the results applies the deletions, sends `invalidateSitesCache` to the background so other UI views reflect the change, shows a transient notification with the **actual** freed bytes (from `chrome.storage.local.getBytesInUse` before/after), then re-runs the scan and refreshes the list.
 - If no records match the threshold, the results list area shows an empty-state message and the delete button is hidden.
 - Changing the threshold input persists the new value to `settings.pruneThresholdSeconds` on each input event.
 
@@ -38,7 +38,7 @@ A manual pruning tool that lets the user find and delete tracked identities (dom
 | -------------------------- | ---------------------------------------------------------------------------------- |
 | New `storage-pruning` page | Threshold input, scope checkboxes, results list, delete action, storage bar        |
 | dashboard                  | Header button linking to the new page                                              |
-| background                 | Receives `invalidateAnalyticsCache` after each successful prune (existing handler) |
+| background                 | Receives `invalidateSitesCache` after each successful prune (existing handler) |
 
 
 ### Files likely to change
@@ -61,8 +61,8 @@ A manual pruning tool that lets the user find and delete tracked identities (dom
 
 | Key               | Shape                                    | Read by              | Written by           | Notes                                                                                 |
 | ----------------- | ---------------------------------------- | -------------------- | -------------------- | ------------------------------------------------------------------------------------- |
-| `analyticsByDay`  | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
-| `analyticsByHour` | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
+| `sitesByDay`  | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
+| `sitesByHour` | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
 | `subpagesByDay`   | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId + path`)                                               |
 | `subpagesByHour`  | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId + path`)                                               |
 | `settings`        | `{ pruneThresholdSeconds: number, ... }` | storage-pruning page | storage-pruning page | new key, bag of user preferences (extensible). `pruneThresholdSeconds` defaults to 30 |
@@ -70,7 +70,7 @@ A manual pruning tool that lets the user find and delete tracked identities (dom
 
 An **identity** is `siteId` for domain stores and `siteId + path` for subpage stores. An identity is **insignificant** in a given store when, summed across every record stored for it in that store, both `totalActiveMs < threshold` AND `totalAudioMs < threshold`. Insignificance is evaluated per store independently — pruning the hourly entries does not touch the daily ones.
 
-After any prune, the page sends `{ type: 'invalidateAnalyticsCache' }` to background so analytics caches (`cachedByDay` / `cachedByHour` / `cachedSubpagesByDay` / `cachedSubpagesByHour`) are dropped.
+After any prune, the page sends `{ type: 'invalidateSitesCache' }` to background so tracking data caches (`cachedByDay` / `cachedByHour` / `cachedSubpagesByDay` / `cachedSubpagesByHour`) are dropped.
 
 ## Edge cases
 

@@ -44,7 +44,7 @@ function formatCountdown(ms) {
   if (!ruleId) return;
 
   const stores = await chrome.storage.local.get([
-    'rules', 'analyticsByDay', 'analyticsByHour', 'subpagesByDay', 'subpagesByHour',
+    'rules', 'sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour',
   ]);
   const rule = (stores.rules ?? []).find(r => r.id === ruleId);
   if (!rule) return;

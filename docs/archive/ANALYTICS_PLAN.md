@@ -1,8 +1,8 @@
-# BiteGuard analytics: data model and implementation plan
+# BiteGuard tracking: data model and implementation plan
 
 ## Context from the codebase
 
-The tracking system is implemented in `[tracking.js](d:\GitHub\Personal Repositories\BiteGuard\tracking.js)`. `flushToStorage()` (called once per minute by the flush alarm) writes elapsed ms and visit counts into `analyticsByDay` and `analyticsByHour` in `chrome.storage.local`. `timeRecords` and `dailyRecords` are also written but are legacy keys left over from the old blocking system — they will be removed or repurposed when the rule/blocking system is reworked.
+The tracking system is implemented in `[tracking.js](d:\GitHub\Personal Repositories\BiteGuard\tracking.js)`. `flushToStorage()` (called once per minute by the flush alarm) writes elapsed ms and visit counts into `sitesByDay` and `sitesByHour` in `chrome.storage.local`. `timeRecords` and `dailyRecords` are also written but are legacy keys left over from the old blocking system — they will be removed or repurposed when the rule/blocking system is reworked.
 
 ## Your choices (locked in for this plan)
 
@@ -24,17 +24,17 @@ UI can show `**siteLabel`** as primary text and `**siteId`** (or TLD) as seconda
 
 ### 1) Flush path (implemented)
 
-`flushToStorage()` in `tracking.js` already writes elapsed ms and visit counts into `analyticsByDay[day][siteId]` and `analyticsByHour[hour][siteId]` once per minute. The shape is `{ ms, visits }` (v1). Future fields (`audioMs`, `overlapMs`) will be added via a migration in `migrations.js`.
+`flushToStorage()` in `tracking.js` already writes elapsed ms and visit counts into `sitesByDay[day][siteId]` and `sitesByHour[hour][siteId]` once per minute. The shape is `{ ms, visits }` (v1). Future fields (`audioMs`, `overlapMs`) will be added via a migration in `migrations.js`.
 
-### 2) Analytics buckets (primary on-disk shape)
+### 2) Data buckets (primary on-disk shape)
 
 Use **calendar buckets in the user’s local timezone** (document this; all “day/week/month” filters align to local midnight unless you later add a setting).
 
 **Option A — start simple (fits `chrome.storage.local` first)**
 
 ```ts
-// analytics v1 — conceptual shape
-analytics: {
+// sites v1 — conceptual shape
+sites: {
   version: 1,
   // key: local calendar day "YYYY-MM-DD"
   byDay: Record<string, Record<string /* siteId */, number /* ms */>>,
@@ -64,7 +64,7 @@ You want a chart for a **chosen key** (`siteId` or a **group** aggregate) that s
   - `**avg[H] = sum[H] / D`** — “average amount of this site’s time that fell in the 1 h slot *H* per day in the window.”  
   - **Alternatives** (document in UI or settings if you ever switch): divide by “days where the user had *any* browsing” (denominator varies by `H`), or divide by exact count of `(date, H)` pairs present (similar to `D` for full days). Pick one and label the chart axis helpfully (e.g. “per day in range”).
 - **Groups**: For a group, `sum[H]` is the sum of `byHour` values for **all** `siteId`s in the group for that bucket key (then same `avg[H]` formula), or equivalently pre-aggregate in memory when rendering.
-- **Edge cases**: **DST** (a day with 23 or 25 hours): bucket keys should come from real local timestamps so counts stay consistent. **Incomplete “today”**: either include partial data with the same `D` or exclude “today” from the average; state the choice in `ANALYTICS.md`.
+- **Edge cases**: **DST** (a day with 23 or 25 hours): bucket keys should come from real local timestamps so counts stay consistent. **Incomplete “today”**: either include partial data with the same `D` or exclude “today” from the average; state the choice in `TRACKING_DATA.md`.
 
 This chart **reinforces choosing Option B** (hourly buckets) early, not only as a “nice to have.”
 
@@ -73,54 +73,54 @@ This chart **reinforces choosing Option B** (hourly buckets) early, not only as 
 Separate storage from raw buckets:
 
 ```ts
-analyticsGroups: Array<{
+sitesGroups: Array<{
   id: string;
   name: string;
   siteIds: string[]; // explicit membership; optional "add from current rules" helper later
 }>
 ```
 
-Aggregates for a group = sum of `ms` for contained `siteIds` over the selected time range (computed in the analytics page from `byDay` / `byHour`, not duplicated in storage).
+Aggregates for a group = sum of `ms` for contained `siteIds` over the selected time range (computed in the UI page from `byDay` / `byHour`, not duplicated in storage).
 
 ### 4) Long “as far back as possible” history and pruning
 
 - `**chrome.storage.local**` has a practical quota (~10MB). Heavy multi-year **hourly** data will hit it.  
-- **Plan split**: keep **recent** detailed buckets in `storage.local`; for “years” of history, **migrate archive buckets to IndexedDB** (much larger quota on extension origin) with the same keying scheme, and query merges **recent + archive** in the analytics page.  
+- **Plan split**: keep **recent** detailed buckets in `storage.local`; for “years” of history, **migrate archive buckets to IndexedDB** (much larger quota on extension origin) with the same keying scheme, and query merges **recent + archive** in the UI page.  
 - **Pruning job** (future): delete buckets older than cutoff in both stores; expose UI “Keep last X months/years”.
 
 ### 5) Data export (download)
 
-Goal: user can **download everything** the extension has collected for analytics (and optionally related config) in formats that open in spreadsheets or backup tools.
+Goal: user can **download everything** the extension has collected for tracking data (and optionally related config) in formats that open in spreadsheets or backup tools.
 
 **Formats (recommended order)**
 
 - **CSV (primary)** — One **long** table per dataset, no extra dependency. Suggested files: `by_day` with columns `bucket_date`, `site_id`, `ms`; `by_hour` with `bucket_local_datetime`, `site_id`, `ms`. Quote fields that may contain commas; UTF-8 with optional BOM for Excel on Windows.
-- **JSON (backup / round-trip)** — Mirrors internal shapes: `analytics`, `analyticsGroups`, `exportVersion`, `exportedAt`, extension version. Good for backups and scripts; weaker as a hand-edited spreadsheet.
+- **JSON (backup / round-trip)** — Mirrors internal shapes: `sites`, `sitesGroups`, `exportVersion`, `exportedAt`, extension version. Good for backups and scripts; weaker as a hand-edited spreadsheet.
 - **ZIP (optional convenience)** — Bundle the CSVs plus a small `export.json` metadata file (and `groups.json` if you split groups).
 - **XLSX (phase 2)** — Friendliest for Excel-only users; needs a library (e.g. SheetJS) and bundle size tradeoff—defer unless you insist on v1.
 - **Plain TXT** — Skip unless you want a short human-readable summary derived from the same aggregates (not a substitute for data export).
 
 **Scope of “all the data”**  
 
-- **Minimum**: all `analytics` bucket keys (`byDay`, `byHour`) with ms per `siteId`.  
-- **Optional second checkbox**: include `**rules`**, `**timeRecords`**, `**dailyRecords**` (limit state) in the same zip or a separate JSON — clearly labeled so users know those are not the same as long-term analytics.  
+- **Minimum**: all `sites` bucket keys (`byDay`, `byHour`) with ms per `siteId`.  
+- **Optional second checkbox**: include `**rules`**, `**timeRecords`**, `**dailyRecords**` (limit state) in the same zip or a separate JSON — clearly labeled so users know those are not the same as long-term data.  
 - If **IndexedDB archive** exists later, export must **merge** archive + `storage.local` before writing files.
 
 **Implementation (extension page)**  
 
-- Build strings/Blobs in the analytics (or settings) page; trigger download with `**<a download href="blob:...">`** — **no** `downloads` permission required.  
+- Build strings/Blobs in the data (or settings) page; trigger download with `**<a download href="blob:...">`** — **no** `downloads` permission required.  
 - Alternatively `chrome.downloads` with `"downloads"` permission if you prefer writing straight to disk with a save dialog API; not required for MVP.
 
 **Privacy**  
 
 - Export is local-only; remind user the file contains browsing-derived data and should be stored carefully.
 
-Document column names, JSON schema version, and merge rules in `ANALYTICS.md`.
+Document column names, JSON schema version, and merge rules in `TRACKING_DATA.md`.
 
 ## UI / extension surface
 
-- **Dedicated page** (not the small popup): add an `**options_ui`** page or a normal extension page opened from a link in the popup (“Analytics”) via `chrome.runtime.openURL` / options. Charts need space.  
-- **Permissions**: No new host permissions if analytics only reads tab URLs you already handle; **no** `history` permission required if you only attribute time from your own timers (recommended).  
+- **Dedicated page** (not the small popup): add an `**options_ui`** page or a normal extension page opened from a link in the popup (“Dashboard”) via `chrome.runtime.openURL` / options. Charts need space.  
+- **Permissions**: No new host permissions if only reads tab URLs you already handle; **no** `history` permission required if you only attribute time from your own timers (recommended).  
 - **Charts**: choose one path and stick to it for v1:  
   - **Canvas/SVG + your own bars** (zero deps, CLAUDE.md-friendly), or  
   - **One chart library** (faster for line/bar), added only when you start the graphs milestone.
@@ -138,9 +138,9 @@ Implementation: small pure functions that convert `Date` ↔ local boundaries; t
 
 After you approve direction, add **one** focused doc (per your repo rule: do not create files until you confirm the path):
 
-- Suggested: `[docs/ANALYTICS.md](d:\GitHub\Personal Repositories\BiteGuard\docs\ANALYTICS.md)` (or project root if you prefer no `docs/` folder) containing:
+- Suggested: `[docs/TRACKING_DATA.md](d:\GitHub\Personal Repositories\BiteGuard\docs\TRACKING_DATA.md)` (or project root if you prefer no `docs/` folder) containing:
   - **Definitions**: `siteId`, `siteLabel`, timezone, bucket keys  
-  - **JSON shapes**: `analytics`, `analyticsGroups`, versioning/migration  
+  - **JSON shapes**: `sites`, `sitesGroups`, versioning/migration  
   - **Pseudocode** for flush → bucket update and for range aggregation  
   - **Retention / pruning** policy placeholders  
   - **UI**: filter matrix + chart list (top‑K, groups, average per clock hour, **export/download**)
@@ -150,9 +150,9 @@ After you approve direction, add **one** focused doc (per your repo rule: do not
 ## Implementation phases
 
 1. **Site resolution module**: URL → `siteId` + `siteLabel` (tldts or equivalent); unit-test tricky hostnames (`bbc.co.uk`, `foo.github.io`, `com.cn` cases).
-2. **Write path**: ✓ Done — `flushToStorage()` writes into `analyticsByDay` and `analyticsByHour` per minute.
-3. **Analytics page**: read storage, apply range filter, render **table** (siteLabel, siteId, ms, % of total). Clicking a row opens the site detail page for that `siteId`.
-4. **Site detail page** (`site.html?id=youtube.com`): dedicated page for one site showing an over-time usage chart (daily bars for the selected range, same range selector as the analytics page). Back link returns to the analytics page.
+2. **Write path**: ✓ Done — `flushToStorage()` writes into `sitesByDay` and `sitesByHour` per minute.
+3. **Dashboard page**: read storage, apply range filter, render **table** (siteLabel, siteId, ms, % of total). Clicking a row opens the site detail page for that `siteId`.
+4. **Site detail page** (`site.html?id=youtube.com`): dedicated page for one site showing an over-time usage chart (daily bars for the selected range, same range selector as the dashboard page). Back link returns to the dashboard page.
 5. **Graphs v1**: top‑K bar chart; **average per local clock hour** for selected `siteId` or group (requires `byHour`). Optional “compare this week vs last week” later.
 6. **Export**: buttons to download **CSV** (and **JSON** dump); optional ZIP bundle; merge IndexedDB archive when that exists.
 7. **Groups**: CRUD UI + aggregated series.
@@ -162,11 +162,11 @@ After you approve direction, add **one** focused doc (per your repo rule: do not
 flowchart LR
   tabEvents[tabs_onUpdated_activated]
   flush[flushToStorage]
-  analytics[analyticsByDay_analyticsByHour]
+  sites[sitesByDay_sitesByHour]
   tabEvents --> flush
-  flush --> analytics
-  ui[analytics_page]
-  analytics --> ui
+  flush --> sites
+  ui[dashboard_page]
+  sites --> ui
 ```
 
 

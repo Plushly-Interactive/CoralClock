@@ -1,6 +1,6 @@
 # Enforcement
 
-Blocking sites once they cross a configured limit. BiteGuard already tracks time per site; enforcement reads the existing `rules` and analytics, computes which sites are over their limit, and redirects further requests to a `blocked.html` page until the period rolls over. The enforcement half was implemented in an earlier iteration and deliberately removed during the tracking redesign (see [docs/archive/REDESIGN_ISSUES.md](../archive/REDESIGN_ISSUES.md)); analytics has since stabilized and this rebuilds enforcement on top of it.
+Blocking sites once they cross a configured limit. BiteGuard already tracks time per site; enforcement reads the existing `rules` and tracking data, computes which sites are over their limit, and redirects further requests to a `blocked.html` page until the period rolls over. The enforcement half was implemented in an earlier iteration and deliberately removed during the tracking redesign (see [docs/archive/REDESIGN_ISSUES.md](../archive/REDESIGN_ISSUES.md)); tracking data has since stabilized and this rebuilds enforcement on top of it.
 
 ## User stories
 
@@ -66,7 +66,7 @@ The dedicated rules page is where all rule management lives. The popup is a laun
 |---|---|---|---|---|
 | `rules` | `{ id, target, path?, matchType, limit, limitUnit, period, enabled, mode }` | rules page, popup, background | rules page, popup, migration | `target` is always a bare host; `path` is set only for `path`/`pathPrefix` rules. `matchType` + `mode` are new; `v3→v4` migration backfills both. |
 | `blocksByDay` | `{ [dayKey]: { [blockKey]: number } }` | rules page (stats + sparkline) | enforcement publisher | Incremented each time a block is newly triggered. `blockKey` = `target\|matchType\|path` — stable across rule UUID changes. |
-| `analyticsByDay` / `analyticsByHour` | `{ [bucket]: { [host]: { activeMs, audioMs, overlapMs, visits } } }` | limit checker | tracking | Source for `host` / `subdomain` rules. Unchanged. |
+| `sitesByDay` / `sitesByHour` | `{ [bucket]: { [host]: { activeMs, audioMs, overlapMs, visits } } }` | limit checker | tracking | Source for `host` / `subdomain` rules. Unchanged. |
 | `subpagesByDay` / `subpagesByHour` | `{ [bucket]: { [host]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }` | limit checker | subpage tracking | Source for `path` rules. Unchanged. |
 | `storageVersion` | `number` | migrations | migrations | Bumped to `4`. |
 
@@ -82,7 +82,7 @@ The dedicated rules page is where all rule management lives. The popup is a laun
 ```mermaid
 flowchart TD
   rules[rules storage]
-  analytics[analyticsByDay or analyticsByHour]
+  sites[sitesByDay or sitesByHour]
   subpages[subpagesByDay or subpagesByHour]
   checker[Limit checker computeOverage]
   publisher[DNR ruleset publisher]
@@ -90,7 +90,7 @@ flowchart TD
   blocked[blocked.html]
 
   rules --> checker
-  analytics --> checker
+  sites --> checker
   subpages --> checker
   checker --> publisher
   publisher --> dnr
@@ -101,7 +101,7 @@ flowchart TD
 2. **DNR publisher** — `publishOverage` diffs the new overage set against the currently-published dynamic rules (each rule's DNR id is a deterministic 31-bit hash of its UUID, `dnrIdFor`). Added entries register a dynamic redirect rule to `blocked.html?rule=<id>&site=<host>[&path=<path>]`; removed entries are deleted. Uses `chrome.declarativeNetRequest.updateDynamicRules`. The matcher per scope (from `describeRule` in [src/shared/rules.js](../../src/shared/rules.js)):
    - `host` → `regexFilter: ^https?://(?:www\.)?<target>(?:/|$)` (RE2). DNR's `||` domain anchor and `requestDomains` are both subdomain-inclusive by design ([Chrome docs](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest)), so an exact-host block needs an anchored `regexFilter`. The optional `www.` keeps the block consistent with tracking, which collapses `www.` into the apex. `<target>` is regex-escaped.
    - `subdomain` → `urlFilter: ||<target>^` (the natural DNR domain anchor — matches apex + all subdomains).
-   - `pathPrefix` → `regexFilter: ^https?://<target>/<path>(?:[/?]|$)` (RE2). A bare `urlFilter: ||<target>/<path>` would over-block sibling paths sharing a prefix (`/maps` matching `/maps-beta`), so the boundary `(?:[/?]|$)` is anchored to a path separator, query, or end — matching the analytics boundary rule exactly. `<target>` and `<path>` are regex-escaped. A `pathPrefix` rule always carries a non-empty path (enforced by the form).
+   - `pathPrefix` → `regexFilter: ^https?://<target>/<path>(?:[/?]|$)` (RE2). A bare `urlFilter: ||<target>/<path>` would over-block sibling paths sharing a prefix (`/maps` matching `/maps-beta`), so the boundary `(?:[/?]|$)` is anchored to a path separator, query, or end — matching the boundary rule exactly. `<target>` and `<path>` are regex-escaped. A `pathPrefix` rule always carries a non-empty path (enforced by the form).
 
    This makes the three scopes genuinely distinct at the block level (not only in usage counting). The `regexFilter` rules are capped (≤1000 per ruleset, <2KB compiled each); these are simple and well under the limits.
 3. **Period boundaries** — the flush alarm fires every minute regardless, so a rolled-over window shrinks the overage set on the next tick. No special boundary handler.
@@ -110,15 +110,15 @@ flowchart TD
 
 The checker sums usage from tracking storage, whose key shapes are fixed by [siteResolution.js](../../src/background/siteResolution.js) and must be matched exactly:
 
-- **Site keys** (`analyticsByDay[bucket][siteId]`) are the full hostname with only a leading `www.` stripped — `siteIdFromUrl`. So `reddit.com`, `old.reddit.com`, `m.reddit.com` are **separate keys**; `www.reddit.com` collapses to `reddit.com`.
+- **Site keys** (`sitesByDay[bucket][siteId]`) are the full hostname with only a leading `www.` stripped — `siteIdFromUrl`. So `reddit.com`, `old.reddit.com`, `m.reddit.com` are **separate keys**; `www.reddit.com` collapses to `reddit.com`.
 - **Subpage keys** (`subpagesByDay[bucket][siteId][path]`) use `pathFromUrl`: `pathname` with any trailing slash stripped (except root `/`), **with the query string appended** (`/r/news?sort=top`).
 
 Consequences the checker must honor:
 
 | Match type | How usage is summed |
 |---|---|
-| `host` | Exact `analytics[bucket][target]` only. Does **not** include subdomains — `old.reddit.com` is a different key. |
-| `subdomain` | Sum every `analytics[bucket][k]` where `k === target` **or** `k` ends with `.${target}`. Includes the apex. A scan of the bucket's keys, not a lookup. |
+| `host` | Exact `sites[bucket][target]` only. Does **not** include subdomains — `old.reddit.com` is a different key. |
+| `subdomain` | Sum every `sites[bucket][k]` where `k === target` **or** `k` ends with `.${target}`. Includes the apex. A scan of the bucket's keys, not a lookup. |
 | `pathPrefix` | Sum every `subpages[bucket][target][p]` where `p === '/'+rule.path` **or** `p` starts with `'/'+rule.path` followed by `/`, `?`, or end. Always carries a non-empty path. |
 
 Exact-path matching was considered and dropped: stored subpage keys include the query string (`/maps?q=x`), so an exact path rarely matches a real visit — hence page rules are always prefix.
@@ -143,7 +143,7 @@ Existing rules without `mode` are backfilled to `active`.
 Smallest shippable slice first:
 
 1. ✅ **Schema + form** — `matchType` and `mode` on the rule shape, the rules-page form, and the rule-list render; `v3→v4` migration backfills both. No blocking behavior.
-2. ✅ **Limit checker** — pure `computeOverage(rules, { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour }, now)`, wired into the flush alarm.
+2. ✅ **Limit checker** — pure `computeOverage(rules, { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, now)`, wired into the flush alarm.
 3. ✅ **DNR publisher** — `publishOverage` diffs the overage set against `getDynamicRules` and calls `updateDynamicRules`, redirecting matches to `blocked.html`. First real blocking.
 4. ✅ **`blocked.html` polish** — reads `?rule=&site=&path=`; shows the blocked target, the limit (`<limit> per <period>`), and when the window next resets (local time, calendar-week aware), plus a "Manage rules" link. The inline script was moved to `blocked.js` (MV3 CSP forbids inline scripts).
 5. ✅ **Block already-open tabs** — DNR only redirects new requests, so a tab already sitting on a page isn't blocked when its rule is published. After publishing, `reloadMatchingTabs` scans all open tabs against the **full** overage set (matching via the same `siteIdFromUrl`/`pathFromUrl` normalization as the checker) and navigates each match straight to its `blocked.html` URL — carrying the tab's exact current URL as `&url=`. Tabs already on `blocked.html` (a `chrome-extension://` URL) don't match, so there's no loop.

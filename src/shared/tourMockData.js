@@ -2,8 +2,8 @@ import { readTourState } from './tour.js';
 import { localDayKey } from './timeUtils.js';
 import { scanSiteBucket, scanSubpageBucket } from '../data/prune.js';
 import {
-  MSG_GET_ANALYTICS_BY_DAY, MSG_GET_ANALYTICS_BY_HOUR_TODAY,
-  MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
+  MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
+  MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
   MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
 } from './msgTypes.js';
 
@@ -65,17 +65,17 @@ function buildFixture() {
     };
   }
 
-  const analyticsByDay = {};
-  const analyticsByHour = {};
+  const sitesByDay = {};
+  const sitesByHour = {};
   const subpagesByDay = {};
   const subpagesByHour = {};
 
   dayKeys.forEach((dayKey, dayIdx) => {
-    analyticsByDay[dayKey] = {};
+    sitesByDay[dayKey] = {};
     subpagesByDay[dayKey] = {};
 
     for (const siteId of SITES) {
-      analyticsByDay[dayKey][siteId] = recordFor(siteId, dayIdx);
+      sitesByDay[dayKey][siteId] = recordFor(siteId, dayIdx);
     }
 
     for (const siteId of SITES) {
@@ -88,12 +88,12 @@ function buildFixture() {
     const activeHours = [9, 12, 14, 18, 20];
     for (const h of activeHours) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
-      analyticsByHour[hourKey] = {};
+      sitesByHour[hourKey] = {};
       subpagesByHour[hourKey] = {};
       for (const siteId of SITES) {
-        const dayRec = analyticsByDay[dayKey][siteId];
+        const dayRec = sitesByDay[dayKey][siteId];
         const share = 1 / activeHours.length;
-        analyticsByHour[hourKey][siteId] = {
+        sitesByHour[hourKey][siteId] = {
           activeMs: Math.round(dayRec.activeMs * share),
           audioMs: Math.round(dayRec.audioMs * share),
           overlapMs: Math.round(dayRec.overlapMs * share),
@@ -114,7 +114,7 @@ function buildFixture() {
     }
   });
 
-  return { analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour, dayKeys, todayKey };
+  return { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour, dayKeys, todayKey };
 }
 
 let fixtureCache = null;
@@ -124,10 +124,10 @@ function fixture() {
 }
 
 function avgPerClockHour(siteIds, range, dayKeys = null) {
-  const { analyticsByHour } = fixture();
+  const { sitesByHour } = fixture();
   if (!dayKeys) {
     if (range === 'all') {
-      const hourKeys = Object.keys(analyticsByHour);
+      const hourKeys = Object.keys(sitesByHour);
       const dates = [...new Set(hourKeys.map(k => k.slice(0, 10)))].sort();
       dayKeys = dates;
     } else {
@@ -147,7 +147,7 @@ function avgPerClockHour(siteIds, range, dayKeys = null) {
   for (const dayKey of dayKeys) {
     for (let h = 0; h < 24; h++) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
-      const bucket = analyticsByHour[hourKey];
+      const bucket = sitesByHour[hourKey];
       if (!bucket) continue;
       if (siteIds?.length) {
         for (const id of siteIds) sums[h] += bucket[id]?.activeMs ?? 0;
@@ -160,11 +160,11 @@ function avgPerClockHour(siteIds, range, dayKeys = null) {
 }
 
 function hourBucketForDay(dayKey) {
-  const { analyticsByHour } = fixture();
+  const { sitesByHour } = fixture();
   const result = {};
   for (let h = 0; h < 24; h++) {
     const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
-    if (analyticsByHour[hourKey]) result[hourKey] = analyticsByHour[hourKey];
+    if (sitesByHour[hourKey]) result[hourKey] = sitesByHour[hourKey];
   }
   return result;
 }
@@ -172,9 +172,9 @@ function hourBucketForDay(dayKey) {
 function mockAnswer(msg) {
   const f = fixture();
   switch (msg.type) {
-    case MSG_GET_ANALYTICS_BY_DAY: return f.analyticsByDay;
-    case MSG_GET_ANALYTICS_BY_HOUR_TODAY: return {};
-    case MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY: return hourBucketForDay(msg.dayKey);
+    case MSG_GET_SITES_BY_DAY: return f.sitesByDay;
+    case MSG_GET_SITES_BY_HOUR_TODAY: return {};
+    case MSG_GET_SITES_BY_HOUR_FOR_DAY: return hourBucketForDay(msg.dayKey);
     case MSG_GET_SUBPAGES_BY_DAY: return f.subpagesByDay;
     case MSG_GET_SUBPAGES_BY_HOUR: return f.subpagesByHour;
     case MSG_GET_AVG_PER_CLOCK_HOUR: return avgPerClockHour(msg.siteIds, msg.range, msg.dayKeys);
@@ -195,7 +195,7 @@ export function clearMockModeCache() {
   fixtureCache = null;
 }
 
-export async function analyticsRequest(msg) {
+export async function fetchTrackingData(msg) {
   if (await isMockMode()) {
     const answer = mockAnswer(msg);
     if (answer !== null) return answer;
@@ -206,8 +206,8 @@ export async function analyticsRequest(msg) {
 export function mockScanResults(scopes, thresholdMs) {
   const f = fixture();
   const results = [];
-  if (scopes.siteDaily) results.push(...scanSiteBucket(f.analyticsByDay, thresholdMs, 'analyticsByDay'));
-  if (scopes.siteHourly) results.push(...scanSiteBucket(f.analyticsByHour, thresholdMs, 'analyticsByHour'));
+  if (scopes.siteDaily) results.push(...scanSiteBucket(f.sitesByDay, thresholdMs, 'sitesByDay'));
+  if (scopes.siteHourly) results.push(...scanSiteBucket(f.sitesByHour, thresholdMs, 'sitesByHour'));
   if (scopes.subpageDaily) results.push(...scanSubpageBucket(f.subpagesByDay, thresholdMs, 'subpagesByDay'));
   if (scopes.subpageHourly) results.push(...scanSubpageBucket(f.subpagesByHour, thresholdMs, 'subpagesByHour'));
   return results;

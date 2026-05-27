@@ -5,19 +5,19 @@ import {
   scanSiteBucket, scanSubpageBucket,
   applySiteDeletions, applySubpageDeletions,
 } from '../../data/prune.js';
-import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../../background/siteTracking.js';
+import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../../background/siteTracking.js';
 import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
 import { mockScanResults, clearMockModeCache } from '../../shared/tourMockData.js';
-import { MSG_INVALIDATE_ANALYTICS_CACHE } from '../../shared/msgTypes.js';
+import { MSG_INVALIDATE_SITES_CACHE } from '../../shared/msgTypes.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../../background/subpageTracking.js';
 
 const STORE_LABELS = {
-  [ANALYTICS_DAY_KEY]: 'Domains — daily',
-  [ANALYTICS_HOUR_KEY]: 'Domains — hourly',
+  [SITES_DAY_KEY]: 'Domains — daily',
+  [SITES_HOUR_KEY]: 'Domains — hourly',
   [SUBPAGES_DAY_KEY]: 'Subpages — daily',
   [SUBPAGES_HOUR_KEY]: 'Subpages — hourly',
 };
-const STORE_ORDER = [ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY];
+const STORE_ORDER = [SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY];
 
 const thresholdInput = document.querySelector('#threshold-input');
 const scopeSiteDaily = document.querySelector('#scope-site-daily');
@@ -95,15 +95,15 @@ async function runScan() {
     results = mockScanResults(scopes, thresholdMs);
   } else {
     const keys = [];
-    if (scopes.siteDaily) keys.push(ANALYTICS_DAY_KEY);
-    if (scopes.siteHourly) keys.push(ANALYTICS_HOUR_KEY);
+    if (scopes.siteDaily) keys.push(SITES_DAY_KEY);
+    if (scopes.siteHourly) keys.push(SITES_HOUR_KEY);
     if (scopes.subpageDaily) keys.push(SUBPAGES_DAY_KEY);
     if (scopes.subpageHourly) keys.push(SUBPAGES_HOUR_KEY);
     const stores = await chrome.storage.local.get(keys);
     scannedStores = stores;
     results = [];
-    if (scopes.siteDaily) results.push(...scanSiteBucket(stores[ANALYTICS_DAY_KEY] ?? {}, thresholdMs, ANALYTICS_DAY_KEY));
-    if (scopes.siteHourly) results.push(...scanSiteBucket(stores[ANALYTICS_HOUR_KEY] ?? {}, thresholdMs, ANALYTICS_HOUR_KEY));
+    if (scopes.siteDaily) results.push(...scanSiteBucket(stores[SITES_DAY_KEY] ?? {}, thresholdMs, SITES_DAY_KEY));
+    if (scopes.siteHourly) results.push(...scanSiteBucket(stores[SITES_HOUR_KEY] ?? {}, thresholdMs, SITES_HOUR_KEY));
     if (scopes.subpageDaily) results.push(...scanSubpageBucket(stores[SUBPAGES_DAY_KEY] ?? {}, thresholdMs, SUBPAGES_DAY_KEY));
     if (scopes.subpageHourly) results.push(...scanSubpageBucket(stores[SUBPAGES_HOUR_KEY] ?? {}, thresholdMs, SUBPAGES_HOUR_KEY));
   }
@@ -290,7 +290,7 @@ function onRowToggle(e) {
 
 function simulatedPruneBytes(selected) {
   const byStore = {
-    [ANALYTICS_DAY_KEY]: [], [ANALYTICS_HOUR_KEY]: [],
+    [SITES_DAY_KEY]: [], [SITES_HOUR_KEY]: [],
     [SUBPAGES_DAY_KEY]: [], [SUBPAGES_HOUR_KEY]: [],
   };
   for (const id of selected) byStore[id.store]?.push(id);
@@ -330,7 +330,7 @@ async function runDelete() {
   }
   deleteBtn.disabled = true;
   const byStore = {
-    [ANALYTICS_DAY_KEY]: [], [ANALYTICS_HOUR_KEY]: [],
+    [SITES_DAY_KEY]: [], [SITES_HOUR_KEY]: [],
     [SUBPAGES_DAY_KEY]: [], [SUBPAGES_HOUR_KEY]: [],
   };
   let totalRecords = 0;
@@ -342,13 +342,13 @@ async function runDelete() {
   const bytesBefore = await chrome.storage.local.getBytesInUse(touched);
   const stores = await chrome.storage.local.get(touched);
   const writeback = {};
-  if (byStore[ANALYTICS_DAY_KEY].length) writeback[ANALYTICS_DAY_KEY] = applySiteDeletions(stores[ANALYTICS_DAY_KEY] ?? {}, byStore[ANALYTICS_DAY_KEY]);
-  if (byStore[ANALYTICS_HOUR_KEY].length) writeback[ANALYTICS_HOUR_KEY] = applySiteDeletions(stores[ANALYTICS_HOUR_KEY] ?? {}, byStore[ANALYTICS_HOUR_KEY]);
+  if (byStore[SITES_DAY_KEY].length) writeback[SITES_DAY_KEY] = applySiteDeletions(stores[SITES_DAY_KEY] ?? {}, byStore[SITES_DAY_KEY]);
+  if (byStore[SITES_HOUR_KEY].length) writeback[SITES_HOUR_KEY] = applySiteDeletions(stores[SITES_HOUR_KEY] ?? {}, byStore[SITES_HOUR_KEY]);
   if (byStore[SUBPAGES_DAY_KEY].length) writeback[SUBPAGES_DAY_KEY] = applySubpageDeletions(stores[SUBPAGES_DAY_KEY] ?? {}, byStore[SUBPAGES_DAY_KEY]);
   if (byStore[SUBPAGES_HOUR_KEY].length) writeback[SUBPAGES_HOUR_KEY] = applySubpageDeletions(stores[SUBPAGES_HOUR_KEY] ?? {}, byStore[SUBPAGES_HOUR_KEY]);
   await chrome.storage.local.set(writeback);
   const bytesAfter = await chrome.storage.local.getBytesInUse(touched);
-  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_ANALYTICS_CACHE });
+  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE });
   showNotification(`Deleted ${totalRecords} record${totalRecords === 1 ? '' : 's'} — freed ${formatBytes(bytesBefore - bytesAfter)}.`);
   await runScan();
   await renderStorageBar();

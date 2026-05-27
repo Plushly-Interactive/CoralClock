@@ -44,7 +44,7 @@ The redesign changes `timeRecords[hostname]` from a plain number to `{ ms, audio
 
 The current code applies rule-based hostname rewriting (subdomain → `rule.target`). The design does not say whether `siteStates` is keyed by the raw hostname or the resolved one. Audio events see the raw URL on the tab; active tracking currently uses the resolved hostname. Needs a decision before implementation.
 
-**Resolution:** Decided to use `siteId` from `resolveSite()` (eTLD+1 via tldts) — the same key analytics uses. All of `siteStates`, `timeRecords`, `dailyRecords`, and `pendingVisits` are now keyed by `siteId`.
+**Resolution:** Decided to use `siteId` from `resolveSite()` (eTLD+1 via tldts) — the same key tracking data uses. All of `siteStates`, `timeRecords`, `dailyRecords`, and `pendingVisits` are now keyed by `siteId`.
 
 ### #7 – Non-http active tabs must be excluded ✓ Resolved
 
@@ -108,7 +108,7 @@ If two windows are showing the same site and one closes, `activeWindowIds` chang
 
 ---
 
-## UX / Analytics
+## UX / Tracking data
 
 ### #15 – Visits decouple from audio time ✓ Resolved
 

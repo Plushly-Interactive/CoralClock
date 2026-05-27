@@ -208,11 +208,11 @@ export function initCustomDropdowns(root = document) {
 }
 
 // Compute total spent time for a rule on a given day (active + audio - overlap).
-// dayKey should be in YYYY-MM-DD format (as used in analyticsByDay/subpagesByDay keys).
+// dayKey should be in YYYY-MM-DD format (as used in sitesByDay/subpagesByDay keys).
 export function computeRuleSpent(rule, dayKey, stores) {
-  const { analyticsByDay = {}, subpagesByDay = {} } = stores;
+  const { sitesByDay = {}, subpagesByDay = {} } = stores;
 
-  const siteBucket = analyticsByDay[dayKey];
+  const siteBucket = sitesByDay[dayKey];
   const subpageBucket = subpagesByDay[dayKey];
 
   function sumCell(cell) {
@@ -252,9 +252,9 @@ export function computeRuleSpent(rule, dayKey, stores) {
 
 // Get visit count for a rule on a given day.
 export function computeRuleVisits(rule, dayKey, stores) {
-  const { analyticsByDay = {}, subpagesByDay = {} } = stores;
+  const { sitesByDay = {}, subpagesByDay = {} } = stores;
 
-  const siteBucket = analyticsByDay[dayKey];
+  const siteBucket = sitesByDay[dayKey];
   const subpageBucket = subpagesByDay[dayKey];
 
   if (rule.matchType === 'pathPrefix') {

@@ -11,8 +11,8 @@ Four persisted stores, each a single `chrome.storage.local` key:
 
 | Key               | Structure                                                                           | Notes                                     |
 | ----------------- | ----------------------------------------------------------------------------------- | ----------------------------------------- |
-| `analyticsByDay`  | `{ [dayKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }`              | One entry per site per day                |
-| `analyticsByHour` | `{ [hourKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }`             | One entry per site per hour-slot visited  |
+| `sitesByDay`  | `{ [dayKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }`              | One entry per site per day                |
+| `sitesByHour` | `{ [hourKey]: { [siteId]: { activeMs, audioMs, overlapMs, visits } } }`             | One entry per site per hour-slot visited  |
 | `subpagesByDay`   | `{ [dayKey]: { [siteId]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }`  | One entry per path per site per day       |
 | `subpagesByHour`  | `{ [hourKey]: { [siteId]: { [path]: { activeMs, audioMs, overlapMs, visits } } } }` | One entry per path per site per hour-slot |
 
@@ -65,8 +65,8 @@ Keep hourly data for N months, daily data for N years. Deletes entire date-key b
 
 ```js
 const [hourBytes, dayBytes, subHourBytes, subDayBytes] = await Promise.all([
-  chrome.storage.local.getBytesInUse('analyticsByHour'),
-  chrome.storage.local.getBytesInUse('analyticsByDay'),
+  chrome.storage.local.getBytesInUse('sitesByHour'),
+  chrome.storage.local.getBytesInUse('sitesByDay'),
   chrome.storage.local.getBytesInUse('subpagesByHour'),
   chrome.storage.local.getBytesInUse('subpagesByDay'),
 ]);

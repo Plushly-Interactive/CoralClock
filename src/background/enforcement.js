@@ -2,7 +2,7 @@ import { localDayKey, localHourKey } from '../shared/timeUtils.js';
 import { RULE_MULTIPLIERS, describeRule, BLOCKS_DAY_KEY, blockKey } from '../shared/rules.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 
-// Usage contributed by one analytics/subpage cell under the rule's mode.
+// Usage contributed by one site/subpage cell under the rule's mode.
 function cellUsage(cell, mode) {
   if (!cell) return 0;
   const active = cell.activeMs ?? 0;
@@ -74,13 +74,13 @@ function sumBucket(rule, siteBucket, subpageBucket) {
 // the limit. Returns Map<ruleId, { target, matchType, path, overBy }> for rules
 // currently over their limit. No chrome APIs.
 export function computeOverage(rules, stores, now = Date.now()) {
-  const { analyticsByDay = {}, analyticsByHour = {}, subpagesByDay = {}, subpagesByHour = {} } = stores;
+  const { sitesByDay = {}, sitesByHour = {}, subpagesByDay = {}, subpagesByHour = {} } = stores;
   const overage = new Map();
 
   for (const rule of rules) {
     if (!rule.enabled) continue;
     const { type, keys } = windowKeys(rule.period, now);
-    const siteBuckets = type === 'hour' ? analyticsByHour : analyticsByDay;
+    const siteBuckets = type === 'hour' ? sitesByHour : sitesByDay;
     const subpageBuckets = type === 'hour' ? subpagesByHour : subpagesByDay;
 
     let used = 0;

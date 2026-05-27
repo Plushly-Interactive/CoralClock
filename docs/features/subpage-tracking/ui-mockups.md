@@ -125,7 +125,7 @@ A segmented control near the header swaps the whole body between the existing si
 
 Direction A's list, but each row is clickable and opens a `path.html` view with the same chart set scoped to that single path. Mirrors the existing site → drill pattern users already know.
 
-**Pros**: most powerful; consistent with existing navigation; full per-path analytics.
+**Pros**: most powerful; consistent with existing navigation; full per-path UI.
 **Cons**: most work; another page to maintain.
 
 ```html

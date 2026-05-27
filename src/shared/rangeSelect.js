@@ -23,7 +23,7 @@ export function createRangeDropdown() {
 }
 
 export function initRangeSelect(rangeSelect, onChange) {
-  const savedRange = sessionStorage.getItem('analyticsRange') || '7';
+  const savedRange = sessionStorage.getItem('timeRange') || '7';
   rangeSelect.dataset.value = savedRange;
   rangeSelect.firstChild.textContent = RANGE_OPTS[savedRange];
 
@@ -33,7 +33,7 @@ export function initRangeSelect(rangeSelect, onChange) {
       rangeSelect.dataset.value = btn.value;
       rangeSelect.firstChild.textContent = btn.textContent;
       rangeSelect.parentElement.querySelector('.dropdown-menu').classList.remove('open');
-      sessionStorage.setItem('analyticsRange', btn.value);
+      sessionStorage.setItem('timeRange', btn.value);
       onChange();
     });
   });

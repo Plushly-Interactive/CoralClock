@@ -6,9 +6,9 @@ import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
-import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
+import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
 import { openModal, closeModal, IMPORT_COMPLETE } from '../../data/importData.js';
-import { MSG_GET_ANALYTICS_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
+import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
 import { PREF_HIDE_BRIEF, PREF_MERGE_MODE, PREF_GROUP_MODE } from '../../shared/prefKeys.js';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
@@ -40,7 +40,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => analyticsRequest({
+  loadAvgPerHour: (range) => fetchTrackingData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: null, range,
   }),
 });
@@ -228,7 +228,7 @@ async function loadAndRender() {
     history.replaceState(null, '', location.pathname);
     await seedTestData();
   }
-  byDayCache = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_DAY });
+  byDayCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_DAY });
   render();
   renderStorageBar();
 }
@@ -413,8 +413,8 @@ function dashboardNewStepRange(completedVersion) {
 }
 
 async function maybeEnableMockMode() {
-  const { analyticsByDay = {} } = await chrome.storage.local.get('analyticsByDay');
-  const empty = Object.keys(analyticsByDay).length === 0;
+  const { sitesByDay = {} } = await chrome.storage.local.get('sitesByDay');
+  const empty = Object.keys(sitesByDay).length === 0;
   if (empty) {
     await writeTourState({ useMockData: true });
     clearMockModeCache();

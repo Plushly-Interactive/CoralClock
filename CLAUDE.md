@@ -26,7 +26,7 @@
 - Never duplicate JS code, use existing functions as much as possible, extract functions that get new use cases in a separate shared file when relevant.
 - When reusing logic across 2+ pages, extract it to `src/shared/`. When extracting data/storage logic (migrations, import, pruning), put it in `src/data/`. When the logic requires service-worker APIs (alarms, DNR, tab/window tracking), put it in `src/background/`.
 - For dynamic JS-driven visibility toggling, use `element.style.display = 'none'` / `''` (empty string restores the CSS-declared display value). Use the `hidden` attribute only for static initial hidden states declared in HTML (e.g. `<div id="modal" hidden>`), and clear it via `element.removeAttribute('hidden')` or by setting `style.display` once before toggling further.
-- Pages access `chrome.storage.local` directly — there is no requirement to proxy reads or writes through `background.js`. Background message passing is for data the service worker tracks in memory (e.g. live analytics cache).
+- Pages access `chrome.storage.local` directly — there is no requirement to proxy reads or writes through `background.js`. Background message passing is for data the service worker tracks in memory (e.g. live tracking data cache).
 - For `<button>` elements that navigate to another page, use `navButton(el, url)` from `src/shared/utils.js` — it handles same-tab, middle-click, and ctrl/cmd-click correctly.
 
 ## Page layout
