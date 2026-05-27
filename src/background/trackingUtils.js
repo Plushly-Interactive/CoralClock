@@ -2,6 +2,15 @@ import { localDayKey, localHourKey, splitByHour } from '../shared/timeUtils.js';
 
 const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
 
+// Debug logger with a local YYYY-MM-DD HH:MM:SS.mmm timestamp prefix, so the
+// [BG-DBG] trace can be correlated against the day/hour buckets in stored data.
+export function dbg(...args) {
+  const d = new Date();
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+  console.log(`[BG-DBG ${date} ${time}]`, ...args);
+}
+
 export function createTrackingModule({
   urlToKey,
   dayStorageKey,
@@ -19,12 +28,12 @@ export function createTrackingModule({
 
   async function init() {
     const windows = await chrome.windows.getAll({ populate: true });
-    console.log('[BG-DBG] init: windows count=', windows.length);
+    dbg('init: windows count=', windows.length);
     for (const w of windows) {
-      if (w.state === 'minimized') { console.log('[BG-DBG] init: window', w.id, 'minimized, skip'); tracker.markMinimized(w.id); continue; }
+      if (w.state === 'minimized') { dbg('init: window', w.id, 'minimized, skip'); tracker.markMinimized(w.id); continue; }
       const tab = w.tabs?.find(t => t.active);
       const key = urlToKey(tab?.url);
-      console.log('[BG-DBG] init: window', w.id, 'activeTab url=', tab?.url, '→ key=', key);
+      dbg('init: window', w.id, 'activeTab url=', tab?.url, '→ key=', key);
       if (key) tracker.addWindow(w.id, key);
     }
     const tabs = await chrome.tabs.query({ audible: true });
@@ -220,31 +229,32 @@ export function createRangeTracker() {
 
   function setWindow(windowId, key) {
     const oldKey = windowToKey.get(windowId);
-    console.log('[BG-DBG] setWindow: windowId=', windowId, 'oldKey=', oldKey, 'newKey=', key);
-    if (oldKey === key) { console.log('[BG-DBG] setWindow: same key, return'); return; }
-    if (!oldKey && !key) { console.log('[BG-DBG] setWindow: both null, return'); return; }
+    dbg('setWindow: windowId=', windowId, 'oldKey=', oldKey, 'newKey=', key);
+    if (oldKey === key) { dbg('setWindow: same key, return'); return; }
+    if (!oldKey && !key) { dbg('setWindow: both null, return'); return; }
     if (oldKey) removeWindow(windowId);
     if (key) {
       const wasMinimized = minimizedWindowIds.delete(windowId);
       const existing = states.get(key);
       const wasTracked = wasMinimized || (!!existing && (existing.wasActive || existing.wasAudible));
-      console.log('[BG-DBG] setWindow: existing state for', key, '?', !!existing, 'wasTracked=', wasTracked, 'wasMinimized=', wasMinimized);
+      dbg('setWindow: existing state for', key, '?', !!existing, 'wasTracked=', wasTracked, 'wasMinimized=', wasMinimized);
       addWindow(windowId, key);
       if (!wasTracked) {
         pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
-        console.log('[BG-DBG] setWindow: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
+        dbg('setWindow: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
       } else {
-        console.log('[BG-DBG] setWindow: visit NOT counted (already tracked)');
+        dbg('setWindow: visit NOT counted (already tracked)');
       }
     } else {
-      console.log('[BG-DBG] setWindow: key is null/falsy, only removed old');
+      dbg('setWindow: key is null/falsy, only removed old');
     }
   }
 
   function addAudibleTab(tabId, key, countVisit = true) {
     if (!key) return;
     const oldKey = audibleTabToKey.get(tabId);
-    if (oldKey === key) return;
+    dbg('addAudibleTab: tabId=', tabId, 'oldKey=', oldKey, 'newKey=', key, 'countVisit=', countVisit);
+    if (oldKey === key) { dbg('addAudibleTab: same key, return'); return; }
     if (oldKey) removeAudibleTab(tabId);
     audibleTabToKey.set(tabId, key);
     let s = states.get(key);
@@ -258,12 +268,20 @@ export function createRangeTracker() {
     s.wasAudible = true;
     if (!wasTracked) {
       s.startedAt = Date.now();
-      if (countVisit) pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
+      if (countVisit) {
+        pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
+        dbg('addAudibleTab: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
+      } else {
+        dbg('addAudibleTab: untracked but countVisit=false, no visit');
+      }
+    } else {
+      dbg('addAudibleTab: visit NOT counted (already tracked) wasActive=', s.wasActive);
     }
   }
 
   function removeAudibleTab(tabId) {
     const key = audibleTabToKey.get(tabId);
+    dbg('removeAudibleTab: tabId=', tabId, 'key=', key);
     if (!key) return;
     audibleTabToKey.delete(tabId);
     const s = states.get(key);
@@ -272,6 +290,7 @@ export function createRangeTracker() {
     if (s.audibleTabIds.size === 0 && s.wasAudible) {
       recordElapsed(key);
       s.wasAudible = false;
+      dbg('removeAudibleTab: cleared wasAudible for', key);
     }
   }
 

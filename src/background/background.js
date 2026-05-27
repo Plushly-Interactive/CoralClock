@@ -18,6 +18,7 @@ import {
   SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
 } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
+import { dbg } from './trackingUtils.js';
 import {
   MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
@@ -224,7 +225,7 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
 chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
   await bootstrapDone;
   const tab = await chrome.tabs.get(tabId);
-  console.log('[BG-DBG] onActivated: windowId=', windowId, 'tabId=', tabId, 'url=', tab.url, 'pendingUrl=', tab.pendingUrl, 'status=', tab.status, 'discarded=', tab.discarded, 'active=', tab.active);
+  dbg('onActivated: windowId=', windowId, 'tabId=', tabId, 'url=', tab.url, 'pendingUrl=', tab.pendingUrl, 'status=', tab.status, 'discarded=', tab.discarded, 'active=', tab.active);
   if (!tab.active) return;
   const siteId = siteIdFromUrl(tab.url);
   const path = pathFromUrl(tab.url);
@@ -234,6 +235,7 @@ chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
 
 chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   await bootstrapDone;
+  dbg('onUpdated: tabId=', _tabId, 'changeInfo=', JSON.stringify(changeInfo), 'url=', tab.url, 'active=', tab.active, 'audible=', tab.audible, 'muted=', tab.mutedInfo?.muted);
   if (changeInfo.status === 'complete' && tab.active) {
     const siteId = siteIdFromUrl(tab.url);
     const path = pathFromUrl(tab.url);
