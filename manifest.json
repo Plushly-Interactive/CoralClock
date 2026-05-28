@@ -28,6 +28,8 @@
   "permissions": ["storage", "alarms", "tabs", "webNavigation", "declarativeNetRequest", "idle"],
   "host_permissions": ["<all_urls>"],
 
+  "options_page": "src/pages/settings/settings.html",
+
   "web_accessible_resources": [{
     "resources": ["src/pages/blocked/blocked.html"],
     "matches": ["<all_urls>"]

@@ -14,6 +14,7 @@ import { PREF_HIDE_BRIEF, PREF_MERGE_MODE, PREF_GROUP_MODE } from '../../shared/
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
 navButton(document.querySelector('#prune-btn'), '../storage-pruning/storage-pruning.html');
+navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
 const rangeSelect = document.querySelector('#range-select');
 const tbody = document.querySelector('#dashboard-body');
 const emptyMsg = document.querySelector('#empty-msg');
