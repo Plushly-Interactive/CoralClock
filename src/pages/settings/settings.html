@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard – Settings</title>
+    <script src="../../shared/theme.js"></script>
+    <link rel="stylesheet" href="../../shared/theme.css" />
+    <link rel="stylesheet" href="../../shared/rules.css" />
+    <link rel="stylesheet" href="../../shared/confirmDialog.css" />
+    <link rel="stylesheet" href="./settings.css" />
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="../dashboard/dashboard.html">
+          <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title">Settings</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <main id="settings-main">
+      <section class="setting-card">
+        <div class="form-row">
+          <label class="setting-label" for="idle-threshold-input">Idle threshold</label>
+          <input id="idle-threshold-input" type="number" min="1" step="1" value="1" />
+          <span class="text-meta">minutes</span>
+        </div>
+        <p class="setting-desc text-meta">
+          Time without keyboard or mouse input before BiteGuard stops crediting active time on the focused tab.
+        </p>
+      </section>
+
+      <section class="setting-card">
+        <div class="form-row">
+          <span class="setting-label">Week starts on</span>
+          <div class="custom-dropdown" id="week-start-dropdown">
+            <button class="dropdown-btn" id="week-start-btn" data-value="monday"
+                    data-confirm-message="Changing the week-start day mid-week shifts the boundary of weekly limits. Rules with period=week will reset earlier or later than they would have. Continue?">
+              Monday<span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="dropdown-menu" id="week-start-menu"></div>
+          </div>
+        </div>
+        <p class="setting-desc text-meta">
+          Used for weekly limits and the weekly sparkline on the rules page. Changing this mid-week shifts active weekly limits the first time.
+        </p>
+      </section>
+    </main>
+
+    <script type="module" src="./settings.js"></script>
+  </body>
+</html>

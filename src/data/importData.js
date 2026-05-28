@@ -1,7 +1,7 @@
-import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../background/siteTracking.js';
+import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
 import { showNotification } from '../shared/utils.js';
-import { MSG_INVALIDATE_ANALYTICS_CACHE } from '../shared/msgTypes.js';
+import { MSG_INVALIDATE_SITES_CACHE } from '../shared/msgTypes.js';
 
 export const IMPORT_COMPLETE = 'importcomplete';
 
@@ -18,7 +18,7 @@ function sumCell(a, b) {
   };
 }
 
-function normalizeAnalyticsBuckets(buckets) {
+function normalizeSiteBuckets(buckets) {
   for (const [bucketKey, sites] of Object.entries(buckets)) {
     const next = {};
     for (const [siteId, cell] of Object.entries(sites)) {
@@ -93,19 +93,19 @@ document.addEventListener('keydown', (e) => {
 
 bgExportBtn.addEventListener('click', async () => {
   const {
-    [ANALYTICS_DAY_KEY]: analyticsByDay = {},
-    [ANALYTICS_HOUR_KEY]: analyticsByHour = {},
+    [SITES_DAY_KEY]: sitesByDay = {},
+    [SITES_HOUR_KEY]: sitesByHour = {},
     [SUBPAGES_DAY_KEY]: subpagesByDay = {},
     [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
-  } = await chrome.storage.local.get([ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
+  } = await chrome.storage.local.get([SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
 
   const payload = {
     format: 'biteguard',
     version: 2,
     exportedAt: new Date().toISOString(),
     data: {
-      [ANALYTICS_DAY_KEY]: analyticsByDay,
-      [ANALYTICS_HOUR_KEY]: analyticsByHour,
+      [SITES_DAY_KEY]: sitesByDay,
+      [SITES_HOUR_KEY]: sitesByHour,
       [SUBPAGES_DAY_KEY]: subpagesByDay,
       [SUBPAGES_HOUR_KEY]: subpagesByHour,
     },
@@ -124,10 +124,10 @@ bgExportBtn.addEventListener('click', async () => {
 });
 
 ttExportBtn.addEventListener('click', async () => {
-  const { [ANALYTICS_DAY_KEY]: analyticsByDay = {} } = await chrome.storage.local.get(ANALYTICS_DAY_KEY);
+  const { [SITES_DAY_KEY]: sitesByDay = {} } = await chrome.storage.local.get(SITES_DAY_KEY);
 
   const __stat__ = [];
-  for (const [day, sites] of Object.entries(analyticsByDay)) {
+  for (const [day, sites] of Object.entries(sitesByDay)) {
     const date = day.replaceAll('-', '');
     for (const [host, entry] of Object.entries(sites)) {
       __stat__.push({
@@ -202,16 +202,16 @@ async function handleTtImport(json) {
     data[dayKey][siteId].visits += time ?? 0;
   }
 
-  const { [ANALYTICS_DAY_KEY]: analyticsByDay = {} } = await chrome.storage.local.get(ANALYTICS_DAY_KEY);
+  const { [SITES_DAY_KEY]: sitesByDay = {} } = await chrome.storage.local.get(SITES_DAY_KEY);
 
-  const conflicts = Object.keys(data).filter((d) => analyticsByDay[d]).sort();
+  const conflicts = Object.keys(data).filter((d) => sitesByDay[d]).sort();
 
   if (conflicts.length === 0) {
-    await applyTtImport(data, analyticsByDay, new Set());
+    await applyTtImport(data, sitesByDay, new Set());
     return;
   }
 
-  pendingImport = { importData: data, currentByDay: analyticsByDay, conflicts, isTt: true };
+  pendingImport = { importData: data, currentByDay: sitesByDay, conflicts, isTt: true };
   showConflictView(conflicts);
 }
 
@@ -225,8 +225,8 @@ async function applyTtImport(importData, currentByDay, daysToReplace) {
     currentByDay[d] = importData[d];
   }
 
-  await chrome.storage.local.set({ [ANALYTICS_DAY_KEY]: currentByDay });
-  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_ANALYTICS_CACHE });
+  await chrome.storage.local.set({ [SITES_DAY_KEY]: currentByDay });
+  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE });
   showNotification(`Imported ${daysToTake.size} day(s)`);
   window.dispatchEvent(new CustomEvent(IMPORT_COMPLETE));
 }
@@ -238,30 +238,31 @@ async function handleBgImport(json) {
     showNotification('Unrecognized BiteGuard format');
     return;
   }
-  const importByDay = json.data[ANALYTICS_DAY_KEY] || {};
-  const importByHour = json.data[ANALYTICS_HOUR_KEY] || {};
+  // Accept both the current key and the legacy analyticsBy* key from older export files.
+  const importByDay = json.data[SITES_DAY_KEY] || json.data.analyticsByDay || {};
+  const importByHour = json.data[SITES_HOUR_KEY] || json.data.analyticsByHour || {};
   const importSubpagesByDay = json.data[SUBPAGES_DAY_KEY] || {};
   const importSubpagesByHour = json.data[SUBPAGES_HOUR_KEY] || {};
-  normalizeAnalyticsBuckets(importByDay);
-  normalizeAnalyticsBuckets(importByHour);
+  normalizeSiteBuckets(importByDay);
+  normalizeSiteBuckets(importByHour);
   normalizeSubpageBuckets(importSubpagesByDay);
   normalizeSubpageBuckets(importSubpagesByHour);
 
   const {
-    [ANALYTICS_DAY_KEY]: analyticsByDay = {},
-    [ANALYTICS_HOUR_KEY]: analyticsByHour = {},
+    [SITES_DAY_KEY]: sitesByDay = {},
+    [SITES_HOUR_KEY]: sitesByHour = {},
     [SUBPAGES_DAY_KEY]: subpagesByDay = {},
     [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
-  } = await chrome.storage.local.get([ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
+  } = await chrome.storage.local.get([SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
 
-  const conflicts = Object.keys(importByDay).filter((d) => analyticsByDay[d]).sort();
+  const conflicts = Object.keys(importByDay).filter((d) => sitesByDay[d]).sort();
 
   if (conflicts.length === 0) {
-    await applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, analyticsByDay, analyticsByHour, subpagesByDay, subpagesByHour, new Set());
+    await applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, sitesByDay, sitesByHour, subpagesByDay, subpagesByHour, new Set());
     return;
   }
 
-  pendingImport = { importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay: analyticsByDay, currentByHour: analyticsByHour, currentSubpagesByDay: subpagesByDay, currentSubpagesByHour: subpagesByHour, conflicts };
+  pendingImport = { importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay: sitesByDay, currentByHour: sitesByHour, currentSubpagesByDay: subpagesByDay, currentSubpagesByHour: subpagesByHour, conflicts };
   showConflictView(conflicts);
 }
 
@@ -300,12 +301,12 @@ async function applyBgImport(importByDay, importByHour, importSubpagesByDay, imp
   }
 
   await chrome.storage.local.set({
-    [ANALYTICS_DAY_KEY]: currentByDay,
-    [ANALYTICS_HOUR_KEY]: currentByHour,
+    [SITES_DAY_KEY]: currentByDay,
+    [SITES_HOUR_KEY]: currentByHour,
     [SUBPAGES_DAY_KEY]: currentSubpagesByDay,
     [SUBPAGES_HOUR_KEY]: currentSubpagesByHour,
   });
-  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_ANALYTICS_CACHE });
+  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE });
   showNotification(`Imported ${daysToTake.size} day(s)`);
   window.dispatchEvent(new CustomEvent(IMPORT_COMPLETE));
 }

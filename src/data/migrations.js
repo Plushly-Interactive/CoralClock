@@ -1,4 +1,4 @@
-import { ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY } from '../background/siteTracking.js';
+import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
 
 function normalizeHost(key) {
@@ -14,7 +14,7 @@ function sumCell(a, b) {
   };
 }
 
-function rewriteAnalytics(buckets) {
+function rewriteSites(buckets) {
   for (const [bucketKey, sites] of Object.entries(buckets)) {
     const next = {};
     for (const [siteId, cell] of Object.entries(sites)) {
@@ -44,8 +44,8 @@ function rewriteSubpages(buckets) {
 
 const migrations = [
   // v0 → v1: initial schema
-  // analyticsByDay[day][siteId]   = { ms, visits }
-  // analyticsByHour[hour][siteId] = { ms, visits }
+  // analyticsByDay[day][siteId]   = { ms, visits }   (legacy key, later renamed sitesByDay)
+  // analyticsByHour[hour][siteId] = { ms, visits }   (legacy key, later renamed sitesByHour)
   // timeRecords[siteId]           = number (active ms)
   async () => {},
 
@@ -53,34 +53,36 @@ const migrations = [
   // analyticsByDay[day][siteId]   = { activeMs, visits, audioMs, overlapMs }
   // analyticsByHour[hour][siteId] = { activeMs, visits, audioMs, overlapMs }
   async () => {
+    // Literal legacy keys: this migration predates the sitesBy* rename (v4 → v5).
     const {
-      [ANALYTICS_DAY_KEY]: analyticsByDay = {},
-      [ANALYTICS_HOUR_KEY]: analyticsByHour = {},
-    } = await chrome.storage.local.get([ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY]);
+      analyticsByDay = {},
+      analyticsByHour = {},
+    } = await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
     for (const sites of Object.values(analyticsByDay))
       for (const [id, d] of Object.entries(sites))
         sites[id] = { activeMs: d.ms ?? d.activeMs ?? 0, audioMs: d.audioMs ?? 0, overlapMs: d.overlapMs ?? 0, visits: d.visits ?? 0 };
     for (const sites of Object.values(analyticsByHour))
       for (const [id, d] of Object.entries(sites))
         sites[id] = { activeMs: d.ms ?? d.activeMs ?? 0, audioMs: d.audioMs ?? 0, overlapMs: d.overlapMs ?? 0, visits: d.visits ?? 0 };
-    await chrome.storage.local.set({ [ANALYTICS_DAY_KEY]: analyticsByDay, [ANALYTICS_HOUR_KEY]: analyticsByHour });
+    await chrome.storage.local.set({ analyticsByDay, analyticsByHour });
   },
 
   // v2 → v3: rewrite analytics keys from eTLD+1 to hostname (www. stripped)
   async () => {
+    // Literal legacy keys: this migration predates the sitesBy* rename (v4 → v5).
     const {
-      [ANALYTICS_DAY_KEY]: analyticsByDay = {},
-      [ANALYTICS_HOUR_KEY]: analyticsByHour = {},
+      analyticsByDay = {},
+      analyticsByHour = {},
       [SUBPAGES_DAY_KEY]: subpagesByDay = {},
       [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
-    } = await chrome.storage.local.get([ANALYTICS_DAY_KEY, ANALYTICS_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
-    rewriteAnalytics(analyticsByDay);
-    rewriteAnalytics(analyticsByHour);
+    } = await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour', SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
+    rewriteSites(analyticsByDay);
+    rewriteSites(analyticsByHour);
     rewriteSubpages(subpagesByDay);
     rewriteSubpages(subpagesByHour);
     await chrome.storage.local.set({
-      [ANALYTICS_DAY_KEY]: analyticsByDay,
-      [ANALYTICS_HOUR_KEY]: analyticsByHour,
+      analyticsByDay,
+      analyticsByHour,
       [SUBPAGES_DAY_KEY]: subpagesByDay,
       [SUBPAGES_HOUR_KEY]: subpagesByHour,
     });
@@ -95,6 +97,42 @@ const migrations = [
       r.mode ??= 'active';
     }
     await chrome.storage.local.set({ rules });
+  },
+
+  // v4 → v5: rename storage keys analyticsByDay/analyticsByHour → sitesByDay/sitesByHour
+  async () => {
+    const { analyticsByDay, analyticsByHour } = await chrome.storage.local.get(['analyticsByDay', 'analyticsByHour']);
+    const set = {};
+    if (analyticsByDay !== undefined) set[SITES_DAY_KEY] = analyticsByDay;
+    if (analyticsByHour !== undefined) set[SITES_HOUR_KEY] = analyticsByHour;
+    if (Object.keys(set).length) await chrome.storage.local.set(set);
+    await chrome.storage.local.remove(['analyticsByDay', 'analyticsByHour']);
+  },
+
+  // v5 → v6: add idleMs field to every cell (sites + subpages, day + hour)
+  async () => {
+    const {
+      [SITES_DAY_KEY]: sitesByDay = {},
+      [SITES_HOUR_KEY]: sitesByHour = {},
+      [SUBPAGES_DAY_KEY]: subpagesByDay = {},
+      [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
+    } = await chrome.storage.local.get([SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
+    for (const sites of Object.values(sitesByDay))
+      for (const cell of Object.values(sites)) cell.idleMs ??= 0;
+    for (const sites of Object.values(sitesByHour))
+      for (const cell of Object.values(sites)) cell.idleMs ??= 0;
+    for (const sites of Object.values(subpagesByDay))
+      for (const paths of Object.values(sites))
+        for (const cell of Object.values(paths)) cell.idleMs ??= 0;
+    for (const sites of Object.values(subpagesByHour))
+      for (const paths of Object.values(sites))
+        for (const cell of Object.values(paths)) cell.idleMs ??= 0;
+    await chrome.storage.local.set({
+      [SITES_DAY_KEY]: sitesByDay,
+      [SITES_HOUR_KEY]: sitesByHour,
+      [SUBPAGES_DAY_KEY]: subpagesByDay,
+      [SUBPAGES_HOUR_KEY]: subpagesByHour,
+    });
   },
 ];
 

@@ -1,4 +1,4 @@
-# Analytics Storage Simulation
+# Tracking Data Storage Simulation
 
 ## Entry structure
 
@@ -18,10 +18,10 @@ New (with audio tracking):
 
 ## Storage structure
 
-- `analyticsByDay`: one entry per site per day (independent of hours visited)
-- `analyticsByHour`: one entry per site per **hour-slot** visited (e.g. visiting a site across 3 different hours = 3 entries)
+- `sitesByDay`: one entry per site per day (independent of hours visited)
+- `sitesByHour`: one entry per site per **hour-slot** visited (e.g. visiting a site across 3 different hours = 3 entries)
 
-`analyticsByHour` is the expensive store — up to 24× more entries per day than `analyticsByDay`.
+`sitesByHour` is the expensive store — up to 24× more entries per day than `sitesByDay`.
 
 ---
 
@@ -80,17 +80,17 @@ Most scenarios stay under Chrome's default `storage.local` quota of 10 MB. Excep
 
 **Parameters:** 30 sites/day, 3 hour-slots/site/day
 
-### `analyticsByHour` (6 months = 180 days)
+### `sitesByHour` (6 months = 180 days)
 - Entries: 30 × 3 × 180 = **16,200**
 - Size: 16,200 × 77 bytes = **~1.26 MB**
 
-### `analyticsByDay` (5 years = 1,825 days)
+### `sitesByDay` (5 years = 1,825 days)
 - Entries: 30 × 1,825 = **54,750**
 - Size: 54,750 × 77 bytes = **~4.18 MB**
 
 ### Total: ~5.44 MB
 
-`analyticsByDay` dominates (77% of total) despite being cheaper per day — it is retained 10× longer.
+`sitesByDay` dominates (77% of total) despite being cheaper per day — it is retained 10× longer.
 
 **Note:** this is a ceiling. It assumes all 30 sites are visited every day across exactly 3 hour-slots each. Real usage is spottier; expect 40–60% of this in practice (~2–3 MB).
 

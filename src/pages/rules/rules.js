@@ -1,6 +1,8 @@
-import { getRules, addRule, toggleRule, deleteRule, updateRule, renderRuleList, initCustomDropdowns, describeRule, findCoveringRule, findRedundantRules, disableRules, matchLabel, BLOCKS_DAY_KEY, blockKey } from '../../shared/rules.js';
+import { getRules, addRule, toggleRule, deleteRule, updateRule, renderRuleList, describeRule, findCoveringRule, findRedundantRules, disableRules, matchLabel, BLOCKS_DAY_KEY, blockKey } from '../../shared/rules.js';
+import { initCustomDropdowns } from '../../shared/dropdown.js';
 import { getDomain } from '../../vendor/tldts.js';
 import { localDayKey } from '../../shared/timeUtils.js';
+import { weekDow, rotatedDayLabels } from '../../shared/weekStart.js';
 import { drawBarChart } from '../../shared/utils.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 
@@ -363,11 +365,11 @@ function last7DayKeys() {
   return keys;
 }
 
-// Returns the Monday-through-today day keys for the current calendar week.
+// Returns the week-start-through-today day keys for the current calendar week.
 function thisWeekKeys() {
   const keys = [];
   const now = new Date();
-  const dow = (now.getDay() + 6) % 7; // 0 = Mon … 6 = Sun
+  const dow = weekDow(now);
   for (let i = dow; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
@@ -417,12 +419,12 @@ async function renderStats() {
   document.querySelector('#stat-avg').textContent = avgPerDay;
 
   // Sparkline
-  const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const DAY_LABELS = rotatedDayLabels();
   const rootStyle = getComputedStyle(document.documentElement);
 
   const sparkData = days7.map((k, i) => {
     const d = new Date(k + 'T12:00:00');
-    const dow = (d.getDay() + 6) % 7;
+    const dow = weekDow(d);
     return {
       label: DAY_LABELS[dow],
       range: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),

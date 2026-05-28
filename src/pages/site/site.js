@@ -8,13 +8,15 @@ import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
+import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
 import {
-  MSG_GET_ANALYTICS_BY_DAY, MSG_GET_ANALYTICS_BY_HOUR_TODAY,
-  MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
+  MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
+  MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
   MSG_GET_AVG_PER_CLOCK_HOUR,
 } from '../../shared/msgTypes.js';
-import { PREF_HIDE_BRIEF, PREF_STRIP_PARAMS } from '../../shared/prefKeys.js';
+import { PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+
+const PREF_STRIP_PARAMS = 'subpagesStripParams';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -170,7 +172,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days from earliest data, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => analyticsRequest({
+  loadAvgPerHour: (range) => fetchTrackingData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
   }),
 });
@@ -193,7 +195,7 @@ initDrill({
   rangeSelect,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
-    const hourData = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_HOUR_FOR_DAY, dayKey });
+    const hourData = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_FOR_DAY, dayKey });
     const result = {};
     for (let h = 0; h < 24; h++) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
@@ -201,7 +203,7 @@ initDrill({
     }
     return result;
   },
-  getAvgPerClockHour: (dayKeys) => analyticsRequest({
+  getAvgPerClockHour: (dayKeys) => fetchTrackingData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range: null, dayKeys,
   }),
   render,
@@ -218,8 +220,8 @@ window.addEventListener('pageshow', () => {
 });
 
 async function loadAndRender() {
-  byDayCache = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_DAY });
-  subpagesByDayCache = await analyticsRequest({ type: MSG_GET_SUBPAGES_BY_DAY });
+  byDayCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_DAY });
+  subpagesByDayCache = await fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_DAY });
   resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
@@ -241,7 +243,7 @@ function resolveAggregationMode() {
 
 async function loadByHour() {
   if (byHourCache) return;
-  byHourCache = await analyticsRequest({ type: MSG_GET_ANALYTICS_BY_HOUR_TODAY });
+  byHourCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_TODAY });
 }
 
 function siteDayKeysForRange(range) {
@@ -393,19 +395,20 @@ function renderSubpages(range) {
   }
   chartsGrid.classList.add('has-subpages');
 
-  if (hideBriefSubpages && !mergePaths(raw, currentDepth).some(r => r.activeMs >= 60_000)) {
+  const getTotalMs = (r) => r.activeMs + r.audioMs - (r.overlapMs ?? 0);
+  if (hideBriefSubpages && !mergePaths(raw, currentDepth).some(r => getTotalMs(r) >= 60_000)) {
     const actualMax = Math.max(...paths.map(p => p.split('/').filter(Boolean).length));
     const shownMax = Math.min(5, actualMax - 1);
     for (let d = shownMax; d >= 1; d--) {
-      if (mergePaths(raw, d).some(r => r.activeMs >= 60_000)) { currentDepth = d; break; }
+      if (mergePaths(raw, d).some(r => getTotalMs(r) >= 60_000)) { currentDepth = d; break; }
     }
   }
 
   buildDepthToggle(paths);
 
   let merged = mergePaths(raw, currentDepth);
-  merged.sort((a, b) => currentSort === 'time' ? b.activeMs - a.activeMs : b.visits - a.visits);
-  if (hideBriefSubpages) merged = merged.filter(r => r.activeMs >= 60_000);
+  merged.sort((a, b) => currentSort === 'time' ? getTotalMs(b) - getTotalMs(a) : b.visits - a.visits);
+  if (hideBriefSubpages) merged = merged.filter(r => getTotalMs(r) >= 60_000);
 
   const pathSiteMs = {};
   if (effectiveSiteIds.length > 1) {
@@ -437,21 +440,19 @@ function renderSubpages(range) {
     const display = escapeHtml(decoded);
     const star = row.truncated ? '<span class="subpage-truncated">*</span>' : '';
     const num = currentSort === 'time'
-      ? formatMs(row.activeMs)
+      ? formatMs(row.activeMs + row.audioMs - (row.overlapMs ?? 0))
       : `${row.visits} visit${row.visits === 1 ? '' : 's'}`;
     li.title = decoded + (row.truncated ? '*' : '');
     const drill = document.createElement('div');
     drill.className = 'subpage-drill';
     drill.innerHTML = `<span class="subpage-path">${display}${star}</span><span class="subpage-num">${num}</span>`;
-    drill.onclick = () => {
-      sessionStorage.setItem('subpageDrill', JSON.stringify({
-        siteIds: effectiveSiteIds,
-        path: row.path,
-        prefix: row.truncated,
-        stripParams,
-      }));
-      location.href = '../path/path.html';
-    };
+    const params = new URLSearchParams();
+    params.set('ids', effectiveSiteIds.join(','));
+    params.set('path', row.path);
+    if (row.truncated) params.set('prefix', '1');
+    if (stripParams) params.set('stripParams', '1');
+    const pathHref = `../path/path.html?${params}`;
+    navButton(drill, pathHref);
     let openPath = row.path;
     if (row.truncated) {
       const prefix = row.path + '/';

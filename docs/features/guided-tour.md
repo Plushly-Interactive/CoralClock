@@ -72,7 +72,7 @@ tour controls the flow.
 - If the highlighted element is missing on a page (e.g. empty
 state, no data yet), that step is skipped automatically, in the
 direction of travel (forward on Next, backward on Previous).
-- When the tour starts and storage holds no analytics data, the
+- When the tour starts and storage holds no tracking data, the
 tour activates mock-data mode and renders an in-memory fixture
 covering **every surface the tour visits**: the dashboard charts
 and table, the site detail page for each mock site (every site
@@ -107,48 +107,48 @@ guarded against writing to storage.
 ### Files likely to change
 
 
-| File                                                                                                                                       | Change                                                                                                                                                                                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/background/background.js`                                                                                                             | Add `chrome.runtime.onInstalled` listener that opens `dashboard.html?tour=1` on `reason === 'install' \|\| reason === 'update'`                                                                                                                                                                 |
-| `src/shared/tour.js`                                                                                                                       | New shared module: step runner, spotlight overlay, clip-path dim hole, tooltip rendering, keyboard handling, completion-flag read/write serialized through a promise chain, cross-surface handoff via `inProgress` storage, close-tour button + confirm dialog                                  |
-| `src/shared/tour.css`                                                                                                                      | New stylesheet: overlay, spotlight, tooltip, arrow, close button, confirm dialog. Also `body.tour-modal-step` / `body.tour-drill-step` rules that gate the modal and drill UIs                                                                                                                  |
-| `src/shared/tourMockData.js`                                                                                                               | New module: deterministic in-memory fixture, `analyticsRequest(msg)` drop-in for `chrome.runtime.sendMessage` that returns fixture data when `useMockData` is set, `mockScanResults` for the storage-pruning scan, `clearMockModeCache()`                                                       |
-| `src/data/importData.js`                                                                                                                   | Export `openModal` / `closeModal`. Gate the modal's existing dismiss paths (`✕`, backdrop, `Esc`) on `body.tour-modal-step`. Listen for the `tour:modal-step-leave` custom event and call `closeModal`                                                                                          |
-| `src/shared/drill.js`                                                                                                                      | Mute the keydown handler entirely while `body.tour-drill-step` is set                                                                                                                                                                                                                           |
-| `src/pages/dashboard/dashboard.html`                                                                                                       | Add `<button id="tour-btn" class="square-btn" title="Take the tour">?</button>` to `#header-right`; link `tour.css`                                                                                                                                                                             |
-| `src/pages/dashboard/dashboard.js`                                                                                                         | Define dashboard step list (welcome, range, top sites, table, import/export modal sub-flow, popup handoff, see site details handoff, open storage pruning handoff); wire `#tour-btn`; auto-start on `?tour=1`; resume on `inProgress.surface === 'dashboard'`; resume on `visibilitychange` and on `tourAdvanceRequest` storage change. Use `analyticsRequest` instead of direct `sendMessage`; `maybeEnableMockMode` flips the flag if `analyticsByDay` is empty; on replay, re-runs `loadAndRender` after enabling mock |
-| `src/pages/popup/popup.html`                                                                                                               | Link `tour.css`                                                                                                                                                                                                                                                                                 |
-| `src/pages/popup/popup.js`                                                                                                                 | Define popup step list (brand, add a rule, back to dashboard handoff); only call `autoStartIfMatches` when `inProgress.surface === 'popup'`; `#dashboard-btn` handler closes the popup, focuses an existing dashboard tab during tour, and writes `tourAdvanceRequest` to nudge the dashboard   |
-| `src/pages/site/site.html`                                                                                                                 | Link `tour.css`                                                                                                                                                                                                                                                                                 |
-| `src/pages/site/site.js`                                                                                                                   | Define site-page step list including the drill sub-flow; `ensureDrillOpen` opens drill at the latest day in `byDayCache` when entering a drill step; `loadAndRenderPromise.then(autoStartIfMatches)` so the data is loaded before resume. `onClose` re-renders against real storage on interrupt |
-| `src/pages/path/path.html`                                                                                                                 | Link `tour.css`                                                                                                                                                                                                                                                                                 |
-| `src/pages/path/path.js`                                                                                                                   | Define path-page step list including the drill sub-flow; same `ensureDrillOpen` + `loadAndRenderPromise.then(autoStartIfMatches)` + interrupt cleanup pattern as site                                                                                                                            |
-| `src/pages/storage-pruning/storage-pruning.html`                                                                                           | Link `tour.css`                                                                                                                                                                                                                                                                                 |
-| `src/pages/storage-pruning/storage-pruning.js`                                                                                             | Define storage-pruning step list; `ensureScanRan` on Review and Delete steps; `runScan` branches to `mockScanResults` when mock mode is active; `runDelete` short-circuits in mock mode. `onClose` clears results on interrupt or navigates to dashboard on Finish                              |
+| File                                             | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/background/background.js`                   | Add `chrome.runtime.onInstalled` listener that opens `dashboard.html?tour=1` on `reason === 'install' || reason === 'update'`                                                                                                                                                                                                                                                                                                                                                                                             |
+| `src/shared/tour.js`                             | New shared module: step runner, spotlight overlay, clip-path dim hole, tooltip rendering, keyboard handling, completion-flag read/write serialized through a promise chain, cross-surface handoff via `inProgress` storage, close-tour button + confirm dialog                                                                                                                                                                                                                                                            |
+| `src/shared/tour.css`                            | New stylesheet: overlay, spotlight, tooltip, arrow, close button, confirm dialog. Also `body.tour-modal-step` / `body.tour-drill-step` rules that gate the modal and drill UIs                                                                                                                                                                                                                                                                                                                                            |
+| `src/shared/tourMockData.js`                     | New module: deterministic in-memory fixture, `fetchTrackingData(msg)` drop-in for `chrome.runtime.sendMessage` that returns fixture data when `useMockData` is set, `mockScanResults` for the storage-pruning scan, `clearMockModeCache()`                                                                                                                                                                                                                                                                                 |
+| `src/data/importData.js`                         | Export `openModal` / `closeModal`. Gate the modal's existing dismiss paths (`✕`, backdrop, `Esc`) on `body.tour-modal-step`. Listen for the `tour:modal-step-leave` custom event and call `closeModal`                                                                                                                                                                                                                                                                                                                    |
+| `src/shared/drill.js`                            | Mute the keydown handler entirely while `body.tour-drill-step` is set                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `src/pages/dashboard/dashboard.html`             | Add `<button id="tour-btn" class="square-btn" title="Take the tour">?</button>` to `#header-right`; link `tour.css`                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `src/pages/dashboard/dashboard.js`               | Define dashboard step list (welcome, range, top sites, table, import/export modal sub-flow, popup handoff, see site details handoff, open storage pruning handoff); wire `#tour-btn`; auto-start on `?tour=1`; resume on `inProgress.surface === 'dashboard'`; resume on `visibilitychange` and on `tourAdvanceRequest` storage change. Use `fetchTrackingData` instead of direct `sendMessage`; `maybeEnableMockMode` flips the flag if `sitesByDay` is empty; on replay, re-runs `loadAndRender` after enabling mock |
+| `src/pages/popup/popup.html`                     | Link `tour.css`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `src/pages/popup/popup.js`                       | Define popup step list (brand, add a rule, back to dashboard handoff); only call `autoStartIfMatches` when `inProgress.surface === 'popup'`; `#dashboard-btn` handler closes the popup, focuses an existing dashboard tab during tour, and writes `tourAdvanceRequest` to nudge the dashboard                                                                                                                                                                                                                             |
+| `src/pages/site/site.html`                       | Link `tour.css`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `src/pages/site/site.js`                         | Define site-page step list including the drill sub-flow; `ensureDrillOpen` opens drill at the latest day in `byDayCache` when entering a drill step; `loadAndRenderPromise.then(autoStartIfMatches)` so the data is loaded before resume. `onClose` re-renders against real storage on interrupt                                                                                                                                                                                                                          |
+| `src/pages/path/path.html`                       | Link `tour.css`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `src/pages/path/path.js`                         | Define path-page step list including the drill sub-flow; same `ensureDrillOpen` + `loadAndRenderPromise.then(autoStartIfMatches)` + interrupt cleanup pattern as site                                                                                                                                                                                                                                                                                                                                                     |
+| `src/pages/storage-pruning/storage-pruning.html` | Link `tour.css`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `src/pages/storage-pruning/storage-pruning.js`   | Define storage-pruning step list; `ensureScanRan` on Review and Delete steps; `runScan` branches to `mockScanResults` when mock mode is active; `runDelete` short-circuits in mock mode. `onClose` clears results on interrupt or navigates to dashboard on Finish                                                                                                                                                                                                                                                        |
 
 
 ### Storage / tracking
 
 
-| Key                   | Shape                                                                                                                                  | Read by                                                          | Written by                          | Notes                                                                                                                                                                                                                                                                  |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tour`                | `{ completed: boolean, completedAt: string \| null, inProgress: { surface: string, stepIndex: number } \| null, useMockData: boolean }` | dashboard, popup, site, path, storage-pruning, `tourMockData.js` | all five surfaces via `tour.js`     | `completed` gates the auto-start; `inProgress` carries cross-surface handoff so the tour resumes on the destination page; `useMockData` enables fixture-driven rendering. All writes are serialized through a promise chain in `writeTourState` to avoid lost updates. |
-| `tourAdvanceRequest`  | `number` (timestamp)                                                                                                                   | dashboard                                                        | popup                               | Written by the popup's `#dashboard-btn` handler just before focusing the existing dashboard tab; the dashboard listens for changes to this key and either jumps the running tour to the wanted step or starts a new tour.                                              |
+| Key                  | Shape                                                                                                                                 | Read by                                                          | Written by                      | Notes                                                                                                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tour`               | `{ completed: boolean, completedAt: string | null, inProgress: { surface: string, stepIndex: number } | null, useMockData: boolean }` | dashboard, popup, site, path, storage-pruning, `tourMockData.js` | all five surfaces via `tour.js` | `completed` gates the auto-start; `inProgress` carries cross-surface handoff so the tour resumes on the destination page; `useMockData` enables fixture-driven rendering. All writes are serialized through a promise chain in `writeTourState` to avoid lost updates. |
+| `tourAdvanceRequest` | `number` (timestamp)                                                                                                                  | dashboard                                                        | popup                           | Written by the popup's `#dashboard-btn` handler just before focusing the existing dashboard tab; the dashboard listens for changes to this key and either jumps the running tour to the wanted step or starts a new tour.                                              |
 
 
 ## Edge cases
 
 - **First install with no data**: `maybeEnableMockMode()` checks
-`analyticsByDay`; if empty, sets `useMockData: true`. All four
+`sitesByDay`; if empty, sets `useMockData: true`. All four
 data-driven surfaces (dashboard, site, path, storage-pruning)
-fall through to fixture data via `analyticsRequest` /
+fall through to fixture data via `fetchTrackingData` /
 `mockScanResults`.
 - **Mixed state — some real data, no mock needed**: if any
-`analyticsByDay` entry exists, mock mode stays off. Real data is
+`sitesByDay` entry exists, mock mode stays off. Real data is
 used. Mock and real are never mixed.
 - **Schema changes**: the mock fixture in `tourMockData.js` mirrors
-the real analytics schema. Any change to the shape of
-`analyticsByDay` / `analyticsByHour` / `subpagesByDay` /
+the real tracking data schema. Any change to the shape of
+`sitesByDay` / `sitesByHour` / `subpagesByDay` /
 `subpagesByHour` requires updating the fixture, the same way it
 requires updating migrations.
 - **User reloads mid-tour on a regular step**: `autoStartIfMatches`
@@ -186,8 +186,7 @@ starter IIFE both writing `useMockData`): `writeTourState` is
 serialized through a promise chain, so reads always see the most
 recent write before merging.
 - **Storage migration / fresh install after uninstall**: missing
-`tour` key is treated as `{ completed: false, useMockData: false,
-inProgress: null }` — auto-start fires on the next dashboard
+`tour` key is treated as `{ completed: false, useMockData: false, inProgress: null }` — auto-start fires on the next dashboard
 open following a fresh `onInstalled` event.
 
 ## Adding new steps in a future version
@@ -196,55 +195,37 @@ When a feature ships and you want returning users to see new tour steps
 automatically on extension reload, follow these steps:
 
 1. **Bump `TOUR_VERSION`** in `src/shared/tour.js`.
-
 2. **Mark each new step** with `newInVersion: TOUR_VERSION`:
-   ```js
+  ```js
    {
      selector: '#my-new-element',
      title: 'New feature',
      body: 'Here is what it does.',
      newInVersion: 3,   // ← set to the new TOUR_VERSION value
    }
-   ```
+  ```
    Insert the marked steps *before* any existing handoff step on the
    same surface so that replay (full tour) includes them in order.
-
-3. **Set `TOUR_UPDATE_ENTRY`** in `src/background/background.js` to
-   the HTML path of the first surface that has new steps, e.g.:
-   ```js
-   const TOUR_UPDATE_ENTRY = 'src/pages/rules/rules.html';
-   ```
+3. **Set `TOUR_UPDATE_ENTRY*`* in `src/background/background.js` to
+  the HTML path of the first surface that has new steps, e.g.:
    On extension reload `onInstalled` opens this page automatically for
    users whose `completedVersion` is below the new `TOUR_VERSION`.
-
 4. **Chain surfaces** (optional). If new steps span more than one
-   navigable surface (rules → dashboard, dashboard → storage-pruning),
+  navigable surface (rules → dashboard, dashboard → storage-pruning),
    pass `nextUpdateSurface` to `autoStartIfMatches` on the earlier
    surface so the update tour hands off automatically:
-   ```js
-   autoStartIfMatches('rules', rulesTourSteps, {
-     nextUpdateSurface: 'dashboard',
-   });
-   ```
    `autoStartIfMatches` injects a "Continue →" handoff on the last new
    step and opens the next surface when the user clicks it.
 
 **What happens automatically** (no extra work needed):
 
-- `autoStartIfMatches` finds the first step where `newInVersion >
-  completedVersion` and slices from there, so you never hardcode an
-  index.
+- `autoStartIfMatches` finds the first step where `newInVersion > completedVersion` and slices from there, so you never hardcode an
+index.
 - The dashboard does the same scan via `dashboardNewStepRange`, so
-  update-tour resume works correctly after a page reload mid-tour.
-- Surfaces that cannot be opened directly (site, path, popup) cannot
-  be the `TOUR_UPDATE_ENTRY` or a `nextUpdateSurface` target, but new
-  steps added there are picked up automatically during full tour replay.
-
-## Out of scope (v1)
-
-- Translations / i18n of tour copy (English only).
-- Per-step analytics (which steps users skip / complete).
-- Animated transitions between steps beyond a basic fade.
+update-tour resume works correctly after a page reload mid-tour.
+- Surfaces that cannot be opened directly (site, path, popup) cannot  
+be the `TOUR_UPDATE_ENTRY` or a `nextUpdateSurface` target, but new  
+steps added there are picked up automatically during full tour replay.
 
 ## Open questions
 
@@ -262,8 +243,9 @@ rough edges flagged in an internal audit:
   - "Back to overview" wording is action-oriented while
   surrounding drill steps ("Daily detail", "Navigate and switch
   metric") are descriptive nouns; consistency could be improved.
-- **`onInstalled` trigger scope**: the listener fires on
+- `**onInstalled` trigger scope**: the listener fires on
 `'install'` AND `'update'`, which means returning users see a
 new tab every time the extension reloads (useful during
 development, possibly annoying in production). Decide whether
 to narrow to `'install'` only before shipping.
+

@@ -25,7 +25,7 @@ A manual pruning tool that lets the user find and delete tracked identities (dom
 - Each column header is clickable to sort the group by that column, toggling ascending/descending. Sorting one group does not scroll the page or reset other groups.
 - Each group has a "Selected" header checkbox that selects/deselects every row in the group and shows an indeterminate state when only some rows are selected.
 - A running summary shows count of selected identities, total record count behind them, and an estimated bytes-saved figure (computed by simulating the deletion against a clone of the scanned stores).
-- A `Delete selected` button at the bottom of the results applies the deletions, sends `invalidateAnalyticsCache` to the background so other UI views reflect the change, shows a transient notification with the **actual** freed bytes (from `chrome.storage.local.getBytesInUse` before/after), then re-runs the scan and refreshes the list.
+- A `Delete selected` button at the bottom of the results applies the deletions, sends `invalidateSitesCache` to the background so other UI views reflect the change, shows a transient notification with the **actual** freed bytes (from `chrome.storage.local.getBytesInUse` before/after), then re-runs the scan and refreshes the list.
 - If no records match the threshold, the results list area shows an empty-state message and the delete button is hidden.
 - Changing the threshold input persists the new value to `settings.pruneThresholdSeconds` on each input event.
 
@@ -33,38 +33,44 @@ A manual pruning tool that lets the user find and delete tracked identities (dom
 
 ### Surfaces involved
 
-| Surface                    | Role in this feature                                                                   |
-| -------------------------- | -------------------------------------------------------------------------------------- |
-| New `storage-pruning` page | Threshold input, scope checkboxes, results list, delete action, storage bar            |
-| dashboard                  | Header button linking to the new page                                                  |
-| background                 | Receives `invalidateAnalyticsCache` after each successful prune (existing handler)     |
+
+| Surface                    | Role in this feature                                                               |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| New `storage-pruning` page | Threshold input, scope checkboxes, results list, delete action, storage bar        |
+| dashboard                  | Header button linking to the new page                                              |
+| background                 | Receives `invalidateSitesCache` after each successful prune (existing handler) |
+
 
 ### Files likely to change
 
-| File                                             | Change                                                                                   |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `src/pages/storage-pruning/storage-pruning.html` | New: page markup (header with storage bar, intro, controls, results section)             |
-| `src/pages/storage-pruning/storage-pruning.css`  | New: page-specific styles                                                                |
-| `src/pages/storage-pruning/storage-pruning.js`   | New: scan / sort / select / delete UI logic; direct `chrome.storage.local` reads/writes  |
+
+| File                                             | Change                                                                                                                                        |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/pages/storage-pruning/storage-pruning.html` | New: page markup (header with storage bar, intro, controls, results section)                                                                  |
+| `src/pages/storage-pruning/storage-pruning.css`  | New: page-specific styles                                                                                                                     |
+| `src/pages/storage-pruning/storage-pruning.js`   | New: scan / sort / select / delete UI logic; direct `chrome.storage.local` reads/writes                                                       |
 | `src/data/prune.js`                              | New: pure aggregation functions (`scanSiteBucket`, `scanSubpageBucket`) and deletion appliers (`applySiteDeletions`, `applySubpageDeletions`) |
-| `src/pages/dashboard/dashboard.html`             | Add `#prune-btn` button linking to the storage-pruning page                              |
-| `src/pages/dashboard/dashboard.js`               | Wire `#prune-btn` to navigate to the storage-pruning page                                |
+| `src/pages/dashboard/dashboard.html`             | Add `#prune-btn` button linking to the storage-pruning page                                                                                   |
+| `src/pages/dashboard/dashboard.js`               | Wire `#prune-btn` to navigate to the storage-pruning page                                                                                     |
 | `src/shared/theme.css`                           | Hoist `.data-table` / `.data-table--scroll` / `.page-title` / `#back-btn` (used by this page and shared with dashboard)                       |
-| `src/shared/utils.js`                            | Extract `showNotification` (shared with `importData.js`)                                 |
+| `src/shared/utils.js`                            | Extract `showNotification` (shared with `importData.js`)                                                                                      |
+
 
 ### Storage / tracking
 
+
 | Key               | Shape                                    | Read by              | Written by           | Notes                                                                                 |
 | ----------------- | ---------------------------------------- | -------------------- | -------------------- | ------------------------------------------------------------------------------------- |
-| `analyticsByDay`  | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
-| `analyticsByHour` | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
+| `sitesByDay`  | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
+| `sitesByHour` | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
 | `subpagesByDay`   | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId + path`)                                               |
 | `subpagesByHour`  | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId + path`)                                               |
 | `settings`        | `{ pruneThresholdSeconds: number, ... }` | storage-pruning page | storage-pruning page | new key, bag of user preferences (extensible). `pruneThresholdSeconds` defaults to 30 |
 
+
 An **identity** is `siteId` for domain stores and `siteId + path` for subpage stores. An identity is **insignificant** in a given store when, summed across every record stored for it in that store, both `totalActiveMs < threshold` AND `totalAudioMs < threshold`. Insignificance is evaluated per store independently — pruning the hourly entries does not touch the daily ones.
 
-After any prune, the page sends `{ type: 'invalidateAnalyticsCache' }` to background so analytics caches (`cachedByDay` / `cachedByHour` / `cachedSubpagesByDay` / `cachedSubpagesByHour`) are dropped.
+After any prune, the page sends `{ type: 'invalidateSitesCache' }` to background so tracking data caches (`cachedByDay` / `cachedByHour` / `cachedSubpagesByDay` / `cachedSubpagesByHour`) are dropped.
 
 ## Edge cases
 
@@ -76,11 +82,3 @@ After any prune, the page sends `{ type: 'invalidateAnalyticsCache' }` to backgr
 - First-time visit (no `settings` key yet): page initialises with default `pruneThresholdSeconds: 30`.
 - Sort/select interactions within one group do not scroll the page or reset other groups (groups re-render in place).
 
-## Out of scope (v1)
-
-- Date-based retention pruning (delete by age).
-- Storage-size monitoring / alerts when approaching the 10 MB quota (the bar is informational, not an alert).
-- Undo / restore after deletion.
-- Cross-group "select all" / "deselect all" (per-group select is implemented; global is not).
-- Sync of the threshold setting across devices.
-- Migration to seed the `settings` key for existing installs (handled separately per project rules).

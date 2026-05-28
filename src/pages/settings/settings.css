@@ -1,0 +1,32 @@
+#settings-main {
+  max-width: 720px;
+  margin: 24px auto;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setting-card {
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-label {
+  font-weight: 600;
+}
+
+.setting-desc {
+  margin: 0;
+}
+
+.setting-card .form-row > input,
+.setting-card .form-row > select,
+.setting-card .form-row > .custom-dropdown {
+  margin-left: auto;
+}

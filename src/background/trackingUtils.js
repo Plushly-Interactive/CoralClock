@@ -2,6 +2,34 @@ import { localDayKey, localHourKey, splitByHour } from '../shared/timeUtils.js';
 
 const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
 
+// Debug logging is off by default and gated on a `_debug` flag in
+// chrome.storage.local. To enable in the field without a rebuild:
+//   chrome.storage.local.set({ _debug: true })  // then reload the extension
+// Logs include full tab URLs, so keep it off unless actively debugging.
+let _debug = false;
+
+// Read the flag once at startup. Called from bootstrap before listeners run.
+export async function initDebug() {
+  const { _debug: flag = false } = await chrome.storage.local.get('_debug');
+  _debug = flag;
+}
+
+// Whether debug logging is on. Use at call sites to skip building expensive
+// log arguments (e.g. JSON.stringify) when logging is off.
+export function isDebug() {
+  return _debug;
+}
+
+// Debug logger with a local YYYY-MM-DD HH:MM:SS.mmm timestamp prefix, so the
+// [BG-DBG] trace can be correlated against the day/hour buckets in stored data.
+export function dbg(...args) {
+  if (!_debug) return;
+  const d = new Date();
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+  console.log(`[BG-DBG ${date} ${time}]`, ...args);
+}
+
 export function createTrackingModule({
   urlToKey,
   dayStorageKey,
@@ -19,12 +47,12 @@ export function createTrackingModule({
 
   async function init() {
     const windows = await chrome.windows.getAll({ populate: true });
-    console.log('[BG-DBG] init: windows count=', windows.length);
+    dbg('init: windows count=', windows.length);
     for (const w of windows) {
-      if (w.state === 'minimized') { console.log('[BG-DBG] init: window', w.id, 'minimized, skip'); tracker.markMinimized(w.id); continue; }
+      if (w.state === 'minimized') { dbg('init: window', w.id, 'minimized, skip'); tracker.markMinimized(w.id); continue; }
       const tab = w.tabs?.find(t => t.active);
       const key = urlToKey(tab?.url);
-      console.log('[BG-DBG] init: window', w.id, 'activeTab url=', tab?.url, '→ key=', key);
+      dbg('init: window', w.id, 'activeTab url=', tab?.url, '→ key=', key);
       if (key) tracker.addWindow(w.id, key);
     }
     const tabs = await chrome.tabs.query({ audible: true });
@@ -36,6 +64,7 @@ export function createTrackingModule({
   }
 
   async function reconcile() {
+    dbg('reconcile: start (tracked windows=', tracker.getTrackedWindowIds().length, 'audible tabs=', tracker.getTrackedAudibleTabIds().length, ')');
     const windows = await chrome.windows.getAll();
     const liveById = new Map(windows.map(w => [w.id, w]));
     for (const id of tracker.getTrackedWindowIds()) {
@@ -78,14 +107,19 @@ export function createTrackingModule({
     _recovered = true;
     const stored = await chrome.storage.local.get(snapshotStorageKey);
     const snap = stored[snapshotStorageKey];
-    if (!snap) return;
+    if (!snap) { dbg(`recover[${snapshotStorageKey}]: no snapshot`); return; }
     const now = Date.now();
     if (now - snap.at > SNAPSHOT_MAX_GAP_MS) {
+      dbg(`recover[${snapshotStorageKey}]: snapshot too stale (${now - snap.at}ms), discarded`);
       await chrome.storage.local.remove(snapshotStorageKey);
       return;
     }
     const endAt = Math.min(clipAt ?? now, now);
     const { activeKeys, audioKeys } = parseSnapshot(snap);
+    // Credits [snap.at, endAt] of time to keys that were live when the worker
+    // was suspended. An unexpectedly large gap here explains time (not visit)
+    // jumps after a restart.
+    dbg(`recover[${snapshotStorageKey}]: crediting ${endAt - snap.at}ms to`, activeKeys.length, 'active /', audioKeys.length, 'audio keys');
     const activeKeySet = new Set(activeKeys);
     for (const key of activeKeys) {
       tracker.pushRange('active', key, [snap.at, endAt]);
@@ -100,8 +134,8 @@ export function createTrackingModule({
 
   async function flushToStorage(now = Date.now()) {
     tracker.flushAllElapsed(now);
-    const { active, audio, overlap, visits } = tracker.pending;
-    if (active.size === 0 && audio.size === 0 && overlap.size === 0 && visits.size === 0) return;
+    const { active, audio, overlap, idle, visits } = tracker.pending;
+    if (active.size === 0 && audio.size === 0 && overlap.size === 0 && idle.size === 0 && visits.size === 0) return;
     const stored = await chrome.storage.local.get([dayStorageKey, hourStorageKey]);
     const byDay = stored[dayStorageKey] ?? {};
     const byHour = stored[hourStorageKey] ?? {};
@@ -125,6 +159,7 @@ export function createTrackingModule({
     addRanges(active, 'activeMs');
     addRanges(audio, 'audioMs');
     addRanges(overlap, 'overlapMs');
+    addRanges(idle, 'idleMs');
 
     const day = localDayKey(now);
     const hour = localHourKey(now);
@@ -133,10 +168,18 @@ export function createTrackingModule({
       getCell(byDay[day], key).visits += count;
       byHour[hour] ??= {};
       getCell(byHour[hour], key).visits += count;
+      // Per-key visit ledger: shows exactly how many visits each flush commits
+      // to storage. A large delta here for a single key in one tick is the
+      // direct fingerprint of a visit-overcount bug.
+      dbg(`flush[${hourStorageKey}]: +${count} visits → ${key} (hour total now ${getCell(byHour[hour], key).visits})`);
     }
 
     tracker.clearPending();
     await chrome.storage.local.set({ [dayStorageKey]: byDay, [hourStorageKey]: byHour });
+  }
+
+  function applyIdleClip(idleSince, now) {
+    tracker.applyIdleClip(idleSince, now);
   }
 
   return {
@@ -147,6 +190,7 @@ export function createTrackingModule({
     removeAudibleTab: tracker.removeAudibleTab,
     init, reconcile,
     saveSnapshot, recoverFromSnapshot, flushToStorage,
+    applyIdleClip,
   };
 }
 
@@ -155,9 +199,15 @@ export function createRangeTracker() {
   const windowToKey = new Map();
   const minimizedWindowIds = new Set();
   const audibleTabToKey = new Map();
+  // Last key each tab was counted as an audio visit for. Unlike audibleTabToKey
+  // (cleared when a tab goes silent), this survives audible→silent→audible flaps
+  // and the countVisit=false restore path on service-worker restart, so a tab
+  // that keeps playing the same site is counted once, not on every resume.
+  const audibleTabLastVisitKey = new Map();
   const pendingActive = new Map();
   const pendingAudio = new Map();
   const pendingOverlap = new Map();
+  const pendingIdle = new Map();
   const pendingVisits = new Map();
 
   function newState() {
@@ -220,31 +270,32 @@ export function createRangeTracker() {
 
   function setWindow(windowId, key) {
     const oldKey = windowToKey.get(windowId);
-    console.log('[BG-DBG] setWindow: windowId=', windowId, 'oldKey=', oldKey, 'newKey=', key);
-    if (oldKey === key) { console.log('[BG-DBG] setWindow: same key, return'); return; }
-    if (!oldKey && !key) { console.log('[BG-DBG] setWindow: both null, return'); return; }
+    dbg('setWindow: windowId=', windowId, 'oldKey=', oldKey, 'newKey=', key);
+    if (oldKey === key) { dbg('setWindow: same key, return'); return; }
+    if (!oldKey && !key) { dbg('setWindow: both null, return'); return; }
     if (oldKey) removeWindow(windowId);
     if (key) {
       const wasMinimized = minimizedWindowIds.delete(windowId);
       const existing = states.get(key);
       const wasTracked = wasMinimized || (!!existing && (existing.wasActive || existing.wasAudible));
-      console.log('[BG-DBG] setWindow: existing state for', key, '?', !!existing, 'wasTracked=', wasTracked, 'wasMinimized=', wasMinimized);
+      dbg('setWindow: existing state for', key, '?', !!existing, 'wasTracked=', wasTracked, 'wasMinimized=', wasMinimized);
       addWindow(windowId, key);
       if (!wasTracked) {
         pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
-        console.log('[BG-DBG] setWindow: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
+        dbg('setWindow: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
       } else {
-        console.log('[BG-DBG] setWindow: visit NOT counted (already tracked)');
+        dbg('setWindow: visit NOT counted (already tracked)');
       }
     } else {
-      console.log('[BG-DBG] setWindow: key is null/falsy, only removed old');
+      dbg('setWindow: key is null/falsy, only removed old');
     }
   }
 
   function addAudibleTab(tabId, key, countVisit = true) {
     if (!key) return;
     const oldKey = audibleTabToKey.get(tabId);
-    if (oldKey === key) return;
+    dbg('addAudibleTab: tabId=', tabId, 'oldKey=', oldKey, 'newKey=', key, 'countVisit=', countVisit);
+    if (oldKey === key) { dbg('addAudibleTab: same key, return'); return; }
     if (oldKey) removeAudibleTab(tabId);
     audibleTabToKey.set(tabId, key);
     let s = states.get(key);
@@ -256,14 +307,24 @@ export function createRangeTracker() {
     recordElapsed(key);
     s.audibleTabIds.add(tabId);
     s.wasAudible = true;
-    if (!wasTracked) {
-      s.startedAt = Date.now();
-      if (countVisit) pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
+    if (!wasTracked) s.startedAt = Date.now();
+    // A visit is "this tab started playing this site", counted once — not on
+    // every audible resume. Gate on the tab's last-seen key (which survives
+    // silent gaps and is restored on SW restart via countVisit=false), so flaps
+    // and restarts don't re-count a tab still on the same site.
+    const alreadyCounted = audibleTabLastVisitKey.get(tabId) === key;
+    audibleTabLastVisitKey.set(tabId, key);
+    if (countVisit && !alreadyCounted) {
+      pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
+      dbg('addAudibleTab: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
+    } else {
+      dbg('addAudibleTab: visit NOT counted; alreadyCounted=', alreadyCounted, 'countVisit=', countVisit);
     }
   }
 
   function removeAudibleTab(tabId) {
     const key = audibleTabToKey.get(tabId);
+    dbg('removeAudibleTab: tabId=', tabId, 'key=', key);
     if (!key) return;
     audibleTabToKey.delete(tabId);
     const s = states.get(key);
@@ -272,11 +333,44 @@ export function createRangeTracker() {
     if (s.audibleTabIds.size === 0 && s.wasAudible) {
       recordElapsed(key);
       s.wasAudible = false;
+      dbg('removeAudibleTab: cleared wasAudible for', key);
     }
   }
 
   function flushAllElapsed(now) {
     for (const key of states.keys()) recordElapsed(key, now);
+  }
+
+  // Splits in-flight ranges at `idleSince`: the portion before counts as active,
+  // the portion after counts as idle. Audio is not clipped — a playing tab is
+  // real usage even while the user is away. Called by the flush alarm when
+  // chrome.idle reports the user idle/locked; idleSince is `now - threshold`.
+  function applyIdleClip(idleSince, now) {
+    for (const [key, s] of states) {
+      if (!s.wasActive && !s.wasAudible) continue;
+      const clip = Math.max(s.startedAt, Math.min(idleSince, now));
+      if (s.wasActive && clip > s.startedAt) {
+        const ranges = pendingActive.get(key) ?? [];
+        ranges.push([s.startedAt, clip]);
+        pendingActive.set(key, ranges);
+        if (s.wasAudible) {
+          const oranges = pendingOverlap.get(key) ?? [];
+          oranges.push([s.startedAt, clip]);
+          pendingOverlap.set(key, oranges);
+        }
+      }
+      if (s.wasActive && now > clip) {
+        const ranges = pendingIdle.get(key) ?? [];
+        ranges.push([clip, now]);
+        pendingIdle.set(key, ranges);
+      }
+      if (s.wasAudible && now > s.startedAt) {
+        const ranges = pendingAudio.get(key) ?? [];
+        ranges.push([s.startedAt, now]);
+        pendingAudio.set(key, ranges);
+      }
+      s.startedAt = now;
+    }
   }
 
   function getActiveKeys() {
@@ -302,6 +396,7 @@ export function createRangeTracker() {
   function pushRange(field, key, range) {
     const map = field === 'active' ? pendingActive
       : field === 'audio' ? pendingAudio
+      : field === 'idle' ? pendingIdle
       : pendingOverlap;
     const ranges = map.get(key) ?? [];
     ranges.push(range);
@@ -312,14 +407,15 @@ export function createRangeTracker() {
     pendingActive.clear();
     pendingAudio.clear();
     pendingOverlap.clear();
+    pendingIdle.clear();
     pendingVisits.clear();
   }
 
   return {
     setWindow, addWindow, removeWindow, markMinimized: (id) => minimizedWindowIds.add(id), addAudibleTab, removeAudibleTab,
-    flushAllElapsed, getActiveKeys, getAudibleKeys,
+    flushAllElapsed, applyIdleClip, getActiveKeys, getAudibleKeys,
     getTrackedWindowIds, getTrackedAudibleTabIds, isWindowTracked,
     pushRange, clearPending,
-    pending: { active: pendingActive, audio: pendingAudio, overlap: pendingOverlap, visits: pendingVisits },
+    pending: { active: pendingActive, audio: pendingAudio, overlap: pendingOverlap, idle: pendingIdle, visits: pendingVisits },
   };
 }

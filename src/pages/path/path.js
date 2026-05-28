@@ -7,15 +7,18 @@ import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../..
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { analyticsRequest, clearMockModeCache } from '../../shared/tourMockData.js';
+import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
 import { MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR } from '../../shared/msgTypes.js';
 
-const drill = JSON.parse(sessionStorage.getItem('subpageDrill') || 'null');
-if (!drill) {
+const drillParams = new URLSearchParams(location.search);
+if (!drillParams.has('ids') || !drillParams.has('path')) {
   location.href = '../dashboard/dashboard.html';
 }
 
-const { siteIds, path, prefix, stripParams } = drill;
+const siteIds = drillParams.get('ids').split(',');
+const path = drillParams.get('path');
+const prefix = drillParams.get('prefix') === '1';
+const stripParams = drillParams.get('stripParams') === '1';
 const siteId = siteIds[0];
 const isMerged = siteIds.length > 1;
 
@@ -268,8 +271,8 @@ const loadAndRenderPromise = loadAndRender();
 
 async function loadAndRender() {
   [byDayCache, byHourCache] = await Promise.all([
-    analyticsRequest({ type: MSG_GET_SUBPAGES_BY_DAY }),
-    analyticsRequest({ type: MSG_GET_SUBPAGES_BY_HOUR }),
+    fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_DAY }),
+    fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_HOUR }),
   ]);
   if (isMerged) setCrumbDomain(resolveOwningDomain());
   renderPathLinks(resolveOwningEntries());

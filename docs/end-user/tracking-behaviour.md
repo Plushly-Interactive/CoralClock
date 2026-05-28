@@ -16,21 +16,21 @@ A "site" is determined by the URL's hostname (via the public-suffix logic in `si
 
 ## How a visit is counted
 
-Visits are **session-based**: one visit is recorded each time a site goes from "not tracked at all" to "tracked".
+A visit is recorded when you **go to** a site. Two things count as going to a site:
 
-A site is *tracked* whenever any of these is true:
+- **Activating it** — it becomes the active tab of a non-minimized window, having not just been active there.
+- **A tab starting to play it** — a tab begins playing the site's audio, having not just been counted for that same site.
 
-- It is the active tab of any non-minimized window.
-- A tab on that site is playing audio (and not muted).
+Opening additional windows on a site that's already active, or audio resuming on a tab that's *still on the same site*, does **not** add a visit.
 
-A new visit is added the moment the site becomes tracked again *after* having been fully untracked. Switching tabs, opening additional windows on the same site, or starting/stopping audio while the site is already tracked does **not** add a visit.
+The audio rule is per-tab: a tab that keeps playing one site is counted **once**, even if its audio stops and resumes, the player reloads, or the stream is interrupted. A stream left playing on a second monitor stays at one visit for the whole session.
 
 ### Example: same site across multiple windows
 
 Open `reddit.com`, then Shift-click posts to open them in two more windows.
 
 - Opening reddit → 1 visit.
-- Each new window on reddit → 0 additional visits (reddit was already tracked).
+- Each new window on reddit → 0 additional visits (reddit was already active).
 
 ### Example: same window, switching to another site and back
 
@@ -38,21 +38,20 @@ Open `reddit.com`, open a few post tabs in the same window, then open `facebook.
 
 - Opening reddit → 1 visit.
 - Opening posts in background tabs → 0 visits.
-- Opening facebook → 1 visit. Reddit becomes fully untracked at this moment.
-- Clicking back to a reddit tab → 1 visit (new session).
+- Opening facebook → 1 visit. Reddit is no longer the active tab.
+- Clicking back to a reddit tab → 1 visit (you navigated back to it).
 
 Reddit ends up at 2 visits.
 
-### Example: same as above, but a reddit tab is playing audio
+### Example: a backgrounded tab playing audio
 
-Same scenario, except one of the reddit post tabs is playing audio in the background.
+Open a Twitch stream, switch your active tab to other sites, and leave the stream playing in the background (e.g. on a second monitor).
 
-- Opening reddit → 1 visit.
-- Opening posts → 0 visits.
-- Opening facebook → 1 visit. Reddit is no longer the active tab anywhere, but the audible tab keeps it tracked.
-- Clicking back to a reddit tab → 0 visits. The reddit session never ended.
+- Opening the stream → 1 visit.
+- Switching away while it keeps playing → 0 visits. Audio time keeps accruing.
+- The stream pausing and resuming, ad breaks, a raid to another channel, or the player reloading → 0 visits. The same tab is still on the same site, so it isn't re-counted.
 
-Reddit stays at 1 visit. If the audio had stopped before you returned, reddit would have become fully untracked, and the return click would count as a new visit (back to 2).
+The stream stays at 1 visit. Opening a *different* audible site in another tab would count that new site once.
 
 ## How time is counted
 

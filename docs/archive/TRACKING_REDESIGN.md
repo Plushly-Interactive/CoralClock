@@ -91,7 +91,7 @@ Rebuilt on service worker startup by querying all windows and all audible tabs.
 > **Issues #12, #13** — every set change triggers a `storage.local.set`; concurrent flush calls race on a non-atomic read-modify-write. Use an in-memory accumulator as source of truth and write only on alarm and on suspend.  
 > See `REDESIGN_ISSUES.md` for details.
 
-### `analyticsByDay` / `analyticsByHour` (persisted, long-term)
+### `sitesByDay` / `sitesByHour` (persisted, long-term)
 
 ```js
 { [dayKey]:  { [siteId]: { activeMs, audioMs, overlapMs, visits } } }
@@ -125,5 +125,5 @@ Rebuilt on service worker startup by querying all windows and all audible tabs.
 
 No `unlimitedStorage` manifest permission. Retention defaults TBD — see `STORAGE_SIMULATION.md` for size projections.
 
-- `analyticsByHour`: prune entries older than N months
-- `analyticsByDay`: prune entries older than N years
+- `sitesByHour`: prune entries older than N months
+- `sitesByDay`: prune entries older than N years

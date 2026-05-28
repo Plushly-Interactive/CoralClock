@@ -1,5 +1,5 @@
 import { localDayKey } from '../shared/timeUtils.js';
-import { MSG_INVALIDATE_ANALYTICS_CACHE } from '../shared/msgTypes.js';
+import { MSG_INVALIDATE_SITES_CACHE } from '../shared/msgTypes.js';
 
 const SITES = {
   'youtube.com':          { peaks: [[19,23,1.0],[12,14,0.6],[15,18,0.5]], peakMaxMin: 35, weekendFactor: 1.7, skipDayProb: 0.10, audioFraction: 0.65 },
@@ -30,7 +30,7 @@ export async function seedTestData() {
   const now = new Date();
   const todayKey = localDayKey(now.getTime());
   const currentHour = now.getHours();
-  const analyticsByDay = {}, analyticsByHour = {};
+  const sitesByDay = {}, sitesByHour = {};
 
   for (let d = 0; d < DAYS_BACK; d++) {
     const day = new Date(now);
@@ -71,7 +71,7 @@ export async function seedTestData() {
 
       if (Object.keys(perSiteMs).length === 0) continue;
 
-      analyticsByHour[hourKey] = {};
+      sitesByHour[hourKey] = {};
       for (const [siteId, ms] of Object.entries(perSiteMs)) {
         const profile = SITES[siteId];
         const visits = visitsForMs(ms);
@@ -81,7 +81,7 @@ export async function seedTestData() {
         const overlapMs = audioMs > 0
           ? Math.floor(audioMs * (0.3 + Math.random() * 0.5))
           : 0;
-        analyticsByHour[hourKey][siteId] = { activeMs: ms, audioMs, overlapMs, visits };
+        sitesByHour[hourKey][siteId] = { activeMs: ms, audioMs, overlapMs, visits };
         dayTotals[siteId] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
         dayTotals[siteId].activeMs += ms;
         dayTotals[siteId].audioMs += audioMs;
@@ -90,9 +90,9 @@ export async function seedTestData() {
       }
     }
 
-    analyticsByDay[dayKey] = dayTotals;
+    sitesByDay[dayKey] = dayTotals;
   }
 
-  await chrome.storage.local.set({ analyticsByDay, analyticsByHour });
-  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_ANALYTICS_CACHE }).catch(() => {});
+  await chrome.storage.local.set({ sitesByDay, sitesByHour });
+  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }).catch(() => {});
 }

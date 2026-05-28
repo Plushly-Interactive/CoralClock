@@ -1,8 +1,9 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
 import { RULE_MULTIPLIERS, describeRule, BLOCKS_DAY_KEY, blockKey } from '../shared/rules.js';
+import { weekDow } from '../shared/weekStart.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 
-// Usage contributed by one analytics/subpage cell under the rule's mode.
+// Usage contributed by one site/subpage cell under the rule's mode.
 function cellUsage(cell, mode) {
   if (!cell) return 0;
   const active = cell.activeMs ?? 0;
@@ -14,14 +15,14 @@ function cellUsage(cell, mode) {
 }
 
 // The day/hour bucket keys covering the rule's period window, ending at `now`.
-// `week` is a *calendar* week (Monday-start): from this Monday through today,
-// resetting at the week boundary like `day`/`hour`. A rolling-7-day variant is
-// a deferred TODO (see docs/features/enforcement.md).
+// `week` is a *calendar* week starting on the user's configured week-start day
+// (default Monday): from this week-start through today, resetting at the week
+// boundary like `day`/`hour`. A rolling-7-day variant is a deferred TODO
+// (see docs/features/enforcement.md).
 function windowKeys(period, now) {
   if (period === 'hour') return { type: 'hour', keys: [localHourKey(now)] };
   if (period === 'week') {
-    const d = new Date(now);
-    const dow = (d.getDay() + 6) % 7; // 0 = Monday … 6 = Sunday
+    const dow = weekDow(new Date(now));
     const keys = [];
     for (let i = dow; i >= 0; i--) {
       const day = new Date(now);
@@ -74,13 +75,13 @@ function sumBucket(rule, siteBucket, subpageBucket) {
 // the limit. Returns Map<ruleId, { target, matchType, path, overBy }> for rules
 // currently over their limit. No chrome APIs.
 export function computeOverage(rules, stores, now = Date.now()) {
-  const { analyticsByDay = {}, analyticsByHour = {}, subpagesByDay = {}, subpagesByHour = {} } = stores;
+  const { sitesByDay = {}, sitesByHour = {}, subpagesByDay = {}, subpagesByHour = {} } = stores;
   const overage = new Map();
 
   for (const rule of rules) {
     if (!rule.enabled) continue;
     const { type, keys } = windowKeys(rule.period, now);
-    const siteBuckets = type === 'hour' ? analyticsByHour : analyticsByDay;
+    const siteBuckets = type === 'hour' ? sitesByHour : sitesByDay;
     const subpageBuckets = type === 'hour' ? subpagesByHour : subpagesByDay;
 
     let used = 0;

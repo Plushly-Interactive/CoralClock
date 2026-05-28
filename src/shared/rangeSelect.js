@@ -1,3 +1,5 @@
+import { initCustomDropdowns } from './dropdown.js';
+
 const RANGE_OPTS = {
   today: 'Today',
   '7': 'Last 7 days',
@@ -23,30 +25,16 @@ export function createRangeDropdown() {
 }
 
 export function initRangeSelect(rangeSelect, onChange) {
-  const savedRange = sessionStorage.getItem('analyticsRange') || '7';
+  const savedRange = sessionStorage.getItem('timeRange') || '7';
   rangeSelect.dataset.value = savedRange;
   rangeSelect.firstChild.textContent = RANGE_OPTS[savedRange];
 
-  rangeSelect.parentElement.querySelector('.dropdown-menu').querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      rangeSelect.dataset.value = btn.value;
-      rangeSelect.firstChild.textContent = btn.textContent;
-      rangeSelect.parentElement.querySelector('.dropdown-menu').classList.remove('open');
-      sessionStorage.setItem('analyticsRange', btn.value);
+  initCustomDropdowns(rangeSelect.parentElement);
+
+  rangeSelect.parentElement.querySelectorAll('.dropdown-menu button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sessionStorage.setItem('timeRange', btn.value);
       onChange();
     });
-  });
-
-  rangeSelect.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const menu = rangeSelect.parentElement.querySelector('.dropdown-menu');
-    const isOpen = menu.classList.contains('open');
-    document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-    if (!isOpen) menu.classList.add('open');
-  });
-
-  document.addEventListener('click', () => {
-    document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
   });
 }

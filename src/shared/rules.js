@@ -180,39 +180,12 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
   }).join('');
 }
 
-export function initCustomDropdowns(root = document) {
-  root.querySelectorAll('.dropdown-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const menu = btn.nextElementSibling;
-      const isOpen = menu.classList.contains('open');
-      root.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-      if (!isOpen) menu.classList.add('open');
-    });
-  });
-
-  root.querySelectorAll('.dropdown-menu:not(#theme-dropdown):not(#form-matchtype-menu) button').forEach(option => {
-    option.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const menu = option.parentElement;
-      const btn = menu.previousElementSibling;
-      btn.firstChild.textContent = option.textContent;
-      btn.dataset.value = option.value;
-      menu.classList.remove('open');
-    });
-  });
-
-  document.addEventListener('click', () => {
-    root.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-  });
-}
-
 // Compute total spent time for a rule on a given day (active + audio - overlap).
-// dayKey should be in YYYY-MM-DD format (as used in analyticsByDay/subpagesByDay keys).
+// dayKey should be in YYYY-MM-DD format (as used in sitesByDay/subpagesByDay keys).
 export function computeRuleSpent(rule, dayKey, stores) {
-  const { analyticsByDay = {}, subpagesByDay = {} } = stores;
+  const { sitesByDay = {}, subpagesByDay = {} } = stores;
 
-  const siteBucket = analyticsByDay[dayKey];
+  const siteBucket = sitesByDay[dayKey];
   const subpageBucket = subpagesByDay[dayKey];
 
   function sumCell(cell) {
@@ -252,9 +225,9 @@ export function computeRuleSpent(rule, dayKey, stores) {
 
 // Get visit count for a rule on a given day.
 export function computeRuleVisits(rule, dayKey, stores) {
-  const { analyticsByDay = {}, subpagesByDay = {} } = stores;
+  const { sitesByDay = {}, subpagesByDay = {} } = stores;
 
-  const siteBucket = analyticsByDay[dayKey];
+  const siteBucket = sitesByDay[dayKey];
   const subpageBucket = subpagesByDay[dayKey];
 
   if (rule.matchType === 'pathPrefix') {
