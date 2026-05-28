@@ -28,8 +28,11 @@
 - For dynamic JS-driven visibility toggling, use `element.style.display = 'none'` / `''` (empty string restores the CSS-declared display value). Use the `hidden` attribute only for static initial hidden states declared in HTML (e.g. `<div id="modal" hidden>`), and clear it via `element.removeAttribute('hidden')` or by setting `style.display` once before toggling further.
 - Pages access `chrome.storage.local` directly — there is no requirement to proxy reads or writes through `background.js`. Background message passing is for data the service worker tracks in memory (e.g. live tracking data cache).
 - For `<button>` elements that navigate to another page, use `navButton(el, url)` from `src/shared/utils.js` — it handles same-tab, middle-click, and ctrl/cmd-click correctly.
+- Background debug logging goes through `dbg()` from `src/background/trackingUtils.js`, gated on the `_debug` flag in `chrome.storage.local`. Don't use bare `console.log` in background code, and don't log user URLs unless behind `dbg()`. Any new tracking feature must add `dbg()` calls at its decision points (visit counted / not counted, state transitions, flushes) so the trace stays usable for diagnosing overcounting and similar bugs.
+- New `chrome.storage.local` preference keys go in `src/shared/prefKeys.js`; new `chrome.runtime` message types go in `src/shared/msgTypes.js`. Don't inline these strings at the call site.
 
 ## Page layout
+- Each full-page view lives in `src/pages/<name>/` as a `<name>.{html,css,js}` triplet.
 - Every full-page view reuses the shared header in `theme.css` (75px height, three-column grid). Don't redefine `header` per page. Exception: the popup has its own fixed-width header layout and is exempt.
 - For "back to dashboard" navigation, use the icon-back pattern: an `<a id="back-btn">` wrapping the BiteGuard logo image, placed in `#header-left`. Never add a text "Back to dashboard" button.
 
