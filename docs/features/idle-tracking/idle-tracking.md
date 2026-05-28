@@ -2,7 +2,7 @@
 
 Pause `activeMs` accrual while the user is idle (no keyboard/mouse input) or the screen is locked, and record the paused time as a separate `idleMs` counter. `activeMs` becomes "attended" time (focused + input); `idleMs` is "focused but no input"; the two are disjoint and sum to "presence". Audio time keeps counting in both states — a playing tab is real usage even if the user has stepped away.
 
-**Scope limitation:** `chrome.idle` reports OS-wide input, not browser-specific input. If the user is actively working in another app (IDE, terminal, etc.) while a Chrome tab is focused in the background, the OS reports `active` and the focused Chrome tab keeps accruing `activeMs`. This feature catches "user away from the computer entirely" but does not catch "user working in another app with Chrome in the background." See [Deferred](#deferred) for the per-page content-script approach that would close this gap.
+**Scope limitation:** `chrome.idle` reports OS-wide input, not browser-specific input. If the user is actively working in another app (IDE, terminal, etc.) while a Chrome tab is focused in the background, the OS reports `active` and the focused Chrome tab keeps accruing `activeMs`. This feature catches "user away from the computer entirely" but does not catch "user working in another app with Chrome in the background." A content-script-based approach to close this gap was scoped and rejected — see [browser-specific-idle.md](./browser-specific-idle.md) for the rationale
 
 ## User stories
 
@@ -56,6 +56,9 @@ The 60-second idle threshold is hardcoded in `background.js` for v1. Under the e
 
 ## Deferred
 
-- **Browser-specific idle via per-page content scripts.** Inject a tiny content script into every page that pings the background on `mousemove` / `keydown`. The background treats "no ping from any tab for ≥ threshold seconds" as browser-idle, separate from `chrome.idle`'s OS-wide signal. Closes the Twitch-while-working-in-IDE case (audio playing in Chrome while user types in another app). Trade-offs: content script on every page, gaps on `chrome://` pages and other restricted contexts, misses input to browser chrome itself (address bar, devtools).
 - **Back-date `idleStartedAt` to claw back the head-loss.** On the `idle` event, set `idleStartedAt = Date.now() - T * 1000` instead of `Date.now()`. Chrome guarantees "idle for ≥ T" when firing the event, so this is exact when the event fires within the same flush window as the transition. Mostly-fine at T = 60 (event almost always fires before the next flush); edge cases at higher T may require rewriting already-committed storage cells.
 - **User-configurable threshold.** Surface T as a setting once the dedicated settings page exists.
+
+## Rejected
+
+- **Browser-specific idle via per-page content scripts.** See [browser-specific-idle.md](./browser-specific-idle.md).
