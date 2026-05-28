@@ -62,7 +62,6 @@ Most features currently implemented all act *at the limit boundary* — measure 
 
 Settings: look for fixed, currently hardcoded values across the whole codebase that could be user-defined in settings.
 
-- **Migrate scattered inline prefs to the settings page** — page-local toggles (`hideBrief`, `mergeMode`, `groupMode`, `subpagesStripParams`) still live on the dashboard and site pages. Move them onto the settings page as a second pass once the page's pattern is settled. The settings page itself (`src/pages/settings/`) and the `options_page` manifest entry are already in place; week-start and idle-threshold ship there.
 - **Incognito / private-window handling policy** — an explicit decision and setting for whether private windows are tracked at all (likely excluded by default). Not currently addressed in the tracking docs.
 - **Pause tracking** — a temporary "pause for 1h / until tomorrow" toggle for legitimate non-leisure browsing (e.g. work research). Tracking is always-on today with no off switch.
 - **Include rules + settings in BiteGuard export/import** — the import/export modal lists "Site rules" and "Settings" as "coming soon" (`dashboard.html`), but only tracking data round-trips today. Add `rules` and the pref keys to the BiteGuard-format export/import to close those existing stubs.
@@ -118,8 +117,7 @@ Blocked page:
 ## Tracking
 
 - Track side panels?
-- **Idle detection** — active time is counted whenever a site is in the focused window, even if the user has stepped away from the keyboard. Using `chrome.idle` to pause `activeMs` accrual after N minutes of no input would make "active time" reflect actual attention rather than just a focused window. Requires the `idle` permission (not requested today).
-- **Sleep / suspend / lock-screen handling** — the focused-window assumption fails hardest when the machine sleeps, suspends, or the screen locks: a tab stays "focused" so `activeMs` keeps accruing across hours the user was away, inflating active time far more than mere keyboard idle. `chrome.idle` reports a `locked` state distinct from `idle`, and a flush gap (no alarm fired for far longer than the period) is a signal the machine was suspended. Pause/clamp accrual across these gaps. Distinct from [idle detection](#tracking) (keyboard inactivity while awake) — this is about the system not running at all.
+- **Sleep / suspend handling** — the focused-window assumption fails hardest when the machine sleeps or suspends: a tab stays "focused" so `activeMs` keeps accruing across hours the user was away, inflating active time far more than mere keyboard idle. A flush gap (no alarm fired for far longer than the period) is a signal the machine was suspended; pause/clamp accrual across these gaps. Distinct from idle detection (keyboard inactivity while awake, already shipped) and screen-lock handling (the `locked` state, also handled by the idle path) — this is about the system not running at all.
 - **Subpage opt-out toggle** — per-site "Track subpages: on/off" toggle on `site.html`. Default = on.
 - **Per-site path patterns** — user-defined rules like `reddit.com` → keep `/r/<sub>` only, `youtube.com` → keep `?v=<id>` only. Could replace or complement raw path storage.
 - **Purge non-human-readable paths** — regular cleanup of paths dominated by random characters / hashes / long IDs to reduce storage noise.
@@ -128,7 +126,7 @@ Blocked page:
 ## Storage & pruning
 
 - Date-based retention pruning (delete by age).
-- Storage-size monitoring / alerts when approaching the 10 MB quota.
+- **Storage-size alerts & per-bucket monitoring** — a total-usage progress bar exists today on the dashboard and storage-pruning pages (`#storage-bar-*`), but there's no alert when usage approaches the 10 MB quota, and no per-bucket breakdown (sites vs subpages, daily vs hourly) on the storage-pruning page to show which store is responsible for the bulk. Add (a) a threshold-based alert/notification when total usage crosses e.g. 80% of quota, and (b) a per-bucket size breakdown on the storage-pruning page so the user can target the prune at the noisiest store.
 - **Automatic local backup / restore** — only manual JSON export exists today. A scheduled auto-snapshot (e.g. weekly, kept in `chrome.storage.local` or auto-downloaded) would protect against accidental data loss or a bad prune, with a one-click restore. Distinct from the existing manual, user-initiated import/export.
 - **Per-site / per-range targeted deletion** — pruning today is global by age or size (`prune.js`). Add a way to delete all stored data for a *single site* (a privacy control — clear a sensitive site without nuking everything) and to delete an *arbitrary date range* (not just "older than X"). A different axis from the age/size pruning above, which is bulk and time-monotonic. Natural homes: a "delete this site's data" action on `site.html`, and a range selector on the storage-pruning page.
 
