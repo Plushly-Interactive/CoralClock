@@ -10,7 +10,7 @@ const mod = createTrackingModule({
   hourStorageKey: SITES_HOUR_KEY,
   snapshotStorageKey: '_trackingSnapshot',
   getCell(bucket, key) {
-    bucket[key] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
+    bucket[key] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, idleMs: 0, visits: 0 };
     return bucket[key];
   },
   recoverLegacy(snap) {
@@ -31,3 +31,4 @@ export const reconcileWindows = mod.reconcile;
 export const saveSnapshot = mod.saveSnapshot;
 export const recoverFromSnapshot = mod.recoverFromSnapshot;
 export const flushToStorage = mod.flushToStorage;
+export const applyIdleClip = mod.applyIdleClip;

@@ -7,6 +7,7 @@ import {
   addAudibleTab, removeAudibleTab,
   flushToStorage, reconcileWindows, initTracking,
   saveSnapshot, recoverFromSnapshot,
+  applyIdleClip,
   SITES_DAY_KEY, SITES_HOUR_KEY,
 } from './siteTracking.js';
 import {
@@ -15,6 +16,7 @@ import {
   initSubpageTracking, reconcileSubpagePaths,
   flushSubpagesToStorage,
   saveSubpageSnapshot, recoverSubpagesFromSnapshot,
+  applyIdleClipSubpages,
   SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
 } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
@@ -62,6 +64,8 @@ chrome.runtime.onStartup.addListener(() => {
 // First page to open for the update tour. The tour hands off between surfaces
 // via nextUpdateSurface — only the entry point needs to be opened here.
 const TOUR_UPDATE_ENTRY = 'src/pages/rules/rules.html';
+
+const IDLE_THRESHOLD_SEC = 60;
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason !== 'install' && details.reason !== 'update') return;
@@ -335,6 +339,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await reconcileWindows();
   await reconcileSubpagePaths();
   const flushAt = Date.now();
+  await clipIfIdle(flushAt);
   await flushToStorage(flushAt);
   await flushSubpagesToStorage(flushAt);
   await saveSnapshot(flushAt);
@@ -352,6 +357,15 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   await bootstrapDone;
   await checkEnforcement(Date.now());
 });
+
+async function clipIfIdle(flushAt) {
+  const idleState = await chrome.idle.queryState(IDLE_THRESHOLD_SEC);
+  if (idleState !== 'idle' && idleState !== 'locked') return;
+  const idleSince = flushAt - IDLE_THRESHOLD_SEC * 1000;
+  applyIdleClip(idleSince, flushAt);
+  applyIdleClipSubpages(idleSince, flushAt);
+  dbg('flush: idle state=', idleState, 'clipped active at idleSince=', idleSince);
+}
 
 // Compute which rules are over their limit and publish DNR redirect rules so
 // over-limit sites are blocked until the period window rolls over.

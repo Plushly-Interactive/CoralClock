@@ -24,7 +24,7 @@ const mod = createTrackingModule({
   getCell(bucket, key) {
     const [siteId, path] = key.split(KEY_SEP);
     bucket[siteId] ??= {};
-    bucket[siteId][path] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
+    bucket[siteId][path] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, idleMs: 0, visits: 0 };
     return bucket[siteId][path];
   },
 });
@@ -47,3 +47,4 @@ export const reconcileSubpagePaths = mod.reconcile;
 export const saveSubpageSnapshot = mod.saveSnapshot;
 export const recoverSubpagesFromSnapshot = mod.recoverFromSnapshot;
 export const flushSubpagesToStorage = mod.flushToStorage;
+export const applyIdleClipSubpages = mod.applyIdleClip;
