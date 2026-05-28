@@ -14,7 +14,9 @@ import {
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
   MSG_GET_AVG_PER_CLOCK_HOUR,
 } from '../../shared/msgTypes.js';
-import { PREF_HIDE_BRIEF, PREF_STRIP_PARAMS } from '../../shared/prefKeys.js';
+import { PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+
+const PREF_STRIP_PARAMS = 'subpagesStripParams';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');

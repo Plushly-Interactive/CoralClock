@@ -1,4 +1,3 @@
 export const PREF_HIDE_BRIEF = 'hideBrief';
-export const PREF_MERGE_MODE = 'mergeMode';
-export const PREF_GROUP_MODE = 'groupMode';
-export const PREF_STRIP_PARAMS = 'subpagesStripParams';
+export const PREF_IDLE_THRESHOLD_SEC = 'idleThresholdSec';
+export const PREF_WEEK_START = 'weekStart';

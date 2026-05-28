@@ -9,7 +9,10 @@ import { runTour, readTourState, writeTourState, clearTourProgress } from '../..
 import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
 import { openModal, closeModal, IMPORT_COMPLETE } from '../../data/importData.js';
 import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
-import { PREF_HIDE_BRIEF, PREF_MERGE_MODE, PREF_GROUP_MODE } from '../../shared/prefKeys.js';
+import { PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+
+const PREF_MERGE_MODE = 'mergeMode';
+const PREF_GROUP_MODE = 'groupMode';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');

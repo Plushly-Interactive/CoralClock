@@ -1,7 +1,7 @@
 #confirm-dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--overlay-bg);
   z-index: 3002;
 }
 

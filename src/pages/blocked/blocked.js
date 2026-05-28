@@ -1,5 +1,6 @@
 import { RULE_MULTIPLIERS, matchLabel, computeRuleSpent, computeRuleVisits } from '../../shared/rules.js';
 import { formatMs, localDayKey } from '../../shared/timeUtils.js';
+import { weekDow } from '../../shared/weekStart.js';
 
 document.querySelector('#logo').src =
   chrome.runtime.getURL('resources/icons/biteguard-icon-blue-square-128px.png');
@@ -22,8 +23,8 @@ function nextReset(period, now = new Date()) {
   }
   d.setHours(0);
   if (period === 'week') {
-    const daysUntilMonday = (8 - (now.getDay() || 7)) % 7 || 7;
-    d.setDate(d.getDate() + daysUntilMonday);
+    const daysUntilNextWeekStart = 7 - weekDow(now);
+    d.setDate(d.getDate() + daysUntilNextWeekStart);
     return d;
   }
   d.setDate(d.getDate() + 1); // 'day'

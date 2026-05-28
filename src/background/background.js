@@ -1,6 +1,8 @@
 import { localDayKey } from '../shared/timeUtils.js';
 import { ensureStorageVersion } from '../data/migrations.js';
 import { TOUR_VERSION } from '../shared/tour.js';
+import { PREF_IDLE_THRESHOLD_SEC } from '../shared/prefKeys.js';
+import { getIdleThresholdSec } from '../shared/idleConfig.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import {
   setWindowSite, removeWindowSite,
@@ -70,8 +72,6 @@ chrome.runtime.onStartup.addListener(() => {
 // First page to open for the update tour. The tour hands off between surfaces
 // via nextUpdateSurface — only the entry point needs to be opened here.
 const TOUR_UPDATE_ENTRY = 'src/pages/rules/rules.html';
-
-const IDLE_THRESHOLD_SEC = 60;
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason !== 'install' && details.reason !== 'update') return;
@@ -365,9 +365,17 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   await checkEnforcement(Date.now());
 });
 
+chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (area !== 'local' || !changes[PREF_IDLE_THRESHOLD_SEC]) return;
+  const sec = await getIdleThresholdSec();
+  chrome.idle.setDetectionInterval(sec);
+  dbg('idle threshold changed → setDetectionInterval(', sec, ')');
+});
+
 async function seedIdleState() {
-  chrome.idle.setDetectionInterval(IDLE_THRESHOLD_SEC);
-  const state = await chrome.idle.queryState(IDLE_THRESHOLD_SEC);
+  const sec = await getIdleThresholdSec();
+  chrome.idle.setDetectionInterval(sec);
+  const state = await chrome.idle.queryState(sec);
   if (state === 'idle' || state === 'locked') {
     idleStartedAt = Date.now();
     dbg('bootstrap: user already', state, '— seeding idleStartedAt=', idleStartedAt);

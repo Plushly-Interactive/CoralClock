@@ -29,7 +29,10 @@
 - Pages access `chrome.storage.local` directly — there is no requirement to proxy reads or writes through `background.js`. Background message passing is for data the service worker tracks in memory (e.g. live tracking data cache).
 - For `<button>` elements that navigate to another page, use `navButton(el, url)` from `src/shared/utils.js` — it handles same-tab, middle-click, and ctrl/cmd-click correctly.
 - Background debug logging goes through `dbg()` from `src/background/trackingUtils.js`, gated on the `_debug` flag in `chrome.storage.local`. Don't use bare `console.log` in background code, and don't log user URLs unless behind `dbg()`. Any new tracking feature must add `dbg()` calls at its decision points (visit counted / not counted, state transitions, flushes) so the trace stays usable for diagnosing overcounting and similar bugs.
-- New `chrome.storage.local` preference keys go in `src/shared/prefKeys.js`; new `chrome.runtime` message types go in `src/shared/msgTypes.js`. Don't inline these strings at the call site.
+- `chrome.storage.local` preference keys and `chrome.runtime` message types go in `src/shared/prefKeys.js` / `src/shared/msgTypes.js` *only when used by more than one file*. A key used in a single file stays as a local string literal in that file — no constant, no shared-module entry. Promote to a shared constant the moment a second file needs it. Same rule for any future "named string" of this kind.
+- Two distinct storage tiers, do not conflate them:
+  - **Persistent user settings** (e.g. `idleThresholdSec`, `weekStart`) live in `chrome.storage.local`, are surfaced on the settings page, and have a `DEFAULT_*` constant colocated with the module that owns the setting's meaning. Defaults are imported, never re-declared at the call site.
+  - **Per-tab view-state** (e.g. `hideBrief`, `mergeMode`, `groupMode`, `subpagesStripParams`, `timeRange`) lives in `sessionStorage`, is intentionally per-tab and ephemeral, and does NOT belong on the settings page. Defaults are encoded in the read pattern (`!== 'false'` / `=== 'true'`).
 
 ## Page layout
 - Each full-page view lives in `src/pages/<name>/` as a `<name>.{html,css,js}` triplet.
