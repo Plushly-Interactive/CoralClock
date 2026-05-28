@@ -134,8 +134,8 @@ export function createTrackingModule({
 
   async function flushToStorage(now = Date.now()) {
     tracker.flushAllElapsed(now);
-    const { active, audio, overlap, visits } = tracker.pending;
-    if (active.size === 0 && audio.size === 0 && overlap.size === 0 && visits.size === 0) return;
+    const { active, audio, overlap, idle, visits } = tracker.pending;
+    if (active.size === 0 && audio.size === 0 && overlap.size === 0 && idle.size === 0 && visits.size === 0) return;
     const stored = await chrome.storage.local.get([dayStorageKey, hourStorageKey]);
     const byDay = stored[dayStorageKey] ?? {};
     const byHour = stored[hourStorageKey] ?? {};
@@ -159,6 +159,7 @@ export function createTrackingModule({
     addRanges(active, 'activeMs');
     addRanges(audio, 'audioMs');
     addRanges(overlap, 'overlapMs');
+    addRanges(idle, 'idleMs');
 
     const day = localDayKey(now);
     const hour = localHourKey(now);
@@ -177,6 +178,10 @@ export function createTrackingModule({
     await chrome.storage.local.set({ [dayStorageKey]: byDay, [hourStorageKey]: byHour });
   }
 
+  function applyIdleClip(idleSince, now) {
+    tracker.applyIdleClip(idleSince, now);
+  }
+
   return {
     setWindow: tracker.setWindow,
     removeWindow: tracker.removeWindow,
@@ -185,6 +190,7 @@ export function createTrackingModule({
     removeAudibleTab: tracker.removeAudibleTab,
     init, reconcile,
     saveSnapshot, recoverFromSnapshot, flushToStorage,
+    applyIdleClip,
   };
 }
 
@@ -201,6 +207,7 @@ export function createRangeTracker() {
   const pendingActive = new Map();
   const pendingAudio = new Map();
   const pendingOverlap = new Map();
+  const pendingIdle = new Map();
   const pendingVisits = new Map();
 
   function newState() {
@@ -334,6 +341,38 @@ export function createRangeTracker() {
     for (const key of states.keys()) recordElapsed(key, now);
   }
 
+  // Splits in-flight ranges at `idleSince`: the portion before counts as active,
+  // the portion after counts as idle. Audio is not clipped — a playing tab is
+  // real usage even while the user is away. Called by the flush alarm when
+  // chrome.idle reports the user idle/locked; idleSince is `now - threshold`.
+  function applyIdleClip(idleSince, now) {
+    for (const [key, s] of states) {
+      if (!s.wasActive && !s.wasAudible) continue;
+      const clip = Math.max(s.startedAt, Math.min(idleSince, now));
+      if (s.wasActive && clip > s.startedAt) {
+        const ranges = pendingActive.get(key) ?? [];
+        ranges.push([s.startedAt, clip]);
+        pendingActive.set(key, ranges);
+        if (s.wasAudible) {
+          const oranges = pendingOverlap.get(key) ?? [];
+          oranges.push([s.startedAt, clip]);
+          pendingOverlap.set(key, oranges);
+        }
+      }
+      if (s.wasActive && now > clip) {
+        const ranges = pendingIdle.get(key) ?? [];
+        ranges.push([clip, now]);
+        pendingIdle.set(key, ranges);
+      }
+      if (s.wasAudible && now > s.startedAt) {
+        const ranges = pendingAudio.get(key) ?? [];
+        ranges.push([s.startedAt, now]);
+        pendingAudio.set(key, ranges);
+      }
+      s.startedAt = now;
+    }
+  }
+
   function getActiveKeys() {
     return [...new Set(windowToKey.values())].filter(Boolean);
   }
@@ -357,6 +396,7 @@ export function createRangeTracker() {
   function pushRange(field, key, range) {
     const map = field === 'active' ? pendingActive
       : field === 'audio' ? pendingAudio
+      : field === 'idle' ? pendingIdle
       : pendingOverlap;
     const ranges = map.get(key) ?? [];
     ranges.push(range);
@@ -367,14 +407,15 @@ export function createRangeTracker() {
     pendingActive.clear();
     pendingAudio.clear();
     pendingOverlap.clear();
+    pendingIdle.clear();
     pendingVisits.clear();
   }
 
   return {
     setWindow, addWindow, removeWindow, markMinimized: (id) => minimizedWindowIds.add(id), addAudibleTab, removeAudibleTab,
-    flushAllElapsed, getActiveKeys, getAudibleKeys,
+    flushAllElapsed, applyIdleClip, getActiveKeys, getAudibleKeys,
     getTrackedWindowIds, getTrackedAudibleTabIds, isWindowTracked,
     pushRange, clearPending,
-    pending: { active: pendingActive, audio: pendingAudio, overlap: pendingOverlap, visits: pendingVisits },
+    pending: { active: pendingActive, audio: pendingAudio, overlap: pendingOverlap, idle: pendingIdle, visits: pendingVisits },
   };
 }

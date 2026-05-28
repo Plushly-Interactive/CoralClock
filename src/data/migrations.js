@@ -108,6 +108,32 @@ const migrations = [
     if (Object.keys(set).length) await chrome.storage.local.set(set);
     await chrome.storage.local.remove(['analyticsByDay', 'analyticsByHour']);
   },
+
+  // v5 → v6: add idleMs field to every cell (sites + subpages, day + hour)
+  async () => {
+    const {
+      [SITES_DAY_KEY]: sitesByDay = {},
+      [SITES_HOUR_KEY]: sitesByHour = {},
+      [SUBPAGES_DAY_KEY]: subpagesByDay = {},
+      [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
+    } = await chrome.storage.local.get([SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
+    for (const sites of Object.values(sitesByDay))
+      for (const cell of Object.values(sites)) cell.idleMs ??= 0;
+    for (const sites of Object.values(sitesByHour))
+      for (const cell of Object.values(sites)) cell.idleMs ??= 0;
+    for (const sites of Object.values(subpagesByDay))
+      for (const paths of Object.values(sites))
+        for (const cell of Object.values(paths)) cell.idleMs ??= 0;
+    for (const sites of Object.values(subpagesByHour))
+      for (const paths of Object.values(sites))
+        for (const cell of Object.values(paths)) cell.idleMs ??= 0;
+    await chrome.storage.local.set({
+      [SITES_DAY_KEY]: sitesByDay,
+      [SITES_HOUR_KEY]: sitesByHour,
+      [SUBPAGES_DAY_KEY]: subpagesByDay,
+      [SUBPAGES_HOUR_KEY]: subpagesByHour,
+    });
+  },
 ];
 
 export async function ensureStorageVersion() {

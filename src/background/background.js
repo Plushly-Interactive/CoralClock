@@ -7,6 +7,7 @@ import {
   addAudibleTab, removeAudibleTab,
   flushToStorage, reconcileWindows, initTracking,
   saveSnapshot, recoverFromSnapshot,
+  applyIdleClip,
   SITES_DAY_KEY, SITES_HOUR_KEY,
 } from './siteTracking.js';
 import {
@@ -15,6 +16,7 @@ import {
   initSubpageTracking, reconcileSubpagePaths,
   flushSubpagesToStorage,
   saveSubpageSnapshot, recoverSubpagesFromSnapshot,
+  applyIdleClipSubpages,
   SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
 } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
@@ -39,6 +41,12 @@ let cachedSubpagesByDay = null;
 let cachedSubpagesByHour = null;
 let bootstrapAt;
 let coldStart = false;
+// Set by chrome.idle.onStateChanged when the user goes idle/locked; cleared
+// when they become active. Used by the flush handler as the exact clip point.
+// In-memory only: a service-worker restart loses the head of the idle stretch
+// — the bootstrap query re-seeds this to `now` if the user is still idle, so
+// only the pre-restart head is forgotten, not the ongoing stretch.
+let idleStartedAt = null;
 
 // Drop the in-memory site caches after storage is rewritten (flush), so
 // the next query re-reads fresh data.
@@ -63,6 +71,8 @@ chrome.runtime.onStartup.addListener(() => {
 // via nextUpdateSurface — only the entry point needs to be opened here.
 const TOUR_UPDATE_ENTRY = 'src/pages/rules/rules.html';
 
+const IDLE_THRESHOLD_SEC = 60;
+
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason !== 'install' && details.reason !== 'update') return;
   if (details.reason === 'update') {
@@ -85,6 +95,7 @@ async function bootstrap() {
     bootstrapAt = Date.now();
     await initTracking();
     await initSubpageTracking();
+    await seedIdleState();
     dbg('bootstrap: done, bootstrapAt=', bootstrapAt);
     return;
   } catch (e) {
@@ -335,6 +346,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   await reconcileWindows();
   await reconcileSubpagePaths();
   const flushAt = Date.now();
+  clipIfIdle(flushAt);
   await flushToStorage(flushAt);
   await flushSubpagesToStorage(flushAt);
   await saveSnapshot(flushAt);
@@ -351,6 +363,32 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== 'local' || !changes.rules) return;
   await bootstrapDone;
   await checkEnforcement(Date.now());
+});
+
+async function seedIdleState() {
+  chrome.idle.setDetectionInterval(IDLE_THRESHOLD_SEC);
+  const state = await chrome.idle.queryState(IDLE_THRESHOLD_SEC);
+  if (state === 'idle' || state === 'locked') {
+    idleStartedAt = Date.now();
+    dbg('bootstrap: user already', state, '— seeding idleStartedAt=', idleStartedAt);
+  }
+}
+
+function clipIfIdle(flushAt) {
+  if (idleStartedAt === null) return;
+  applyIdleClip(idleStartedAt, flushAt);
+  applyIdleClipSubpages(idleStartedAt, flushAt);
+  dbg('flush: clipped active at idleStartedAt=', idleStartedAt);
+}
+
+chrome.idle.onStateChanged.addListener((state) => {
+  if (state === 'idle' || state === 'locked') {
+    if (idleStartedAt === null) idleStartedAt = Date.now();
+    dbg('idle.onStateChanged:', state, 'idleStartedAt=', idleStartedAt);
+  } else {
+    dbg('idle.onStateChanged: active (was idleStartedAt=', idleStartedAt, ')');
+    idleStartedAt = null;
+  }
 });
 
 // Compute which rules are over their limit and publish DNR redirect rules so
