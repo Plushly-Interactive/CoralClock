@@ -1,4 +1,5 @@
 import { formatMs, formatMsAsDays, localDayKey } from './timeUtils.js';
+import { weekKeyForDate, daysInWeek, navigateWeek } from './weekStart.js';
 import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from './utils.js';
 import { drawTimeChart, drawVisitsChart, drawHourlyChart, buildHourlyBuckets } from './overview.js';
 
@@ -39,8 +40,8 @@ const DRILL_INNER_HTML = `
     <div id="drill-keys-popup" class="tooltip text-meta">
       <div id="drill-keys-title">Keyboard shortcuts</div>
       <div><kbd>&larr;</kbd><kbd>&rarr;</kbd> Navigate period</div>
-      <div><kbd>&uarr;</kbd> Go to month (day &rarr; month)</div>
-      <div><kbd>&darr;</kbd> Go to first day with data in month</div>
+      <div><kbd>&uarr;</kbd> Go up one level (day &rarr; week &rarr; month)</div>
+      <div><kbd>&darr;</kbd> Go to first day / week with data</div>
       <div><kbd>Space</kbd> Toggle mode (time &rarr; visits &rarr; avg.)</div>
       <div><kbd>Esc</kbd> Exit to overview</div>
     </div>
@@ -108,32 +109,45 @@ export function initDrill(context) {
     if (document.body.classList.contains('tour-drill-step')) return;
     if (e.key === ' ') {
       e.preventDefault();
-      const isMonthDrill = drillPeriod.length === 7;
-      const modes = isMonthDrill ? ['time', 'visits', 'hour'] : ['time', 'visits'];
-      const next = modes[(modes.indexOf(drillMetric) + 1) % modes.length];
-      drillMetric = next;
+      const modes = drillPeriod.length === 10 ? ['time', 'visits'] : ['time', 'visits', 'hour'];
+      drillMetric = modes[(modes.indexOf(drillMetric) + 1) % modes.length];
       updateDrillButtons();
       renderDrillChart();
     } else if (e.key === 'ArrowLeft') { e.preventDefault(); navigatePeriod(-1); }
     else if (e.key === 'ArrowRight') { e.preventDefault(); navigatePeriod(1); }
     else if (e.key === 'ArrowUp') {
-      if (drillPeriod.length !== 10) return;
-      e.preventDefault();
-      enterDrill(drillPeriod.slice(0, 7), null, drillMetric);
+      if (drillPeriod.length === 10) {
+        e.preventDefault();
+        const [y, m, d] = drillPeriod.split('-').map(Number);
+        enterDrill(weekKeyForDate(new Date(y, m - 1, d)), null, drillMetric);
+      } else if (drillPeriod.length === 11) {
+        e.preventDefault();
+        enterDrill(drillPeriod.slice(0, 7), null, drillMetric);
+      }
     } else if (e.key === 'Escape') {
       e.preventDefault();
       exitDrillCompletely();
     } else if (e.key === 'ArrowDown') {
-      if (drillPeriod.length !== 7) return;
-      e.preventDefault();
-      const [y, m] = drillPeriod.split('-').map(Number);
-      const daysInMonth = new Date(y, m, 0).getDate();
-      for (let i = 1; i <= daysInMonth; i++) {
-        const dayKey = `${drillPeriod}-${String(i).padStart(2, '0')}`;
-        const entry = ctx.getDayEntry(dayKey);
-        if (entry.activeMs > 0 || entry.visits > 0) {
-          enterDrill(dayKey, drillPeriod, drillMetric);
-          break;
+      if (drillPeriod.length === 7) {
+        e.preventDefault();
+        const [y, m] = drillPeriod.split('-').map(Number);
+        const daysInMonth = new Date(y, m, 0).getDate();
+        for (let i = 1; i <= daysInMonth; i++) {
+          const dayKey = `${drillPeriod}-${String(i).padStart(2, '0')}`;
+          const entry = ctx.getDayEntry(dayKey);
+          if (entry.activeMs > 0 || entry.visits > 0) {
+            enterDrill(weekKeyForDate(new Date(y, m - 1, i)), null, drillMetric);
+            break;
+          }
+        }
+      } else if (drillPeriod.length === 11) {
+        e.preventDefault();
+        for (const dayKey of daysInWeek(drillPeriod)) {
+          const entry = ctx.getDayEntry(dayKey);
+          if (entry.activeMs > 0 || entry.visits > 0) {
+            enterDrill(dayKey, drillPeriod, drillMetric);
+            break;
+          }
         }
       }
     }
@@ -213,6 +227,14 @@ function formatPeriodLabel(period) {
     const [y, m] = period.split('-');
     return new Date(+y, +m - 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   }
+  if (period.length === 11) {
+    const [y, m, d] = period.slice(0, 10).split('-').map(Number);
+    const start = new Date(y, m - 1, d);
+    const end = new Date(y, m - 1, d + 6);
+    const startStr = start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const endStr = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    return `${startStr} – ${endStr}`;
+  }
   const [y, m, d] = period.split('-');
   return new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 }
@@ -222,6 +244,8 @@ function navigatePeriod(dir) {
     const [y, m] = drillPeriod.split('-').map(Number);
     const d = new Date(y, m - 1 + dir, 1);
     drillPeriod = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  } else if (drillPeriod.length === 11) {
+    drillPeriod = navigateWeek(drillPeriod, dir);
   } else {
     const [y, m, day] = drillPeriod.split('-').map(Number);
     const d = new Date(y, m - 1, day + dir);
@@ -231,10 +255,14 @@ function navigatePeriod(dir) {
   renderDrillChart();
 }
 
+const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 async function renderDrillChart() {
   const isMonthDrill = drillPeriod.length === 7;
-  ctx.drillHourBtn.style.display = isMonthDrill ? 'block' : 'none';
-  if (!isMonthDrill && drillMetric === 'hour') {
+  const isWeekDrill = drillPeriod.length === 11;
+  const isDayDrill = drillPeriod.length === 10;
+  ctx.drillHourBtn.style.display = isDayDrill ? 'none' : 'block';
+  if (isDayDrill && drillMetric === 'hour') {
     drillMetric = 'time';
     updateDrillButtons();
   }
@@ -246,6 +274,11 @@ async function renderDrillChart() {
     data = Array.from({ length: daysInMonth }, (_, i) => {
       const dayKey = `${drillPeriod}-${String(i + 1).padStart(2, '0')}`;
       return { label: String(i + 1), range: dayKey, ...ctx.getDayEntry(dayKey) };
+    });
+  } else if (isWeekDrill) {
+    data = daysInWeek(drillPeriod).map(dayKey => {
+      const [y, m, d] = dayKey.split('-').map(Number);
+      return { label: `${SHORT_DAYS[new Date(y, m - 1, d).getDay()]} ${d}`, range: dayKey, ...ctx.getDayEntry(dayKey) };
     });
   } else {
     const hourData = await ctx.getHourEntriesForDay(drillPeriod);
@@ -259,11 +292,17 @@ async function renderDrillChart() {
 
   if (isMonthDrill) {
     ctx.drillMonthLink.style.display = 'none';
-  } else {
+  } else if (isWeekDrill) {
     const monthKey = drillPeriod.slice(0, 7);
     ctx.drillMonthLink.textContent = formatPeriodLabel(monthKey);
     ctx.drillMonthLink.style.display = 'block';
     ctx.drillMonthLink.onclick = () => enterDrill(monthKey, null, drillMetric);
+  } else {
+    const [y, m, d] = drillPeriod.split('-').map(Number);
+    const weekKey = weekKeyForDate(new Date(y, m - 1, d));
+    ctx.drillMonthLink.textContent = formatPeriodLabel(weekKey);
+    ctx.drillMonthLink.style.display = 'block';
+    ctx.drillMonthLink.onclick = () => enterDrill(weekKey, null, drillMetric);
   }
 
   const hasData = data.some(d => d.activeMs > 0 || d.visits > 0);
@@ -285,13 +324,13 @@ async function renderDrillChart() {
 
   if (!hasData) return;
 
-  const onBarClick = isMonthDrill ? r => enterDrill(r, drillPeriod, drillMetric) : null;
-  const maxTimeMs = isMonthDrill ? 24 * 3600000 : 3600000;
+  const onBarClick = !isDayDrill ? r => enterDrill(r, drillPeriod, drillMetric) : null;
+  const maxTimeMs = isDayDrill ? 3600000 : 24 * 3600000;
 
   if (drillMetric === 'time') {
-    const formatValForAxis = isMonthDrill
-      ? (val) => Math.abs(val - maxTimeMs) < 1 ? formatMsAsDays(val) : formatMs(val)
-      : formatMs;
+    const formatValForAxis = isDayDrill
+      ? formatMs
+      : (val) => Math.abs(val - maxTimeMs) < 1 ? formatMsAsDays(val) : formatMs(val);
     drawTimeChart({
       svgEl: ctx.drillChart,
       tooltipEl: ctx.drillTooltip,
@@ -323,6 +362,8 @@ async function renderDrillChart() {
       for (let i = 1; i <= daysInMonth; i++) {
         dayKeys.push(`${drillPeriod}-${String(i).padStart(2, '0')}`);
       }
+    } else if (isWeekDrill) {
+      dayKeys = daysInWeek(drillPeriod);
     } else {
       dayKeys = [drillPeriod];
     }

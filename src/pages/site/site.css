@@ -253,7 +253,7 @@
 #nav-label {
   font-size: var(--font-md);
   font-weight: 500;
-  min-width: 140px;
+  min-width: 150px;
   text-align: center;
 }
 

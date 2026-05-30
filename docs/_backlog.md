@@ -13,10 +13,6 @@
 - **Suggest rules from analytics** — proactively surface "you might want to limit this" prompts when a site's usage crosses a heuristic (e.g. consistently high daily time, sharp week-over-week increase, or far above the user's per-site average). A suggestion would pre-fill the rules add card (reusing the existing `?target=<host>` pre-fill path) with a sensible default limit. Turns the passive analytics into actionable enforcement instead of waiting for the user to notice and act. Could surface on the dashboard or site page. Distinct from the existing [empty-state guidance](#onboarding), which is first-install only.
 - **Streak (limit compliance)** — e.g. "4 / 7 days under limit this week". Motivational, pattern-oriented. Requires per-day limit-compliance history. Natural fit on the blocked or rules page, but it's a cross-cutting insight. Distinct from the per-site activity streak under [Site page stats](#site-page-stats).
 
-## Drills
-
-- Add a "week" level in the drills, compatible with keyboard navigation.
-
 ## Popup
 
 - **Live "spent vs limit" progress bars** — the popup lists enabled rules read-only but shows no current usage. Add a per-rule mini progress bar (e.g. "8m / 10m this hour"), reusing the tracking data the background already holds in memory, so the popup is glanceable and actionable.
