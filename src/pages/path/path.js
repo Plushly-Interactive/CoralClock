@@ -1,4 +1,4 @@
-import { localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
+import { localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
@@ -9,6 +9,7 @@ import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats 
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
 import { MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR } from '../../shared/msgTypes.js';
+import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 
 const drillParams = new URLSearchParams(location.search);
 if (!drillParams.has('ids') || !drillParams.has('path')) {
@@ -233,6 +234,9 @@ function avgPerClockHour(dayKeys) {
   return sums.map(s => s / dayKeys.length);
 }
 
+const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
+const clockFormat = clockFormatStored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
+
 const hourly = createHourlyChart({
   chart: document.querySelector('#hourly-chart'),
   tooltip: document.querySelector('#hourly-tooltip'),
@@ -245,12 +249,14 @@ const hourly = createHourlyChart({
     const todayKey = localDayKey(Date.now());
     return avgPerClockHour(dayKeysForRange(range, byDayCache).filter(d => d !== todayKey));
   },
+  clockFormat,
 });
 
 initDrill({
   chartsGrid,
   drillView,
   rangeSelect,
+  clockFormat,
   getDayEntry,
   getHourEntriesForDay: (dayKey) => {
     const result = {};
@@ -283,7 +289,7 @@ function render() {
   if (isInDrillMode()) return;
   const range = rangeSelect.dataset.value;
   const dayKeys = dayKeysForRange(range, byDayCache);
-  const data = buildOverviewData({ range, dayKeys, getDayEntry, getHourEntry });
+  const data = buildOverviewData({ range, dayKeys, clockFormat, getDayEntry, getHourEntry });
   drawOverviewCharts({
     data, range,
     timeChart, timeTooltip, timeLegend, timeNoData,

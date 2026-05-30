@@ -1,4 +1,4 @@
-import { formatMs, formatMsAsDays, localDayKey } from './timeUtils.js';
+import { formatMs, formatMsAsDays, localDayKey, formatHourLabel, formatHourRange } from './timeUtils.js';
 import { weekKeyForDate, daysInWeek, navigateWeek } from './weekStart.js';
 import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from './utils.js';
 import { drawTimeChart, drawVisitsChart, drawHourlyChart, buildHourlyBuckets } from './overview.js';
@@ -284,9 +284,7 @@ async function renderDrillChart() {
     const hourData = await ctx.getHourEntriesForDay(drillPeriod);
     data = Array.from({ length: 24 }, (_, h) => {
       const hourKey = `${drillPeriod}T${String(h).padStart(2, '0')}`;
-      const hStr = String(h).padStart(2, '0');
-      const hNext = String(h + 1).padStart(2, '0');
-      return { label: `${hStr}:00`, range: `${hStr}:00–${hNext}:00`, ...(hourData[hourKey] ?? { activeMs: 0, audioMs: 0, visits: 0 }) };
+      return { label: formatHourLabel(h, ctx.clockFormat), range: formatHourRange(h, '–', ctx.clockFormat), ...(hourData[hourKey] ?? { activeMs: 0, audioMs: 0, visits: 0 }) };
     });
   }
 
@@ -368,7 +366,7 @@ async function renderDrillChart() {
       dayKeys = [drillPeriod];
     }
 
-    const hourlyData = buildHourlyBuckets(await ctx.getAvgPerClockHour(dayKeys));
+    const hourlyData = buildHourlyBuckets(await ctx.getAvgPerClockHour(dayKeys), ctx.clockFormat);
     const hasHourlyData = hourlyData.some(d => d.activeMs > 0);
     ctx.drillNoData.style.display = hasHourlyData ? 'none' : 'block';
     ctx.drillChart.style.display = hasHourlyData ? 'block' : 'none';

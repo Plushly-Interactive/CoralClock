@@ -1,6 +1,6 @@
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { escapeHtml, showNotification, formatBytes, renderStorageBar } from '../../shared/utils.js';
-import { formatMs } from '../../shared/timeUtils.js';
+import { formatMs, DEFAULT_CLOCK_FORMAT, formatHourRange } from '../../shared/timeUtils.js';
 import {
   scanSiteBucket, scanSubpageBucket,
   applySiteDeletions, applySubpageDeletions,
@@ -10,6 +10,7 @@ import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
 import { mockScanResults, clearMockModeCache } from '../../shared/tourMockData.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../../shared/msgTypes.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../../background/subpageTracking.js';
+import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 
 const STORE_LABELS = {
   [SITES_DAY_KEY]: 'Domains — daily',
@@ -18,6 +19,9 @@ const STORE_LABELS = {
   [SUBPAGES_HOUR_KEY]: 'Subpages — hourly',
 };
 const STORE_ORDER = [SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY];
+
+const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
+const clockFormat = clockFormatStored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
 
 const thresholdInput = document.querySelector('#threshold-input');
 const scopeSiteDaily = document.querySelector('#scope-site-daily');
@@ -191,9 +195,7 @@ function rowsHtml(rows, store) {
 function splitDateKey(key) {
   if (key.length === 10) return { day: key, hour: null };
   const h = Number(key.slice(11));
-  const start = String(h).padStart(2, '0');
-  const next = String((h + 1) % 24).padStart(2, '0');
-  return { day: key.slice(0, 10), hour: `${start}:00 – ${next}:00` };
+  return { day: key.slice(0, 10), hour: formatHourRange(h, ' – ', clockFormat) };
 }
 
 function sortRows(rows, { col, dir }) {

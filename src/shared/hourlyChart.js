@@ -1,6 +1,6 @@
 import { buildHourlyBuckets, drawHourlyChart } from './overview.js';
 
-export function createHourlyChart({ chart, tooltip, container, subheading, notRelevant, allDaysLabel, getRangeValue, loadAvgPerHour }) {
+export function createHourlyChart({ chart, tooltip, container, subheading, notRelevant, allDaysLabel, getRangeValue, loadAvgPerHour, clockFormat = '24h' }) {
   const cache = {};
 
   async function load(range) {
@@ -31,7 +31,7 @@ export function createHourlyChart({ chart, tooltip, container, subheading, notRe
       return;
     }
 
-    const data = buildHourlyBuckets(cache[range]);
+    const data = buildHourlyBuckets(cache[range], clockFormat);
     const hasData = data.some(d => d.activeMs > 0);
     if (!hasData) {
       chart.style.display = 'none';

@@ -1,4 +1,4 @@
-import { formatMs, localDayKey } from '../../shared/timeUtils.js';
+import { formatMs, localDayKey, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
@@ -9,7 +9,7 @@ import { runTour, readTourState, writeTourState, clearTourProgress } from '../..
 import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
 import { openModal, closeModal, IMPORT_COMPLETE } from '../../data/importData.js';
 import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
-import { PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
@@ -36,6 +36,9 @@ const groupToggle = document.querySelector('#group-toggle');
 const mergeToggle = document.querySelector('#merge-toggle');
 const hideBriefToggle = document.querySelector('#hide-brief-toggle');
 
+const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
+const clockFormat = clockFormatStored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
+
 const hourly = createHourlyChart({
   chart: hourlyChart,
   tooltip: hourlyTooltip,
@@ -47,6 +50,7 @@ const hourly = createHourlyChart({
   loadAvgPerHour: (range) => fetchTrackingData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: null, range,
   }),
+  clockFormat,
 });
 
 let sortCol = 'time';

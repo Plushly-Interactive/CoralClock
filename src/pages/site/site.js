@@ -1,4 +1,4 @@
-import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
+import { formatMs, localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
@@ -14,7 +14,7 @@ import {
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
   MSG_GET_AVG_PER_CLOCK_HOUR,
 } from '../../shared/msgTypes.js';
-import { PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 
 const PREF_STRIP_PARAMS = 'subpagesStripParams';
 
@@ -164,6 +164,9 @@ const hourlySubheading = document.querySelector('#hourly-subheading');
 
 timeLegend.innerHTML = CHART_LEGEND_HTML;
 
+const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
+const clockFormat = clockFormatStored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
+
 const hourly = createHourlyChart({
   chart: hourlyChart,
   tooltip: hourlyTooltip,
@@ -175,6 +178,7 @@ const hourly = createHourlyChart({
   loadAvgPerHour: (range) => fetchTrackingData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
   }),
+  clockFormat,
 });
 
 initRangeSelect(rangeSelect, render);
@@ -193,6 +197,7 @@ initDrill({
   chartsGrid,
   drillView,
   rangeSelect,
+  clockFormat,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
     const hourData = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_FOR_DAY, dayKey });
@@ -273,7 +278,7 @@ function render() {
   if (range === 'today' && !byHourCache) { loadByHour().then(render); return; }
   const dayKeys = siteDayKeysForRange(range);
   const data = buildOverviewData({
-    range, dayKeys,
+    range, dayKeys, clockFormat,
     getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
     getHourEntry: (hourKey) => entrySum(byHourCache?.[hourKey]),
   });

@@ -51,3 +51,16 @@ export function formatMsAsDays(ms) {
   if (days === Math.floor(days)) return `${Math.floor(days)}d`;
   return `${days.toFixed(1)}d`;
 }
+
+export const DEFAULT_CLOCK_FORMAT = '24h';
+
+export function formatHourLabel(h, clockFormat) {
+  if (clockFormat !== '12h') return `${String(h).padStart(2, '0')}:00`;
+  const period = h < 12 ? 'AM' : 'PM';
+  const hour12 = h % 12 || 12;
+  return `${hour12} ${period}`;
+}
+
+export function formatHourRange(h, sep, clockFormat) {
+  return `${formatHourLabel(h, clockFormat)}${sep}${formatHourLabel((h + 1) % 24, clockFormat)}`;
+}
