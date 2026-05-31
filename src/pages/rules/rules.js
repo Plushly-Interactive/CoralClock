@@ -3,10 +3,11 @@ import { initCustomDropdowns } from '../../shared/dropdown.js';
 import { getDomain } from '../../vendor/tldts.js';
 import { localDayKey } from '../../shared/timeUtils.js';
 import { weekDow, rotatedDayLabels } from '../../shared/weekStart.js';
-import { drawBarChart, loadFaviconCache, faviconUrl } from '../../shared/utils.js';
+import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear } from '../../shared/utils.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 
-const formTarget     = document.querySelector('#form-target');
+const formTarget          = document.querySelector('#form-target');
+const formTargetClearBtn  = document.querySelector('#form-target-clear');
 const cards          = [...document.querySelectorAll('.scope-card')];
 const previewText    = document.querySelector('#preview-text');
 const previewPattern = document.querySelector('#preview-pattern');
@@ -183,7 +184,7 @@ function refreshPreview() {
 }
 
 cards.forEach(card => card.addEventListener('click', () => selectScope(card.dataset.scope)));
-formTarget.addEventListener('input', refreshPreview);
+const syncTargetClear = attachInputClear(formTarget, formTargetClearBtn, refreshPreview, { escStopPropagation: true });
 
 previewText.addEventListener('click', (e) => {
   const link = e.target.closest('#covering-link');
@@ -256,6 +257,7 @@ saveBtn.addEventListener('click', async () => {
   await addRule(newRule);
 
   formTarget.value = '';
+  syncTargetClear();
   formLimit.value = '10';
   refreshPreview();
   await render();
@@ -310,7 +312,7 @@ function openRowEditor(id) {
   li.querySelectorAll('.edit-btn, .toggle-btn, .delete-btn').forEach(b => b.remove());
   li.insertAdjacentHTML('beforeend', `
     <div class="form-row edit-controls">
-      <input class="edit-limit" type="number" value="${rule.limit}" min="1" />
+      <input class="edit-limit number-input" type="number" value="${rule.limit}" min="1" />
       ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
@@ -462,6 +464,7 @@ async function renderStats() {
 const prefillTarget = new URLSearchParams(location.search).get('target');
 if (prefillTarget) {
   formTarget.value = prefillTarget;
+  syncTargetClear();
   // Open the add card if pre-filled from "Limit this site"
   addCard.classList.add('open');
   addCardBody.removeAttribute('hidden');

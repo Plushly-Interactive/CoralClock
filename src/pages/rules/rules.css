@@ -85,7 +85,7 @@
   border-top: 1px solid var(--color-border);
 }
 
-#form-target { margin-bottom: 12px; margin-top: 14px; }
+#form-target-wrap { margin-bottom: 12px; margin-top: 14px; }
 
 .scope-cards {
   display: grid;

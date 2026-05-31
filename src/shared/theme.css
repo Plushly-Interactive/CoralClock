@@ -171,12 +171,12 @@ button:disabled {
 
 .text-input {
   width: 100%;
-  padding: 9px 12px;
+  padding: 6px 28px 6px 8px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
   background: var(--color-bg);
   color: var(--color-text);
-  font-size: var(--font-lg);
+  font-size: var(--font-md);
 }
 
 .text-input:focus { outline: none; border-color: var(--color-accent); }
@@ -184,6 +184,46 @@ button:disabled {
 .text-hint {
   font-style: italic;
   color: var(--color-text-secondary);
+}
+
+.number-input {
+  width: 60px;
+  padding: 6px 8px;
+  font-size: var(--font-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.number-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.input-wrap {
+  position: relative;
+}
+
+.input-clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  font-size: var(--font-lg);
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  padding: 0 4px;
+}
+
+.icon-btn:hover {
+  color: var(--color-accent-light);
 }
 
 .callout {
@@ -404,7 +444,6 @@ button:disabled {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  margin-top: 8px;
 }
 
 .data-table th {

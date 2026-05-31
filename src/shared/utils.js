@@ -33,6 +33,32 @@ export const HOURLY_CHART_HTML = `<div id="hourly-chart-container" class="chart-
   <p id="hourly-not-relevant" class="text-meta" style="display:none"></p>
 </div>`;
 
+export function attachInputClear(input, clearBtn, onChange, { escStopPropagation = false } = {}) {
+  function sync() {
+    clearBtn.style.display = input.value ? 'block' : 'none';
+  }
+  input.addEventListener('input', () => { sync(); onChange(); });
+  if (input.type === 'search') {
+    input.addEventListener('search', () => { sync(); onChange(); });
+  } else {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && input.value) {
+        input.value = '';
+        sync();
+        onChange();
+        if (escStopPropagation) e.stopPropagation();
+      }
+    });
+  }
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    sync();
+    onChange();
+    input.focus();
+  });
+  return sync;
+}
+
 export function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')

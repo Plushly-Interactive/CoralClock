@@ -89,7 +89,10 @@
 
             <!-- URL / host form -->
             <div id="url-form">
-              <input id="form-target" class="text-input" type="text" placeholder="reddit.com" />
+              <div id="form-target-wrap" class="input-wrap">
+                <input id="form-target" class="text-input" type="text" placeholder="reddit.com" />
+                <button id="form-target-clear" class="icon-btn input-clear" aria-label="Clear" hidden>&times;</button>
+              </div>
               <div class="scope-cards">
                 <div class="scope-card" id="scope-host" data-scope="host">
                   <h3>Host only</h3>
@@ -109,7 +112,7 @@
               </div>
               <div class="form-row" id="limit-row">
                 <span>Limit to</span>
-                <input id="form-limit" class="form-limit" type="number" value="10" min="1" />
+                <input id="form-limit" class="form-limit number-input" type="number" value="10" min="1" />
                 <div class="custom-dropdown">
                   <button type="button" class="dropdown-btn form-unit-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
                   <div class="dropdown-menu form-unit-menu" id="form-unit-menu">

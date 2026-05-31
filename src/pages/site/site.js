@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache } from '../../shared/utils.js';
+import { STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
@@ -17,6 +17,7 @@ import {
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 
 const PREF_STRIP_PARAMS = 'subpagesStripParams';
+const PREF_SUBPAGE_SEARCH = 'subpageSearch';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -140,6 +141,17 @@ let byHourCache = null;
 let subpagesByDayCache = null;
 let currentDepth = null;
 let currentSort = 'time';
+let subpageSearch = sessionStorage.getItem(PREF_SUBPAGE_SEARCH) ?? '';
+const subpageSearchInput = document.querySelector('#subpage-search');
+const subpageSearchClearBtn = document.querySelector('#subpage-search-clear');
+subpageSearchInput.value = subpageSearch;
+const syncSubpageSearchClear = attachInputClear(subpageSearchInput, subpageSearchClearBtn, () => {
+  subpageSearch = subpageSearchInput.value;
+  sessionStorage.setItem(PREF_SUBPAGE_SEARCH, subpageSearch);
+  renderSubpages(rangeSelect.dataset.value);
+});
+syncSubpageSearchClear();
+
 let stripParams = sessionStorage.getItem(PREF_STRIP_PARAMS) !== 'false';
 const stripParamsToggle = document.querySelector('#strip-params-toggle');
 stripParamsToggle.checked = stripParams;
@@ -226,6 +238,9 @@ window.addEventListener('pageshow', () => {
   hideBriefSubpagesToggle.checked = hideBriefSubpages;
   stripParams = sessionStorage.getItem(PREF_STRIP_PARAMS) !== 'false';
   stripParamsToggle.checked = stripParams;
+  subpageSearch = sessionStorage.getItem(PREF_SUBPAGE_SEARCH) ?? '';
+  subpageSearchInput.value = subpageSearch;
+  syncSubpageSearchClear();
   if (subpagesByDayCache) renderSubpages(rangeSelect.dataset.value);
 });
 
@@ -419,6 +434,10 @@ function renderSubpages(range) {
   let merged = mergePaths(raw, currentDepth);
   merged.sort((a, b) => currentSort === 'time' ? getTotalMs(b) - getTotalMs(a) : b.visits - a.visits);
   if (hideBriefSubpages) merged = merged.filter(r => getTotalMs(r) >= 60_000);
+  if (subpageSearch) {
+    const q = subpageSearch.toLowerCase();
+    merged = merged.filter(r => r.path.toLowerCase().includes(q) || displayPath(r.path).toLowerCase().includes(q));
+  }
 
   const pathSiteMs = {};
   if (effectiveSiteIds.length > 1) {
@@ -484,6 +503,10 @@ function renderSubpages(range) {
     li.appendChild(openBtn);
     list.appendChild(li);
   }
+  const noMatch = merged.length === 0;
+  list.style.display = noMatch ? 'none' : '';
+  document.querySelector('#subpages-controls').style.display = noMatch ? 'none' : '';
+  document.querySelector('#subpages-empty').style.display = noMatch ? 'flex' : 'none';
   document.querySelector('#subpages-count').textContent = `${merged.length} page${merged.length !== 1 ? 's' : ''}`;
 }
 

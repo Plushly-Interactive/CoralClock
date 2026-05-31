@@ -43,16 +43,6 @@
   flex-wrap: wrap;
 }
 
-#threshold-input {
-  width: 80px;
-  padding: 4px 8px;
-  font-size: var(--font-base);
-  background: var(--color-bg);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-}
-
 .scope-check {
   display: inline-flex;
   align-items: center;

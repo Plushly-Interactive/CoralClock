@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton, faviconUrl, loadFaviconCache } from '../../shared/utils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
@@ -14,6 +14,7 @@ import { initThemeMenu } from '../../shared/themeMenu.js';
 
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
+const PREF_SEARCH = 'siteSearch';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 initThemeMenu();
@@ -21,6 +22,7 @@ navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
 navButton(document.querySelector('#prune-btn'), '../storage-pruning/storage-pruning.html');
 navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
 const rangeSelect = document.querySelector('#range-select');
+const dashboardTable = document.querySelector('#dashboard-table');
 const tbody = document.querySelector('#dashboard-body');
 const emptyMsg = document.querySelector('#empty-msg');
 const entriesCount = document.querySelector('#entries-count');
@@ -37,6 +39,8 @@ const topSubheading = document.querySelector('#top-subheading');
 const groupToggle = document.querySelector('#group-toggle');
 const mergeToggle = document.querySelector('#merge-toggle');
 const hideBriefToggle = document.querySelector('#hide-brief-toggle');
+const siteSearchInput = document.querySelector('#site-search');
+const siteSearchClearBtn = document.querySelector('#site-search-clear');
 
 await loadFaviconCache();
 const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
@@ -65,6 +69,8 @@ let mergeMode = sessionStorage.getItem(PREF_MERGE_MODE) !== 'false';
 mergeToggle.checked = mergeMode;
 let hideBrief = sessionStorage.getItem(PREF_HIDE_BRIEF) !== 'false';
 hideBriefToggle.checked = hideBrief;
+let searchQuery = sessionStorage.getItem(PREF_SEARCH) ?? '';
+siteSearchInput.value = searchQuery;
 
 const thName = document.querySelector('#th-name');
 const thTime = document.querySelector('#th-time');
@@ -94,7 +100,7 @@ function updateHeaders() {
       sortDir = col === 'name' ? 'asc' : 'desc';
     }
     renderTopChart();
-    renderTable(sortedRows());
+    renderTable(filteredRows());
   });
 });
 
@@ -153,7 +159,32 @@ function sortedRows() {
   });
 }
 
+function filteredRows() {
+  const q = searchQuery.toLowerCase().trim();
+  if (!q) return sortedRows();
+  return sortedRows().filter(row => {
+    if (row.siteLabel.toLowerCase().includes(q)) return true;
+    if (row.siteId && row.siteId.toLowerCase().includes(q)) return true;
+    if (row.hostnames) {
+      for (const h of row.hostnames) {
+        if (h.toLowerCase().includes(q)) return true;
+      }
+    }
+    return false;
+  });
+}
+
 function renderTable(rows) {
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    entriesCount.textContent = '';
+    emptyMsg.textContent = searchQuery.trim() ? 'No sites match your search.' : 'No data for this period.';
+    dashboardTable.style.display = 'none';
+    emptyMsg.style.display = 'flex';
+    return;
+  }
+  dashboardTable.style.display = '';
+  emptyMsg.style.display = 'none';
   tbody.innerHTML = rows.map(row => {
     const { siteLabel, activeMs, audioMs, visits } = row;
     const etld1Count = row.etld1s?.size ?? 0;
@@ -217,6 +248,14 @@ hideBriefToggle.addEventListener('change', () => {
   render();
 });
 
+function applySearch() {
+  searchQuery = siteSearchInput.value;
+  sessionStorage.setItem(PREF_SEARCH, searchQuery);
+  renderTable(filteredRows());
+}
+const syncSearchClear = attachInputClear(siteSearchInput, siteSearchClearBtn, applySearch);
+syncSearchClear();
+
 window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
 });
@@ -235,6 +274,9 @@ window.addEventListener('pageshow', () => {
   mergeToggle.checked = mergeMode;
   groupMode = sessionStorage.getItem(PREF_GROUP_MODE) === 'true';
   groupToggle.checked = groupMode;
+  searchQuery = sessionStorage.getItem(PREF_SEARCH) ?? '';
+  siteSearchInput.value = searchQuery;
+  syncSearchClear();
   if (currentRows.length) render();
 });
 
@@ -334,7 +376,9 @@ function render() {
   if (currentRows.length === 0) {
     tbody.innerHTML = '';
     entriesCount.textContent = '';
-    emptyMsg.style.display = 'block';
+    dashboardTable.style.display = 'none';
+    emptyMsg.textContent = 'No data for this period.';
+    emptyMsg.style.display = 'flex';
     topChartContainer.style.display = 'block';
     topChart.style.display = 'none';
     topSubheading.textContent = '';
@@ -351,7 +395,7 @@ function render() {
   hourly.render(range);
 
   renderTopChart();
-  renderTable(sortedRows());
+  renderTable(filteredRows());
 }
 
 const tourBtn = document.querySelector('#tour-btn');

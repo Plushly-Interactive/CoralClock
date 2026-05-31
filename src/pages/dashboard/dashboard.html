@@ -59,7 +59,7 @@
       <div id="io-modal" role="dialog" aria-labelledby="io-modal-title" aria-modal="true">
         <div id="io-modal-header">
           <h2 id="io-modal-title" class="dialog-title">Import / Export data</h2>
-          <button id="io-modal-close" aria-label="Close">&times;</button>
+          <button id="io-modal-close" class="icon-btn" aria-label="Close">&times;</button>
         </div>
         <div id="io-modal-body">
           <input type="file" id="import-input" accept=".json" style="display:none">
@@ -165,6 +165,10 @@
           All browsed sites
           <label id="hide-brief-label" class="table-filter text-meta"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
         </h2>
+        <div id="site-search-wrap" class="input-wrap">
+          <input type="search" id="site-search" class="text-input" placeholder="Search sites…" autocomplete="off">
+          <button id="site-search-clear" class="icon-btn input-clear" aria-label="Clear search" hidden>&times;</button>
+        </div>
         <table id="dashboard-table" class="data-table data-table--scroll">
           <thead>
             <tr>

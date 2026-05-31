@@ -35,12 +35,14 @@
       </div>
 
       <div id="subpages-container" class="chart-container">
-        <div id="subpages-header">
-          <h2 class="chart-heading" id="subpages-heading">Page activity
-            <label id="hide-brief-subpages-label" class="table-filter text-meta">
-              <input type="checkbox" id="hide-brief-subpages-toggle" checked> Hide brief (&lt;1m)
-            </label>
-          </h2>
+        <h2 class="chart-heading" id="subpages-heading">Page activity
+          <label id="hide-brief-subpages-label" class="table-filter text-meta">
+            <input type="checkbox" id="hide-brief-subpages-toggle" checked> Hide brief (&lt;1m)
+          </label>
+        </h2>
+        <div id="subpage-search-wrap" class="input-wrap">
+          <input type="search" id="subpage-search" class="text-input" placeholder="Search pages…" autocomplete="off">
+          <button id="subpage-search-clear" class="icon-btn input-clear" aria-label="Clear search" hidden>&times;</button>
         </div>
         <div id="subpages-controls">
           <span class="text-meta">Depth</span>
@@ -51,6 +53,7 @@
           </div>
         </div>
         <ol id="subpages-list"></ol>
+        <p id="subpages-empty" class="text-meta" style="display:none">No pages match your search.</p>
         <div id="subpages-footer" class="table-footer">
           <span id="subpages-count" class="text-meta"></span>
           <label id="strip-params-label" class="table-filter text-meta">

@@ -19,7 +19,6 @@
 
 ## UI & visuals
 
-- **Dashboard list search bar** — a text input above the dashboard's site list to filter rows by hostname as you type. The list can grow long once enough history accrues; a search box makes finding a specific site immediate instead of scrolling. Pairs naturally with the existing name-group / subdomain-merge controls.
 - **Per-site comparison / multi-select on dashboard** — the dashboard shows aggregate charts and `site.html` shows one site at a time; there's no way to pick 2–3 sites and view their trends together. Add multi-select (e.g. checkboxes on table rows) that overlays the selected sites' active-time series on one chart for side-by-side comparison. Pairs with the [dashboard list search bar](#ui--visuals) (find, then select). Distinct from the existing name-group / subdomain-merge controls, which *combine* sites into one total rather than comparing them.
 - **User-chosen chart color palette** — the chart colors (active / audio / visits / hourly) are fixed CSS custom properties in `theme.css`. Let the user pick from a few preset palettes (including a colour-blind-safe option), saved as a pref and applied by swapping the `--color-chart-*` variables. Improves accessibility and personalization. Natural home is the [dedicated settings page](#settings--configuration).
 
