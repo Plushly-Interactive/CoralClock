@@ -261,8 +261,31 @@ chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
   setWindowPath(windowId, siteId, path);
 });
 
+async function cacheFavicon(hostname, url) {
+  if (!url || !url.startsWith('http')) return;
+  const { faviconCache = {} } = await chrome.storage.local.get('faviconCache');
+  if (faviconCache[hostname]?.url === url) return;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const type = res.headers.get('content-type') || 'image/png';
+    const buffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 8192) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    }
+    faviconCache[hostname] = { url, dataUrl: `data:${type};base64,${btoa(binary)}` };
+    await chrome.storage.local.set({ faviconCache });
+  } catch { /* ignore network errors */ }
+}
+
 chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   await bootstrapDone;
+  if (changeInfo.favIconUrl) {
+    const hostname = siteIdFromUrl(tab.url);
+    if (hostname) cacheFavicon(hostname, changeInfo.favIconUrl);
+  }
   if (isDebug()) dbg('onUpdated: tabId=', _tabId, 'changeInfo=', JSON.stringify(changeInfo), 'url=', tab.url, 'active=', tab.active, 'audible=', tab.audible, 'muted=', tab.mutedInfo?.muted);
   if (changeInfo.status === 'complete' && tab.active) {
     const siteId = siteIdFromUrl(tab.url);

@@ -1,4 +1,5 @@
 import { formatMs } from './timeUtils.js';
+import { faviconUrl } from './utils.js';
 
 export const RULE_MULTIPLIERS = { minutes: 60000, hours: 3600000, days: 86400000 };
 export const BLOCKS_DAY_KEY = 'blocksByDay';
@@ -172,12 +173,16 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
       <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>`;
     return `
     <li id="rule-${rule.id}" class="${rule.enabled ? '' : 'disabled'}">
+      <img class="site-favicon" src="${faviconUrl(rule.target)}" alt="">
       <div class="rule-info">
         <span class="site-label">${matchLabel(rule)}</span>
         <span class="text-meta">${SCOPE_LABELS[rule.matchType]} · ${formatMs(limitMs)} per ${rule.period} · ${MODE_LABELS[rule.mode]}</span>
       </div>${actions}
     </li>`;
   }).join('');
+  listEl.querySelectorAll('.site-favicon').forEach(img => {
+    img.addEventListener('error', () => { img.style.display = 'none'; });
+  });
 }
 
 // Compute total spent time for a rule on a given day (active + audio - overlap).

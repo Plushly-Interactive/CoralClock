@@ -55,6 +55,17 @@
 
 #dashboard-table th:nth-child(1),
 #dashboard-table td:nth-child(1) { width: 40%; }
+
+.site-cell-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.site-text {
+  flex: 1;
+  min-width: 0;
+}
 #dashboard-table th:nth-child(2),
 #dashboard-table td:nth-child(2) { width: 22.5%; }
 #dashboard-table th:nth-child(3),

@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML } from '../../shared/utils.js';
+import { STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
@@ -127,7 +127,12 @@ function applyHeader() {
   else secondary = siteId;
   document.querySelector('#site-id').textContent = secondary;
   document.title = `BiteGuard — ${label}`;
+  const faviconEl = document.querySelector('#site-favicon');
+  faviconEl.src = faviconUrl(primary);
+  faviconEl.removeAttribute('hidden');
+  faviconEl.addEventListener('error', () => { faviconEl.style.display = 'none'; });
 }
+await loadFaviconCache();
 applyHeader();
 
 let byDayCache = null;

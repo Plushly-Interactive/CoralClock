@@ -1,5 +1,5 @@
 import { localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML } from '../../shared/utils.js';
+import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
@@ -40,9 +40,14 @@ const statsList = document.querySelector('#stats-list');
 const backBtn = document.querySelector('#back-btn');
 const crumbSite = document.querySelector('#path-crumb-site');
 
+await loadFaviconCache();
 const siteLabel = formatHostnameLabel(siteId);
 document.querySelector('#site-label').textContent = siteLabel;
 document.querySelector('#site-id').textContent = isMerged ? siteIds.join(', ') : siteId;
+const faviconEl = document.querySelector('#site-favicon');
+faviconEl.src = faviconUrl(siteId);
+faviconEl.removeAttribute('hidden');
+faviconEl.addEventListener('error', () => { faviconEl.style.display = 'none'; });
 document.title = `BiteGuard — ${siteLabel} ${displayPath(path)}`;
 const crumbPath = document.querySelector('#path-crumb-path');
 const spacedPath = displayPath(path).replace(/\//g, ' / ').trimStart() + (prefix ? ' *' : '');

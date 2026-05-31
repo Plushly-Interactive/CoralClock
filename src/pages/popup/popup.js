@@ -1,4 +1,5 @@
 import { getRules, renderRuleList } from '../../shared/rules.js';
+import { loadFaviconCache } from '../../shared/utils.js';
 import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
 import { initThemeMenu } from '../../shared/themeMenu.js';
 
@@ -30,6 +31,7 @@ document.querySelector('#manage-btn').addEventListener('click', () => {
 });
 
 async function renderRules() {
+  await loadFaviconCache();
   const rules = (await getRules()).filter(r => r.enabled);
   const noRulesMsg = document.querySelector('#no-rules-message');
 

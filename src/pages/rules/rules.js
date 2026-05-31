@@ -3,7 +3,7 @@ import { initCustomDropdowns } from '../../shared/dropdown.js';
 import { getDomain } from '../../vendor/tldts.js';
 import { localDayKey } from '../../shared/timeUtils.js';
 import { weekDow, rotatedDayLabels } from '../../shared/weekStart.js';
-import { drawBarChart } from '../../shared/utils.js';
+import { drawBarChart, loadFaviconCache, faviconUrl } from '../../shared/utils.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 
 const formTarget     = document.querySelector('#form-target');
@@ -13,6 +13,8 @@ const previewPattern = document.querySelector('#preview-pattern');
 const saveBtn        = document.querySelector('#save-btn');
 const rulesList      = document.querySelector('#rules-list');
 const noRulesMsg     = document.querySelector('#no-rules-message');
+const mostBlockedFavicon = document.querySelector('#most-blocked-favicon');
+mostBlockedFavicon.addEventListener('error', () => { mostBlockedFavicon.style.display = 'none'; });
 const redundantPrompt       = document.querySelector('#redundant-prompt');
 const redundantText         = document.querySelector('#redundant-text');
 const redundantList         = document.querySelector('#redundant-list');
@@ -398,9 +400,10 @@ async function renderStats() {
 
   // Most blocked: stable key with highest week count, resolved to its label
   let mostBlocked = '—';
+  let topRule = null;
   if (Object.keys(blocksByRuleKey).length) {
     const topKey = Object.entries(blocksByRuleKey).sort((a, b) => b[1] - a[1])[0][0];
-    const topRule = rules.find(r => blockKey(r) === topKey);
+    topRule = rules.find(r => blockKey(r) === topKey) ?? null;
     mostBlocked = topRule ? matchLabel(topRule) : '—';
   }
 
@@ -412,6 +415,13 @@ async function renderStats() {
 
   document.querySelector('#stat-blocks').textContent = weekTotal;
   document.querySelector('#stat-most-blocked').textContent = mostBlocked;
+  if (topRule) {
+    mostBlockedFavicon.src = faviconUrl(topRule.target);
+    mostBlockedFavicon.removeAttribute('hidden');
+    mostBlockedFavicon.style.display = '';
+  } else {
+    mostBlockedFavicon.setAttribute('hidden', '');
+  }
   const activeEl = document.querySelector('#stat-active');
   activeEl.innerHTML = rules.length
     ? `${activeCount}<span class="stat-sub"> out of ${rules.length}</span>`
@@ -471,6 +481,7 @@ formLimit.addEventListener('input', () => {
 });
 
 refreshPreview();
+await loadFaviconCache();
 render();
 
 // ── Tour ──

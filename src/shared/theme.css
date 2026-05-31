@@ -549,6 +549,13 @@ header {
   display: block;
 }
 
+.site-favicon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
 .stats-list {
   display: grid;
   gap: 0 48px;

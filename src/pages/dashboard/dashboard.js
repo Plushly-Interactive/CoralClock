@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton } from '../../shared/utils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton, faviconUrl, loadFaviconCache } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
@@ -38,6 +38,7 @@ const groupToggle = document.querySelector('#group-toggle');
 const mergeToggle = document.querySelector('#merge-toggle');
 const hideBriefToggle = document.querySelector('#hide-brief-toggle');
 
+await loadFaviconCache();
 const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
 const clockFormat = clockFormatStored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
 
@@ -157,6 +158,7 @@ function renderTable(rows) {
     const { siteLabel, activeMs, audioMs, visits } = row;
     const etld1Count = row.etld1s?.size ?? 0;
     const hostCount = row.hostnames?.size ?? 0;
+    const faviconHost = row.etld1s ? [...row.hostnames][0] : row.siteId;
     let href, subtitle;
     if (!row.etld1s) {
       href = `../site/site.html?id=${encodeURIComponent(row.siteId)}`;
@@ -177,12 +179,15 @@ function renderTable(rows) {
       subtitle = `${etld1Count} sites · ${hostCount} subdomains`;
     }
     return `<tr class="clickable" data-href="${href}">
-      <td><span class="site-label">${escapeHtml(siteLabel)}</span><span class="site-id text-meta">${escapeHtml(subtitle)}</span></td>
+      <td><div class="site-cell-content"><img class="site-favicon" src="${faviconUrl(faviconHost)}" alt=""><div class="site-text"><span class="site-label">${escapeHtml(siteLabel)}</span><span class="site-id text-meta">${escapeHtml(subtitle)}</span></div></div></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(activeMs))}</span></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(audioMs))}</span></td>
       <td><span class="stat-value">${visits}</span></td>
     </tr>`;
   }).join('');
+  tbody.querySelectorAll('.site-favicon').forEach(img => {
+    img.addEventListener('error', () => { img.style.display = 'none'; });
+  });
   tbody.querySelectorAll('tr.clickable').forEach(row => {
     navButton(row, row.dataset.href);
   });
@@ -287,7 +292,7 @@ function renderTopChart() {
     const href = ids.length === 1
       ? `../site/site.html?id=${encodeURIComponent(ids[0])}`
       : `../site/site.html?ids=${encodeURIComponent(ids.join(','))}`;
-    return { label: row.siteLabel, range: ids.join(', '), val: getVal(row), href };
+    return { label: row.siteLabel, range: ids.join(', '), val: getVal(row), href, faviconDataUrl: faviconUrl(ids[0]) };
   });
   const hrefByRange = new Map(top.map(d => [d.range, d.href]));
   drawBarChart({
