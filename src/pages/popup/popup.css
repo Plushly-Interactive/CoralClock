@@ -17,30 +17,6 @@ header {
   gap: 16px;
 }
 
-#theme-menu {
-  position: relative;
-}
-
-#theme-btn svg {
-  stroke: currentColor;
-}
-
-#moon-icon {
-  display: block;
-}
-
-html.dark #moon-icon {
-  display: none;
-}
-
-#sun-icon {
-  display: none;
-  color: var(--color-accent-light);
-}
-
-html.dark #sun-icon {
-  display: block;
-}
 
 #dashboard-btn {
   display: flex;

@@ -10,11 +10,13 @@ import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData
 import { openModal, closeModal, IMPORT_COMPLETE } from '../../data/importData.js';
 import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+import { initThemeMenu } from '../../shared/themeMenu.js';
 
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+initThemeMenu();
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
 navButton(document.querySelector('#prune-btn'), '../storage-pruning/storage-pruning.html');
 navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
