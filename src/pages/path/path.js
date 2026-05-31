@@ -1,5 +1,5 @@
 import { localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache } from '../../shared/utils.js';
+import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache, navButton } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
@@ -24,6 +24,13 @@ const siteId = siteIds[0];
 const isMerged = siteIds.length > 1;
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+const limitBtn = document.querySelector('#limit-btn');
+function wireLimit(host) {
+  navButton(limitBtn, `../rules/rules.html?target=${encodeURIComponent(host + stripQuery(path))}`);
+  limitBtn.style.display = '';
+}
+if (isMerged) limitBtn.style.display = 'none';
+else wireLimit(siteId);
 const chartsGrid = document.querySelector('#charts-grid');
 chartsGrid.insertAdjacentHTML('afterbegin', TIME_CHART_HTML);
 chartsGrid.insertAdjacentHTML('beforeend', VISITS_CHART_HTML);
@@ -285,7 +292,11 @@ async function loadAndRender() {
     fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_DAY }),
     fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_HOUR }),
   ]);
-  if (isMerged) setCrumbDomain(resolveOwningDomain());
+  if (isMerged) {
+    const owner = resolveOwningDomain();
+    setCrumbDomain(owner);
+    if (owner) wireLimit(owner);
+  }
   renderPathLinks(resolveOwningEntries());
   render();
 }
