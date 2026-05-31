@@ -225,6 +225,10 @@ tr.clickable:hover td {
   justify-content: center;
 }
 
+#io-section-csv {
+  grid-column: span 2;
+}
+
 #io-conflict-view {
   margin-top: 20px;
 }
