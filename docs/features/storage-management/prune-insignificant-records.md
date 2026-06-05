@@ -15,11 +15,11 @@ A manual pruning tool that lets the user find and delete tracked identities (dom
 
 ## Acceptance criteria
 
-- A new "Storage pruning" page is reachable from the dashboard via a header button.
-- The page header shows a live storage bar (`bytes used / QUOTA_BYTES`) that refreshes after each deletion.
+- A new "Storage management" page is reachable from the dashboard via a "Manage storage" header button (renamed from "Storage pruning").
+- ~~The page header shows a live storage bar.~~ **Decided:** the header bar was removed in favour of the quota stat box on the new storage management page, which covers the same information without occupying the header.
 - The page has a threshold input (seconds), defaulting to 30 on first use and otherwise restored from `settings.pruneThresholdSeconds`.
-- The page has four checkboxes: `Domains — daily`, `Domains — hourly`, `Subpages — daily`, `Subpages — hourly`, all checked by default.
-- A `Scan` button finds, per selected store, every identity (a `siteId` for domains, a `siteId + path` for subpages) whose **summed** `activeMs` AND **summed** `audioMs` across all of its records in that store are both below the threshold, and displays them in a list.
+- The page has two checkboxes: `Sites` and `Subpages`, both checked by default. **Decided:** the original four (daily/hourly per type) were collapsed into two because deleting insignificant records only for the daily or only for the hourly bucket of a site/path has no practical value — both buckets are evaluated together per identity.
+- A `Scan` button finds, across both daily and hourly records for each selected type, every identity (a `siteId` for sites, a `siteId + path` for subpages) whose **summed** `activeMs` AND **summed** `audioMs` across all of its records are both below the threshold, and displays them in a list.
 - Results are grouped by store using collapsible `<details>` panels, each showing the store name and result count.
 - Each result row shows: site (and path for subpages, with truncation + hover tooltip), last visit (day + hour range), total active time, total audio time, record count, and a selection checkbox.
 - Each column header is clickable to sort the group by that column, toggling ascending/descending. Sorting one group does not scroll the page or reset other groups.
