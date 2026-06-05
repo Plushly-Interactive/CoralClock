@@ -430,6 +430,19 @@ const dashboardTourSteps = [
     title: 'Manage storage',
     body: 'Click Manage storage to see your storage usage, clean up insignificant records, delete data by range, and check data consistency.',
     handoff: { nextSurface: 'storage-management', mode: 'inPage' },
+    newInVersion: 3,
+  },
+  {
+    selector: '#settings-btn',
+    title: 'Settings',
+    body: 'Click Settings to configure BiteGuard and continue the tour.',
+    handoff: { nextSurface: 'settings', mode: 'inPage' },
+    newInVersion: 3,
+  },
+  {
+    selector: '#tour-btn',
+    title: 'Tour complete',
+    body: "That's every feature of BiteGuard. Click here any time to replay the tour.",
   },
 ];
 
@@ -454,10 +467,10 @@ async function maybeEnableMockMode() {
 let isTourRunning = false;
 let currentTourHandle = null;
 
-async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null) {
+async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null, forceStart = false) {
   if (isTourRunning) return;
   const tourState = knownState ?? await readTourState();
-  if (tourState.completed && !tourState.inProgress) return;
+  if (!forceStart && tourState.completed && !tourState.inProgress) return;
   isTourRunning = true;
   if (startIndex === 0) {
     const wasMock = tourState.useMockData;
@@ -526,7 +539,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (state.completed) {
     const range = dashboardNewStepRange(state.completedVersion ?? 0);
-    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state);
+    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state, true);
     return;
   }
   const pendingSurface = state.inProgress?.surface;

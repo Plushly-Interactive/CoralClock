@@ -896,36 +896,39 @@ const storageTourSteps = [
     selector: '#overview',
     title: 'Storage overview',
     body: 'At a glance: how many domains, subpages and records you have, how much space each store uses, your quota headroom, and when you last exported.',
+    newInVersion: 3,
   },
   {
     selector: '#insig-card',
     title: 'Remove insignificant records',
     body: 'Scan for sites whose total active and audio time both fall below a threshold — brief visits and accidental clicks — and delete them in bulk.',
+    newInVersion: 3,
   },
   {
     selector: '#range-delete',
     title: 'Targeted deletion',
     body: 'Delete all data for one site, or remove records within an exact date-and-time window — contiguous or repeating daily.',
+    newInVersion: 3,
   },
   {
     selector: '#hourly-card',
     title: 'Hourly data',
     body: 'Hourly stores hold the same time as daily at finer granularity. Drop old hourly buckets to reclaim space while keeping daily aggregates intact.',
+    newInVersion: 3,
   },
   {
     selector: '#health-card',
     title: 'Data health',
     body: 'Checks that hourly and daily aggregates are consistent. Drift accumulates after targeted deletion; Repair reconciles everything in one step.',
+    newInVersion: 3,
   },
   {
     selector: '#back-btn',
     title: "That's the tour",
-    body: "You've seen every surface of BiteGuard. You can replay this tour any time from the dashboard.",
+    body: "You've seen every surface of BiteGuard. Click the back arrow to return to the dashboard.",
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 7, mode: 'inPage' },
+    newInVersion: 3,
   },
 ];
 
-autoStartIfMatches('storage-management', storageTourSteps, {
-  onClose: ({ skipped }) => {
-    if (!skipped) location.href = '../dashboard/dashboard.html';
-  },
-});
+autoStartIfMatches('storage-management', storageTourSteps);

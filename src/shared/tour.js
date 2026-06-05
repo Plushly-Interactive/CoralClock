@@ -1,5 +1,5 @@
 const TOUR_KEY = 'tour';
-export const TOUR_VERSION = 2;
+export const TOUR_VERSION = 3;
 
 const DEFAULT_STATE = { completed: false, completedAt: null, completedVersion: 0, inProgress: null, useMockData: false };
 
@@ -325,6 +325,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
         dashboard: 'src/pages/dashboard/dashboard.html',
         rules: 'src/pages/rules/rules.html',
         'storage-management': 'src/pages/storage-management/storage-management.html',
+        settings: 'src/pages/settings/settings.html',
       };
       const url = surfaceUrls[currentStep.handoff.nextSurface];
       if (url) chrome.tabs.create({ url: chrome.runtime.getURL(url) });
