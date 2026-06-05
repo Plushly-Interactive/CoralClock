@@ -731,3 +731,19 @@ html.dark #moon-icon {
 html.dark #sun-icon {
   display: block;
 }
+
+.modal-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3003;
+  max-width: 360px;
+  padding: 18px 20px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-modal);
+  font-size: var(--font-base);
+}

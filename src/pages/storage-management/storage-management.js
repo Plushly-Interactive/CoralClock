@@ -74,17 +74,22 @@ spanChip.addEventListener('mouseleave', () => { spanTooltip.style.display = 'non
 
 const contiguousForm = document.querySelector('#range-form-row');
 const repeatForm = document.querySelector('#repeat-form');
+const modeRepeatBtn = document.querySelector('#mode-repeat-btn');
+const rangeFromDate = document.querySelector('#range-from-date');
+const rangeToDate = document.querySelector('#range-to-date');
+const repeatFromDate = document.querySelector('#repeat-from-date');
+const repeatToDate = document.querySelector('#repeat-to-date');
 document.querySelector('#mode-contiguous-btn').addEventListener('click', () => {
   contiguousForm.style.display = '';
   repeatForm.style.display = 'none';
   document.querySelector('#mode-contiguous-btn').classList.add('active');
-  document.querySelector('#mode-repeat-btn').classList.remove('active');
+  modeRepeatBtn.classList.remove('active');
   syncDeleteRangeBtn();
 });
-document.querySelector('#mode-repeat-btn').addEventListener('click', () => {
+modeRepeatBtn.addEventListener('click', () => {
   contiguousForm.style.display = 'none';
   repeatForm.style.display = '';
-  document.querySelector('#mode-repeat-btn').classList.add('active');
+  modeRepeatBtn.classList.add('active');
   document.querySelector('#mode-contiguous-btn').classList.remove('active');
   syncDeleteRangeBtn();
 });
@@ -101,24 +106,24 @@ function getHourValue(id) {
 
 function syncDeleteRangeBtn() {
   const btn = document.querySelector('#delete-range-btn');
-  const isRepeat = document.querySelector('#mode-repeat-btn').classList.contains('active');
+  const isRepeat = modeRepeatBtn.classList.contains('active');
   if (isRepeat) {
-    const fromDate = document.querySelector('#repeat-from-date').value;
-    const toDate   = document.querySelector('#repeat-to-date').value;
+    const fromDate = repeatFromDate.value;
+    const toDate   = repeatToDate.value;
     btn.disabled = !fromDate || !toDate || fromDate > toDate || getHourValue('repeat-from-hour') >= getHourValue('repeat-to-hour');
   } else {
-    const fromDate = document.querySelector('#range-from-date').value;
-    const toDate   = document.querySelector('#range-to-date').value;
+    const fromDate = rangeFromDate.value;
+    const toDate   = rangeToDate.value;
     const fromKey  = fromDate ? `${fromDate}T${String(getHourValue('range-from-hour')).padStart(2, '0')}` : '';
     const toKey    = toDate   ? `${toDate}T${String(getHourValue('range-to-hour')).padStart(2, '0')}`     : '';
     btn.disabled = !fromDate || !toDate || fromKey >= toKey;
   }
 }
 
-document.querySelector('#range-from-date').addEventListener('input', syncDeleteRangeBtn);
-document.querySelector('#range-to-date').addEventListener('input', syncDeleteRangeBtn);
-document.querySelector('#repeat-from-date').addEventListener('input', syncDeleteRangeBtn);
-document.querySelector('#repeat-to-date').addEventListener('input', syncDeleteRangeBtn);
+rangeFromDate.addEventListener('input', syncDeleteRangeBtn);
+rangeToDate.addEventListener('input', syncDeleteRangeBtn);
+repeatFromDate.addEventListener('input', syncDeleteRangeBtn);
+repeatToDate.addEventListener('input', syncDeleteRangeBtn);
 
 deleteAllBtn.addEventListener('click', async () => {
   const siteId = siteInput.value.trim();
@@ -149,22 +154,22 @@ deleteAllBtn.addEventListener('click', async () => {
 });
 
 document.querySelector('#delete-range-btn').addEventListener('click', async () => {
-  const isRepeat = document.querySelector('#mode-repeat-btn').classList.contains('active');
+  const isRepeat = modeRepeatBtn.classList.contains('active');
   const siteId   = siteInput.value.trim() || null;
   const scope    = siteId ? ` for ${siteId}` : '';
 
   let confirmMsg, rangePairs;
 
   if (isRepeat) {
-    const fromDate = document.querySelector('#repeat-from-date').value;
-    const toDate   = document.querySelector('#repeat-to-date').value;
+    const fromDate = repeatFromDate.value;
+    const toDate   = repeatToDate.value;
     const fromHour = getHourValue('repeat-from-hour');
     const toHour   = getHourValue('repeat-to-hour');
     rangePairs = buildRepeatPairs(fromDate, toDate, fromHour, toHour);
     confirmMsg = `Delete records${scope} for hours ${String(fromHour).padStart(2, '0')}:00–${String(toHour).padStart(2, '0')}:00 daily from ${fromDate} to ${toDate}? This cannot be undone.`;
   } else {
-    const fromDate = document.querySelector('#range-from-date').value;
-    const toDate   = document.querySelector('#range-to-date').value;
+    const fromDate = rangeFromDate.value;
+    const toDate   = rangeToDate.value;
     const fromHour = getHourValue('range-from-hour');
     const toHour   = getHourValue('range-to-hour');
     const fromKey  = `${fromDate}T${String(fromHour).padStart(2, '0')}`;

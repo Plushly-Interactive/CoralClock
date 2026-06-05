@@ -73,6 +73,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
 
   const confirm = document.createElement('div');
   confirm.id = 'tour-confirm';
+  confirm.className = 'modal-dialog';
   confirm.hidden = true;
   confirm.innerHTML = `
     <div id="tour-confirm-body">Are you sure you want to interrupt the guided tour?</div>
