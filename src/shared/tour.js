@@ -323,7 +323,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
       const surfaceUrls = {
         dashboard: 'src/pages/dashboard/dashboard.html',
         rules: 'src/pages/rules/rules.html',
-        'storage-pruning': 'src/pages/storage-pruning/storage-pruning.html',
+        'storage-management': 'src/pages/storage-management/storage-management.html',
       };
       const url = surfaceUrls[currentStep.handoff.nextSurface];
       if (url) chrome.tabs.create({ url: chrome.runtime.getURL(url) });

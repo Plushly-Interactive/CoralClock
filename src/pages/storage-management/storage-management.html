@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BiteGuard — Storage management</title>
+  <script src="../../shared/theme.js"></script>
+  <link rel="stylesheet" href="../../shared/theme.css" />
+  <link rel="stylesheet" href="./storage-management.css" />
+</head>
+<body>
+  <header>
+    <div id="header-left">
+      <a id="back-btn" href="../dashboard/dashboard.html">
+        <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+      </a>
+    </div>
+    <div id="header-center"><h1 class="page-title">Storage management</h1></div>
+    <div id="header-right">
+      <button id="import-btn" class="btn">Import/Export data</button>
+    </div>
+  </header>
+
+  <main id="page-main">
+
+    <!-- Stats band -->
+    <div id="overview">
+      <div id="counts-row">
+        <div class="count-chip">
+          <span class="stat-value">142</span>
+          <span class="stat-label">Domains</span>
+        </div>
+        <div class="count-chip">
+          <span class="stat-value">2,847</span>
+          <span class="stat-label">Subpages</span>
+        </div>
+        <div class="count-chip">
+          <span class="stat-value">18,234</span>
+          <span class="stat-label">Records</span>
+        </div>
+        <div class="count-chip" id="span-chip">
+          <span class="stat-value-row">
+            <span class="stat-value">8 months</span>
+            <span id="span-info" class="stat-info">ⓘ</span>
+          </span>
+          <span class="stat-label">Of data</span>
+          <div class="tooltip text-meta" id="span-tooltip">2025-09-15 → 2026-05-31</div>
+        </div>
+      </div>
+
+      <div id="stats-row">
+        <div class="chart-container">
+          <span class="chart-heading">Storage by store</span>
+          <div class="store-bar">
+            <div style="width:11.8%;background:var(--color-accent)"></div>
+            <div style="width:23.5%;background:var(--color-accent-light)"></div>
+            <div style="width:26.5%;background:var(--color-secondary)"></div>
+            <div style="width:38.2%;background:var(--color-secondary-light)"></div>
+          </div>
+          <div class="store-bar-legend">
+            <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent)"></span>Sites daily — 0.4 MB</div>
+            <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent-light)"></span>Sites hourly — 0.8 MB</div>
+            <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary)"></span>Subpages daily — 0.9 MB</div>
+            <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary-light)"></span>Subpages hourly — 1.3 MB</div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <span class="chart-heading">Quota</span>
+          <div class="quota-row">
+            <div class="quota-bar-track"><div class="quota-bar-fill" style="width:34%"></div></div>
+            <span class="text-meta">3.4 / 10 MB</span>
+          </div>
+          <span class="quota-warn">At current rate: ~18 days to cap</span>
+          <span class="text-meta">Chrome caps extension storage at 10 MB by default. Adding <code>unlimitedStorage</code> to the manifest removes this limit.</span>
+        </div>
+
+        <div class="chart-container">
+          <span class="chart-heading">Last export</span>
+          <div>
+            <div class="export-age">12</div>
+            <div class="export-label">days ago</div>
+          </div>
+          <span class="text-meta">Back up before running a large prune or delete.</span>
+          <button id="export-btn" class="btn" style="align-self:flex-start">Quick export</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tools grid -->
+    <div id="tools-grid">
+
+      <div class="chart-container" id="insig-card">
+        <h2 class="chart-heading">Remove insignificant records</h2>
+        <p class="card-desc">Over time, brief visits and accidental clicks accumulate noise. Scan and remove entries whose total tracked time falls below a threshold.</p>
+        <div class="field-group">
+          <div class="setting-label">Threshold</div>
+          <div id="threshold-row">
+            <input id="threshold-input" class="number-input" type="number" value="30" />
+            <span>seconds</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="setting-label">Scan</div>
+          <div id="insig-stores">
+            <label class="scope-check"><input type="checkbox" checked> Sites</label>
+            <label class="scope-check"><input type="checkbox" checked> Subpages</label>
+          </div>
+        </div>
+        <div class="right-row"><button id="scan-btn" class="btn">Scan</button></div>
+      </div>
+
+      <div class="chart-container" id="range-delete">
+        <h2 class="chart-heading">Targeted deletion</h2>
+        <p class="card-desc">Delete all data for a specific site, or remove records within an exact date and time window.</p>
+        <div id="site-filter-row">
+          <span class="setting-label">Site (optional)</span>
+          <div id="site-filter-wrap" class="input-wrap">
+            <input type="text" id="site-filter-input" class="text-input" placeholder="e.g. reddit.com" value="twitter.com" />
+            <button id="site-filter-clear" class="icon-btn input-clear">&times;</button>
+          </div>
+        </div>
+        <div id="delete-all-site-row">
+          <button id="delete-all-site-btn" class="btn">Delete all data</button>
+        </div>
+        <hr class="card-divider" />
+        <div id="range-mode-row">
+          <div id="range-mode-toggle" class="seg-control">
+            <button id="mode-contiguous-btn" class="seg-btn active">Contiguous</button>
+            <button id="mode-repeat-btn" class="seg-btn">Repeat daily</button>
+          </div>
+        </div>
+        <div id="range-form-row">
+          <div id="range-form-col">
+            <div class="range-line">
+              <span class="setting-label">From</span>
+              <div class="dt-group">
+                <input type="date" id="range-from-date" value="2026-04-01" />
+                <div class="custom-dropdown hour-dropdown" id="range-from-hour"></div>
+              </div>
+            </div>
+            <div class="range-line">
+              <span class="setting-label">To</span>
+              <div class="dt-group">
+                <input type="date" id="range-to-date" value="2026-04-30" />
+                <div class="custom-dropdown hour-dropdown" id="range-to-hour"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="repeat-form" style="display:none">
+          <div class="repeat-row">
+            <span class="repeat-label setting-label">Dates</span>
+            <input type="date" id="repeat-from-date" value="2026-01-01" />
+            <span class="text-meta">–</span>
+            <input type="date" id="repeat-to-date" value="2026-05-31" />
+          </div>
+          <div class="repeat-row">
+            <span class="repeat-label setting-label">Hours</span>
+            <div class="custom-dropdown hour-dropdown" id="repeat-from-hour"></div>
+            <span class="text-meta">–</span>
+            <div class="custom-dropdown hour-dropdown" id="repeat-to-hour"></div>
+          </div>
+        </div>
+        <div class="right-row">
+          <button id="delete-range-btn" class="btn">Delete range</button>
+        </div>
+      </div>
+
+      <div class="chart-container" id="hourly-card">
+        <h2 class="chart-heading">Hourly data</h2>
+        <p class="card-desc">Hourly stores track the same time as daily, at finer granularity. Old hourly data can be dropped once daily aggregates are accurate.</p>
+        <div class="callout">
+          <div>Sites hourly — <strong>0.8 MB (24%)</strong> · 89 sites across 743 buckets</div>
+          <div>Subpages hourly — <strong>1.3 MB (38%)</strong> · 234 subpages across 1,243 buckets</div>
+          <div class="text-meta" style="margin-top:4px">Total hourly: 2.1 MB of 3.4 MB (62%)</div>
+        </div>
+        <div class="field-group">
+          <div class="setting-label">Scope</div>
+          <div id="drop-stores">
+            <label class="scope-check"><input type="checkbox" id="drop-scope-sites" checked> Sites</label>
+            <label class="scope-check"><input type="checkbox" id="drop-scope-subpages" checked> Subpages</label>
+          </div>
+        </div>
+        <div id="drop-row">
+          <span class="setting-label">Drop data older than</span>
+          <input id="drop-days-input" class="number-input" type="number" value="30" />
+          <span>days</span>
+          <span id="drop-estimate" class="text-meta">~280 KB</span>
+        </div>
+        <div class="right-row"><button id="drop-hourly-btn" class="btn">Drop hourly</button></div>
+      </div>
+
+      <div class="chart-container" id="health-card">
+        <h2 class="chart-heading">Data health</h2>
+        <p class="card-desc">Verifies hourly and daily aggregates are consistent. Targeted deletion reduces daily values from hourly data — small drifts accumulate over time.</p>
+        <div class="health-status">
+          <span class="health-dot"></span>
+          <span><strong>14 issues found</strong> — hourly/daily drift, orphaned records, future-dated keys and invalid values</span>
+        </div>
+        <ul class="issue-list">
+          <li class="issue-item"><span class="issue-site">reddit.com</span> — hourly/daily drift on 2026-05-01</li>
+          <li class="issue-item"><span class="issue-site">twitter.com</span> — hourly/daily drift on 2026-05-15</li>
+          <li class="issue-item"><span class="issue-site">youtube.com</span> — orphaned hourly record on 2026-04-30</li>
+          <li class="issue-item"><span class="issue-site">github.com</span> — hourly/daily drift on 2026-05-03</li>
+          <li class="issue-item"><span class="issue-site">news.ycombinator.com</span> — hourly/daily drift on 2026-04-22</li>
+          <li class="issue-item"><span class="issue-site">wikipedia.org</span> — orphaned hourly record on 2026-05-10</li>
+          <li class="issue-item"><span class="issue-site">stackoverflow.com</span> — hourly/daily drift on 2026-05-07</li>
+          <li class="issue-item"><span class="issue-site">twitch.tv</span> — orphaned hourly record on 2026-04-18</li>
+          <li class="issue-item"><span class="issue-site">netflix.com</span> — hourly/daily drift on 2026-05-12</li>
+          <li class="issue-item"><span class="issue-site">nytimes.com</span> — hourly/daily drift on 2026-04-29</li>
+          <li class="issue-item"><span class="issue-site">linkedin.com</span> — orphaned hourly record on 2026-05-08</li>
+          <li class="issue-item"><span class="issue-site">amazon.com</span> — hourly/daily drift on 2026-04-15</li>
+          <li class="issue-item"><span class="issue-site">sitesByDay</span> — future-dated key 2027-03-15</li>
+          <li class="issue-item"><span class="issue-site">reddit.com</span> — invalid value: audioMs = −500 on 2026-05-20</li>
+        </ul>
+        <div class="right-row">
+          <button id="repair-btn" class="btn">Repair</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Scan overlay -->
+  <div id="scan-overlay" style="display:none">
+    <div class="overlay-header">
+      <span class="overlay-title">Scan results</span>
+      <span id="overlay-params" class="text-meta">30s · Sites + Subpages</span>
+      <button id="overlay-close" class="overlay-close">×</button>
+    </div>
+    <div class="overlay-results">
+      <details class="result-group" open>
+        <summary class="result-group-title">Sites (3)</summary>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="td-site">Site</th>
+              <th class="td-narrow">Last visit</th>
+              <th class="td-narrow">Active</th>
+              <th class="td-narrow">Audio</th>
+              <th class="td-narrow">Records</th>
+              <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="select-all-sites" checked> All</label></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="td-site">reddit.com</td><td>2026-05-28</td><td>0s</td><td>0s</td><td>3</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site">news.ycombinator.com</td><td>2026-05-25</td><td>4s</td><td>0s</td><td>2</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site">wikipedia.org</td><td>2026-05-20</td><td>1s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+          </tbody>
+        </table>
+      </details>
+      <details class="result-group" open>
+        <summary class="result-group-title">Subpages (4)</summary>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="td-site">Page</th>
+              <th class="td-narrow">Last visit</th>
+              <th class="td-narrow">Active</th>
+              <th class="td-narrow">Audio</th>
+              <th class="td-narrow">Records</th>
+              <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="select-all-sub" checked> All</label></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="td-site"><span class="site-label">reddit.com</span><span class="text-meta" style="display:block">/r/programming</span></td><td>2026-05-28</td><td>0s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site"><span class="site-label">reddit.com</span><span class="text-meta" style="display:block">/r/random</span></td><td>2026-05-26</td><td>2s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site"><span class="site-label">github.com</span><span class="text-meta" style="display:block">/orgs/anthropics</span></td><td>2026-05-22</td><td>2s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site"><span class="site-label">youtube.com</span><span class="text-meta" style="display:block">/watch?v=dQw4w9WgXcQ</span></td><td>2026-05-18</td><td>0s</td><td>3s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+    <div class="overlay-footer">
+      <span id="overlay-summary" class="text-meta">7 of 7 selected (13 records, approx 2.1 KB)</span>
+      <button id="overlay-delete-btn" class="btn">Delete selected</button>
+    </div>
+  </div>
+
+  <!-- Repair overlay -->
+  <div id="repair-overlay" style="display:none">
+    <div class="overlay-header">
+      <span class="overlay-title">Health issues</span>
+      <span class="text-meta">14 issues detected — review before repairing</span>
+      <button id="repair-overlay-close" class="overlay-close">×</button>
+    </div>
+    <div class="overlay-results">
+      <details class="result-group" open>
+        <summary class="result-group-title">Hourly/daily drift (8)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Site</th><th class="td-date">Date</th><th class="td-desc">Discrepancy</th></tr></thead>
+          <tbody>
+            <tr><td class="td-site">reddit.com</td><td class="td-date">2026-05-01</td><td class="td-desc">activeMs: daily 4,320 ms ≠ hourly sum 3,800 ms</td></tr>
+            <tr><td class="td-site">twitter.com</td><td class="td-date">2026-05-15</td><td class="td-desc">activeMs: daily 8,640 ms ≠ hourly sum 7,200 ms</td></tr>
+            <tr><td class="td-site">github.com</td><td class="td-date">2026-05-03</td><td class="td-desc">audioMs: daily 0 ms ≠ hourly sum 1,200 ms</td></tr>
+            <tr><td class="td-site">news.ycombinator.com</td><td class="td-date">2026-04-22</td><td class="td-desc">activeMs: daily 2,160 ms ≠ hourly sum 1,980 ms</td></tr>
+            <tr><td class="td-site">stackoverflow.com</td><td class="td-date">2026-05-07</td><td class="td-desc">overlapMs: daily 600 ms ≠ hourly sum 0 ms</td></tr>
+            <tr><td class="td-site">netflix.com</td><td class="td-date">2026-05-12</td><td class="td-desc">activeMs: daily 21,600 ms ≠ hourly sum 18,000 ms</td></tr>
+            <tr><td class="td-site">nytimes.com</td><td class="td-date">2026-04-29</td><td class="td-desc">activeMs: daily 3,600 ms ≠ hourly sum 3,240 ms</td></tr>
+            <tr><td class="td-site">amazon.com</td><td class="td-date">2026-04-15</td><td class="td-desc">idleMs: daily 900 ms ≠ hourly sum 0 ms</td></tr>
+          </tbody>
+        </table>
+      </details>
+      <details class="result-group" open>
+        <summary class="result-group-title">Orphaned hourly records (3)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Site</th><th class="td-date">Hour key</th><th class="td-desc">Discrepancy</th></tr></thead>
+          <tbody>
+            <tr><td class="td-site">youtube.com</td><td class="td-date">2026-04-30T14</td><td class="td-desc">no matching daily entry</td></tr>
+            <tr><td class="td-site">wikipedia.org</td><td class="td-date">2026-05-10T09</td><td class="td-desc">no matching daily entry</td></tr>
+            <tr><td class="td-site">linkedin.com</td><td class="td-date">2026-05-08T21</td><td class="td-desc">no matching daily entry</td></tr>
+          </tbody>
+        </table>
+      </details>
+      <details class="result-group" open>
+        <summary class="result-group-title">Future-dated keys (2)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Store</th><th class="td-date">Key</th><th class="td-desc">Discrepancy</th></tr></thead>
+          <tbody>
+            <tr><td class="td-site">sitesByDay</td><td class="td-date">2027-03-15</td><td class="td-desc">dated after today</td></tr>
+            <tr><td class="td-site">sitesByHour</td><td class="td-date">2027-03-15T08</td><td class="td-desc">dated after today</td></tr>
+          </tbody>
+        </table>
+      </details>
+      <details class="result-group" open>
+        <summary class="result-group-title">Invalid values (1)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Site</th><th class="td-date">Date</th><th class="td-desc">Discrepancy</th></tr></thead>
+          <tbody>
+            <tr><td class="td-site">reddit.com</td><td class="td-date">2026-05-20</td><td class="td-desc">audioMs = −500 (negative)</td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+    <div class="overlay-footer">
+      <span class="text-meta">14 issues will be reconciled</span>
+      <div style="display:flex;gap:8px">
+        <button id="repair-overlay-cancel-btn" class="btn">Cancel</button>
+        <button id="repair-all-btn" class="btn">Repair all</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="notification" hidden></div>
+
+  <script type="module" src="./storage-management.js"></script>
+</body>
+</html>

@@ -19,7 +19,7 @@ const PREF_SEARCH = 'siteSearch';
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 initThemeMenu();
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
-navButton(document.querySelector('#prune-btn'), '../storage-pruning/storage-pruning.html');
+navButton(document.querySelector('#prune-btn'), '../storage-management/storage-management.html');
 navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
 const rangeSelect = document.querySelector('#range-select');
 const dashboardTable = document.querySelector('#dashboard-table');
@@ -458,7 +458,7 @@ const dashboardTourSteps = [
     selector: '#prune-btn',
     title: 'Open Storage pruning',
     body: 'Click Storage pruning to see how BiteGuard manages its storage and remove low-value entries.',
-    handoff: { nextSurface: 'storage-pruning', mode: 'inPage' },
+    handoff: { nextSurface: 'storage-management', mode: 'inPage' },
   },
 ];
 
