@@ -2,6 +2,17 @@
   gap: 16px;
 }
 
+#settings-btn {
+  background: var(--color-accent);
+  color: var(--color-button-text);
+  -webkit-text-stroke: 0.5px var(--color-button-text);
+}
+
+#settings-btn:hover {
+  background: var(--color-accent-light);
+  border-color: var(--color-accent-light);
+}
+
 #dashboard-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

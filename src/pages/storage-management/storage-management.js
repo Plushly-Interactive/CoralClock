@@ -1,6 +1,7 @@
 import { scanSiteBucket, scanSubpageBucket, applySiteDeletions, applySubpageDeletions } from '../../data/prune.js';
+import { applySiteHourlyRangeDeletion, applySiteDailyReductions, applySubpageHourlyRangeDeletion, applySubpageDailyReductions, applyDirectDailyRangeDeletion, applyDirectSubpageDailyRangeDeletion, deleteSiteAllTime, deleteSubpageSiteAllTime } from '../../data/targetedDelete.js';
 import { formatMs } from '../../shared/timeUtils.js';
-import { showNotification, formatBytes, escapeHtml } from '../../shared/utils.js';
+import { showNotification, formatBytes, escapeHtml, attachInputClear } from '../../shared/utils.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../../shared/msgTypes.js';
 import { PREF_LAST_EXPORT_AT } from '../../shared/prefKeys.js';
@@ -8,19 +9,19 @@ import { exportBiteGuardData } from '../../data/importData.js';
 
 // ── Hour dropdowns (targeted deletion) ───────────────────────────────────────
 
-function buildHourDropdown(id, initHour) {
+function buildHourDropdown(id, initHour, onChange) {
   const wrap = document.querySelector(`#${id}`);
   wrap.dataset.direction = 'up';
   const btn = document.createElement('button');
   btn.className = 'dropdown-btn';
   btn.dataset.value = initHour;
-  btn.innerHTML = `${String(initHour).padStart(2, '0')}h<span class="dropdown-arrow">▼</span>`;
+  btn.innerHTML = `${String(initHour).padStart(2, '0')}:00<span class="dropdown-arrow">▼</span>`;
   const menu = document.createElement('div');
   menu.className = 'dropdown-menu';
   for (let h = 0; h <= 24; h++) {
     const opt = document.createElement('button');
     opt.value = h;
-    opt.textContent = String(h).padStart(2, '0') + 'h';
+    opt.textContent = h === 24 ? '24:00' : String(h).padStart(2, '0') + ':00';
     menu.appendChild(opt);
   }
   wrap.append(btn, menu);
@@ -36,14 +37,15 @@ function buildHourDropdown(id, initHour) {
       btn.firstChild.textContent = opt.textContent;
       btn.dataset.value = opt.value;
       menu.classList.remove('open');
+      if (onChange) onChange();
     });
   });
 }
 
-buildHourDropdown('range-from-hour', 0);
-buildHourDropdown('range-to-hour', 23);
-buildHourDropdown('repeat-from-hour', 9);
-buildHourDropdown('repeat-to-hour', 17);
+buildHourDropdown('range-from-hour', 0, () => syncDeleteRangeBtn());
+buildHourDropdown('range-to-hour', 24, () => syncDeleteRangeBtn());
+buildHourDropdown('repeat-from-hour', 9, () => syncDeleteRangeBtn());
+buildHourDropdown('repeat-to-hour', 17, () => syncDeleteRangeBtn());
 
 document.addEventListener('click', () => {
   document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
@@ -60,7 +62,7 @@ spanChip.addEventListener('mousemove', e => {
 });
 spanChip.addEventListener('mouseleave', () => { spanTooltip.style.display = 'none'; });
 
-// ── Targeted deletion (visual stubs) ─────────────────────────────────────────
+// ── Targeted deletion ─────────────────────────────────────────────────────────
 
 const contiguousForm = document.querySelector('#range-form-row');
 const repeatForm = document.querySelector('#repeat-form');
@@ -69,29 +71,163 @@ document.querySelector('#mode-contiguous-btn').addEventListener('click', () => {
   repeatForm.style.display = 'none';
   document.querySelector('#mode-contiguous-btn').classList.add('active');
   document.querySelector('#mode-repeat-btn').classList.remove('active');
+  syncDeleteRangeBtn();
 });
 document.querySelector('#mode-repeat-btn').addEventListener('click', () => {
   contiguousForm.style.display = 'none';
   repeatForm.style.display = '';
   document.querySelector('#mode-repeat-btn').classList.add('active');
   document.querySelector('#mode-contiguous-btn').classList.remove('active');
+  syncDeleteRangeBtn();
 });
 
 const siteInput = document.querySelector('#site-filter-input');
 const deleteAllBtn = document.querySelector('#delete-all-site-btn');
+
 function syncDeleteAllBtn() { deleteAllBtn.disabled = !siteInput.value.trim(); }
-siteInput.addEventListener('input', syncDeleteAllBtn);
-document.querySelector('#site-filter-clear').addEventListener('click', () => { siteInput.value = ''; syncDeleteAllBtn(); });
+attachInputClear(siteInput, document.querySelector('#site-filter-clear'), syncDeleteAllBtn);
+
+function getHourValue(id) {
+  return parseInt(document.querySelector(`#${id} .dropdown-btn`).dataset.value, 10);
+}
+
+function syncDeleteRangeBtn() {
+  const btn = document.querySelector('#delete-range-btn');
+  const isRepeat = document.querySelector('#mode-repeat-btn').classList.contains('active');
+  if (isRepeat) {
+    const fromDate = document.querySelector('#repeat-from-date').value;
+    const toDate   = document.querySelector('#repeat-to-date').value;
+    btn.disabled = !fromDate || !toDate || fromDate > toDate || getHourValue('repeat-from-hour') >= getHourValue('repeat-to-hour');
+  } else {
+    const fromDate = document.querySelector('#range-from-date').value;
+    const toDate   = document.querySelector('#range-to-date').value;
+    const fromKey  = fromDate ? `${fromDate}T${String(getHourValue('range-from-hour')).padStart(2, '0')}` : '';
+    const toKey    = toDate   ? `${toDate}T${String(getHourValue('range-to-hour')).padStart(2, '0')}`     : '';
+    btn.disabled = !fromDate || !toDate || fromKey >= toKey;
+  }
+}
+
+document.querySelector('#range-from-date').addEventListener('input', syncDeleteRangeBtn);
+document.querySelector('#range-to-date').addEventListener('input', syncDeleteRangeBtn);
+document.querySelector('#repeat-from-date').addEventListener('input', syncDeleteRangeBtn);
+document.querySelector('#repeat-to-date').addEventListener('input', syncDeleteRangeBtn);
+
 deleteAllBtn.addEventListener('click', async () => {
-  const s = siteInput.value.trim();
-  const ok = await confirmDialog({ message: `Delete all data for ${s}? This permanently removes all tracking records for ${s} across all dates. This cannot be undone.`, confirmLabel: 'Delete' });
-  if (ok) showNotification(`All data for ${s} deleted.`);
+  const siteId = siteInput.value.trim();
+  const ok = await confirmDialog({
+    message: `Delete all data for ${siteId}? This permanently removes all tracking records for ${siteId} across all dates. This cannot be undone.`,
+    confirmLabel: 'Delete',
+  });
+  if (!ok) return;
+
+  const beforeBytes = await chrome.storage.local.getBytesInUse(null);
+  const data = await chrome.storage.local.get(['sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour']);
+  const sitesByDay     = data.sitesByDay     ?? {};
+  const sitesByHour    = data.sitesByHour    ?? {};
+  const subpagesByDay  = data.subpagesByDay  ?? {};
+  const subpagesByHour = data.subpagesByHour ?? {};
+
+  deleteSiteAllTime(sitesByDay, siteId);
+  deleteSiteAllTime(sitesByHour, siteId);
+  deleteSubpageSiteAllTime(subpagesByDay, siteId);
+  deleteSubpageSiteAllTime(subpagesByHour, siteId);
+
+  await chrome.storage.local.set({ sitesByDay, sitesByHour, subpagesByDay, subpagesByHour });
+  try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
+
+  const afterBytes = await chrome.storage.local.getBytesInUse(null);
+  showNotification(`All data for ${siteId} deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
+  loadStats();
 });
 
 document.querySelector('#delete-range-btn').addEventListener('click', async () => {
-  const ok = await confirmDialog({ message: 'Delete records in the selected range? This cannot be undone.', confirmLabel: 'Delete' });
-  if (ok) showNotification('Range deleted.');
+  const isRepeat = document.querySelector('#mode-repeat-btn').classList.contains('active');
+  const siteId   = siteInput.value.trim() || null;
+  const scope    = siteId ? ` for ${siteId}` : '';
+
+  let confirmMsg, rangePairs;
+
+  if (isRepeat) {
+    const fromDate = document.querySelector('#repeat-from-date').value;
+    const toDate   = document.querySelector('#repeat-to-date').value;
+    const fromHour = getHourValue('repeat-from-hour');
+    const toHour   = getHourValue('repeat-to-hour');
+    rangePairs = buildRepeatPairs(fromDate, toDate, fromHour, toHour);
+    confirmMsg = `Delete records${scope} for hours ${String(fromHour).padStart(2, '0')}:00–${String(toHour).padStart(2, '0')}:00 daily from ${fromDate} to ${toDate}? This cannot be undone.`;
+  } else {
+    const fromDate = document.querySelector('#range-from-date').value;
+    const toDate   = document.querySelector('#range-to-date').value;
+    const fromHour = getHourValue('range-from-hour');
+    const toHour   = getHourValue('range-to-hour');
+    const fromKey  = `${fromDate}T${String(fromHour).padStart(2, '0')}`;
+    const toKey    = `${toDate}T${String(toHour).padStart(2, '0')}`;
+    rangePairs = [[fromKey, toKey]];
+    confirmMsg = `Delete all records${scope} from ${fromDate} ${String(fromHour).padStart(2, '0')}:00 to ${toDate} ${String(toHour).padStart(2, '0')}:00? This cannot be undone.`;
+  }
+
+  const ok = await confirmDialog({ message: confirmMsg, confirmLabel: 'Delete' });
+  if (!ok) return;
+
+  const beforeBytes = await chrome.storage.local.getBytesInUse(null);
+  const data = await chrome.storage.local.get(['sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour']);
+  const sitesByDay     = data.sitesByDay     ?? {};
+  const sitesByHour    = data.sitesByHour    ?? {};
+  const subpagesByDay  = data.subpagesByDay  ?? {};
+  const subpagesByHour = data.subpagesByHour ?? {};
+
+  const siteRed    = {};
+  const subpageRed = {};
+  for (const [from, to] of rangePairs) {
+    mergeSiteReductions(siteRed,    applySiteHourlyRangeDeletion(sitesByHour, from, to, siteId));
+    mergeSubpageReductions(subpageRed, applySubpageHourlyRangeDeletion(subpagesByHour, from, to, siteId));
+    applyDirectDailyRangeDeletion(sitesByDay, from, to, siteId);
+    applyDirectSubpageDailyRangeDeletion(subpagesByDay, from, to, siteId);
+  }
+  applySiteDailyReductions(sitesByDay, siteRed);
+  applySubpageDailyReductions(subpagesByDay, subpageRed);
+
+  await chrome.storage.local.set({ sitesByDay, sitesByHour, subpagesByDay, subpagesByHour });
+  try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
+
+  const afterBytes = await chrome.storage.local.getBytesInUse(null);
+  showNotification(`Range deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
+  loadStats();
 });
+
+function buildRepeatPairs(fromDate, toDate, fromHour, toHour) {
+  const pairs = [];
+  const cur = new Date(fromDate + 'T12:00:00');
+  const end = new Date(toDate + 'T12:00:00');
+  while (cur <= end) {
+    const d = cur.toISOString().slice(0, 10);
+    pairs.push([`${d}T${String(fromHour).padStart(2, '0')}`, `${d}T${String(toHour).padStart(2, '0')}`]);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return pairs;
+}
+
+function mergeSiteReductions(target, source) {
+  for (const [day, sites] of Object.entries(source)) {
+    target[day] ??= {};
+    for (const [sid, amounts] of Object.entries(sites)) {
+      target[day][sid] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, idleMs: 0 };
+      for (const f of ['activeMs', 'audioMs', 'overlapMs', 'idleMs']) target[day][sid][f] += amounts[f];
+    }
+  }
+}
+
+function mergeSubpageReductions(target, source) {
+  for (const [day, sites] of Object.entries(source)) {
+    target[day] ??= {};
+    for (const [sid, paths] of Object.entries(sites)) {
+      target[day][sid] ??= {};
+      for (const [path, amounts] of Object.entries(paths)) {
+        target[day][sid][path] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, idleMs: 0 };
+        for (const f of ['activeMs', 'audioMs', 'overlapMs', 'idleMs']) target[day][sid][path][f] += amounts[f];
+      }
+    }
+  }
+}
 
 // ── Hourly data (visual stub) ─────────────────────────────────────────────────
 
@@ -530,5 +666,13 @@ function formatSpan(earliest, latest) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
+const urlParams = new URLSearchParams(location.search);
+const paramSite = urlParams.get('site');
+if (paramSite) {
+  siteInput.value = paramSite;
+  document.querySelector('#range-delete').scrollIntoView({ behavior: 'smooth' });
+}
+syncDeleteAllBtn();
+syncDeleteRangeBtn();
 loadStats();
 loadPruneSettings();

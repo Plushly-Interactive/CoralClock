@@ -124,8 +124,8 @@
         <div id="site-filter-row">
           <span class="setting-label">Site (optional)</span>
           <div id="site-filter-wrap" class="input-wrap">
-            <input type="text" id="site-filter-input" class="text-input" placeholder="e.g. reddit.com" value="twitter.com" />
-            <button id="site-filter-clear" class="icon-btn input-clear">&times;</button>
+            <input type="text" id="site-filter-input" class="text-input" placeholder="e.g. google.com" />
+            <button id="site-filter-clear" class="icon-btn input-clear" hidden>&times;</button>
           </div>
         </div>
         <div id="delete-all-site-row">
@@ -143,14 +143,14 @@
             <div class="range-line">
               <span class="setting-label">From</span>
               <div class="dt-group">
-                <input type="date" id="range-from-date" value="2026-04-01" />
+                <input type="date" id="range-from-date" />
                 <div class="custom-dropdown hour-dropdown" id="range-from-hour"></div>
               </div>
             </div>
             <div class="range-line">
               <span class="setting-label">To</span>
               <div class="dt-group">
-                <input type="date" id="range-to-date" value="2026-04-30" />
+                <input type="date" id="range-to-date" />
                 <div class="custom-dropdown hour-dropdown" id="range-to-hour"></div>
               </div>
             </div>
@@ -159,9 +159,9 @@
         <div id="repeat-form" style="display:none">
           <div class="repeat-row">
             <span class="repeat-label setting-label">Dates</span>
-            <input type="date" id="repeat-from-date" value="2026-01-01" />
+            <input type="date" id="repeat-from-date" />
             <span class="text-meta">–</span>
-            <input type="date" id="repeat-to-date" value="2026-05-31" />
+            <input type="date" id="repeat-to-date" />
           </div>
           <div class="repeat-row">
             <span class="repeat-label setting-label">Hours</span>
