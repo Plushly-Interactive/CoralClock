@@ -7,7 +7,6 @@ import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.j
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
 import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
-import { openModal, closeModal, IMPORT_COMPLETE } from '../../data/importData.js';
 import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 import { initThemeMenu } from '../../shared/themeMenu.js';
@@ -297,11 +296,6 @@ document.querySelector('#seed-btn')?.addEventListener('click', async () => {
   await loadAndRender();
 });
 
-window.addEventListener(IMPORT_COMPLETE, async () => {
-  byDayCache = null;
-  hourly.clearCache();
-  await loadAndRender();
-});
 
 function dayKeys(range) {
   const keys = [];
@@ -420,26 +414,6 @@ const dashboardTourSteps = [
     selector: '#dashboard-table-col',
     title: 'All browsed sites',
     body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
-  },
-  {
-    selector: '#import-btn',
-    title: 'Import / Export',
-    body: 'Open the import/export modal to back up your data or transfer it between installs.',
-    advanceOn: 'click',
-  },
-  {
-    selector: '#io-section-bg',
-    title: 'BiteGuard format',
-    body: 'Export and import all your BiteGuard data — daily and hourly stats for sites and subpages.',
-    modalStep: true,
-    onEnter: openModal,
-  },
-  {
-    selector: '#io-section-tt',
-    title: 'Time Tracker compatibility',
-    body: 'Exchange data with the Time Tracker extension. Daily site totals and visit counts are compatible; audio time and subpage data are not.',
-    modalStep: true,
-    onEnter: openModal,
   },
   {
     title: 'Open the popup',

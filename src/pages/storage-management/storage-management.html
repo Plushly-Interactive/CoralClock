@@ -5,6 +5,8 @@
   <title>BiteGuard — Storage management</title>
   <script src="../../shared/theme.js"></script>
   <link rel="stylesheet" href="../../shared/theme.css" />
+  <link rel="stylesheet" href="../../shared/ioModal.css" />
+  <link rel="stylesheet" href="../../shared/confirmDialog.css" />
   <link rel="stylesheet" href="./storage-management.css" />
 </head>
 <body>
@@ -102,8 +104,8 @@
         <div class="field-group">
           <div class="setting-label">Scan</div>
           <div id="insig-stores">
-            <label class="scope-check"><input type="checkbox" checked> Sites</label>
-            <label class="scope-check"><input type="checkbox" checked> Subpages</label>
+            <label class="scope-check"><input type="checkbox" id="insig-scope-sites" checked> Sites</label>
+            <label class="scope-check"><input type="checkbox" id="insig-scope-subpages" checked> Subpages</label>
           </div>
         </div>
         <div class="right-row"><button id="scan-btn" class="btn">Scan</button></div>
@@ -221,6 +223,79 @@
     </div>
   </main>
 
+  <!-- Import/Export modal -->
+  <div id="io-modal-overlay" hidden>
+    <div id="io-modal" role="dialog" aria-labelledby="io-modal-title" aria-modal="true">
+      <div id="io-modal-header">
+        <h2 id="io-modal-title" class="dialog-title">Import / Export data</h2>
+        <button id="io-modal-close" class="icon-btn" aria-label="Close">&times;</button>
+      </div>
+      <div id="io-modal-body">
+        <input type="file" id="import-input" accept=".json" style="display:none">
+        <div id="io-columns">
+          <section class="io-section" id="io-section-bg">
+            <h3 class="io-section-title">BiteGuard format</h3>
+            <p class="io-section-desc">Back up your BiteGuard data or transfer it between installs. Includes all daily and hourly browsing stats and settings.</p>
+            <ul class="io-bullets">
+              <li class="io-yes">Active time per site</li>
+              <li class="io-yes">Visit counts per site</li>
+              <li class="io-yes">Audio time per site</li>
+              <li class="io-yes">Per subpage data</li>
+              <li class="io-no">Site rules &amp; limits <span class="io-soon">(coming soon)</span></li>
+              <li class="io-no">Settings <span class="io-soon">(coming soon)</span></li>
+            </ul>
+            <div class="io-actions">
+              <button id="bg-export-btn" class="btn io-btn">Export</button>
+              <button id="bg-import-btn" class="btn io-btn">Import</button>
+            </div>
+          </section>
+          <section class="io-section" id="io-section-tt">
+            <h3 class="io-section-title">Time Tracker compatibility</h3>
+            <p class="io-section-desc">Exchange data with the "Time Tracker - Web Habit Builder" extension (v<span id="tt-version"></span>). Not all data is compatible.</p>
+            <ul class="io-bullets">
+              <li class="io-yes">Active time per site (daily only)</li>
+              <li class="io-yes">Visit counts per site (daily only)</li>
+              <li class="io-no">Audio time</li>
+              <li class="io-no">Site rules</li>
+              <li class="io-no">Settings</li>
+            </ul>
+            <div class="io-actions">
+              <button id="tt-export-btn" class="btn io-btn">Export</button>
+              <button id="tt-import-btn" class="btn io-btn">Import</button>
+            </div>
+          </section>
+          <section class="io-section" id="io-section-csv">
+            <h3 class="io-section-title">CSV / Spreadsheet</h3>
+            <p class="io-section-desc">Export site stats as a CSV file, openable in any spreadsheet app. Times are in decimal minutes.</p>
+            <ul class="io-bullets">
+              <li class="io-yes">Active time per site (in minutes)</li>
+              <li class="io-yes">Audio time per site (in minutes)</li>
+              <li class="io-yes">Visit counts per site</li>
+              <li class="io-yes">Daily or hourly granularity (one button each)</li>
+              <li class="io-yes">Per subpage data</li>
+            </ul>
+            <div class="io-actions">
+              <button id="csv-daily-btn" class="btn io-btn">Export daily</button>
+              <button id="csv-hourly-btn" class="btn io-btn">Export hourly</button>
+            </div>
+          </section>
+        </div>
+        <div id="io-conflict-view" hidden>
+          <h3 id="io-conflict-title" class="dialog-title">
+            <span id="io-conflict-warning-symbol" aria-hidden="true">⚠</span>Conflicting days
+          </h3>
+          <p id="io-conflict-desc" class="io-section-desc">The following days exist both in your current data and the imported file. Choose what to do — the choice applies to all listed days.</p>
+          <ul id="io-conflict-list"></ul>
+          <div class="io-actions" id="io-conflict-actions">
+            <button id="io-conflict-cancel" class="btn io-btn">Cancel</button>
+            <button id="io-conflict-keep" class="btn io-btn">Keep existing</button>
+            <button id="io-conflict-replace" class="btn io-btn">Replace with imported</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Scan overlay -->
   <div id="scan-overlay" style="display:none">
     <div class="overlay-header">
@@ -228,51 +303,9 @@
       <span id="overlay-params" class="text-meta">30s · Sites + Subpages</span>
       <button id="overlay-close" class="overlay-close">×</button>
     </div>
-    <div class="overlay-results">
-      <details class="result-group" open>
-        <summary class="result-group-title">Sites (3)</summary>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th class="td-site">Site</th>
-              <th class="td-narrow">Last visit</th>
-              <th class="td-narrow">Active</th>
-              <th class="td-narrow">Audio</th>
-              <th class="td-narrow">Records</th>
-              <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="select-all-sites" checked> All</label></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td class="td-site">reddit.com</td><td>2026-05-28</td><td>0s</td><td>0s</td><td>3</td><td class="td-check"><input type="checkbox" checked></td></tr>
-            <tr><td class="td-site">news.ycombinator.com</td><td>2026-05-25</td><td>4s</td><td>0s</td><td>2</td><td class="td-check"><input type="checkbox" checked></td></tr>
-            <tr><td class="td-site">wikipedia.org</td><td>2026-05-20</td><td>1s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
-          </tbody>
-        </table>
-      </details>
-      <details class="result-group" open>
-        <summary class="result-group-title">Subpages (4)</summary>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th class="td-site">Page</th>
-              <th class="td-narrow">Last visit</th>
-              <th class="td-narrow">Active</th>
-              <th class="td-narrow">Audio</th>
-              <th class="td-narrow">Records</th>
-              <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="select-all-sub" checked> All</label></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td class="td-site"><span class="site-label">reddit.com</span><span class="text-meta" style="display:block">/r/programming</span></td><td>2026-05-28</td><td>0s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
-            <tr><td class="td-site"><span class="site-label">reddit.com</span><span class="text-meta" style="display:block">/r/random</span></td><td>2026-05-26</td><td>2s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
-            <tr><td class="td-site"><span class="site-label">github.com</span><span class="text-meta" style="display:block">/orgs/anthropics</span></td><td>2026-05-22</td><td>2s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
-            <tr><td class="td-site"><span class="site-label">youtube.com</span><span class="text-meta" style="display:block">/watch?v=dQw4w9WgXcQ</span></td><td>2026-05-18</td><td>0s</td><td>3s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
-          </tbody>
-        </table>
-      </details>
-    </div>
+    <div id="overlay-results" class="overlay-results"></div>
     <div class="overlay-footer">
-      <span id="overlay-summary" class="text-meta">7 of 7 selected (13 records, approx 2.1 KB)</span>
+      <span id="overlay-summary" class="text-meta"></span>
       <button id="overlay-delete-btn" class="btn">Delete selected</button>
     </div>
   </div>
