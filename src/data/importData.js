@@ -357,9 +357,6 @@ async function applyBgImport(importByDay, importByHour, importSubpagesByDay, imp
 
   for (const d of daysToTake) {
     const prefix = `${d}T`;
-    for (const hk of Object.keys(currentByHour)) {
-      if (hk.startsWith(prefix)) delete currentByHour[hk];
-    }
     for (const [hk, sites] of Object.entries(importByHour)) {
       if (hk.startsWith(prefix)) currentByHour[hk] = sites;
     }
@@ -371,9 +368,6 @@ async function applyBgImport(importByDay, importByHour, importSubpagesByDay, imp
 
   for (const d of daysToTake) {
     const prefix = `${d}T`;
-    for (const hk of Object.keys(currentSubpagesByHour)) {
-      if (hk.startsWith(prefix)) delete currentSubpagesByHour[hk];
-    }
     for (const [hk, sites] of Object.entries(importSubpagesByHour)) {
       if (hk.startsWith(prefix)) currentSubpagesByHour[hk] = sites;
     }
