@@ -44,6 +44,7 @@ html.dark {
 
 body {
   font-family: system-ui, sans-serif;
+  font-size: var(--font-base);
   color: var(--color-text);
   background-color: var(--color-bg);
   height: 100vh;
@@ -388,6 +389,16 @@ button:disabled {
   z-index: 1000;
   flex-direction: column;
 }
+
+.custom-dropdown[data-direction="up"] .dropdown-menu {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.custom-dropdown[data-direction="up"] .dropdown-btn .dropdown-arrow { transform: rotate(180deg); }
+.custom-dropdown[data-direction="up"]:has(.dropdown-menu.open) .dropdown-btn .dropdown-arrow { transform: rotate(0deg); }
 
 .dropdown-menu.open {
   display: flex;
