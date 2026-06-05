@@ -3,7 +3,8 @@ import { formatMs } from '../../shared/timeUtils.js';
 import { showNotification, formatBytes, escapeHtml } from '../../shared/utils.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../../shared/msgTypes.js';
-import '../../data/importData.js';
+import { PREF_LAST_EXPORT_AT } from '../../shared/prefKeys.js';
+import { exportBiteGuardData } from '../../data/importData.js';
 
 // ── Hour dropdowns (targeted deletion) ───────────────────────────────────────
 
@@ -118,7 +119,10 @@ document.querySelector('#repair-all-btn').addEventListener('click', () => {
 
 // ── Export (visual stub) ──────────────────────────────────────────────────────
 
-document.querySelector('#export-btn').addEventListener('click', () => showNotification('Export downloaded.'));
+document.querySelector('#export-btn').addEventListener('click', async () => {
+  await exportBiteGuardData();
+  await loadStats();
+});
 
 // ── Remove insignificant records ──────────────────────────────────────────────
 
@@ -126,15 +130,13 @@ const DEFAULT_THRESHOLD_S = 30;
 let pruneState = null; // { groups, stores, thresholdMs }
 
 async function loadPruneSettings() {
-  const { settings = {} } = await chrome.storage.local.get('settings');
-  document.querySelector('#threshold-input').value = settings.pruneThresholdSeconds ?? DEFAULT_THRESHOLD_S;
+  const { pruneThresholdSeconds } = await chrome.storage.local.get('pruneThresholdSeconds');
+  document.querySelector('#threshold-input').value = pruneThresholdSeconds ?? DEFAULT_THRESHOLD_S;
   syncScanBtn();
 }
 
 async function savePruneThreshold(val) {
-  const { settings = {} } = await chrome.storage.local.get('settings');
-  settings.pruneThresholdSeconds = val;
-  await chrome.storage.local.set({ settings });
+  await chrome.storage.local.set({ pruneThresholdSeconds: val });
 }
 
 function syncScanBtn() {
@@ -417,6 +419,116 @@ async function deleteSelected() {
   showNotification(`Insignificant records deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
 }
 
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+async function loadStats() {
+  const keys = ['sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour', PREF_LAST_EXPORT_AT];
+  const [data, siteDayBytes, siteHourBytes, subDayBytes, subHourBytes, totalBytes] = await Promise.all([
+    chrome.storage.local.get(keys),
+    chrome.storage.local.getBytesInUse('sitesByDay'),
+    chrome.storage.local.getBytesInUse('sitesByHour'),
+    chrome.storage.local.getBytesInUse('subpagesByDay'),
+    chrome.storage.local.getBytesInUse('subpagesByHour'),
+    chrome.storage.local.getBytesInUse(null),
+  ]);
+
+  const sitesByDay = data.sitesByDay ?? {};
+  const sitesByHour = data.sitesByHour ?? {};
+  const subpagesByDay = data.subpagesByDay ?? {};
+  const subpagesByHour = data.subpagesByHour ?? {};
+
+  const domains = new Set();
+  for (const b of Object.values(sitesByDay)) for (const id of Object.keys(b)) domains.add(id);
+  for (const b of Object.values(sitesByHour)) for (const id of Object.keys(b)) domains.add(id);
+
+  const subpages = new Set();
+  for (const b of Object.values(subpagesByDay))
+    for (const [sid, paths] of Object.entries(b)) for (const p of Object.keys(paths)) subpages.add(`${sid}\n${p}`);
+  for (const b of Object.values(subpagesByHour))
+    for (const [sid, paths] of Object.entries(b)) for (const p of Object.keys(paths)) subpages.add(`${sid}\n${p}`);
+
+  let records = 0;
+  for (const b of Object.values(sitesByDay)) records += Object.keys(b).length;
+  for (const b of Object.values(sitesByHour)) records += Object.keys(b).length;
+  for (const b of Object.values(subpagesByDay)) for (const paths of Object.values(b)) records += Object.keys(paths).length;
+  for (const b of Object.values(subpagesByHour)) for (const paths of Object.values(b)) records += Object.keys(paths).length;
+
+  const allDays = [
+    ...Object.keys(sitesByDay),
+    ...Object.keys(sitesByHour).map(k => k.slice(0, 10)),
+    ...Object.keys(subpagesByDay),
+    ...Object.keys(subpagesByHour).map(k => k.slice(0, 10)),
+  ];
+  const earliest = allDays.length ? allDays.reduce((a, b) => a < b ? a : b) : null;
+  const latest   = allDays.length ? allDays.reduce((a, b) => a > b ? a : b) : null;
+
+  document.querySelector('#count-domains').textContent  = domains.size.toLocaleString();
+  document.querySelector('#count-subpages').textContent = subpages.size.toLocaleString();
+  document.querySelector('#count-records').textContent  = records.toLocaleString();
+
+  if (earliest && latest) {
+    document.querySelector('#span-value').textContent   = formatSpan(earliest, latest);
+    document.querySelector('#span-tooltip').textContent = `${earliest} → ${latest}`;
+  } else {
+    document.querySelector('#span-value').textContent = '—';
+    document.querySelector('#span-info').style.display = 'none';
+    document.querySelector('#span-chip').style.cursor  = 'default';
+  }
+
+  const storeTotal = siteDayBytes + siteHourBytes + subDayBytes + subHourBytes;
+  const pct = s => totalBytes > 0 ? `${(s / totalBytes * 100).toFixed(1)}%` : '0%';
+  document.querySelector('#bar-site-day').style.width  = pct(siteDayBytes);
+  document.querySelector('#bar-site-hour').style.width = pct(siteHourBytes);
+  document.querySelector('#bar-sub-day').style.width   = pct(subDayBytes);
+  document.querySelector('#bar-sub-hour').style.width  = pct(subHourBytes);
+  document.querySelector('#store-total-text').textContent = `${formatBytes(storeTotal)} / ${formatBytes(totalBytes)}`;
+  document.querySelector('#legend-site-day').textContent  = `Sites daily — ${formatBytes(siteDayBytes)}`;
+  document.querySelector('#legend-site-hour').textContent = `Sites hourly — ${formatBytes(siteHourBytes)}`;
+  document.querySelector('#legend-sub-day').textContent   = `Subpages daily — ${formatBytes(subDayBytes)}`;
+  document.querySelector('#legend-sub-hour').textContent  = `Subpages hourly — ${formatBytes(subHourBytes)}`;
+  const otherBytes = totalBytes - storeTotal;
+  if (otherBytes > 0) {
+    document.querySelector('#bar-other').style.width = pct(otherBytes);
+    document.querySelector('#legend-other').removeAttribute('hidden');
+    document.querySelector('#legend-other-text').textContent = `Cache, Rules & Other — ${formatBytes(otherBytes)}`;
+  }
+
+  const quota = chrome.storage.local.QUOTA_BYTES ?? 10485760;
+  document.querySelector('#quota-bar-fill').style.width = `${Math.min(100, totalBytes / quota * 100).toFixed(1)}%`;
+  document.querySelector('#quota-text').textContent = `${formatBytes(totalBytes)} / ${formatBytes(quota)}`;
+
+  const quotaWarn = document.querySelector('#quota-warn');
+  if (totalBytes > 0 && earliest && latest) {
+    const daySpan = Math.max(1, Math.round((new Date(latest) - new Date(earliest)) / 86400000));
+    const daysLeft = Math.round((quota - totalBytes) / (totalBytes / daySpan));
+    if (daysLeft > 0) {
+      quotaWarn.textContent = `At current rate: ~${daysLeft} day${daysLeft !== 1 ? 's' : ''} to cap`;
+      quotaWarn.removeAttribute('hidden');
+    }
+  }
+
+  const lastExportAt = data[PREF_LAST_EXPORT_AT];
+  if (lastExportAt) {
+    const diffDays = Math.floor((Date.now() - lastExportAt) / 86400000);
+    document.querySelector('#export-age').textContent   = diffDays === 0 ? 'Today' : diffDays;
+    document.querySelector('#export-label').textContent = diffDays === 0 ? '' : `day${diffDays !== 1 ? 's' : ''} ago`;
+  } else {
+    document.querySelector('#export-age').textContent   = 'Never';
+    document.querySelector('#export-label').textContent = 'exported';
+  }
+}
+
+function formatSpan(earliest, latest) {
+  const days = Math.round((new Date(latest) - new Date(earliest)) / 86400000);
+  if (days < 1)   return '1 day';
+  if (days < 14)  return `${days} day${days !== 1 ? 's' : ''}`;
+  if (days < 60)  { const w = Math.round(days / 7);  return `${w} week${w !== 1 ? 's' : ''}`; }
+  if (days < 730) { const m = Math.round(days / 30.44); return `${m} month${m !== 1 ? 's' : ''}`; }
+  const y = (days / 365.25).toFixed(1);
+  return `${y} year${y !== '1.0' ? 's' : ''}`;
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
+loadStats();
 loadPruneSettings();
