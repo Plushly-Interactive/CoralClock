@@ -179,9 +179,9 @@
         <h2 class="chart-heading">Hourly data</h2>
         <p class="card-desc">Hourly stores track the same time as daily, at finer granularity. Old hourly data can be dropped once daily aggregates are accurate.</p>
         <div class="callout">
-          <div>Sites hourly — <strong>0.8 MB (24%)</strong> · 89 sites across 743 buckets</div>
-          <div>Subpages hourly — <strong>1.3 MB (38%)</strong> · 234 subpages across 1,243 buckets</div>
-          <div class="text-meta" style="margin-top:4px">Total hourly: 2.1 MB of 3.4 MB (62%)</div>
+          <div id="callout-sites-hour"></div>
+          <div id="callout-sub-hour"></div>
+          <div id="callout-hourly-total" class="text-meta" style="margin-top:4px"></div>
         </div>
         <div class="field-group">
           <div class="setting-label">Scope</div>
@@ -196,32 +196,16 @@
           <span>days</span>
           <span id="drop-estimate" class="text-meta">~280 KB</span>
         </div>
-        <div class="right-row"><button id="drop-hourly-btn" class="btn">Drop hourly</button></div>
+        <div class="right-row"><button id="drop-hourly-btn" class="btn">Drop data</button></div>
       </div>
 
       <div class="chart-container" id="health-card">
         <h2 class="chart-heading">Data health</h2>
-        <p class="card-desc">Verifies hourly and daily aggregates are consistent. Targeted deletion reduces daily values from hourly data — small drifts accumulate over time.</p>
+        <p class="card-desc">Verifies hourly and daily aggregates are consistent. Targeted deletion reduces daily values from hourly data, small drifts accumulate over time.</p>
         <div class="health-status">
-          <span class="health-dot"></span>
-          <span><strong>14 issues found</strong> — hourly/daily drift, orphaned records, future-dated keys and invalid values</span>
+          <span id="health-dot" class="health-dot"></span>
+          <span id="health-status-text"></span>
         </div>
-        <ul class="issue-list">
-          <li class="issue-item"><span class="issue-site">reddit.com</span> — hourly/daily drift on 2026-05-01</li>
-          <li class="issue-item"><span class="issue-site">twitter.com</span> — hourly/daily drift on 2026-05-15</li>
-          <li class="issue-item"><span class="issue-site">youtube.com</span> — orphaned hourly record on 2026-04-30</li>
-          <li class="issue-item"><span class="issue-site">github.com</span> — hourly/daily drift on 2026-05-03</li>
-          <li class="issue-item"><span class="issue-site">news.ycombinator.com</span> — hourly/daily drift on 2026-04-22</li>
-          <li class="issue-item"><span class="issue-site">wikipedia.org</span> — orphaned hourly record on 2026-05-10</li>
-          <li class="issue-item"><span class="issue-site">stackoverflow.com</span> — hourly/daily drift on 2026-05-07</li>
-          <li class="issue-item"><span class="issue-site">twitch.tv</span> — orphaned hourly record on 2026-04-18</li>
-          <li class="issue-item"><span class="issue-site">netflix.com</span> — hourly/daily drift on 2026-05-12</li>
-          <li class="issue-item"><span class="issue-site">nytimes.com</span> — hourly/daily drift on 2026-04-29</li>
-          <li class="issue-item"><span class="issue-site">linkedin.com</span> — orphaned hourly record on 2026-05-08</li>
-          <li class="issue-item"><span class="issue-site">amazon.com</span> — hourly/daily drift on 2026-04-15</li>
-          <li class="issue-item"><span class="issue-site">sitesByDay</span> — future-dated key 2027-03-15</li>
-          <li class="issue-item"><span class="issue-site">reddit.com</span> — invalid value: audioMs = −500 on 2026-05-20</li>
-        </ul>
         <div class="right-row">
           <button id="repair-btn" class="btn">Repair</button>
         </div>
@@ -321,59 +305,12 @@
   <div id="repair-overlay" style="display:none">
     <div class="overlay-header">
       <span class="overlay-title">Health issues</span>
-      <span class="text-meta">14 issues detected — review before repairing</span>
+      <span id="repair-count" class="text-meta"></span>
       <button id="repair-overlay-close" class="overlay-close">×</button>
     </div>
-    <div class="overlay-results">
-      <details class="result-group" open>
-        <summary class="result-group-title">Hourly/daily drift (8)</summary>
-        <table class="data-table">
-          <thead><tr><th class="td-site">Site</th><th class="td-date">Date</th><th class="td-desc">Discrepancy</th></tr></thead>
-          <tbody>
-            <tr><td class="td-site">reddit.com</td><td class="td-date">2026-05-01</td><td class="td-desc">activeMs: daily 4,320 ms ≠ hourly sum 3,800 ms</td></tr>
-            <tr><td class="td-site">twitter.com</td><td class="td-date">2026-05-15</td><td class="td-desc">activeMs: daily 8,640 ms ≠ hourly sum 7,200 ms</td></tr>
-            <tr><td class="td-site">github.com</td><td class="td-date">2026-05-03</td><td class="td-desc">audioMs: daily 0 ms ≠ hourly sum 1,200 ms</td></tr>
-            <tr><td class="td-site">news.ycombinator.com</td><td class="td-date">2026-04-22</td><td class="td-desc">activeMs: daily 2,160 ms ≠ hourly sum 1,980 ms</td></tr>
-            <tr><td class="td-site">stackoverflow.com</td><td class="td-date">2026-05-07</td><td class="td-desc">overlapMs: daily 600 ms ≠ hourly sum 0 ms</td></tr>
-            <tr><td class="td-site">netflix.com</td><td class="td-date">2026-05-12</td><td class="td-desc">activeMs: daily 21,600 ms ≠ hourly sum 18,000 ms</td></tr>
-            <tr><td class="td-site">nytimes.com</td><td class="td-date">2026-04-29</td><td class="td-desc">activeMs: daily 3,600 ms ≠ hourly sum 3,240 ms</td></tr>
-            <tr><td class="td-site">amazon.com</td><td class="td-date">2026-04-15</td><td class="td-desc">idleMs: daily 900 ms ≠ hourly sum 0 ms</td></tr>
-          </tbody>
-        </table>
-      </details>
-      <details class="result-group" open>
-        <summary class="result-group-title">Orphaned hourly records (3)</summary>
-        <table class="data-table">
-          <thead><tr><th class="td-site">Site</th><th class="td-date">Hour key</th><th class="td-desc">Discrepancy</th></tr></thead>
-          <tbody>
-            <tr><td class="td-site">youtube.com</td><td class="td-date">2026-04-30T14</td><td class="td-desc">no matching daily entry</td></tr>
-            <tr><td class="td-site">wikipedia.org</td><td class="td-date">2026-05-10T09</td><td class="td-desc">no matching daily entry</td></tr>
-            <tr><td class="td-site">linkedin.com</td><td class="td-date">2026-05-08T21</td><td class="td-desc">no matching daily entry</td></tr>
-          </tbody>
-        </table>
-      </details>
-      <details class="result-group" open>
-        <summary class="result-group-title">Future-dated keys (2)</summary>
-        <table class="data-table">
-          <thead><tr><th class="td-site">Store</th><th class="td-date">Key</th><th class="td-desc">Discrepancy</th></tr></thead>
-          <tbody>
-            <tr><td class="td-site">sitesByDay</td><td class="td-date">2027-03-15</td><td class="td-desc">dated after today</td></tr>
-            <tr><td class="td-site">sitesByHour</td><td class="td-date">2027-03-15T08</td><td class="td-desc">dated after today</td></tr>
-          </tbody>
-        </table>
-      </details>
-      <details class="result-group" open>
-        <summary class="result-group-title">Invalid values (1)</summary>
-        <table class="data-table">
-          <thead><tr><th class="td-site">Site</th><th class="td-date">Date</th><th class="td-desc">Discrepancy</th></tr></thead>
-          <tbody>
-            <tr><td class="td-site">reddit.com</td><td class="td-date">2026-05-20</td><td class="td-desc">audioMs = −500 (negative)</td></tr>
-          </tbody>
-        </table>
-      </details>
-    </div>
+    <div id="repair-results" class="overlay-results"></div>
     <div class="overlay-footer">
-      <span class="text-meta">14 issues will be reconciled</span>
+      <span id="repair-footer-count" class="text-meta"></span>
       <div style="display:flex;gap:8px">
         <button id="repair-overlay-cancel-btn" class="btn">Cancel</button>
         <button id="repair-all-btn" class="btn">Repair all</button>

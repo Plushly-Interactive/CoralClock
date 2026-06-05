@@ -6,6 +6,18 @@ import { confirmDialog } from '../../shared/confirmDialog.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../../shared/msgTypes.js';
 import { PREF_LAST_EXPORT_AT } from '../../shared/prefKeys.js';
 import { exportBiteGuardData } from '../../data/importData.js';
+import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
+
+let cachedStores = { sitesByDay: {}, sitesByHour: {}, subpagesByDay: {}, subpagesByHour: {} };
+let cachedBytes  = { siteHour: 0, subHour: 0, total: 0 };
+let cachedIssues = [];
+
+const ISSUE_TYPE_LABELS = {
+  'drift':        'hourly/daily drift',
+  'orphan':       'orphaned records',
+  'future-dated': 'future-dated keys',
+  'invalid':      'invalid values',
+};
 
 // ── Hour dropdowns (targeted deletion) ───────────────────────────────────────
 
@@ -229,28 +241,232 @@ function mergeSubpageReductions(target, source) {
   }
 }
 
-// ── Hourly data (visual stub) ─────────────────────────────────────────────────
+// ── Hourly data ───────────────────────────────────────────────────────────────
+
+function updateHourlyCallout() {
+  const { sitesByHour, subpagesByHour } = cachedStores;
+  const { siteHour, subHour, total } = cachedBytes;
+
+  const siteIds = new Set();
+  for (const b of Object.values(sitesByHour)) for (const id of Object.keys(b)) siteIds.add(id);
+
+  const subPages = new Set();
+  for (const b of Object.values(subpagesByHour))
+    for (const [sid, paths] of Object.entries(b))
+      for (const p of Object.keys(paths)) subPages.add(`${sid}\n${p}`);
+
+  const pct = b => total > 0 ? ` (${(b / total * 100).toFixed(0)}%)` : '';
+  const hourlyTotal = siteHour + subHour;
+
+  document.querySelector('#callout-sites-hour').innerHTML =
+    `Sites — <strong>${formatBytes(siteHour)}${pct(siteHour)}</strong> · ${siteIds.size} site${siteIds.size !== 1 ? 's' : ''}`;
+  document.querySelector('#callout-sub-hour').innerHTML =
+    `Subpages — <strong>${formatBytes(subHour)}${pct(subHour)}</strong> · ${subPages.size} page${subPages.size !== 1 ? 's' : ''}`;
+  document.querySelector('#callout-hourly-total').textContent =
+    `Total hourly: ${formatBytes(hourlyTotal)} of ${formatBytes(total)} (${total > 0 ? (hourlyTotal / total * 100).toFixed(0) : 0}%)`;
+}
+
+function updateDropEstimate() {
+  const days = parseInt(document.querySelector('#drop-days-input').value, 10);
+  const el = document.querySelector('#drop-estimate');
+  if (isNaN(days) || days <= 0) { el.textContent = ''; return 0; }
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+
+  const scopeSites = document.querySelector('#drop-scope-sites').checked;
+  const scopeSub   = document.querySelector('#drop-scope-subpages').checked;
+
+  let bytes = 0;
+  if (scopeSites)
+    for (const [k, v] of Object.entries(cachedStores.sitesByHour))
+      if (k.slice(0, 10) < cutoffKey) bytes += JSON.stringify(v).length;
+  if (scopeSub)
+    for (const [k, v] of Object.entries(cachedStores.subpagesByHour))
+      if (k.slice(0, 10) < cutoffKey) bytes += JSON.stringify(v).length;
+
+  el.textContent = bytes > 0 ? `~${formatBytes(bytes)}` : '0 B';
+  return bytes;
+}
+
+function syncDropBtn() {
+  const val = document.querySelector('#drop-days-input').value;
+  const num = parseInt(val, 10);
+  const valid = val !== '' && !isNaN(num) && num > 0;
+  const scopeOk = document.querySelector('#drop-scope-sites').checked || document.querySelector('#drop-scope-subpages').checked;
+  const bytes = updateDropEstimate();
+  document.querySelector('#drop-hourly-btn').disabled = !valid || !scopeOk || bytes === 0;
+}
+
+document.querySelector('#drop-days-input').addEventListener('input', syncDropBtn);
+document.querySelector('#drop-scope-sites').addEventListener('change', syncDropBtn);
+document.querySelector('#drop-scope-subpages').addEventListener('change', syncDropBtn);
 
 document.querySelector('#drop-hourly-btn').addEventListener('click', async () => {
-  const days = document.querySelector('#drop-days-input').value;
-  const ok = await confirmDialog({ message: `Drop all hourly data older than ${days} days? Daily aggregates are preserved. This cannot be undone.`, confirmLabel: 'Drop hourly' });
-  if (ok) showNotification(`Hourly data older than ${days} days dropped — freed ~280 KB.`);
+  const days = parseInt(document.querySelector('#drop-days-input').value, 10);
+  const scopeSites = document.querySelector('#drop-scope-sites').checked;
+  const scopeSub   = document.querySelector('#drop-scope-subpages').checked;
+  const scope = [scopeSites && 'Sites', scopeSub && 'Subpages'].filter(Boolean).join(' + ');
+
+  const ok = await confirmDialog({
+    message: `Drop ${scope} hourly data older than ${days} day${days !== 1 ? 's' : ''}? Daily aggregates are preserved. This cannot be undone.`,
+    confirmLabel: 'Drop hourly',
+  });
+  if (!ok) return;
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+
+  const beforeBytes = await chrome.storage.local.getBytesInUse(null);
+  const data = await chrome.storage.local.get(['sitesByHour', 'subpagesByHour']);
+  const sitesByHour    = data.sitesByHour    ?? {};
+  const subpagesByHour = data.subpagesByHour ?? {};
+
+  if (scopeSites)
+    for (const k of Object.keys(sitesByHour))    if (k.slice(0, 10) < cutoffKey) delete sitesByHour[k];
+  if (scopeSub)
+    for (const k of Object.keys(subpagesByHour)) if (k.slice(0, 10) < cutoffKey) delete subpagesByHour[k];
+
+  await chrome.storage.local.set({ sitesByHour, subpagesByHour });
+  try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
+
+  const afterBytes = await chrome.storage.local.getBytesInUse(null);
+  showNotification(`Hourly data older than ${days} day${days !== 1 ? 's' : ''} dropped — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
+  loadStats();
 });
 
-// ── Data health (visual stub) ─────────────────────────────────────────────────
+// ── Data health ───────────────────────────────────────────────────────────────
+
+function loadHealthCard() {
+  cachedIssues = checkHealth(cachedStores);
+  const dot        = document.querySelector('#health-dot');
+  const statusText = document.querySelector('#health-status-text');
+  const repairBtn  = document.querySelector('#repair-btn');
+
+  if (cachedIssues.length === 0) {
+    dot.className = 'health-dot ok';
+    statusText.innerHTML = '<strong>All checks passed</strong>';
+    repairBtn.style.display = 'none';
+  } else {
+    dot.className = 'health-dot';
+    const types = [...new Set(cachedIssues.map(i => ISSUE_TYPE_LABELS[i.type]))].join(', ');
+    statusText.innerHTML = `<strong>${cachedIssues.length} issue${cachedIssues.length !== 1 ? 's' : ''} found</strong> — ${types}`;
+    repairBtn.style.display = '';
+  }
+}
+
+function buildRepairOverlay(issues) {
+  const n = issues.length;
+  document.querySelector('#repair-count').textContent = `${n} issue${n !== 1 ? 's' : ''} detected — review before repairing`;
+  document.querySelector('#repair-footer-count').textContent = `${n} issue${n !== 1 ? 's' : ''} will be reconciled`;
+
+  const resultsEl = document.querySelector('#repair-results');
+  resultsEl.innerHTML = '';
+
+  const grouped = {};
+  for (const issue of issues) (grouped[issue.type] ??= []).push(issue);
+
+  for (const [type, typeIssues] of Object.entries(grouped)) {
+    const isFuture = type === 'future-dated';
+    const siteLabel = isFuture ? 'Store' : 'Site';
+    const dateLabel = isFuture ? 'Key' : 'Date';
+    const sortState = { col: 'date', dir: 'asc' };
+
+    const details = document.createElement('details');
+    details.className = 'result-group';
+    details.open = true;
+    details.innerHTML = `
+      <summary class="result-group-title">${ISSUE_TYPE_LABELS[type]} (${typeIssues.length})</summary>
+      <table class="data-table">
+        <thead><tr>
+          <th class="td-site" data-col="site" data-label="${siteLabel}">${siteLabel}</th>
+          <th class="td-date" data-col="date" data-label="${dateLabel}">${dateLabel}</th>
+          <th class="td-desc" data-col="detail" data-label="Detail">Detail</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>`;
+
+    rerenderRepairGroupBody(details, typeIssues, isFuture, sortState);
+
+    details.querySelectorAll('th[data-col]').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.dataset.col;
+        sortState.dir = sortState.col === col && sortState.dir === 'asc' ? 'desc' : 'asc';
+        sortState.col = col;
+        rerenderRepairGroupBody(details, typeIssues, isFuture, sortState);
+      });
+    });
+
+    resultsEl.appendChild(details);
+  }
+}
+
+function rerenderRepairGroupBody(details, issues, isFuture, sortState) {
+  const getVal = issue =>
+    sortState.col === 'site'   ? (isFuture ? issue.store : (issue.siteId ?? '')).toLowerCase() :
+    sortState.col === 'detail' ? issue.desc.toLowerCase() :
+    (issue.hourKey ?? issue.dayKey ?? '');
+
+  const sorted = [...issues].sort((a, b) => {
+    const cmp = getVal(a) < getVal(b) ? -1 : getVal(a) > getVal(b) ? 1 : 0;
+    return sortState.dir === 'asc' ? cmp : -cmp;
+  });
+
+  details.querySelectorAll('th[data-col]').forEach(th => {
+    const isSorted = th.dataset.col === sortState.col;
+    th.textContent = th.dataset.label + (isSorted ? (sortState.dir === 'desc' ? ' ↓' : ' ↑') : '');
+    th.classList.toggle('sorted', isSorted);
+  });
+
+  const tbody = details.querySelector('tbody');
+  tbody.innerHTML = '';
+  for (const issue of sorted) {
+    const tr = document.createElement('tr');
+    const siteCell = isFuture ? escapeHtml(issue.store) :
+      issue.path
+        ? `<span class="site-label truncate">${escapeHtml(issue.siteId)}</span><span class="text-meta truncate">${escapeHtml(issue.path)}</span>`
+        : `<span class="truncate">${escapeHtml(issue.siteId)}</span>`;
+    tr.innerHTML = `<td class="td-site">${siteCell}</td><td class="td-date">${escapeHtml(issue.hourKey ?? issue.dayKey ?? '')}</td><td class="td-desc">${escapeHtml(issue.desc)}</td>`;
+    tbody.appendChild(tr);
+  }
+}
 
 const repairOverlay = document.querySelector('#repair-overlay');
-document.querySelector('#repair-btn').addEventListener('click', () => { repairOverlay.style.display = ''; });
+document.querySelector('#repair-btn').addEventListener('click', async () => {
+  const data = await chrome.storage.local.get(['sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour']);
+  cachedIssues = checkHealth({
+    sitesByDay:     data.sitesByDay     ?? {},
+    sitesByHour:    data.sitesByHour    ?? {},
+    subpagesByDay:  data.subpagesByDay  ?? {},
+    subpagesByHour: data.subpagesByHour ?? {},
+  });
+  buildRepairOverlay(cachedIssues);
+  repairOverlay.style.display = '';
+});
 document.querySelector('#repair-overlay-close').addEventListener('click', () => { repairOverlay.style.display = 'none'; });
 document.querySelector('#repair-overlay-cancel-btn').addEventListener('click', () => { repairOverlay.style.display = 'none'; });
-document.querySelector('#repair-all-btn').addEventListener('click', () => {
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && repairOverlay.style.display !== 'none') repairOverlay.style.display = 'none'; });
+
+document.querySelector('#repair-all-btn').addEventListener('click', async () => {
+  const data = await chrome.storage.local.get(['sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour']);
+  const stores = {
+    sitesByDay:     data.sitesByDay     ?? {},
+    sitesByHour:    data.sitesByHour    ?? {},
+    subpagesByDay:  data.subpagesByDay  ?? {},
+    subpagesByHour: data.subpagesByHour ?? {},
+  };
+
+  applyRepairs(stores, cachedIssues);
+
+  await chrome.storage.local.set({ sitesByDay: stores.sitesByDay, sitesByHour: stores.sitesByHour, subpagesByDay: stores.subpagesByDay, subpagesByHour: stores.subpagesByHour });
+  try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
+
   repairOverlay.style.display = 'none';
-  const healthCard = document.querySelector('#health-card');
-  healthCard.querySelector('.health-dot').classList.add('ok');
-  healthCard.querySelector('.health-status span:last-child').innerHTML = '<strong>All checks passed</strong>';
-  healthCard.querySelector('.issue-list').style.display = 'none';
-  document.querySelector('#repair-btn').style.display = 'none';
-  showNotification('14 issues reconciled — tracking data is now consistent.');
+  const n = cachedIssues.length;
+  showNotification(`${n} issue${n !== 1 ? 's' : ''} repaired — tracking data is now consistent.`);
+  loadStats();
 });
 
 // ── Export (visual stub) ──────────────────────────────────────────────────────
@@ -330,7 +546,7 @@ async function runScan() {
     groups.push({ label: 'Subpages', isSubpage: true, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
   }
 
-  pruneState = { groups, stores: { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, thresholdMs };
+  pruneState = { groups, stores: { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, storeKeys: keys, thresholdMs };
   renderScanResults();
   scanOverlay.style.display = '';
 }
@@ -531,12 +747,12 @@ async function deleteSelected() {
   });
   if (!ok) return;
 
-  const { groups, stores } = pruneState;
+  const { groups, stores, storeKeys } = pruneState;
 
   const beforeBytes = await chrome.storage.local.getBytesInUse(null);
 
   const updated = {};
-  for (const [key, store] of Object.entries(stores)) updated[key] = JSON.parse(JSON.stringify(store));
+  for (const key of storeKeys) updated[key] = JSON.parse(JSON.stringify(stores[key]));
 
   for (const group of groups) {
     const selected = group.results.filter(r => group.selectedKeys.has(rowKey(r)));
@@ -553,6 +769,7 @@ async function deleteSelected() {
 
   scanOverlay.style.display = 'none';
   showNotification(`Insignificant records deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
+  loadStats();
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
@@ -652,6 +869,12 @@ async function loadStats() {
     document.querySelector('#export-age').textContent   = 'Never';
     document.querySelector('#export-label').textContent = 'exported';
   }
+
+  cachedStores = { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour };
+  cachedBytes  = { siteHour: siteHourBytes, subHour: subHourBytes, total: totalBytes };
+  updateHourlyCallout();
+  syncDropBtn();
+  loadHealthCard();
 }
 
 function formatSpan(earliest, latest) {
@@ -670,9 +893,11 @@ const urlParams = new URLSearchParams(location.search);
 const paramSite = urlParams.get('site');
 if (paramSite) {
   siteInput.value = paramSite;
+  document.querySelector('#site-filter-clear').style.display = 'block';
   document.querySelector('#range-delete').scrollIntoView({ behavior: 'smooth' });
 }
 syncDeleteAllBtn();
 syncDeleteRangeBtn();
+syncDropBtn();
 loadStats();
 loadPruneSettings();

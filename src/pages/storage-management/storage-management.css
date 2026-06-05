@@ -94,7 +94,6 @@
   gap: 24px;
   align-items: stretch;
   flex: 1;
-  min-height: 0;
 }
 
 #tools-grid .chart-container {
@@ -112,7 +111,7 @@
 .right-row { display: flex; justify-content: flex-end; margin-top: auto; }
 
 /* Insignificant records */
-#insig-stores { display: flex; flex-direction: column; gap: 6px; }
+#insig-stores { display: flex; gap: 12px; }
 #threshold-row { display: flex; align-items: center; gap: 8px; }
 
 /* Targeted deletion */
@@ -156,7 +155,7 @@ input[type="date"]:focus { outline: none; border-color: var(--color-accent); }
 .repeat-label { flex-shrink: 0; }
 
 /* Hourly data */
-#drop-stores { display: flex; flex-direction: column; gap: 6px; }
+#drop-stores { display: flex; gap: 12px; }
 #drop-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* Data health */
@@ -250,6 +249,7 @@ input[type="date"]:focus { outline: none; border-color: var(--color-accent); }
 .result-group[open] > .result-group-title::before { content: '▾ '; }
 
 .overlay-results .data-table th { padding: 7px 12px; }
+.overlay-results .data-table th[data-col] { cursor: pointer; user-select: none; }
 .overlay-results .data-table td { padding: 8px 12px; font-size: var(--font-base); }
 .overlay-results .data-table .td-site { overflow: hidden; }
 .overlay-results .data-table tr.unchecked td { color: var(--color-text-secondary); }
