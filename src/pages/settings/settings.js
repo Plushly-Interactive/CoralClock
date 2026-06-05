@@ -1,3 +1,4 @@
+import { autoStartIfMatches } from '../../shared/tour.js';
 import { PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../../shared/prefKeys.js';
 import { WEEK_DAYS, DEFAULT_WEEK_START } from '../../shared/weekStart.js';
 import { getIdleThresholdSec } from '../../shared/idleConfig.js';
@@ -86,3 +87,19 @@ idleInput.addEventListener('change', async () => {
   idleInput.value = minutes;
   await chrome.storage.local.set({ [PREF_IDLE_THRESHOLD_SEC]: minutes * 60 });
 });
+
+autoStartIfMatches('settings', [
+  {
+    selector: '#settings-main',
+    title: 'Settings',
+    body: 'Adjust idle threshold, clock format, and week start day. Changes take effect immediately.',
+    newInVersion: 3,
+  },
+  {
+    selector: '#back-btn',
+    title: 'Back to the dashboard',
+    body: 'Click the back arrow to return to the dashboard and finish the tour.',
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'inPage' },
+    newInVersion: 3,
+  },
+]);

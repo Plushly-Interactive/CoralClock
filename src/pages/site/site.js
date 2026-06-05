@@ -31,10 +31,13 @@ chartsGrid.insertAdjacentHTML('afterbegin', TIME_CHART_HTML);
 chartsGrid.insertAdjacentHTML('beforeend', VISITS_CHART_HTML);
 chartsGrid.insertAdjacentHTML('beforeend', HOURLY_CHART_HTML);
 const limitBtn = document.querySelector('#limit-btn');
+const deleteSiteBtn = document.querySelector('#delete-site-btn');
 if (isMerged) {
   limitBtn.style.display = 'none';
+  deleteSiteBtn.style.display = 'none';
 } else {
   navButton(limitBtn, `../rules/rules.html?target=${encodeURIComponent(siteId)}`);
+  navButton(deleteSiteBtn, `../storage-management/storage-management.html?site=${encodeURIComponent(siteId)}`);
 }
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');

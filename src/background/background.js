@@ -74,7 +74,7 @@ chrome.runtime.onStartup.addListener(() => {
 
 // First page to open for the update tour. The tour hands off between surfaces
 // via nextUpdateSurface — only the entry point needs to be opened here.
-const TOUR_UPDATE_ENTRY = 'src/pages/rules/rules.html';
+const TOUR_UPDATE_ENTRY = 'src/pages/dashboard/dashboard.html';
 
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason !== 'install' && details.reason !== 'update') return;

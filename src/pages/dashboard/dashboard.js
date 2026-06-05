@@ -7,19 +7,15 @@ import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.j
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
 import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
-import { openModal, closeModal, IMPORT_COMPLETE } from '../../data/importData.js';
 import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
-import { initThemeMenu } from '../../shared/themeMenu.js';
-
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
 const PREF_SEARCH = 'siteSearch';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
-initThemeMenu();
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
-navButton(document.querySelector('#prune-btn'), '../storage-pruning/storage-pruning.html');
+navButton(document.querySelector('#prune-btn'), '../storage-management/storage-management.html');
 navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
 const rangeSelect = document.querySelector('#range-select');
 const dashboardTable = document.querySelector('#dashboard-table');
@@ -297,11 +293,6 @@ document.querySelector('#seed-btn')?.addEventListener('click', async () => {
   await loadAndRender();
 });
 
-window.addEventListener(IMPORT_COMPLETE, async () => {
-  byDayCache = null;
-  hourly.clearCache();
-  await loadAndRender();
-});
 
 function dayKeys(range) {
   const keys = [];
@@ -422,26 +413,6 @@ const dashboardTourSteps = [
     body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
   },
   {
-    selector: '#import-btn',
-    title: 'Import / Export',
-    body: 'Open the import/export modal to back up your data or transfer it between installs.',
-    advanceOn: 'click',
-  },
-  {
-    selector: '#io-section-bg',
-    title: 'BiteGuard format',
-    body: 'Export and import all your BiteGuard data — daily and hourly stats for sites and subpages.',
-    modalStep: true,
-    onEnter: openModal,
-  },
-  {
-    selector: '#io-section-tt',
-    title: 'Time Tracker compatibility',
-    body: 'Exchange data with the Time Tracker extension. Daily site totals and visit counts are compatible; audio time and subpage data are not.',
-    modalStep: true,
-    onEnter: openModal,
-  },
-  {
     title: 'Open the popup',
     body: 'Click the BiteGuard icon in your browser toolbar to continue the tour.',
     tooltipPosition: 'top-right',
@@ -456,9 +427,22 @@ const dashboardTourSteps = [
   },
   {
     selector: '#prune-btn',
-    title: 'Open Storage pruning',
-    body: 'Click Storage pruning to see how BiteGuard manages its storage and remove low-value entries.',
-    handoff: { nextSurface: 'storage-pruning', mode: 'inPage' },
+    title: 'Manage storage',
+    body: 'Click Manage storage to see your storage usage, clean up insignificant records, delete data by range, and check data consistency.',
+    handoff: { nextSurface: 'storage-management', mode: 'inPage' },
+    newInVersion: 3,
+  },
+  {
+    selector: '#settings-btn',
+    title: 'Settings',
+    body: 'Click Settings to configure BiteGuard and continue the tour.',
+    handoff: { nextSurface: 'settings', mode: 'inPage' },
+    newInVersion: 3,
+  },
+  {
+    selector: '#tour-btn',
+    title: 'Tour complete',
+    body: "That's every feature of BiteGuard. Click here any time to replay the tour.",
   },
 ];
 
@@ -483,10 +467,10 @@ async function maybeEnableMockMode() {
 let isTourRunning = false;
 let currentTourHandle = null;
 
-async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null) {
+async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null, forceStart = false) {
   if (isTourRunning) return;
   const tourState = knownState ?? await readTourState();
-  if (tourState.completed && !tourState.inProgress) return;
+  if (!forceStart && tourState.completed && !tourState.inProgress) return;
   isTourRunning = true;
   if (startIndex === 0) {
     const wasMock = tourState.useMockData;
@@ -555,7 +539,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (state.completed) {
     const range = dashboardNewStepRange(state.completedVersion ?? 0);
-    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state);
+    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state, true);
     return;
   }
   const pendingSurface = state.inProgress?.surface;

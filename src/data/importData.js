@@ -2,6 +2,7 @@ import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
 import { showNotification } from '../shared/utils.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../shared/msgTypes.js';
+import { PREF_LAST_EXPORT_AT } from '../shared/prefKeys.js';
 
 export const IMPORT_COMPLETE = 'importcomplete';
 
@@ -93,7 +94,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && modalOverlay.style.display !== 'none') closeModal();
 });
 
-bgExportBtn.addEventListener('click', async () => {
+export async function exportBiteGuardData() {
   const {
     [SITES_DAY_KEY]: sitesByDay = {},
     [SITES_HOUR_KEY]: sitesByHour = {},
@@ -122,8 +123,12 @@ bgExportBtn.addEventListener('click', async () => {
   a.click();
   URL.revokeObjectURL(url);
 
+  await chrome.storage.local.set({ [PREF_LAST_EXPORT_AT]: Date.now() });
+
   showNotification(`Exported to "${filename}"`);
-});
+}
+
+bgExportBtn.addEventListener('click', exportBiteGuardData);
 
 function csvField(value) {
   return /[,"\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
@@ -352,9 +357,6 @@ async function applyBgImport(importByDay, importByHour, importSubpagesByDay, imp
 
   for (const d of daysToTake) {
     const prefix = `${d}T`;
-    for (const hk of Object.keys(currentByHour)) {
-      if (hk.startsWith(prefix)) delete currentByHour[hk];
-    }
     for (const [hk, sites] of Object.entries(importByHour)) {
       if (hk.startsWith(prefix)) currentByHour[hk] = sites;
     }
@@ -366,9 +368,6 @@ async function applyBgImport(importByDay, importByHour, importSubpagesByDay, imp
 
   for (const d of daysToTake) {
     const prefix = `${d}T`;
-    for (const hk of Object.keys(currentSubpagesByHour)) {
-      if (hk.startsWith(prefix)) delete currentSubpagesByHour[hk];
-    }
     for (const [hk, sites] of Object.entries(importSubpagesByHour)) {
       if (hk.startsWith(prefix)) currentSubpagesByHour[hk] = sites;
     }

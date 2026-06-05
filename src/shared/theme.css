@@ -44,6 +44,7 @@ html.dark {
 
 body {
   font-family: system-ui, sans-serif;
+  font-size: var(--font-base);
   color: var(--color-text);
   background-color: var(--color-bg);
   height: 100vh;
@@ -205,6 +206,12 @@ button:disabled {
   position: relative;
 }
 
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .input-clear {
   position: absolute;
   right: 4px;
@@ -285,6 +292,10 @@ button:disabled {
   margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.setting-label {
+  font-weight: 600;
 }
 
 .chart-header {
@@ -388,6 +399,16 @@ button:disabled {
   z-index: 1000;
   flex-direction: column;
 }
+
+.custom-dropdown[data-direction="up"] .dropdown-menu {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.custom-dropdown[data-direction="up"] .dropdown-btn .dropdown-arrow { transform: rotate(180deg); }
+.custom-dropdown[data-direction="up"]:has(.dropdown-menu.open) .dropdown-btn .dropdown-arrow { transform: rotate(0deg); }
 
 .dropdown-menu.open {
   display: flex;
@@ -646,12 +667,6 @@ header {
   width: 100%;
 }
 
-#storage-bar-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 160px;
-}
 
 .seg-control {
   display: inline-flex;
@@ -681,20 +696,6 @@ header {
   background: var(--color-accent);
   color: var(--color-button-text);
   font-weight: 600;
-}
-
-#storage-bar-track {
-  flex: 1;
-  height: 4px;
-  background: var(--color-border);
-  border-radius: 2px;
-}
-
-#storage-bar-fill {
-  height: 100%;
-  background: var(--color-accent);
-  border-radius: 2px;
-  width: 0%;
 }
 
 #storage-bar-label {
@@ -729,4 +730,20 @@ html.dark #moon-icon {
 
 html.dark #sun-icon {
   display: block;
+}
+
+.modal-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3003;
+  max-width: 360px;
+  padding: 18px 20px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-modal);
+  font-size: var(--font-base);
 }

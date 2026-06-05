@@ -112,7 +112,6 @@ export function formatBytes(bytes) {
 export async function renderStorageBar() {
   const used = await chrome.storage.local.getBytesInUse(null);
   const quota = chrome.storage.local.QUOTA_BYTES;
-  document.querySelector('#storage-bar-fill').style.width = `${(used / quota) * 100}%`;
   document.querySelector('#storage-bar-label').textContent = `${formatBytes(used)} / ${formatBytes(quota)}`;
 }
 
