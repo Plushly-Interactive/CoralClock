@@ -147,8 +147,6 @@ export function applyRepairs(stores, issues) {
 
     if (issue.type === 'drift' || issue.type === 'orphan') {
       if (issue.store === 'subpagesByDay') {
-        // Orphaned subpage daily (parent site daily missing) — create the missing site daily entry.
-        // Reconstruct from site hourly if available, otherwise sum subpage daily values as fallback.
         const sum = { activeMs: 0, audioMs: 0, overlapMs: 0, idleMs: 0 };
         let hasHourly = false;
         for (const [hourKey, bucket] of Object.entries(sitesByHour)) {
@@ -166,7 +164,6 @@ export function applyRepairs(stores, issues) {
           sitesByDay[issue.dayKey][issue.siteId] = { ...existing, ...sum };
         }
       } else if (issue.path != null) {
-        // Step 1: create/update subpagesByDay from subpage hourly sum for this path
         const subSum = { activeMs: 0, audioMs: 0, overlapMs: 0, idleMs: 0 };
         for (const [hourKey, bucket] of Object.entries(subpagesByHour)) {
           if (hourKey.slice(0, 10) !== issue.dayKey) continue;
@@ -185,7 +182,6 @@ export function applyRepairs(stores, issues) {
           const existing = subpagesByDay[issue.dayKey][issue.siteId][issue.path] ?? {};
           subpagesByDay[issue.dayKey][issue.siteId][issue.path] = { ...existing, ...subSum };
         }
-        // Step 2: create missing sitesByHour entries by summing all subpage paths per hour
         for (const [hourKey, bucket] of Object.entries(subpagesByHour)) {
           if (hourKey.slice(0, 10) !== issue.dayKey) continue;
           const sitePaths = bucket[issue.siteId];
@@ -194,7 +190,6 @@ export function applyRepairs(stores, issues) {
           for (const rec of Object.values(sitePaths)) for (const f of FIELDS) hourSum[f] += rec[f] ?? 0;
           if (FIELDS.some(f => hourSum[f] > 0)) { sitesByHour[hourKey] ??= {}; sitesByHour[hourKey][issue.siteId] = hourSum; }
         }
-        // Step 3: create missing sitesByDay entry from site hourly sum
         if (!sitesByDay[issue.dayKey]?.[issue.siteId]) {
           const siteSum = { activeMs: 0, audioMs: 0, overlapMs: 0, idleMs: 0 };
           for (const [hourKey, bucket] of Object.entries(sitesByHour)) {

@@ -294,6 +294,10 @@ button:disabled {
   letter-spacing: 0.04em;
 }
 
+.setting-label {
+  font-weight: 600;
+}
+
 .chart-header {
   display: flex;
   align-items: baseline;

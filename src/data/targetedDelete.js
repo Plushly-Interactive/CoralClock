@@ -131,9 +131,3 @@ export function deleteSiteAllTime(store, siteId) {
   }
 }
 
-export function deleteSubpageSiteAllTime(store, siteId) {
-  for (const dateKey of Object.keys(store)) {
-    delete store[dateKey][siteId];
-    if (Object.keys(store[dateKey]).length === 0) delete store[dateKey];
-  }
-}

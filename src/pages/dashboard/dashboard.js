@@ -427,8 +427,8 @@ const dashboardTourSteps = [
   },
   {
     selector: '#prune-btn',
-    title: 'Open Storage pruning',
-    body: 'Click Storage pruning to see how BiteGuard manages its storage and remove low-value entries.',
+    title: 'Manage storage',
+    body: 'Click Manage storage to see your storage usage, clean up insignificant records, delete data by range, and check data consistency.',
     handoff: { nextSurface: 'storage-management', mode: 'inPage' },
   },
 ];

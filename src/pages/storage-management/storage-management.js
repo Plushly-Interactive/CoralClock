@@ -1,5 +1,5 @@
 import { scanSiteBucket, scanSubpageBucket, applySiteDeletions, applySubpageDeletions } from '../../data/prune.js';
-import { applySiteHourlyRangeDeletion, applySiteDailyReductions, applySubpageHourlyRangeDeletion, applySubpageDailyReductions, applyDirectDailyRangeDeletion, applyDirectSubpageDailyRangeDeletion, deleteSiteAllTime, deleteSubpageSiteAllTime } from '../../data/targetedDelete.js';
+import { applySiteHourlyRangeDeletion, applySiteDailyReductions, applySubpageHourlyRangeDeletion, applySubpageDailyReductions, applyDirectDailyRangeDeletion, applyDirectSubpageDailyRangeDeletion, deleteSiteAllTime } from '../../data/targetedDelete.js';
 import { formatMs } from '../../shared/timeUtils.js';
 import { showNotification, formatBytes, escapeHtml, attachInputClear } from '../../shared/utils.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
@@ -7,7 +7,9 @@ import { MSG_INVALIDATE_SITES_CACHE } from '../../shared/msgTypes.js';
 import { PREF_LAST_EXPORT_AT } from '../../shared/prefKeys.js';
 import { exportBiteGuardData } from '../../data/importData.js';
 import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
+import { autoStartIfMatches } from '../../shared/tour.js';
 
+let _cbId = 0;
 let cachedStores = { sitesByDay: {}, sitesByHour: {}, subpagesByDay: {}, subpagesByHour: {} };
 let cachedBytes  = { siteHour: 0, subHour: 0, total: 0 };
 let cachedIssues = [];
@@ -18,8 +20,6 @@ const ISSUE_TYPE_LABELS = {
   'future-dated': 'future-dated keys',
   'invalid':      'invalid values',
 };
-
-// ── Hour dropdowns (targeted deletion) ───────────────────────────────────────
 
 function buildHourDropdown(id, initHour, onChange) {
   const wrap = document.querySelector(`#${id}`);
@@ -63,8 +63,6 @@ document.addEventListener('click', () => {
   document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
 });
 
-// ── Span tooltip ──────────────────────────────────────────────────────────────
-
 const spanChip = document.querySelector('#span-chip');
 const spanTooltip = document.querySelector('#span-tooltip');
 spanChip.addEventListener('mouseenter', () => { spanTooltip.style.display = 'block'; });
@@ -73,8 +71,6 @@ spanChip.addEventListener('mousemove', e => {
   spanTooltip.style.top = `${e.clientY - 30}px`;
 });
 spanChip.addEventListener('mouseleave', () => { spanTooltip.style.display = 'none'; });
-
-// ── Targeted deletion ─────────────────────────────────────────────────────────
 
 const contiguousForm = document.querySelector('#range-form-row');
 const repeatForm = document.querySelector('#repeat-form');
@@ -141,8 +137,8 @@ deleteAllBtn.addEventListener('click', async () => {
 
   deleteSiteAllTime(sitesByDay, siteId);
   deleteSiteAllTime(sitesByHour, siteId);
-  deleteSubpageSiteAllTime(subpagesByDay, siteId);
-  deleteSubpageSiteAllTime(subpagesByHour, siteId);
+  deleteSiteAllTime(subpagesByDay, siteId);
+  deleteSiteAllTime(subpagesByHour, siteId);
 
   await chrome.storage.local.set({ sitesByDay, sitesByHour, subpagesByDay, subpagesByHour });
   try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
@@ -211,7 +207,7 @@ function buildRepeatPairs(fromDate, toDate, fromHour, toHour) {
   const cur = new Date(fromDate + 'T12:00:00');
   const end = new Date(toDate + 'T12:00:00');
   while (cur <= end) {
-    const d = cur.toISOString().slice(0, 10);
+    const d = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
     pairs.push([`${d}T${String(fromHour).padStart(2, '0')}`, `${d}T${String(toHour).padStart(2, '0')}`]);
     cur.setDate(cur.getDate() + 1);
   }
@@ -240,8 +236,6 @@ function mergeSubpageReductions(target, source) {
     }
   }
 }
-
-// ── Hourly data ───────────────────────────────────────────────────────────────
 
 function updateHourlyCallout() {
   const { sitesByHour, subpagesByHour } = cachedStores;
@@ -336,8 +330,6 @@ document.querySelector('#drop-hourly-btn').addEventListener('click', async () =>
   showNotification(`Hourly data older than ${days} day${days !== 1 ? 's' : ''} dropped — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
   loadStats();
 });
-
-// ── Data health ───────────────────────────────────────────────────────────────
 
 function loadHealthCard() {
   cachedIssues = checkHealth(cachedStores);
@@ -469,14 +461,10 @@ document.querySelector('#repair-all-btn').addEventListener('click', async () => 
   loadStats();
 });
 
-// ── Export (visual stub) ──────────────────────────────────────────────────────
-
 document.querySelector('#export-btn').addEventListener('click', async () => {
   await exportBiteGuardData();
   await loadStats();
 });
-
-// ── Remove insignificant records ──────────────────────────────────────────────
 
 const DEFAULT_THRESHOLD_S = 30;
 let pruneState = null; // { groups, stores, thresholdMs }
@@ -610,7 +598,7 @@ function buildGroupEl(group) {
         <th class="td-narrow" data-col="totalActive" data-label="Active">Active</th>
         <th class="td-narrow" data-col="totalAudio" data-label="Audio">Audio</th>
         <th class="td-narrow" data-col="recordCount" data-label="Records">Records</th>
-        <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="group-all-check"> All</label></th>
+        <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="scan-all-${group.label.toLowerCase()}" class="group-all-check"> All</label></th>
       </tr></thead>
       <tbody></tbody>
     </table>`;
@@ -667,7 +655,7 @@ function buildRowEl(r, group, details) {
     ? `<td class="td-site"><span class="site-label truncate" title="${escapeHtml(r.siteId)}">${escapeHtml(r.siteId)}</span><span class="text-meta truncate" title="${escapeHtml(r.path)}">${escapeHtml(r.path)}</span></td>`
     : `<td class="td-site"><span class="truncate" title="${escapeHtml(r.siteId)}">${escapeHtml(r.siteId)}</span></td>`;
 
-  tr.innerHTML = `${siteCell}<td>${formatLastVisit(r.lastVisit)}</td><td>${formatMs(r.totalActive)}</td><td>${formatMs(r.totalAudio)}</td><td>${r.recordCount}</td><td class="td-check"><input type="checkbox" ${checked ? 'checked' : ''}></td>`;
+  tr.innerHTML = `${siteCell}<td>${formatLastVisit(r.lastVisit)}</td><td>${formatMs(r.totalActive)}</td><td>${formatMs(r.totalAudio)}</td><td>${r.recordCount}</td><td class="td-check"><input type="checkbox" id="scan-row-${++_cbId}" ${checked ? 'checked' : ''}></td>`;
 
   tr.querySelector('input[type="checkbox"]').addEventListener('change', e => {
     if (e.target.checked) { group.selectedKeys.add(key); tr.classList.remove('unchecked'); }
@@ -771,8 +759,6 @@ async function deleteSelected() {
   showNotification(`Insignificant records deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
   loadStats();
 }
-
-// ── Stats ─────────────────────────────────────────────────────────────────────
 
 async function loadStats() {
   const keys = ['sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour', PREF_LAST_EXPORT_AT];
@@ -887,13 +873,11 @@ function formatSpan(earliest, latest) {
   return `${y} year${y !== '1.0' ? 's' : ''}`;
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-
 const urlParams = new URLSearchParams(location.search);
 const paramSite = urlParams.get('site');
 if (paramSite) {
   siteInput.value = paramSite;
-  document.querySelector('#site-filter-clear').style.display = 'block';
+  document.querySelector('#site-filter-clear').removeAttribute('hidden');
   document.querySelector('#range-delete').scrollIntoView({ behavior: 'smooth' });
 }
 syncDeleteAllBtn();
@@ -901,3 +885,42 @@ syncDeleteRangeBtn();
 syncDropBtn();
 loadStats();
 loadPruneSettings();
+
+const storageTourSteps = [
+  {
+    selector: '#overview',
+    title: 'Storage overview',
+    body: 'At a glance: how many domains, subpages and records you have, how much space each store uses, your quota headroom, and when you last exported.',
+  },
+  {
+    selector: '#insig-card',
+    title: 'Remove insignificant records',
+    body: 'Scan for sites whose total active and audio time both fall below a threshold — brief visits and accidental clicks — and delete them in bulk.',
+  },
+  {
+    selector: '#range-delete',
+    title: 'Targeted deletion',
+    body: 'Delete all data for one site, or remove records within an exact date-and-time window — contiguous or repeating daily.',
+  },
+  {
+    selector: '#hourly-card',
+    title: 'Hourly data',
+    body: 'Hourly stores hold the same time as daily at finer granularity. Drop old hourly buckets to reclaim space while keeping daily aggregates intact.',
+  },
+  {
+    selector: '#health-card',
+    title: 'Data health',
+    body: 'Checks that hourly and daily aggregates are consistent. Drift accumulates after targeted deletion; Repair reconciles everything in one step.',
+  },
+  {
+    selector: '#back-btn',
+    title: "That's the tour",
+    body: "You've seen every surface of BiteGuard. You can replay this tour any time from the dashboard.",
+  },
+];
+
+autoStartIfMatches('storage-management', storageTourSteps, {
+  onClose: ({ skipped }) => {
+    if (!skipped) location.href = '../dashboard/dashboard.html';
+  },
+});
