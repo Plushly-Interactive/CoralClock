@@ -102,7 +102,7 @@ export function createTrackingModule({
     }
   }
 
-  async function recoverFromSnapshot(clipAt) {
+  async function recoverFromSnapshot(clipAt, idleSince = null) {
     if (_recovered) return;
     _recovered = true;
     const stored = await chrome.storage.local.get(snapshotStorageKey);
@@ -115,19 +115,24 @@ export function createTrackingModule({
       return;
     }
     const endAt = Math.min(clipAt ?? now, now);
+    // If the user is idle, split the recovery window at idleSince: the portion
+    // before counts as active, the portion after counts as idle. Audio is not
+    // clipped — same policy as applyIdleClip. This is the critical path for AFK
+    // sessions: the SW restarts on every alarm, so recovery is how elapsed time
+    // enters the tracker, and without this split it would all land in activeMs.
+    const activeEndAt = idleSince !== null ? Math.min(endAt, idleSince) : endAt;
+    const idleStartAt = idleSince !== null ? Math.max(snap.at, idleSince) : null;
     const { activeKeys, audioKeys } = parseSnapshot(snap);
-    // Credits [snap.at, endAt] of time to keys that were live when the worker
-    // was suspended. An unexpectedly large gap here explains time (not visit)
-    // jumps after a restart.
-    dbg(`recover[${snapshotStorageKey}]: crediting ${endAt - snap.at}ms to`, activeKeys.length, 'active /', audioKeys.length, 'audio keys');
+    dbg(`recover[${snapshotStorageKey}]: crediting ${endAt - snap.at}ms to`, activeKeys.length, 'active /', audioKeys.length, 'audio keys', idleSince !== null ? `(idle clip at ${idleSince})` : '');
     const activeKeySet = new Set(activeKeys);
     for (const key of activeKeys) {
-      tracker.pushRange('active', key, [snap.at, endAt]);
+      if (activeEndAt > snap.at) tracker.pushRange('active', key, [snap.at, activeEndAt]);
+      if (idleStartAt !== null && endAt > idleStartAt) tracker.pushRange('idle', key, [idleStartAt, endAt]);
     }
     for (const key of audioKeys) {
       tracker.pushRange('audio', key, [snap.at, endAt]);
-      if (activeKeySet.has(key)) {
-        tracker.pushRange('overlap', key, [snap.at, endAt]);
+      if (activeKeySet.has(key) && activeEndAt > snap.at) {
+        tracker.pushRange('overlap', key, [snap.at, activeEndAt]);
       }
     }
   }

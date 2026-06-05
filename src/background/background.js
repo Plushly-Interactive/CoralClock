@@ -2,7 +2,7 @@ import { localDayKey } from '../shared/timeUtils.js';
 import { ensureStorageVersion } from '../data/migrations.js';
 import { TOUR_VERSION } from '../shared/tour.js';
 import { PREF_IDLE_THRESHOLD_SEC } from '../shared/prefKeys.js';
-import { getIdleThresholdSec } from '../shared/idleConfig.js';
+import { getIdleThresholdSec, DEFAULT_IDLE_THRESHOLD_SEC } from '../shared/idleConfig.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import {
   setWindowSite, removeWindowSite,
@@ -46,9 +46,12 @@ let coldStart = false;
 // Set by chrome.idle.onStateChanged when the user goes idle/locked; cleared
 // when they become active. Used by the flush handler as the exact clip point.
 // In-memory only: a service-worker restart loses the head of the idle stretch
-// — the bootstrap query re-seeds this to `now` if the user is still idle, so
-// only the pre-restart head is forgotten, not the ongoing stretch.
+// — the bootstrap query re-seeds this to `now - threshold` if the user is
+// still idle, so at most one detection window of idle time is miscounted.
 let idleStartedAt = null;
+// Mirrors the value passed to chrome.idle.setDetectionInterval so the
+// onStateChanged listener can compute the retroactive clip point synchronously.
+let cachedIdleThresholdMs = DEFAULT_IDLE_THRESHOLD_SEC * 1000;
 
 // Drop the in-memory site caches after storage is rewritten (flush), so
 // the next query re-reads fresh data.
@@ -364,8 +367,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     await chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
     coldStart = false;
   }
-  await recoverFromSnapshot(bootstrapAt);
-  await recoverSubpagesFromSnapshot(bootstrapAt);
+  await recoverFromSnapshot(bootstrapAt, idleStartedAt);
+  await recoverSubpagesFromSnapshot(bootstrapAt, idleStartedAt);
   await reconcileWindows();
   await reconcileSubpagePaths();
   const flushAt = Date.now();
@@ -391,16 +394,18 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== 'local' || !changes[PREF_IDLE_THRESHOLD_SEC]) return;
   const sec = await getIdleThresholdSec();
+  cachedIdleThresholdMs = sec * 1000;
   chrome.idle.setDetectionInterval(sec);
   dbg('idle threshold changed → setDetectionInterval(', sec, ')');
 });
 
 async function seedIdleState() {
   const sec = await getIdleThresholdSec();
+  cachedIdleThresholdMs = sec * 1000;
   chrome.idle.setDetectionInterval(sec);
   const state = await chrome.idle.queryState(sec);
   if (state === 'idle' || state === 'locked') {
-    idleStartedAt = Date.now();
+    idleStartedAt = Date.now() - cachedIdleThresholdMs;
     dbg('bootstrap: user already', state, '— seeding idleStartedAt=', idleStartedAt);
   }
 }
@@ -414,10 +419,20 @@ function clipIfIdle(flushAt) {
 
 chrome.idle.onStateChanged.addListener((state) => {
   if (state === 'idle' || state === 'locked') {
-    if (idleStartedAt === null) idleStartedAt = Date.now();
+    // Chrome fires this event only after the user has been idle for the full
+    // detection interval, so subtract the threshold to get the retroactive
+    // actual-idle start rather than the (too-late) detection time.
+    if (idleStartedAt === null) idleStartedAt = Date.now() - cachedIdleThresholdMs;
     dbg('idle.onStateChanged:', state, 'idleStartedAt=', idleStartedAt);
   } else {
+    const activeAt = Date.now();
     dbg('idle.onStateChanged: active (was idleStartedAt=', idleStartedAt, ')');
+    // Clip the in-flight window (since the last flush) before clearing the
+    // timestamp, otherwise that window gets counted as active on the next flush.
+    if (idleStartedAt !== null) {
+      applyIdleClip(idleStartedAt, activeAt);
+      applyIdleClipSubpages(idleStartedAt, activeAt);
+    }
     idleStartedAt = null;
   }
 });
