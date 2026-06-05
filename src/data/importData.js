@@ -2,6 +2,7 @@ import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
 import { showNotification } from '../shared/utils.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../shared/msgTypes.js';
+import { PREF_LAST_EXPORT_AT } from '../shared/prefKeys.js';
 
 export const IMPORT_COMPLETE = 'importcomplete';
 
@@ -55,6 +56,8 @@ const ttExportBtn = document.querySelector('#tt-export-btn');
 document.querySelector('#tt-version').textContent = TT_VERSION;
 const bgExportBtn = document.querySelector('#bg-export-btn');
 const bgImportBtn = document.querySelector('#bg-import-btn');
+const csvDailyBtn = document.querySelector('#csv-daily-btn');
+const csvHourlyBtn = document.querySelector('#csv-hourly-btn');
 const ioColumns = document.querySelector('#io-columns');
 const conflictView = document.querySelector('#io-conflict-view');
 const conflictList = document.querySelector('#io-conflict-list');
@@ -91,7 +94,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && modalOverlay.style.display !== 'none') closeModal();
 });
 
-bgExportBtn.addEventListener('click', async () => {
+export async function exportBiteGuardData() {
   const {
     [SITES_DAY_KEY]: sitesByDay = {},
     [SITES_HOUR_KEY]: sitesByHour = {},
@@ -120,7 +123,83 @@ bgExportBtn.addEventListener('click', async () => {
   a.click();
   URL.revokeObjectURL(url);
 
+  await chrome.storage.local.set({ [PREF_LAST_EXPORT_AT]: Date.now() });
+
   showNotification(`Exported to "${filename}"`);
+}
+
+bgExportBtn.addEventListener('click', exportBiteGuardData);
+
+function csvField(value) {
+  return /[,"\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+function downloadCsv(rows, filename) {
+  if (rows.length === 1) {
+    showNotification('No data to export');
+    return;
+  }
+  const blob = new Blob([rows.join('\r\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotification(`Exported to "${filename}"`);
+}
+
+function siteRow(prefix, host, cell) {
+  return `${prefix},${host},,${((cell.activeMs ?? 0) / 60000).toFixed(2)},${((cell.audioMs ?? 0) / 60000).toFixed(2)},${cell.visits ?? 0}`;
+}
+
+function subpageRow(prefix, host, path, cell) {
+  return `${prefix},${host},${csvField(path)},${((cell.activeMs ?? 0) / 60000).toFixed(2)},${((cell.audioMs ?? 0) / 60000).toFixed(2)},${cell.visits ?? 0}`;
+}
+
+csvDailyBtn.addEventListener('click', async () => {
+  const {
+    [SITES_DAY_KEY]: sitesByDay = {},
+    [SUBPAGES_DAY_KEY]: subpagesByDay = {},
+  } = await chrome.storage.local.get([SITES_DAY_KEY, SUBPAGES_DAY_KEY]);
+  const rows = ['date,host,path,active_min,audio_min,visits'];
+  for (const [day, sites] of Object.entries(sitesByDay).sort()) {
+    for (const [host, cell] of Object.entries(sites).sort()) {
+      const paths = subpagesByDay[day]?.[host];
+      if (paths && Object.keys(paths).length > 0) {
+        for (const [path, pathCell] of Object.entries(paths).sort()) {
+          rows.push(subpageRow(day, host, path, pathCell));
+        }
+      } else {
+        rows.push(siteRow(day, host, cell));
+      }
+    }
+  }
+  downloadCsv(rows, `biteguard-daily-${new Date().toISOString().slice(0, 10)}.csv`);
+});
+
+csvHourlyBtn.addEventListener('click', async () => {
+  const {
+    [SITES_HOUR_KEY]: sitesByHour = {},
+    [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
+  } = await chrome.storage.local.get([SITES_HOUR_KEY, SUBPAGES_HOUR_KEY]);
+  const rows = ['date,hour,host,path,active_min,audio_min,visits'];
+  for (const [bucket, sites] of Object.entries(sitesByHour).sort()) {
+    const [date, time] = bucket.split('T');
+    const hour = parseInt(time, 10);
+    const prefix = `${date},${hour}`;
+    for (const [host, cell] of Object.entries(sites).sort()) {
+      const paths = subpagesByHour[bucket]?.[host];
+      if (paths && Object.keys(paths).length > 0) {
+        for (const [path, pathCell] of Object.entries(paths).sort()) {
+          rows.push(subpageRow(prefix, host, path, pathCell));
+        }
+      } else {
+        rows.push(siteRow(prefix, host, cell));
+      }
+    }
+  }
+  downloadCsv(rows, `biteguard-hourly-${new Date().toISOString().slice(0, 10)}.csv`);
 });
 
 ttExportBtn.addEventListener('click', async () => {
@@ -278,9 +357,6 @@ async function applyBgImport(importByDay, importByHour, importSubpagesByDay, imp
 
   for (const d of daysToTake) {
     const prefix = `${d}T`;
-    for (const hk of Object.keys(currentByHour)) {
-      if (hk.startsWith(prefix)) delete currentByHour[hk];
-    }
     for (const [hk, sites] of Object.entries(importByHour)) {
       if (hk.startsWith(prefix)) currentByHour[hk] = sites;
     }
@@ -292,9 +368,6 @@ async function applyBgImport(importByDay, importByHour, importSubpagesByDay, imp
 
   for (const d of daysToTake) {
     const prefix = `${d}T`;
-    for (const hk of Object.keys(currentSubpagesByHour)) {
-      if (hk.startsWith(prefix)) delete currentSubpagesByHour[hk];
-    }
     for (const [hk, sites] of Object.entries(importSubpagesByHour)) {
       if (hk.startsWith(prefix)) currentSubpagesByHour[hk] = sites;
     }

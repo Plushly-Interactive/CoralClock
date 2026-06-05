@@ -1,5 +1,7 @@
 import { getRules, renderRuleList } from '../../shared/rules.js';
+import { loadFaviconCache } from '../../shared/utils.js';
 import { autoStartIfMatches, readTourState } from '../../shared/tour.js';
+import { initThemeMenu } from '../../shared/themeMenu.js';
 
 document.querySelector('#dashboard-btn').addEventListener('click', async () => {
   const state = await readTourState();
@@ -29,6 +31,7 @@ document.querySelector('#manage-btn').addEventListener('click', () => {
 });
 
 async function renderRules() {
+  await loadFaviconCache();
   const rules = (await getRules()).filter(r => r.enabled);
   const noRulesMsg = document.querySelector('#no-rules-message');
 
@@ -44,23 +47,7 @@ async function renderRules() {
 
 renderRules();
 
-const themeBtn = document.querySelector('#theme-btn');
-const themeDropdown = document.querySelector('#theme-dropdown');
-
-themeBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  themeDropdown.classList.toggle('open');
-});
-
-themeDropdown.querySelectorAll('button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const val = btn.getAttribute('value');
-    if (val === 'system') localStorage.removeItem('theme');
-    else localStorage.setItem('theme', val);
-    window.applyTheme();
-    themeDropdown.classList.remove('open');
-  });
-});
+initThemeMenu();
 
 const popupTourSteps = [
   {

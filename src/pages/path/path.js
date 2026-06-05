@@ -1,5 +1,5 @@
-import { localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
-import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML } from '../../shared/utils.js';
+import { localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
+import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache, navButton } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
@@ -9,6 +9,7 @@ import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats 
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
 import { MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR } from '../../shared/msgTypes.js';
+import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 
 const drillParams = new URLSearchParams(location.search);
 if (!drillParams.has('ids') || !drillParams.has('path')) {
@@ -23,6 +24,13 @@ const siteId = siteIds[0];
 const isMerged = siteIds.length > 1;
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+const limitBtn = document.querySelector('#limit-btn');
+function wireLimit(host) {
+  navButton(limitBtn, `../rules/rules.html?target=${encodeURIComponent(host + stripQuery(path))}`);
+  limitBtn.style.display = '';
+}
+if (isMerged) limitBtn.style.display = 'none';
+else wireLimit(siteId);
 const chartsGrid = document.querySelector('#charts-grid');
 chartsGrid.insertAdjacentHTML('afterbegin', TIME_CHART_HTML);
 chartsGrid.insertAdjacentHTML('beforeend', VISITS_CHART_HTML);
@@ -39,9 +47,14 @@ const statsList = document.querySelector('#stats-list');
 const backBtn = document.querySelector('#back-btn');
 const crumbSite = document.querySelector('#path-crumb-site');
 
+await loadFaviconCache();
 const siteLabel = formatHostnameLabel(siteId);
 document.querySelector('#site-label').textContent = siteLabel;
 document.querySelector('#site-id').textContent = isMerged ? siteIds.join(', ') : siteId;
+const faviconEl = document.querySelector('#site-favicon');
+faviconEl.src = faviconUrl(siteId);
+faviconEl.removeAttribute('hidden');
+faviconEl.addEventListener('error', () => { faviconEl.style.display = 'none'; });
 document.title = `BiteGuard — ${siteLabel} ${displayPath(path)}`;
 const crumbPath = document.querySelector('#path-crumb-path');
 const spacedPath = displayPath(path).replace(/\//g, ' / ').trimStart() + (prefix ? ' *' : '');
@@ -233,6 +246,9 @@ function avgPerClockHour(dayKeys) {
   return sums.map(s => s / dayKeys.length);
 }
 
+const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
+const clockFormat = clockFormatStored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
+
 const hourly = createHourlyChart({
   chart: document.querySelector('#hourly-chart'),
   tooltip: document.querySelector('#hourly-tooltip'),
@@ -245,12 +261,14 @@ const hourly = createHourlyChart({
     const todayKey = localDayKey(Date.now());
     return avgPerClockHour(dayKeysForRange(range, byDayCache).filter(d => d !== todayKey));
   },
+  clockFormat,
 });
 
 initDrill({
   chartsGrid,
   drillView,
   rangeSelect,
+  clockFormat,
   getDayEntry,
   getHourEntriesForDay: (dayKey) => {
     const result = {};
@@ -274,7 +292,11 @@ async function loadAndRender() {
     fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_DAY }),
     fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_HOUR }),
   ]);
-  if (isMerged) setCrumbDomain(resolveOwningDomain());
+  if (isMerged) {
+    const owner = resolveOwningDomain();
+    setCrumbDomain(owner);
+    if (owner) wireLimit(owner);
+  }
   renderPathLinks(resolveOwningEntries());
   render();
 }
@@ -283,7 +305,7 @@ function render() {
   if (isInDrillMode()) return;
   const range = rangeSelect.dataset.value;
   const dayKeys = dayKeysForRange(range, byDayCache);
-  const data = buildOverviewData({ range, dayKeys, getDayEntry, getHourEntry });
+  const data = buildOverviewData({ range, dayKeys, clockFormat, getDayEntry, getHourEntry });
   drawOverviewCharts({
     data, range,
     timeChart, timeTooltip, timeLegend, timeNoData,
@@ -367,7 +389,7 @@ const pathTourSteps = [
     selector: '#back-btn',
     title: 'Back to the dashboard',
     body: 'Use back to return to the site, then back again to the dashboard, where the tour continues.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 9, mode: 'inPage' },
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 6, mode: 'inPage' },
   },
 ];
 

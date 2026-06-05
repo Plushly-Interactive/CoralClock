@@ -1,5 +1,5 @@
-import { formatMs, localDayKey } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton } from '../../shared/utils.js';
+import { formatMs, localDayKey, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
@@ -7,18 +7,18 @@ import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.j
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
 import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
-import { openModal, closeModal, IMPORT_COMPLETE } from '../../data/importData.js';
 import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
-import { PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
-
+import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
+const PREF_SEARCH = 'siteSearch';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
-navButton(document.querySelector('#prune-btn'), '../storage-pruning/storage-pruning.html');
+navButton(document.querySelector('#prune-btn'), '../storage-management/storage-management.html');
 navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
 const rangeSelect = document.querySelector('#range-select');
+const dashboardTable = document.querySelector('#dashboard-table');
 const tbody = document.querySelector('#dashboard-body');
 const emptyMsg = document.querySelector('#empty-msg');
 const entriesCount = document.querySelector('#entries-count');
@@ -35,6 +35,12 @@ const topSubheading = document.querySelector('#top-subheading');
 const groupToggle = document.querySelector('#group-toggle');
 const mergeToggle = document.querySelector('#merge-toggle');
 const hideBriefToggle = document.querySelector('#hide-brief-toggle');
+const siteSearchInput = document.querySelector('#site-search');
+const siteSearchClearBtn = document.querySelector('#site-search-clear');
+
+await loadFaviconCache();
+const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
+const clockFormat = clockFormatStored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
 
 const hourly = createHourlyChart({
   chart: hourlyChart,
@@ -47,6 +53,7 @@ const hourly = createHourlyChart({
   loadAvgPerHour: (range) => fetchTrackingData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: null, range,
   }),
+  clockFormat,
 });
 
 let sortCol = 'time';
@@ -58,6 +65,8 @@ let mergeMode = sessionStorage.getItem(PREF_MERGE_MODE) !== 'false';
 mergeToggle.checked = mergeMode;
 let hideBrief = sessionStorage.getItem(PREF_HIDE_BRIEF) !== 'false';
 hideBriefToggle.checked = hideBrief;
+let searchQuery = sessionStorage.getItem(PREF_SEARCH) ?? '';
+siteSearchInput.value = searchQuery;
 
 const thName = document.querySelector('#th-name');
 const thTime = document.querySelector('#th-time');
@@ -87,7 +96,7 @@ function updateHeaders() {
       sortDir = col === 'name' ? 'asc' : 'desc';
     }
     renderTopChart();
-    renderTable(sortedRows());
+    renderTable(filteredRows());
   });
 });
 
@@ -146,11 +155,37 @@ function sortedRows() {
   });
 }
 
+function filteredRows() {
+  const q = searchQuery.toLowerCase().trim();
+  if (!q) return sortedRows();
+  return sortedRows().filter(row => {
+    if (row.siteLabel.toLowerCase().includes(q)) return true;
+    if (row.siteId && row.siteId.toLowerCase().includes(q)) return true;
+    if (row.hostnames) {
+      for (const h of row.hostnames) {
+        if (h.toLowerCase().includes(q)) return true;
+      }
+    }
+    return false;
+  });
+}
+
 function renderTable(rows) {
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    entriesCount.textContent = '';
+    emptyMsg.textContent = searchQuery.trim() ? 'No sites match your search.' : 'No data for this period.';
+    dashboardTable.style.display = 'none';
+    emptyMsg.style.display = 'flex';
+    return;
+  }
+  dashboardTable.style.display = '';
+  emptyMsg.style.display = 'none';
   tbody.innerHTML = rows.map(row => {
     const { siteLabel, activeMs, audioMs, visits } = row;
     const etld1Count = row.etld1s?.size ?? 0;
     const hostCount = row.hostnames?.size ?? 0;
+    const faviconHost = row.etld1s ? [...row.hostnames][0] : row.siteId;
     let href, subtitle;
     if (!row.etld1s) {
       href = `../site/site.html?id=${encodeURIComponent(row.siteId)}`;
@@ -171,12 +206,15 @@ function renderTable(rows) {
       subtitle = `${etld1Count} sites · ${hostCount} subdomains`;
     }
     return `<tr class="clickable" data-href="${href}">
-      <td><span class="site-label">${escapeHtml(siteLabel)}</span><span class="site-id text-meta">${escapeHtml(subtitle)}</span></td>
+      <td><div class="site-cell-content"><img class="site-favicon" src="${faviconUrl(faviconHost)}" alt=""><div class="site-text"><span class="site-label">${escapeHtml(siteLabel)}</span><span class="site-id text-meta">${escapeHtml(subtitle)}</span></div></div></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(activeMs))}</span></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(audioMs))}</span></td>
       <td><span class="stat-value">${visits}</span></td>
     </tr>`;
   }).join('');
+  tbody.querySelectorAll('.site-favicon').forEach(img => {
+    img.addEventListener('error', () => { img.style.display = 'none'; });
+  });
   tbody.querySelectorAll('tr.clickable').forEach(row => {
     navButton(row, row.dataset.href);
   });
@@ -206,6 +244,14 @@ hideBriefToggle.addEventListener('change', () => {
   render();
 });
 
+function applySearch() {
+  searchQuery = siteSearchInput.value;
+  sessionStorage.setItem(PREF_SEARCH, searchQuery);
+  renderTable(filteredRows());
+}
+const syncSearchClear = attachInputClear(siteSearchInput, siteSearchClearBtn, applySearch);
+syncSearchClear();
+
 window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
 });
@@ -224,6 +270,9 @@ window.addEventListener('pageshow', () => {
   mergeToggle.checked = mergeMode;
   groupMode = sessionStorage.getItem(PREF_GROUP_MODE) === 'true';
   groupToggle.checked = groupMode;
+  searchQuery = sessionStorage.getItem(PREF_SEARCH) ?? '';
+  siteSearchInput.value = searchQuery;
+  syncSearchClear();
   if (currentRows.length) render();
 });
 
@@ -244,11 +293,6 @@ document.querySelector('#seed-btn')?.addEventListener('click', async () => {
   await loadAndRender();
 });
 
-window.addEventListener(IMPORT_COMPLETE, async () => {
-  byDayCache = null;
-  hourly.clearCache();
-  await loadAndRender();
-});
 
 function dayKeys(range) {
   const keys = [];
@@ -281,7 +325,7 @@ function renderTopChart() {
     const href = ids.length === 1
       ? `../site/site.html?id=${encodeURIComponent(ids[0])}`
       : `../site/site.html?ids=${encodeURIComponent(ids.join(','))}`;
-    return { label: row.siteLabel, range: ids.join(', '), val: getVal(row), href };
+    return { label: row.siteLabel, range: ids.join(', '), val: getVal(row), href, faviconDataUrl: faviconUrl(ids[0]) };
   });
   const hrefByRange = new Map(top.map(d => [d.range, d.href]));
   drawBarChart({
@@ -323,7 +367,9 @@ function render() {
   if (currentRows.length === 0) {
     tbody.innerHTML = '';
     entriesCount.textContent = '';
-    emptyMsg.style.display = 'block';
+    dashboardTable.style.display = 'none';
+    emptyMsg.textContent = 'No data for this period.';
+    emptyMsg.style.display = 'flex';
     topChartContainer.style.display = 'block';
     topChart.style.display = 'none';
     topSubheading.textContent = '';
@@ -340,7 +386,7 @@ function render() {
   hourly.render(range);
 
   renderTopChart();
-  renderTable(sortedRows());
+  renderTable(filteredRows());
 }
 
 const tourBtn = document.querySelector('#tour-btn');
@@ -367,26 +413,6 @@ const dashboardTourSteps = [
     body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
   },
   {
-    selector: '#import-btn',
-    title: 'Import / Export',
-    body: 'Open the import/export modal to back up your data or transfer it between installs.',
-    advanceOn: 'click',
-  },
-  {
-    selector: '#io-section-bg',
-    title: 'BiteGuard format',
-    body: 'Export and import all your BiteGuard data — daily and hourly stats for sites and subpages.',
-    modalStep: true,
-    onEnter: openModal,
-  },
-  {
-    selector: '#io-section-tt',
-    title: 'Time Tracker compatibility',
-    body: 'Exchange data with the Time Tracker extension. Daily site totals and visit counts are compatible; audio time and subpage data are not.',
-    modalStep: true,
-    onEnter: openModal,
-  },
-  {
     title: 'Open the popup',
     body: 'Click the BiteGuard icon in your browser toolbar to continue the tour.',
     tooltipPosition: 'top-right',
@@ -401,9 +427,22 @@ const dashboardTourSteps = [
   },
   {
     selector: '#prune-btn',
-    title: 'Open Storage pruning',
-    body: 'Click Storage pruning to see how BiteGuard manages its storage and remove low-value entries.',
-    handoff: { nextSurface: 'storage-pruning', mode: 'inPage' },
+    title: 'Manage storage',
+    body: 'Click Manage storage to see your storage usage, clean up insignificant records, delete data by range, and check data consistency.',
+    handoff: { nextSurface: 'storage-management', mode: 'inPage' },
+    newInVersion: 3,
+  },
+  {
+    selector: '#settings-btn',
+    title: 'Settings',
+    body: 'Click Settings to configure BiteGuard and continue the tour.',
+    handoff: { nextSurface: 'settings', mode: 'inPage' },
+    newInVersion: 3,
+  },
+  {
+    selector: '#tour-btn',
+    title: 'Tour complete',
+    body: "That's every feature of BiteGuard. Click here any time to replay the tour.",
   },
 ];
 
@@ -428,10 +467,10 @@ async function maybeEnableMockMode() {
 let isTourRunning = false;
 let currentTourHandle = null;
 
-async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null) {
+async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null, forceStart = false) {
   if (isTourRunning) return;
   const tourState = knownState ?? await readTourState();
-  if (tourState.completed && !tourState.inProgress) return;
+  if (!forceStart && tourState.completed && !tourState.inProgress) return;
   isTourRunning = true;
   if (startIndex === 0) {
     const wasMock = tourState.useMockData;
@@ -500,7 +539,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   if (state.completed) {
     const range = dashboardNewStepRange(state.completedVersion ?? 0);
-    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state);
+    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state, true);
     return;
   }
   const pendingSurface = state.inProgress?.surface;

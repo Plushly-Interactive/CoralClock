@@ -85,7 +85,7 @@
   border-top: 1px solid var(--color-border);
 }
 
-#form-target { margin-bottom: 12px; margin-top: 14px; }
+#form-target-wrap { margin-bottom: 12px; margin-top: 14px; }
 
 .scope-cards {
   display: grid;
@@ -159,6 +159,17 @@
 }
 
 #rules-list { overflow-y: auto; flex: 1; min-height: 0; }
+
+#stat-most-blocked-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#most-blocked-favicon {
+  width: 16px;
+  height: 16px;
+}
 
 #no-rules-message {
   padding: 24px;

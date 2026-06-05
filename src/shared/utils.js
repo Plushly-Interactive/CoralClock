@@ -33,6 +33,32 @@ export const HOURLY_CHART_HTML = `<div id="hourly-chart-container" class="chart-
   <p id="hourly-not-relevant" class="text-meta" style="display:none"></p>
 </div>`;
 
+export function attachInputClear(input, clearBtn, onChange, { escStopPropagation = false } = {}) {
+  function sync() {
+    clearBtn.style.display = input.value ? 'block' : 'none';
+  }
+  input.addEventListener('input', () => { sync(); onChange(); });
+  if (input.type === 'search') {
+    input.addEventListener('search', () => { sync(); onChange(); });
+  } else {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && input.value) {
+        input.value = '';
+        sync();
+        onChange();
+        if (escStopPropagation) e.stopPropagation();
+      }
+    });
+  }
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    sync();
+    onChange();
+    input.focus();
+  });
+  return sync;
+}
+
 export function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -40,6 +66,19 @@ export function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+const _faviconCache = new Map();
+
+export async function loadFaviconCache() {
+  const { faviconCache = {} } = await chrome.storage.local.get('faviconCache');
+  for (const [k, v] of Object.entries(faviconCache)) _faviconCache.set(k, v.dataUrl);
+}
+
+export function faviconUrl(hostname) {
+  if (_faviconCache.has(hostname)) return _faviconCache.get(hostname);
+  const pageUrl = encodeURIComponent(`https://${hostname}`);
+  return `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${pageUrl}&size=32`;
 }
 
 // Make a <button> navigate like a link: plain click → same tab, middle-click or
@@ -73,7 +112,6 @@ export function formatBytes(bytes) {
 export async function renderStorageBar() {
   const used = await chrome.storage.local.getBytesInUse(null);
   const quota = chrome.storage.local.QUOTA_BYTES;
-  document.querySelector('#storage-bar-fill').style.width = `${(used / quota) * 100}%`;
   document.querySelector('#storage-bar-label').textContent = `${formatBytes(used)} / ${formatBytes(quota)}`;
 }
 
@@ -183,12 +221,23 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
       const barH = Math.round(toFrac(val) * innerH);
       const x = padLeft + i * gap;
       const y = padTop + innerH - barH;
+      const cx = padLeft + i * gap + gap / 2;
       const showLabel = i % labelEvery === 0 || i === data.length - 1;
+      let faviconEl = '', labelEl = '';
+      if (showLabel) {
+        if (d.faviconDataUrl) {
+          const groupX = cx - (16 + 4 + d.label.length * 7) / 2;
+          faviconEl = `<image href="${d.faviconDataUrl}" x="${groupX}" y="${H - 21}" width="16" height="16"/>`;
+          labelEl = `<text x="${groupX + 20}" y="${H - 8}" text-anchor="start" class="chart-axis-label" fill="var(--color-text-secondary)">${d.label}</text>`;
+        } else {
+          labelEl = `<text x="${cx}" y="${H - 8}" text-anchor="middle" class="chart-axis-label" fill="var(--color-text-secondary)">${d.label}</text>`;
+        }
+      }
       return `
         <rect x="${x}" y="${y}" width="${barW}" height="${barH}" fill="${color}" rx="2"></rect>
         <rect x="${x}" y="${padTop}" width="${barW}" height="${innerH}" fill="transparent"
           data-range="${d.range}" data-val="${val}"></rect>
-        ${showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" class="chart-axis-label" fill="var(--color-text-secondary)">${d.label}</text>` : ''}
+        ${faviconEl}${labelEl}
       `;
     }).join('');
   }

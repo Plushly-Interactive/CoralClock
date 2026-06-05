@@ -1,4 +1,5 @@
 import { RULE_MULTIPLIERS, matchLabel, computeRuleSpent, computeRuleVisits } from '../../shared/rules.js';
+import { faviconUrl, loadFaviconCache } from '../../shared/utils.js';
 import { formatMs, localDayKey } from '../../shared/timeUtils.js';
 import { weekDow } from '../../shared/weekStart.js';
 
@@ -43,6 +44,7 @@ function formatCountdown(ms) {
 
 (async () => {
   if (!ruleId) return;
+  await loadFaviconCache();
 
   const stores = await chrome.storage.local.get([
     'rules', 'sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour',
@@ -50,7 +52,13 @@ function formatCountdown(ms) {
   const rule = (stores.rules ?? []).find(r => r.id === ruleId);
   if (!rule) return;
 
-  document.querySelector('#target').textContent = matchLabel(rule);
+  const targetEl = document.querySelector('#target');
+  const faviconImg = document.createElement('img');
+  faviconImg.className = 'site-favicon';
+  faviconImg.src = faviconUrl(rule.target);
+  faviconImg.alt = '';
+  faviconImg.addEventListener('error', () => { faviconImg.style.display = 'none'; });
+  targetEl.append(faviconImg, matchLabel(rule));
 
   const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
   document.querySelector('#stat-limit').textContent = `${formatMs(limitMs)} / ${rule.period}`;

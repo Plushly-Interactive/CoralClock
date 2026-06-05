@@ -1,5 +1,5 @@
-import { formatMs, localDayKey, dayKeysForRange } from '../../shared/timeUtils.js';
-import { STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML } from '../../shared/utils.js';
+import { formatMs, localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
+import { STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
@@ -14,9 +14,10 @@ import {
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
   MSG_GET_AVG_PER_CLOCK_HOUR,
 } from '../../shared/msgTypes.js';
-import { PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 
 const PREF_STRIP_PARAMS = 'subpagesStripParams';
+const PREF_SUBPAGE_SEARCH = 'subpageSearch';
 
 const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
@@ -30,10 +31,13 @@ chartsGrid.insertAdjacentHTML('afterbegin', TIME_CHART_HTML);
 chartsGrid.insertAdjacentHTML('beforeend', VISITS_CHART_HTML);
 chartsGrid.insertAdjacentHTML('beforeend', HOURLY_CHART_HTML);
 const limitBtn = document.querySelector('#limit-btn');
+const deleteSiteBtn = document.querySelector('#delete-site-btn');
 if (isMerged) {
   limitBtn.style.display = 'none';
+  deleteSiteBtn.style.display = 'none';
 } else {
   navButton(limitBtn, `../rules/rules.html?target=${encodeURIComponent(siteId)}`);
+  navButton(deleteSiteBtn, `../storage-management/storage-management.html?site=${encodeURIComponent(siteId)}`);
 }
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
@@ -127,7 +131,12 @@ function applyHeader() {
   else secondary = siteId;
   document.querySelector('#site-id').textContent = secondary;
   document.title = `BiteGuard — ${label}`;
+  const faviconEl = document.querySelector('#site-favicon');
+  faviconEl.src = faviconUrl(primary);
+  faviconEl.removeAttribute('hidden');
+  faviconEl.addEventListener('error', () => { faviconEl.style.display = 'none'; });
 }
+await loadFaviconCache();
 applyHeader();
 
 let byDayCache = null;
@@ -135,6 +144,17 @@ let byHourCache = null;
 let subpagesByDayCache = null;
 let currentDepth = null;
 let currentSort = 'time';
+let subpageSearch = sessionStorage.getItem(PREF_SUBPAGE_SEARCH) ?? '';
+const subpageSearchInput = document.querySelector('#subpage-search');
+const subpageSearchClearBtn = document.querySelector('#subpage-search-clear');
+subpageSearchInput.value = subpageSearch;
+const syncSubpageSearchClear = attachInputClear(subpageSearchInput, subpageSearchClearBtn, () => {
+  subpageSearch = subpageSearchInput.value;
+  sessionStorage.setItem(PREF_SUBPAGE_SEARCH, subpageSearch);
+  renderSubpages(rangeSelect.dataset.value);
+});
+syncSubpageSearchClear();
+
 let stripParams = sessionStorage.getItem(PREF_STRIP_PARAMS) !== 'false';
 const stripParamsToggle = document.querySelector('#strip-params-toggle');
 stripParamsToggle.checked = stripParams;
@@ -164,6 +184,9 @@ const hourlySubheading = document.querySelector('#hourly-subheading');
 
 timeLegend.innerHTML = CHART_LEGEND_HTML;
 
+const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
+const clockFormat = clockFormatStored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
+
 const hourly = createHourlyChart({
   chart: hourlyChart,
   tooltip: hourlyTooltip,
@@ -175,6 +198,7 @@ const hourly = createHourlyChart({
   loadAvgPerHour: (range) => fetchTrackingData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
   }),
+  clockFormat,
 });
 
 initRangeSelect(rangeSelect, render);
@@ -193,6 +217,7 @@ initDrill({
   chartsGrid,
   drillView,
   rangeSelect,
+  clockFormat,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
     const hourData = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_FOR_DAY, dayKey });
@@ -216,6 +241,9 @@ window.addEventListener('pageshow', () => {
   hideBriefSubpagesToggle.checked = hideBriefSubpages;
   stripParams = sessionStorage.getItem(PREF_STRIP_PARAMS) !== 'false';
   stripParamsToggle.checked = stripParams;
+  subpageSearch = sessionStorage.getItem(PREF_SUBPAGE_SEARCH) ?? '';
+  subpageSearchInput.value = subpageSearch;
+  syncSubpageSearchClear();
   if (subpagesByDayCache) renderSubpages(rangeSelect.dataset.value);
 });
 
@@ -273,7 +301,7 @@ function render() {
   if (range === 'today' && !byHourCache) { loadByHour().then(render); return; }
   const dayKeys = siteDayKeysForRange(range);
   const data = buildOverviewData({
-    range, dayKeys,
+    range, dayKeys, clockFormat,
     getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
     getHourEntry: (hourKey) => entrySum(byHourCache?.[hourKey]),
   });
@@ -409,6 +437,10 @@ function renderSubpages(range) {
   let merged = mergePaths(raw, currentDepth);
   merged.sort((a, b) => currentSort === 'time' ? getTotalMs(b) - getTotalMs(a) : b.visits - a.visits);
   if (hideBriefSubpages) merged = merged.filter(r => getTotalMs(r) >= 60_000);
+  if (subpageSearch) {
+    const q = subpageSearch.toLowerCase();
+    merged = merged.filter(r => r.path.toLowerCase().includes(q) || displayPath(r.path).toLowerCase().includes(q));
+  }
 
   const pathSiteMs = {};
   if (effectiveSiteIds.length > 1) {
@@ -474,6 +506,10 @@ function renderSubpages(range) {
     li.appendChild(openBtn);
     list.appendChild(li);
   }
+  const noMatch = merged.length === 0;
+  list.style.display = noMatch ? 'none' : '';
+  document.querySelector('#subpages-controls').style.display = noMatch ? 'none' : '';
+  document.querySelector('#subpages-empty').style.display = noMatch ? 'flex' : 'none';
   document.querySelector('#subpages-count').textContent = `${merged.length} page${merged.length !== 1 ? 's' : ''}`;
 }
 

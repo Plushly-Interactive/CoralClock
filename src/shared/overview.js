@@ -1,4 +1,4 @@
-import { localDayKey, formatMs } from './timeUtils.js';
+import { localDayKey, formatMs, formatHourLabel, formatHourRange } from './timeUtils.js';
 import { drawBarChart, formatWithSmallSub } from './utils.js';
 
 const SUBHEADINGS = {
@@ -28,14 +28,12 @@ export function activeDaysFromRange(range, byDayCache) {
   return parseInt(range);
 }
 
-export function buildOverviewData({ range, dayKeys, getDayEntry, getHourEntry }) {
+export function buildOverviewData({ range, dayKeys, getDayEntry, getHourEntry, clockFormat = '24h' }) {
   if (range === 'today') {
     const dayKey = localDayKey(Date.now());
     return Array.from({ length: 24 }, (_, h) => {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
-      const hStr = String(h).padStart(2, '0');
-      const hNext = String(h + 1).padStart(2, '0');
-      return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, ...getHourEntry(hourKey) };
+      return { label: formatHourLabel(h, clockFormat), range: formatHourRange(h, ' - ', clockFormat), ...getHourEntry(hourKey) };
     });
   }
   if (range === 'all' || parseInt(range) > 90) {
@@ -95,12 +93,12 @@ export function drawTimeChart({ svgEl, tooltipEl, legendEl, data, maxVal, format
   });
 }
 
-export function buildHourlyBuckets(avgPerHours) {
-  return avgPerHours.map((avgMs, h) => {
-    const hStr = String(h).padStart(2, '0');
-    const hNext = String(h + 1).padStart(2, '0');
-    return { label: `${hStr}:00`, range: `${hStr}:00 - ${hNext}:00`, activeMs: avgMs };
-  });
+export function buildHourlyBuckets(avgPerHours, clockFormat = '24h') {
+  return avgPerHours.map((avgMs, h) => ({
+    label: formatHourLabel(h, clockFormat),
+    range: formatHourRange(h, ' - ', clockFormat),
+    activeMs: avgMs,
+  }));
 }
 
 export function drawHourlyChart({ svgEl, tooltipEl, data, maxVal, scale, gridLineWidth }) {

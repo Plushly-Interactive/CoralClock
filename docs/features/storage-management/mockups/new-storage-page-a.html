@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Layout B: Stats band at top, 4-column equal-width tools grid below -->
+<head>
+  <meta charset="UTF-8" />
+  <title>BiteGuard — Storage management</title>
+  <script src="../../../../src/shared/theme.js"></script>
+  <link rel="stylesheet" href="../../../../src/shared/theme.css" />
+  <style>
+    #page-main {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+    .section-divider { border: none; border-top: 1px solid var(--color-border); margin: 0; }
+    /* TODO: in real impl, .tool-card and .stat-box → use .chart-container from theme.css (same padding/border/radius); only keep the flex/gap overrides */
+    .tool-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--color-border); border-radius: 6px; min-width: 0; }
+    .card-desc { font-size: var(--font-sm); color: var(--color-text-secondary); line-height: 1.5; }
+
+    .scope-check { display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-base); cursor: pointer; }
+
+    /* ── Stats band ── */
+    #overview { display: flex; flex-direction: column; gap: 24px; }
+    #counts-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; justify-content: center; }
+    .count-chip { display: flex; flex-direction: column; gap: 2px; position: relative; align-items: flex-start; text-align: left; }
+    .count-chip .stat-value { display: flex; align-items: baseline; gap: 3px; }
+    /* from site.css — not duplicating, just bridging the missing import */
+    .stat-info { font-size: var(--font-base); font-weight: 700; color: var(--color-text-secondary); margin-left: 4px; vertical-align: middle; cursor: help; }
+    #span-chip { cursor: help; }
+    #span-tooltip { position: fixed; }
+
+    #stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+    .stat-box { padding: 16px; border: 1px solid var(--color-border); border-radius: 6px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* Store breakdown bar */
+    .store-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; }
+    .store-bar-legend { display: flex; flex-direction: column; gap: 4px; }
+    .legend-row { display: flex; align-items: center; gap: 6px; font-size: var(--font-sm); color: var(--color-text-secondary); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+    /* Quota gauge */
+    .quota-bar-track { flex: 1; height: 6px; background: var(--color-border); border-radius: 3px; }
+    .quota-bar-fill { height: 100%; border-radius: 3px; background: var(--color-accent); }
+    .quota-row { display: flex; align-items: center; gap: 10px; }
+    .quota-warn { font-size: var(--font-sm); color: var(--color-accent); }
+
+    /* Export freshness */
+    .export-age { font-size: var(--font-lg); font-weight: 600; color: var(--color-text); line-height: 1; }
+    .export-label { font-size: var(--font-sm); color: var(--color-text-secondary); }
+
+    /* ── Tools grid ── */
+    #tools-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; align-items: stretch; flex: 1; min-height: 0; }
+    #insig-stores { display: flex; flex-direction: column; gap: 6px; }
+    #threshold-row { display: flex; align-items: center; gap: 8px; }
+
+    /* ── Targeted deletion ── */
+    input[type="date"] { padding: 5px 8px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); font-size: var(--font-base); }
+    input[type="date"]:focus { outline: none; border-color: var(--color-accent); }
+    .hour-dropdown .dropdown-btn { background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); padding: 6px 12px; font-size: var(--font-base); min-width: 60px; justify-content: space-between; }
+    .hour-dropdown .dropdown-btn:hover { background: var(--color-hover-bg); border-color: var(--color-accent); }
+    .hour-dropdown .dropdown-menu { width: 100%; max-height: 280px; overflow-y: auto; }
+    #site-filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    #site-filter-wrap { position: relative; width: 100%; flex-shrink: 0; }
+    #site-filter-input { width: 100%; padding: 5px 24px 5px 8px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-bg); color: var(--color-text); font-size: var(--font-base); }
+    #delete-all-site-row { display: flex; justify-content: flex-end; }
+    .card-divider { border: none; border-top: 1px solid var(--color-border); margin: 0; }
+    #range-mode-row { display: flex; align-items: center; gap: 10px; }
+    #range-mode-toggle .seg-btn { width: 88px; justify-content: center; }
+    #range-form-col { display: flex; flex-direction: column; gap: 6px; }
+    .range-line { display: flex; align-items: center; gap: 8px; }
+    .dt-group { display: flex; align-items: center; gap: 6px; }
+    #repeat-form { display: flex; flex-direction: column; gap: 8px; }
+    .repeat-row { display: flex; align-items: center; gap: 8px; }
+    #repeat-form input[type="date"] { flex: 1; min-width: 0; }
+    .repeat-label { flex-shrink: 0; }
+    .right-row { display: flex; justify-content: flex-end; margin-top: auto; }
+
+    /* ── Hourly card ── */
+    #drop-stores { display: flex; flex-direction: column; gap: 6px; }
+    #drop-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    /* ── Health card ── */
+    .health-status { display: flex; align-items: center; gap: 8px; font-size: var(--font-base); }
+    .health-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-accent); flex-shrink: 0; }
+    .health-dot.ok { background: #5a9a6e; }
+    #health-card { overflow: hidden; }
+    .issue-list { list-style: none; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; flex: 1; min-height: 0; }
+    .issue-item { font-size: var(--font-sm); color: var(--color-text-secondary); padding: 5px 8px; background: var(--color-hover-bg); border-radius: 4px; }
+    .issue-site { font-weight: 500; color: var(--color-text); }
+
+    /* ── Repair overlay ── */
+    #repair-overlay { position: fixed; top: 75px; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-top: 2px solid var(--color-accent); display: flex; flex-direction: column; z-index: 100; }
+    #repair-overlay-header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
+    #repair-overlay-title { font-size: var(--font-base); font-weight: 600; color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.04em; }
+    #repair-overlay-close { margin-left: auto; background: none; border: none; font-size: 20px; line-height: 1; cursor: pointer; color: var(--color-text-secondary); padding: 0 4px; }
+    #repair-overlay-close:hover { color: var(--color-accent); }
+    #repair-overlay-results { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 20px; display: flex; flex-direction: column; gap: 16px; }
+    #repair-overlay-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-top: 1px solid var(--color-border); flex-shrink: 0; }
+    .td-date { width: 20%; } .td-desc { width: 42%; }
+
+    /* ── Scan overlay ── */
+    #scan-overlay { position: fixed; top: 75px; left: 0; right: 0; bottom: 0; background: var(--color-bg); border-top: 2px solid var(--color-accent); display: flex; flex-direction: column; z-index: 100; }
+    #overlay-header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
+    #overlay-title { font-size: var(--font-base); font-weight: 600; color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.04em; }
+    #overlay-params { font-size: var(--font-sm); color: var(--color-text-secondary); }
+    #overlay-close { margin-left: auto; background: none; border: none; font-size: 20px; line-height: 1; cursor: pointer; color: var(--color-text-secondary); padding: 0 4px; }
+    #overlay-close:hover { color: var(--color-accent); }
+    #overlay-results { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 20px; display: flex; flex-direction: column; gap: 16px; }
+    #overlay-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-top: 1px solid var(--color-border); flex-shrink: 0; }
+    .result-group { border: none; }
+    .result-group-title { font-size: var(--font-sm); font-weight: 600; color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.04em; padding: 6px 0; cursor: pointer; user-select: none; list-style: none; }
+    .result-group-title::before { content: '▸ '; }
+    .result-group[open] > .result-group-title::before { content: '▾ '; }
+    .data-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .data-table th { text-align: left; padding: 7px 12px; font-size: var(--font-sm); color: var(--color-text-secondary); border-bottom: 1px solid var(--color-border); }
+    .data-table td { padding: 8px 12px; font-size: var(--font-base); border-bottom: 1px solid var(--color-border); }
+    .td-site { width: 38%; } .td-narrow { width: 14%; } .td-check { width: 8%; text-align: right; }
+
+    /* ── Confirm dialog ── */
+    .dlg-overlay { position: fixed; inset: 0; background: var(--overlay-bg); z-index: 3002; }
+    .dlg { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 3003; width: 360px; padding: 18px 20px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; box-shadow: var(--shadow-modal); font-size: var(--font-base); }
+    .dlg-body { margin-bottom: 14px; line-height: 1.4; }
+    .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div id="header-left">
+      <a id="back-btn" href="#">
+        <img src="../../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+      </a>
+    </div>
+    <div id="header-center"><h1 class="page-title">Storage management</h1></div>
+    <div id="header-right">
+      <button id="import-btn" class="btn">Import/Export data</button>
+    </div>
+  </header>
+
+  <main id="page-main">
+
+    <!-- ── Stats band ── -->
+    <div id="overview">
+      <div id="counts-row">
+        <div class="count-chip"><span class="stat-value">142</span><span class="stat-label">Domains</span></div>
+        <div class="count-chip"><span class="stat-value">2,847</span><span class="stat-label">Subpages</span></div>
+        <div class="count-chip"><span class="stat-value">18,234</span><span class="stat-label">Records</span></div>
+        <div class="count-chip" id="span-chip">
+          <span class="stat-value-row">
+            <span class="stat-value">8 months</span>
+            <span id="span-info" class="stat-info">ⓘ</span>
+          </span>
+          <span class="stat-label">Of data</span>
+          <div class="tooltip text-meta" id="span-tooltip">2025-09-15 → 2026-05-31</div>
+        </div>
+      </div>
+
+      <div id="stats-row">
+        <!-- Per-store breakdown -->
+        <div class="stat-box">
+          <span class="chart-heading" style="margin:0">Storage by store</span>
+          <div class="store-bar">
+            <div style="width:11.8%;background:var(--color-accent)"></div>
+            <div style="width:23.5%;background:var(--color-accent-light)"></div>
+            <div style="width:26.5%;background:var(--color-secondary)"></div>
+            <div style="width:38.2%;background:var(--color-secondary-light)"></div>
+          </div>
+          <div class="store-bar-legend">
+            <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent)"></span>Sites daily — 0.4 MB</div>
+            <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent-light)"></span>Sites hourly — 0.8 MB</div>
+            <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary)"></span>Subpages daily — 0.9 MB</div>
+            <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary-light)"></span>Subpages hourly — 1.3 MB</div>
+          </div>
+        </div>
+
+        <!-- Quota gauge -->
+        <div class="stat-box">
+          <span class="chart-heading" style="margin:0">Quota</span>
+          <div class="quota-row">
+            <div class="quota-bar-track"><div class="quota-bar-fill" style="width:34%"></div></div>
+            <span class="text-meta">3.4 / 10 MB</span>
+          </div>
+          <span class="quota-warn">At current rate: ~18 days to cap</span>
+          <span class="text-meta">Chrome caps extension storage at 10 MB by default. Adding <code>unlimitedStorage</code> to the manifest removes this limit.</span>
+        </div>
+
+        <!-- Export freshness -->
+        <div class="stat-box">
+          <span class="chart-heading" style="margin:0">Last export</span>
+          <div>
+            <div class="export-age">12</div>
+            <div class="export-label">days ago</div>
+          </div>
+          <span class="text-meta">Back up before running a large prune or delete.</span>
+          <button id="export-btn" class="btn" style="align-self:flex-start">Quick export</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tools grid ── -->
+    <div id="tools-grid">
+
+      <div class="tool-card" id="insig-card">
+        <h2 class="chart-heading">Remove insignificant records</h2>
+        <p class="card-desc">Over time, brief visits and accidental clicks accumulate noise. Scan and remove entries whose total tracked time falls below a threshold.</p>
+        <div>
+          <div class="setting-label">Threshold</div>
+          <div id="threshold-row">
+            <input id="threshold-input" class="number-input" type="number" value="30" />
+            <span>seconds</span>
+          </div>
+        </div>
+        <div>
+          <div class="setting-label">Scan</div>
+          <div id="insig-stores">
+            <label class="scope-check"><input type="checkbox" checked> Sites</label>
+            <label class="scope-check"><input type="checkbox" checked> Subpages</label>
+          </div>
+        </div>
+        <div class="right-row"><button id="scan-btn" class="btn">Scan</button></div>
+      </div>
+
+      <div class="tool-card" id="range-delete">
+        <h2 class="chart-heading">Targeted deletion</h2>
+        <p class="card-desc">Delete all data for a specific site, or remove records within an exact date and time window.</p>
+        <div id="site-filter-row">
+          <span class="setting-label">Site (optional)</span>
+          <div id="site-filter-wrap" class="input-wrap">
+            <input type="text" id="site-filter-input" placeholder="e.g. reddit.com" value="twitter.com" />
+            <button id="site-filter-clear" class="icon-btn input-clear">&times;</button>
+          </div>
+        </div>
+        <div id="delete-all-site-row">
+          <button id="delete-all-site-btn" class="btn">Delete all data</button>
+        </div>
+        <hr class="card-divider" />
+        <div id="range-mode-row">
+          <div id="range-mode-toggle" class="seg-control">
+            <button id="mode-contiguous-btn" class="seg-btn active">Contiguous</button>
+            <button id="mode-repeat-btn" class="seg-btn">Repeat daily</button>
+          </div>
+        </div>
+        <div id="range-form-row">
+          <div id="range-form-col">
+            <div class="range-line">
+              <span class="setting-label">From</span>
+              <div class="dt-group">
+                <input type="date" id="range-from-date" value="2026-04-01" />
+                <div class="custom-dropdown hour-dropdown" id="range-from-hour"></div>
+              </div>
+            </div>
+            <div class="range-line">
+              <span class="setting-label">To</span>
+              <div class="dt-group">
+                <input type="date" id="range-to-date" value="2026-04-30" />
+                <div class="custom-dropdown hour-dropdown" id="range-to-hour"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="repeat-form" style="display:none">
+          <div class="repeat-row">
+            <span class="repeat-label setting-label">Dates</span>
+            <input type="date" id="repeat-from-date" value="2026-01-01" />
+            <span class="text-meta">–</span>
+            <input type="date" id="repeat-to-date" value="2026-05-31" />
+          </div>
+          <div class="repeat-row">
+            <span class="repeat-label setting-label">Hours</span>
+            <div class="custom-dropdown hour-dropdown" id="repeat-from-hour"></div>
+            <span class="text-meta">–</span>
+            <div class="custom-dropdown hour-dropdown" id="repeat-to-hour"></div>
+          </div>
+        </div>
+        <div class="right-row">
+          <button id="delete-range-btn" class="btn">Delete range</button>
+        </div>
+      </div>
+
+      <div class="tool-card" id="hourly-card">
+        <h2 class="chart-heading">Hourly data</h2>
+        <p class="card-desc">Hourly stores track the same time as daily, at finer granularity. Old hourly data can be dropped once daily aggregates are accurate.</p>
+        <div class="callout">
+          <div>Sites hourly — <strong>0.8 MB (24%)</strong> · 89 sites across 743 buckets</div>
+          <div>Subpages hourly — <strong>1.3 MB (38%)</strong> · 234 subpages across 1,243 buckets</div>
+          <div class="text-meta" style="margin-top:4px">Total hourly: 2.1 MB of 3.4 MB (62%)</div>
+        </div>
+        <div>
+          <div class="setting-label">Scope</div>
+          <div id="drop-stores">
+            <label class="scope-check"><input type="checkbox" id="drop-scope-sites" checked> Sites</label>
+            <label class="scope-check"><input type="checkbox" id="drop-scope-subpages" checked> Subpages</label>
+          </div>
+        </div>
+        <div id="drop-row">
+          <span class="setting-label">Drop data older than</span>
+          <input id="drop-days-input" class="number-input" type="number" value="30" />
+          <span>days</span>
+          <span id="drop-estimate" class="text-meta">~280 KB</span>
+        </div>
+        <div class="right-row"><button id="drop-hourly-btn" class="btn">Drop hourly</button></div>
+      </div>
+
+      <div class="tool-card" id="health-card">
+        <h2 class="chart-heading">Data health</h2>
+        <p class="card-desc">Verifies hourly and daily aggregates are consistent. Targeted deletion reduces daily values from hourly data — small drifts accumulate over time.</p>
+        <div class="health-status">
+          <span class="health-dot"></span>
+          <span><strong>14 issues found</strong> — hourly/daily drift, orphaned records, future-dated keys and invalid values</span>
+        </div>
+        <ul class="issue-list">
+          <li class="issue-item"><span class="issue-site">reddit.com</span> — hourly/daily drift on 2026-05-01</li>
+          <li class="issue-item"><span class="issue-site">twitter.com</span> — hourly/daily drift on 2026-05-15</li>
+          <li class="issue-item"><span class="issue-site">youtube.com</span> — orphaned hourly record on 2026-04-30</li>
+          <li class="issue-item"><span class="issue-site">github.com</span> — hourly/daily drift on 2026-05-03</li>
+          <li class="issue-item"><span class="issue-site">news.ycombinator.com</span> — hourly/daily drift on 2026-04-22</li>
+          <li class="issue-item"><span class="issue-site">wikipedia.org</span> — orphaned hourly record on 2026-05-10</li>
+          <li class="issue-item"><span class="issue-site">stackoverflow.com</span> — hourly/daily drift on 2026-05-07</li>
+          <li class="issue-item"><span class="issue-site">twitch.tv</span> — orphaned hourly record on 2026-04-18</li>
+          <li class="issue-item"><span class="issue-site">netflix.com</span> — hourly/daily drift on 2026-05-12</li>
+          <li class="issue-item"><span class="issue-site">nytimes.com</span> — hourly/daily drift on 2026-04-29</li>
+          <li class="issue-item"><span class="issue-site">linkedin.com</span> — orphaned hourly record on 2026-05-08</li>
+          <li class="issue-item"><span class="issue-site">amazon.com</span> — hourly/daily drift on 2026-04-15</li>
+          <li class="issue-item"><span class="issue-site">sitesByDay</span> — future-dated key 2027-03-15</li>
+          <li class="issue-item"><span class="issue-site">reddit.com</span> — invalid value: audioMs = −500 on 2026-05-20</li>
+        </ul>
+        <div class="right-row">
+          <button id="repair-btn" class="btn">Repair</button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Scan overlay -->
+  <div id="scan-overlay" style="display:none">
+    <div id="overlay-header">
+      <span id="overlay-title">Scan results</span>
+      <span id="overlay-params" class="text-meta">30s · Sites + Subpages</span>
+      <button id="overlay-close">×</button>
+    </div>
+    <div id="overlay-results">
+      <details class="result-group" open>
+        <summary class="result-group-title">Sites (3)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Site</th><th class="td-narrow">Last visit</th><th class="td-narrow">Active</th><th class="td-narrow">Audio</th><th class="td-narrow">Records</th><th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="select-all-sites" checked> All</label></th></tr></thead>
+          <tbody>
+            <tr><td class="td-site">reddit.com</td><td>2026-05-28</td><td>0s</td><td>0s</td><td>3</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site">news.ycombinator.com</td><td>2026-05-25</td><td>4s</td><td>0s</td><td>2</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site">wikipedia.org</td><td>2026-05-20</td><td>1s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+          </tbody>
+        </table>
+      </details>
+      <details class="result-group" open>
+        <summary class="result-group-title">Subpages (4)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Page</th><th class="td-narrow">Last visit</th><th class="td-narrow">Active</th><th class="td-narrow">Audio</th><th class="td-narrow">Records</th><th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="select-all-sub" checked> All</label></th></tr></thead>
+          <tbody>
+            <tr><td class="td-site"><span class="site-label">reddit.com</span><span class="text-meta" style="display:block">/r/programming</span></td><td>2026-05-28</td><td>0s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site"><span class="site-label">reddit.com</span><span class="text-meta" style="display:block">/r/random</span></td><td>2026-05-26</td><td>2s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site"><span class="site-label">github.com</span><span class="text-meta" style="display:block">/orgs/anthropics</span></td><td>2026-05-22</td><td>2s</td><td>0s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+            <tr><td class="td-site"><span class="site-label">youtube.com</span><span class="text-meta" style="display:block">/watch?v=dQw4w9WgXcQ</span></td><td>2026-05-18</td><td>0s</td><td>3s</td><td>1</td><td class="td-check"><input type="checkbox" checked></td></tr>
+          </tbody>
+        </table>
+      </details>
+    </div>
+    <div id="overlay-footer">
+      <span id="overlay-summary" class="text-meta">7 of 7 selected (13 records, approx 2.1 KB)</span>
+      <button id="overlay-delete-btn" class="btn">Delete selected</button>
+    </div>
+  </div>
+
+  <!-- Repair overlay -->
+  <div id="repair-overlay" style="display:none">
+    <div id="repair-overlay-header">
+      <span id="repair-overlay-title">Health issues</span>
+      <span class="text-meta">14 issues detected — review before repairing</span>
+      <button id="repair-overlay-close">×</button>
+    </div>
+    <div id="repair-overlay-results">
+
+      <details class="result-group" open>
+        <summary class="result-group-title">Hourly/daily drift (8)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Site</th><th class="td-date">Date</th><th class="td-desc">Discrepancy</th></tr></thead>
+          <tbody>
+            <tr><td class="td-site">reddit.com</td><td class="td-date">2026-05-01</td><td class="td-desc">activeMs: daily 4,320 ms ≠ hourly sum 3,800 ms</td></tr>
+            <tr><td class="td-site">twitter.com</td><td class="td-date">2026-05-15</td><td class="td-desc">activeMs: daily 8,640 ms ≠ hourly sum 7,200 ms</td></tr>
+            <tr><td class="td-site">github.com</td><td class="td-date">2026-05-03</td><td class="td-desc">audioMs: daily 0 ms ≠ hourly sum 1,200 ms</td></tr>
+            <tr><td class="td-site">news.ycombinator.com</td><td class="td-date">2026-04-22</td><td class="td-desc">activeMs: daily 2,160 ms ≠ hourly sum 1,980 ms</td></tr>
+            <tr><td class="td-site">stackoverflow.com</td><td class="td-date">2026-05-07</td><td class="td-desc">overlapMs: daily 600 ms ≠ hourly sum 0 ms</td></tr>
+            <tr><td class="td-site">netflix.com</td><td class="td-date">2026-05-12</td><td class="td-desc">activeMs: daily 21,600 ms ≠ hourly sum 18,000 ms</td></tr>
+            <tr><td class="td-site">nytimes.com</td><td class="td-date">2026-04-29</td><td class="td-desc">activeMs: daily 3,600 ms ≠ hourly sum 3,240 ms</td></tr>
+            <tr><td class="td-site">amazon.com</td><td class="td-date">2026-04-15</td><td class="td-desc">idleMs: daily 900 ms ≠ hourly sum 0 ms</td></tr>
+          </tbody>
+        </table>
+      </details>
+
+      <details class="result-group" open>
+        <summary class="result-group-title">Orphaned hourly records (3)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Site</th><th class="td-date">Hour key</th><th class="td-desc">Discrepancy</th></tr></thead>
+          <tbody>
+            <tr><td class="td-site">youtube.com</td><td class="td-date">2026-04-30T14</td><td class="td-desc">no matching daily entry</td></tr>
+            <tr><td class="td-site">wikipedia.org</td><td class="td-date">2026-05-10T09</td><td class="td-desc">no matching daily entry</td></tr>
+            <tr><td class="td-site">linkedin.com</td><td class="td-date">2026-05-08T21</td><td class="td-desc">no matching daily entry</td></tr>
+          </tbody>
+        </table>
+      </details>
+
+      <details class="result-group" open>
+        <summary class="result-group-title">Future-dated keys (2)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Store</th><th class="td-date">Key</th><th class="td-desc">Discrepancy</th></tr></thead>
+          <tbody>
+            <tr><td class="td-site">sitesByDay</td><td class="td-date">2027-03-15</td><td class="td-desc">dated after today</td></tr>
+            <tr><td class="td-site">sitesByHour</td><td class="td-date">2027-03-15T08</td><td class="td-desc">dated after today</td></tr>
+          </tbody>
+        </table>
+      </details>
+
+      <details class="result-group" open>
+        <summary class="result-group-title">Invalid values (1)</summary>
+        <table class="data-table">
+          <thead><tr><th class="td-site">Site</th><th class="td-date">Date</th><th class="td-desc">Discrepancy</th></tr></thead>
+          <tbody>
+            <tr><td class="td-site">reddit.com</td><td class="td-date">2026-05-20</td><td class="td-desc">audioMs = −500 (negative)</td></tr>
+          </tbody>
+        </table>
+      </details>
+
+    </div>
+    <div id="repair-overlay-footer">
+      <span class="text-meta">14 issues will be reconciled</span>
+      <div style="display:flex;gap:8px">
+        <button id="repair-overlay-cancel-btn" class="btn">Cancel</button>
+        <button id="repair-all-btn" class="btn">Repair all</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="notification" hidden></div>
+
+  <script>
+    // Hour dropdowns
+    function buildHourDropdown(id, initHour, direction = 'down') {
+      const wrap = document.querySelector(`#${id}`);
+      if (direction === 'up') wrap.dataset.direction = 'up';
+      const label = String(initHour).padStart(2, '0') + 'h';
+      const btn = document.createElement('button');
+      btn.className = 'dropdown-btn';
+      btn.dataset.value = initHour;
+      btn.innerHTML = `${label}<span class="dropdown-arrow">▼</span>`;
+      const menu = document.createElement('div');
+      menu.className = 'dropdown-menu';
+      for (let h = 0; h <= 24; h++) {
+        const opt = document.createElement('button');
+        opt.value = h;
+        opt.textContent = String(h).padStart(2, '0') + 'h';
+        menu.appendChild(opt);
+      }
+      wrap.appendChild(btn);
+      wrap.appendChild(menu);
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = menu.classList.contains('open');
+        document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+        if (!isOpen) menu.classList.add('open');
+      });
+      menu.querySelectorAll('button').forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          btn.firstChild.textContent = opt.textContent;
+          btn.dataset.value = opt.value;
+          menu.classList.remove('open');
+        });
+      });
+    }
+    buildHourDropdown('range-from-hour', 0, 'up');
+    buildHourDropdown('range-to-hour', 23, 'up');
+    buildHourDropdown('repeat-from-hour', 9, 'up');
+    buildHourDropdown('repeat-to-hour', 17, 'up');
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+    });
+
+    // Span tooltip — same pattern as peak-day in site overview
+    const spanChip = document.querySelector('#span-chip');
+    const spanTooltip = document.querySelector('#span-tooltip');
+    spanChip.addEventListener('mouseenter', () => { spanTooltip.style.display = 'block'; });
+    spanChip.addEventListener('mousemove', (e) => {
+      spanTooltip.style.left = `${e.clientX + 12}px`;
+      spanTooltip.style.top = `${e.clientY - 30}px`;
+    });
+    spanChip.addEventListener('mouseleave', () => { spanTooltip.style.display = 'none'; });
+
+    const overlay = document.querySelector('#scan-overlay');
+    const notif = document.querySelector('#notification');
+
+    function showNotif(msg) {
+      notif.textContent = msg;
+      notif.removeAttribute('hidden');
+      setTimeout(() => notif.setAttribute('hidden', ''), 3000);
+    }
+
+    function showConfirm(html, confirmLabel, onConfirm) {
+      const ov = document.createElement('div'); ov.className = 'dlg-overlay';
+      const dlg = document.createElement('div'); dlg.className = 'dlg';
+      dlg.innerHTML = `<div class="dlg-body">${html}</div><div class="dlg-actions"><button class="btn dlg-cancel">Cancel</button><button class="btn dlg-ok">${confirmLabel}</button></div>`;
+      document.body.append(ov, dlg);
+      const close = () => { ov.remove(); dlg.remove(); };
+      ov.onclick = close;
+      dlg.querySelector('.dlg-cancel').onclick = close;
+      dlg.querySelector('.dlg-ok').onclick = () => { close(); onConfirm(); };
+      dlg.querySelector('.dlg-ok').focus();
+    }
+
+    // Scan open / close
+    document.querySelector('#scan-btn').addEventListener('click', () => overlay.style.display = '');
+    document.querySelector('#overlay-close').addEventListener('click', () => overlay.style.display = 'none');
+    document.querySelector('#overlay-delete-btn').addEventListener('click', () => {
+      showConfirm('Delete all selected insignificant records?<br><br>This cannot be undone.', 'Delete', () => {
+        overlay.style.display = 'none';
+        showNotif('Insignificant records deleted — freed approx 2.1 KB.');
+      });
+    });
+
+    // Mode toggle
+    const contiguousForm = document.querySelector('#range-form-row');
+    const repeatForm = document.querySelector('#repeat-form');
+    document.querySelector('#mode-contiguous-btn').addEventListener('click', () => {
+      contiguousForm.style.display = ''; repeatForm.style.display = 'none';
+      document.querySelector('#mode-contiguous-btn').classList.add('active');
+      document.querySelector('#mode-repeat-btn').classList.remove('active');
+    });
+    document.querySelector('#mode-repeat-btn').addEventListener('click', () => {
+      contiguousForm.style.display = 'none'; repeatForm.style.display = '';
+      document.querySelector('#mode-repeat-btn').classList.add('active');
+      document.querySelector('#mode-contiguous-btn').classList.remove('active');
+    });
+
+    // Site filter → update delete-all button
+    const siteInput = document.querySelector('#site-filter-input');
+    const deleteAllBtn = document.querySelector('#delete-all-site-btn');
+    function syncDeleteAllBtn() {
+      const s = siteInput.value.trim();
+      deleteAllBtn.disabled = !s;
+    }
+    siteInput.addEventListener('input', syncDeleteAllBtn);
+    document.querySelector('#site-filter-clear').addEventListener('click', () => { siteInput.value = ''; syncDeleteAllBtn(); });
+
+    // Delete all for site
+    deleteAllBtn.addEventListener('click', () => {
+      const s = siteInput.value.trim();
+      showConfirm(`<strong>Delete all data for ${s}?</strong><br><br>This permanently removes all tracking records for ${s} — domains, subpages, daily and hourly — across all dates. This cannot be undone.`, 'Delete', () => showNotif(`All data for ${s} deleted.`));
+    });
+
+    // Delete range
+    document.querySelector('#delete-range-btn').addEventListener('click', () => {
+      showConfirm('Delete records in the selected range?<br><br>This cannot be undone.', 'Delete', () => showNotif('Range deleted.'));
+    });
+
+    // Drop hourly
+    document.querySelector('#drop-hourly-btn').addEventListener('click', () => {
+      const days = document.querySelector('#drop-days-input').value;
+      showConfirm(`Drop all hourly data older than ${days} days?<br><br>Daily aggregates are preserved. This cannot be undone.`, 'Drop hourly', () => showNotif(`Hourly data older than ${days} days dropped — freed ~280 KB.`));
+    });
+
+    // Repair overlay
+    const repairOverlay = document.querySelector('#repair-overlay');
+    document.querySelector('#repair-btn').addEventListener('click', () => { repairOverlay.style.display = ''; });
+    document.querySelector('#repair-overlay-close').addEventListener('click', () => { repairOverlay.style.display = 'none'; });
+    document.querySelector('#repair-overlay-cancel-btn').addEventListener('click', () => { repairOverlay.style.display = 'none'; });
+    document.querySelector('#repair-all-btn').addEventListener('click', () => {
+      repairOverlay.style.display = 'none';
+      document.querySelector('#health-card .health-dot').classList.add('ok');
+      document.querySelector('#health-card .health-status strong').textContent = 'All checks passed';
+      document.querySelector('#health-card .health-status').querySelector('span:last-child').textContent = '';
+      document.querySelector('#health-card .issue-list').style.display = 'none';
+      document.querySelector('#repair-btn').style.display = 'none';
+      showNotif('14 issues reconciled — tracking data is now consistent.');
+    });
+
+    // Export
+    document.querySelector('#export-btn').addEventListener('click', () => showNotif('Export downloaded.'));
+  </script>
+</body>
+</html>

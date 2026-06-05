@@ -34,6 +34,10 @@ body {
 }
 
 #target {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: var(--font-md);
   color: var(--color-accent-light);
   font-weight: 600;

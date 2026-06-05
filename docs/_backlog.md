@@ -8,14 +8,9 @@
 - Groups, labels, etc. (can serve as filters of tracking data) — user-defined groups, separate from the existing dashboard name groups / subdomains merging.
 - **Today vs. same-weekday comparison** — compare today against the average of the last N same weekdays (Mondays vs Mondays), not a flat all-days average. Browsing is weekly-cyclical, so a same-weekday baseline is a more honest "is today unusual" signal.
 - **Goal / target line on charts** — overlay a user-set total budget (e.g. "< X min/day across all sites") on the dashboard charts, with progress coloring. A global self-imposed budget that complements the per-site enforcement rules.
-- **CSV export** — only JSON import/export exists today. Add a CSV export so the data can be opened in a spreadsheet. Low effort given the existing data shape.
 - **"↑ 2× usual" comparison value** — a secondary value showing how a metric (e.g. time spent) compares to the user's usual average; reveals whether today is an outlier. Most insightful on spent time, not block count. Could surface on the dashboard, the site page, or the blocked page (as a sub-value under "Spent today"). Worth revisiting once enough history exists to compute a meaningful average. Related to [Today vs. same-weekday comparison](#analytics--insights).
 - **Suggest rules from analytics** — proactively surface "you might want to limit this" prompts when a site's usage crosses a heuristic (e.g. consistently high daily time, sharp week-over-week increase, or far above the user's per-site average). A suggestion would pre-fill the rules add card (reusing the existing `?target=<host>` pre-fill path) with a sensible default limit. Turns the passive analytics into actionable enforcement instead of waiting for the user to notice and act. Could surface on the dashboard or site page. Distinct from the existing [empty-state guidance](#onboarding), which is first-install only.
 - **Streak (limit compliance)** — e.g. "4 / 7 days under limit this week". Motivational, pattern-oriented. Requires per-day limit-compliance history. Natural fit on the blocked or rules page, but it's a cross-cutting insight. Distinct from the per-site activity streak under [Site page stats](#site-page-stats).
-
-## Drills
-
-- Add a "week" level in the drills, compatible with keyboard navigation.
 
 ## Popup
 
@@ -24,8 +19,6 @@
 
 ## UI & visuals
 
-- **Site favicons in lists & charts** — no favicon usage anywhere today; the dashboard, site list, rules list, and blocked page all show plain hostnames. Showing each site's favicon (via the site's `/favicon.ico` or a favicon service) would make every list scannable at a glance. Low effort, high visual payoff.
-- **Dashboard list search bar** — a text input above the dashboard's site list to filter rows by hostname as you type. The list can grow long once enough history accrues; a search box makes finding a specific site immediate instead of scrolling. Pairs naturally with the existing name-group / subdomain-merge controls.
 - **Per-site comparison / multi-select on dashboard** — the dashboard shows aggregate charts and `site.html` shows one site at a time; there's no way to pick 2–3 sites and view their trends together. Add multi-select (e.g. checkboxes on table rows) that overlays the selected sites' active-time series on one chart for side-by-side comparison. Pairs with the [dashboard list search bar](#ui--visuals) (find, then select). Distinct from the existing name-group / subdomain-merge controls, which *combine* sites into one total rather than comparing them.
 - **User-chosen chart color palette** — the chart colors (active / audio / visits / hourly) are fixed CSS custom properties in `theme.css`. Let the user pick from a few preset palettes (including a colour-blind-safe option), saved as a pref and applied by swapping the `--color-chart-*` variables. Improves accessibility and personalization. Natural home is the [dedicated settings page](#settings--configuration).
 
@@ -66,7 +59,6 @@ Settings: look for fixed, currently hardcoded values across the whole codebase t
 - **Pause tracking** — a temporary "pause for 1h / until tomorrow" toggle for legitimate non-leisure browsing (e.g. work research). Tracking is always-on today with no off switch.
 - **Include rules + settings in BiteGuard export/import** — the import/export modal lists "Site rules" and "Settings" as "coming soon" (`dashboard.html`), but only tracking data round-trips today. Add `rules` and the pref keys to the BiteGuard-format export/import to close those existing stubs.
 - **Import file validation & error surfacing** — the import flow accepts `.json` (`dashboard.html`) but has no schema validation or version-mismatch handling surfaced to the user. A malformed, truncated, or incompatible-format file should fail gracefully with a clear inline message (what's wrong, which format was expected) rather than silently doing nothing or corrupting data. Distinct from the [automatic backup / restore](#storage--pruning) idea, which protects against loss; this protects against bad input.
-- **Theme switcher on full-page views** — the light/dark/system menu only exists in the popup (`popup.html`). The dashboard, site, rules, and blocked pages load `theme.js` and respect the saved choice but offer no way to change it. A user who lives on the dashboard can't switch theme without opening the popup.
 - **Cross-device rule + settings sync** — everything lives in `chrome.storage.local` today, so it is per-machine: limits set on the laptop don't apply on the desktop, which is the biggest real-world loophole in a commitment device ("I'll just use my other computer"). Sync the small, structured data — `rules` and the pref keys — via `chrome.storage.sync` so limits and preferences follow the signed-in user across browsers. Tracking aggregates (`sitesByDay`, `subpagesByHour`, …) stay local: they're far too large for the `sync` quota (~100 KB total, ~8 KB/item) and are inherently per-device anyway. Needs a conflict/merge policy for rules edited on two devices and a user toggle (sync on/off, since not everyone wants it). Distinct from [BiteGuard export/import](#settings--configuration) (manual, one-shot, whole-dataset) — this is continuous and scoped to rules + prefs.
 
 ## Privacy & permissions
@@ -75,7 +67,6 @@ Settings: look for fixed, currently hardcoded values across the whole codebase t
 
 ## i18n
 
-- Implement 12h time format for the UIs
 - Translate UI texts, add a language selector
 - Translate guided tour, language should match the selected language
 - Translate quotes, or curate new quotes in new languages
@@ -116,7 +107,7 @@ Blocked page:
 
 ## Tracking
 
-- Track side panels?
+- **Track side panels — not possible with current APIs.** Vivaldi web panels fire `chrome.tabs.onUpdated` (with real URLs and tab IDs) but are always `active: false` and their window is not returned by `chrome.windows.getAll()`, so there is no way to distinguish a visible web panel from a regular background tab. The `chrome.sidePanel` API (Chrome 141+) only exposes open/close events for an extension's *own* panel page, not for arbitrary websites shown in any panel. No standard Chrome Extension API surfaces panel visibility or focus state for third-party content. Revisit only if Vivaldi or Chrome exposes a panel-visibility event.
 - **Sleep / suspend handling** — the focused-window assumption fails hardest when the machine sleeps or suspends: a tab stays "focused" so `activeMs` keeps accruing across hours the user was away, inflating active time far more than mere keyboard idle. A flush gap (no alarm fired for far longer than the period) is a signal the machine was suspended; pause/clamp accrual across these gaps. Distinct from idle detection (keyboard inactivity while awake, already shipped) and screen-lock handling (the `locked` state, also handled by the idle path) — this is about the system not running at all.
 - **Subpage opt-out toggle** — per-site "Track subpages: on/off" toggle on `site.html`. Default = on.
 - **Per-site path patterns** — user-defined rules like `reddit.com` → keep `/r/<sub>` only, `youtube.com` → keep `?v=<id>` only. Could replace or complement raw path storage.

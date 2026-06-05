@@ -3,16 +3,19 @@ import { initCustomDropdowns } from '../../shared/dropdown.js';
 import { getDomain } from '../../vendor/tldts.js';
 import { localDayKey } from '../../shared/timeUtils.js';
 import { weekDow, rotatedDayLabels } from '../../shared/weekStart.js';
-import { drawBarChart } from '../../shared/utils.js';
+import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear } from '../../shared/utils.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 
-const formTarget     = document.querySelector('#form-target');
+const formTarget          = document.querySelector('#form-target');
+const formTargetClearBtn  = document.querySelector('#form-target-clear');
 const cards          = [...document.querySelectorAll('.scope-card')];
 const previewText    = document.querySelector('#preview-text');
 const previewPattern = document.querySelector('#preview-pattern');
 const saveBtn        = document.querySelector('#save-btn');
 const rulesList      = document.querySelector('#rules-list');
 const noRulesMsg     = document.querySelector('#no-rules-message');
+const mostBlockedFavicon = document.querySelector('#most-blocked-favicon');
+mostBlockedFavicon.addEventListener('error', () => { mostBlockedFavicon.style.display = 'none'; });
 const redundantPrompt       = document.querySelector('#redundant-prompt');
 const redundantText         = document.querySelector('#redundant-text');
 const redundantList         = document.querySelector('#redundant-list');
@@ -181,7 +184,7 @@ function refreshPreview() {
 }
 
 cards.forEach(card => card.addEventListener('click', () => selectScope(card.dataset.scope)));
-formTarget.addEventListener('input', refreshPreview);
+const syncTargetClear = attachInputClear(formTarget, formTargetClearBtn, refreshPreview, { escStopPropagation: true });
 
 previewText.addEventListener('click', (e) => {
   const link = e.target.closest('#covering-link');
@@ -254,6 +257,7 @@ saveBtn.addEventListener('click', async () => {
   await addRule(newRule);
 
   formTarget.value = '';
+  syncTargetClear();
   formLimit.value = '10';
   refreshPreview();
   await render();
@@ -308,7 +312,7 @@ function openRowEditor(id) {
   li.querySelectorAll('.edit-btn, .toggle-btn, .delete-btn').forEach(b => b.remove());
   li.insertAdjacentHTML('beforeend', `
     <div class="form-row edit-controls">
-      <input class="edit-limit" type="number" value="${rule.limit}" min="1" />
+      <input class="edit-limit number-input" type="number" value="${rule.limit}" min="1" />
       ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
@@ -398,9 +402,10 @@ async function renderStats() {
 
   // Most blocked: stable key with highest week count, resolved to its label
   let mostBlocked = '—';
+  let topRule = null;
   if (Object.keys(blocksByRuleKey).length) {
     const topKey = Object.entries(blocksByRuleKey).sort((a, b) => b[1] - a[1])[0][0];
-    const topRule = rules.find(r => blockKey(r) === topKey);
+    topRule = rules.find(r => blockKey(r) === topKey) ?? null;
     mostBlocked = topRule ? matchLabel(topRule) : '—';
   }
 
@@ -412,6 +417,13 @@ async function renderStats() {
 
   document.querySelector('#stat-blocks').textContent = weekTotal;
   document.querySelector('#stat-most-blocked').textContent = mostBlocked;
+  if (topRule) {
+    mostBlockedFavicon.src = faviconUrl(topRule.target);
+    mostBlockedFavicon.removeAttribute('hidden');
+    mostBlockedFavicon.style.display = '';
+  } else {
+    mostBlockedFavicon.setAttribute('hidden', '');
+  }
   const activeEl = document.querySelector('#stat-active');
   activeEl.innerHTML = rules.length
     ? `${activeCount}<span class="stat-sub"> out of ${rules.length}</span>`
@@ -452,6 +464,7 @@ async function renderStats() {
 const prefillTarget = new URLSearchParams(location.search).get('target');
 if (prefillTarget) {
   formTarget.value = prefillTarget;
+  syncTargetClear();
   // Open the add card if pre-filled from "Limit this site"
   addCard.classList.add('open');
   addCardBody.removeAttribute('hidden');
@@ -471,6 +484,7 @@ formLimit.addEventListener('input', () => {
 });
 
 refreshPreview();
+await loadFaviconCache();
 render();
 
 // ── Tour ──
@@ -495,7 +509,7 @@ const rulesTourSteps = [
     selector: '#back-btn',
     title: 'Back to the dashboard',
     body: 'Click the BiteGuard logo to return to the dashboard and continue the tour.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'crossDocument' },
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 5, mode: 'crossDocument' },
   },
 ];
 
