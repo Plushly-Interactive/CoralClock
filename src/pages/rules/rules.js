@@ -37,6 +37,11 @@ const regexPreviewText  = document.querySelector('#regex-preview-text');
 const regexPreviewPat   = document.querySelector('#regex-preview-pattern');
 const regexSaveBtn      = document.querySelector('#regex-save-btn');
 
+const kwInput      = document.querySelector('#keyword-input');
+const kwInputClear = document.querySelector('#keyword-input-clear');
+const kwPreviewText = document.querySelector('#kw-preview-text');
+const kwSaveBtn    = document.querySelector('#kw-save-btn');
+
 let scope = 'subdomain';
 let currentRules = [];
 let sort = { key: 'site', dir: 1 };
@@ -207,7 +212,11 @@ previewText.addEventListener('click', (e) => {
 // ── Sort ──
 
 function sortedRules() {
-  function sortKey(r) { return r.matchType === 'regex' ? r.pattern : r.target + (r.path || ''); }
+  function sortKey(r) {
+    if (r.matchType === 'regex') return r.pattern;
+    if (r.matchType === 'keyword') return r.keyword;
+    return r.target + (r.path || '');
+  }
   const cmp = sort.key === 'status'
     ? (a, b) => Number(b.enabled) - Number(a.enabled)
     : (a, b) => sortKey(a).localeCompare(sortKey(b));
@@ -353,6 +362,54 @@ regexSaveBtn.addEventListener('click', async () => {
   regexPatternInput.value = '';
   syncRegexClear();
   refreshRegexPreview();
+  await render();
+});
+
+// ── Keyword form logic ──
+
+function kwLimitFields() {
+  return {
+    limit:     parseInt(document.querySelector('#keyword-limit').value),
+    limitUnit: document.querySelector('#kw-unit-btn').dataset.value,
+    period:    document.querySelector('#kw-period-btn').dataset.value,
+    mode:      document.querySelector('#kw-mode-btn').dataset.value,
+  };
+}
+
+function refreshKwPreview() {
+  const kw = kwInput.value.trim();
+  if (!kw) {
+    kwPreviewText.textContent = 'Enter a keyword above.';
+    kwSaveBtn.disabled = true;
+    return;
+  }
+  kwPreviewText.textContent = `Will block URLs containing "${kw}".`;
+  kwSaveBtn.disabled = false;
+}
+
+const syncKwClear = attachInputClear(kwInput, kwInputClear, refreshKwPreview, { escStopPropagation: true });
+
+document.querySelectorAll('#kw-unit-menu button, #kw-period-menu button').forEach(opt => {
+  opt.addEventListener('click', () => { constrainLimitForm('kw'); refreshKwPreview(); });
+});
+document.querySelectorAll('#kw-mode-menu button').forEach(opt => opt.addEventListener('click', refreshKwPreview));
+document.querySelector('#keyword-limit').addEventListener('input', () => {
+  const el = document.querySelector('#keyword-limit');
+  const max = parseInt(el.max);
+  if (max && parseInt(el.value) > max) el.value = max;
+  refreshKwPreview();
+});
+
+kwSaveBtn.addEventListener('click', async () => {
+  const kw = kwInput.value.trim();
+  if (!kw) return;
+  const fields = kwLimitFields();
+  if (!fields.limit) return;
+
+  await addRule({ keyword: kw, matchType: 'keyword', ...fields });
+  kwInput.value = '';
+  syncKwClear();
+  refreshKwPreview();
   await render();
 });
 
@@ -539,6 +596,7 @@ if (prefillTarget) {
 initCustomDropdowns();
 constrainLimitForm();
 constrainLimitForm('regex');
+constrainLimitForm('kw');
 
 document.querySelectorAll('#form-unit-menu button, #form-period-menu button').forEach(opt => {
   opt.addEventListener('click', () => { constrainLimitForm(); refreshPreview(); });
@@ -552,6 +610,7 @@ formLimit.addEventListener('input', () => {
 
 refreshPreview();
 refreshRegexPreview();
+refreshKwPreview();
 await loadFaviconCache();
 render();
 

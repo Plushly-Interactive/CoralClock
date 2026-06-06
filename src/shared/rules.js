@@ -6,14 +6,16 @@ export const BLOCKS_DAY_KEY = 'blocksByDay';
 
 export function blockKey(rule) {
   if (rule.matchType === 'regex') return `${rule.pattern}|regex|`;
+  if (rule.matchType === 'keyword') return `${rule.keyword}|keyword|`;
   return `${rule.target}|${rule.matchType}|${rule.path ?? ''}`;
 }
 
 const MODE_LABELS = { active: 'active', audio: 'audio', 'active+audio': 'active + audio' };
-const SCOPE_LABELS = { host: 'This host only', subdomain: 'Whole site', pathPrefix: 'A specific page', regex: 'Regex pattern' };
+const SCOPE_LABELS = { host: 'This host only', subdomain: 'Whole site', pathPrefix: 'A specific page', regex: 'Regex pattern', keyword: 'Keyword match' };
 
 export function matchLabel(rule) {
   if (rule.matchType === 'regex') return rule.pattern;
+  if (rule.matchType === 'keyword') return rule.keyword;
   if (rule.matchType === 'subdomain') return `*.${rule.target}`;
   if (rule.matchType === 'pathPrefix') return rule.path ? `${rule.target}/${rule.path}` : `${rule.target}/`;
   return rule.target;
@@ -28,9 +30,12 @@ function reEsc(s) {
 // it compiles to: { kind: 'urlFilter' | 'regexFilter', value }. Pure — used by
 // the form's live preview and (later) the DNR publisher. See the spec's
 // "Matching against tracking data" section for why each shape is what it is.
-export function describeRule({ target, path, matchType, pattern }) {
+export function describeRule({ target, path, matchType, pattern, keyword }) {
   if (matchType === 'regex') {
     return { text: `URLs matching /${pattern}/`, kind: 'regexFilter', value: pattern };
+  }
+  if (matchType === 'keyword') {
+    return { text: `URLs containing "${keyword}"`, kind: 'regexFilter', value: reEsc(keyword) };
   }
   const host = target || 'google.com';
   if (matchType === 'subdomain') {
@@ -61,6 +66,7 @@ export function describeRule({ target, path, matchType, pattern }) {
 // Equal scope is covered by all three branches (a == b ⇒ true).
 function coversScope(a, b) {
   if (a.matchType === 'regex' || b.matchType === 'regex') return false;
+  if (a.matchType === 'keyword' || b.matchType === 'keyword') return false;
   if (a.matchType === 'subdomain') {
     return b.target === a.target || b.target.endsWith(`.${a.target}`);
   }
@@ -120,7 +126,7 @@ export async function getRules() {
   return rules;
 }
 
-export async function addRule({ target, path, pattern, matchType, limit, limitUnit, period, mode }) {
+export async function addRule({ target, path, pattern, keyword, matchType, limit, limitUnit, period, mode }) {
   const rule = {
     id: crypto.randomUUID(),
     matchType,
@@ -132,6 +138,8 @@ export async function addRule({ target, path, pattern, matchType, limit, limitUn
   };
   if (matchType === 'regex') {
     rule.pattern = pattern;
+  } else if (matchType === 'keyword') {
+    rule.keyword = keyword;
   } else {
     rule.target = target;
     if (path) rule.path = path;
@@ -181,9 +189,9 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
       <button class="edit-btn square-btn" data-id="${rule.id}">✎</button>
       <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
       <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>`;
-    const faviconHtml = rule.matchType === 'regex'
-      ? ''
-      : `<img class="site-favicon" src="${faviconUrl(rule.target)}" alt="">`;
+    const faviconHtml = rule.target
+      ? `<img class="site-favicon" src="${faviconUrl(rule.target)}" alt="">`
+      : '';
     return `
     <li id="rule-${rule.id}" class="${rule.enabled ? '' : 'disabled'}">
       ${faviconHtml}
@@ -224,6 +232,16 @@ export function computeRuleSpent(rule, dayKey, stores) {
       }
       return total;
     } catch { return 0; }
+  }
+
+  if (rule.matchType === 'keyword') {
+    let total = 0;
+    for (const [siteId, paths] of Object.entries(subpageBucket ?? {})) {
+      for (const [p, cell] of Object.entries(paths)) {
+        if (`https://${siteId}${p}`.includes(rule.keyword)) total += sumCell(cell);
+      }
+    }
+    return total;
   }
 
   if (rule.matchType === 'pathPrefix') {
@@ -272,6 +290,16 @@ export function computeRuleVisits(rule, dayKey, stores) {
       }
       return visits;
     } catch { return 0; }
+  }
+
+  if (rule.matchType === 'keyword') {
+    let visits = 0;
+    for (const [siteId, paths] of Object.entries(subpageBucket ?? {})) {
+      for (const [p, cell] of Object.entries(paths)) {
+        if (`https://${siteId}${p}`.includes(rule.keyword)) visits += cell.visits ?? 0;
+      }
+    }
+    return visits;
   }
 
   if (rule.matchType === 'pathPrefix') {

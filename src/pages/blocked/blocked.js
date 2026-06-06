@@ -53,7 +53,7 @@ function formatCountdown(ms) {
   if (!rule) return;
 
   const targetEl = document.querySelector('#target');
-  let faviconHost = rule.matchType !== 'regex' ? rule.target : null;
+  let faviconHost = rule.target ?? null;
   if (!faviconHost) {
     const original = params.get('url');
     try { faviconHost = new URL(original).hostname.replace(/^www\./, ''); } catch {}

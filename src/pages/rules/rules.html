@@ -74,11 +74,11 @@
                 <button id="tab-url" class="seg-btn active">
                   <span class="seg-icon">🔗</span> URL / host
                 </button>
-                <button id="tab-regex" class="seg-btn">
-                  <span class="seg-icon seg-icon-regex">.*</span> Regex
-                </button>
                 <button id="tab-keyword" class="seg-btn">
                   <span class="seg-icon">🔍</span> Keyword
+                </button>
+                <button id="tab-regex" class="seg-btn">
+                  <span class="seg-icon seg-icon-regex">.*</span> Regex
                 </button>
               </div>
               <span id="add-toggle-arrow">▼</span>
@@ -202,9 +202,48 @@
               </div>
             </div>
 
-            <!-- Keyword stub -->
+            <!-- Keyword form -->
             <div id="keyword-form" hidden>
-              <p class="text-hint">Keyword rules are coming soon.</p>
+              <div id="keyword-target-wrap" class="input-wrap">
+                <input id="keyword-input" class="text-input" type="text" placeholder="news" />
+                <button id="keyword-input-clear" class="icon-btn input-clear" aria-label="Clear" hidden>&times;</button>
+              </div>
+              <div class="form-row" id="keyword-limit-row">
+                <span>Limit to</span>
+                <input id="keyword-limit" class="kw-limit number-input" type="number" value="10" min="1" />
+                <div class="custom-dropdown">
+                  <button type="button" class="dropdown-btn kw-unit-btn" id="kw-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
+                  <div class="dropdown-menu kw-unit-menu" id="kw-unit-menu">
+                    <button type="button" value="minutes">min</button>
+                    <button type="button" value="hours">hours</button>
+                    <button type="button" value="days">days</button>
+                  </div>
+                </div>
+                <span>per</span>
+                <div class="custom-dropdown">
+                  <button type="button" class="dropdown-btn kw-period-btn" id="kw-period-btn" data-value="hour">hour<span class="dropdown-arrow">▼</span></button>
+                  <div class="dropdown-menu kw-period-menu" id="kw-period-menu">
+                    <button type="button" value="hour">hour</button>
+                    <button type="button" value="day">day</button>
+                    <button type="button" value="week">week</button>
+                  </div>
+                </div>
+                <span>counting</span>
+                <div class="custom-dropdown">
+                  <button type="button" class="dropdown-btn" id="kw-mode-btn" data-value="active+audio">active + audio<span class="dropdown-arrow">▼</span></button>
+                  <div class="dropdown-menu" id="kw-mode-menu">
+                    <button type="button" value="active">active</button>
+                    <button type="button" value="audio">audio</button>
+                    <button type="button" value="active+audio">active + audio</button>
+                  </div>
+                </div>
+              </div>
+              <div id="keyword-preview" class="callout">
+                <span id="kw-preview-text"></span>
+              </div>
+              <div class="form-submit-row">
+                <button id="kw-save-btn" type="button" class="btn">Add rule</button>
+              </div>
             </div>
 
           </div><!-- /add-card-body -->

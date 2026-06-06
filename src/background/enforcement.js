@@ -48,7 +48,7 @@ function pathUnder(p, rulePath) {
 // `{ siteId: { path: cell } }` map).
 function sumBucket(rule, siteBucket, subpageBucket) {
   if (!siteBucket && !subpageBucket) return 0;
-  const { target, matchType, mode, path, pattern } = rule;
+  const { target, matchType, mode, path, pattern, keyword } = rule;
 
   if (matchType === 'regex') {
     try {
@@ -61,6 +61,16 @@ function sumBucket(rule, siteBucket, subpageBucket) {
       }
       return sum;
     } catch { return 0; }
+  }
+
+  if (matchType === 'keyword') {
+    let sum = 0;
+    for (const [siteId, paths] of Object.entries(subpageBucket ?? {})) {
+      for (const [p, cell] of Object.entries(paths)) {
+        if (`https://${siteId}${p}`.includes(keyword)) sum += cellUsage(cell, mode);
+      }
+    }
+    return sum;
   }
 
   if (matchType === 'host') {
@@ -102,9 +112,10 @@ export function computeOverage(rules, stores, now = Date.now()) {
 
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
     if (used > limitMs) {
-      const entry = rule.matchType === 'regex'
-        ? { matchType: 'regex', pattern: rule.pattern, overBy: used - limitMs }
-        : { target: rule.target, matchType: rule.matchType, path: rule.path, overBy: used - limitMs };
+      const base = { matchType: rule.matchType, overBy: used - limitMs };
+      const entry = rule.matchType === 'regex'   ? { ...base, pattern: rule.pattern }
+                  : rule.matchType === 'keyword' ? { ...base, keyword: rule.keyword }
+                  : { ...base, target: rule.target, path: rule.path };
       overage.set(rule.id, entry);
     }
   }
@@ -124,7 +135,7 @@ function dnrIdFor(uuid) {
 
 function blockedUrl(ruleId, entry, originalUrl) {
   const params = new URLSearchParams({ rule: ruleId });
-  if (entry.matchType !== 'regex') {
+  if (entry.target) {
     params.set('site', entry.target);
     if (entry.path) params.set('path', entry.path);
   }
@@ -149,6 +160,7 @@ function tabMatchesEntry(url, entry) {
   if (entry.matchType === 'regex') {
     try { return new RegExp(entry.pattern).test(url); } catch { return false; }
   }
+  if (entry.matchType === 'keyword') return url.includes(entry.keyword);
   const siteId = siteIdFromUrl(url);
   if (!siteId) return false;
   if (entry.matchType === 'subdomain') return siteId === entry.target || siteId.endsWith(`.${entry.target}`);
