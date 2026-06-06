@@ -124,6 +124,16 @@
 
 #limit-row, #regex-limit-row, #keyword-limit-row { flex-wrap: wrap; margin-bottom: 12px; }
 
+.always-block-label {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: var(--font-sm);
+  cursor: pointer;
+}
+
 #rule-preview, #regex-preview, #keyword-preview { margin-bottom: 12px; }
 #redundant-prompt { margin-bottom: 12px; }
 #redundant-prompt #redundant-list { margin: 8px 0; }

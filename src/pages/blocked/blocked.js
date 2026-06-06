@@ -69,7 +69,7 @@ function formatCountdown(ms) {
   targetEl.append(matchLabel(rule));
 
   const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
-  document.querySelector('#stat-limit').textContent = `${formatMs(limitMs)} / ${rule.period}`;
+  document.querySelector('#stat-limit').textContent = limitMs === 0 ? 'Never' : `${formatMs(limitMs)} / ${rule.period}`;
 
   const dayKey = localDayKey(Date.now());
   const activeMs = computeRuleSpent(rule, dayKey, stores);

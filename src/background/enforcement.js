@@ -111,7 +111,7 @@ export function computeOverage(rules, stores, now = Date.now()) {
     for (const k of keys) used += sumBucket(rule, siteBuckets[k], subpageBuckets[k]);
 
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
-    if (used > limitMs) {
+    if (limitMs === 0 || used > limitMs) {
       const base = { matchType: rule.matchType, overBy: used - limitMs };
       const entry = rule.matchType === 'regex'   ? { ...base, pattern: rule.pattern }
                   : rule.matchType === 'keyword' ? { ...base, keyword: rule.keyword }

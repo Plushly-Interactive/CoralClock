@@ -185,6 +185,7 @@ export async function disableRules(ids) {
 export function renderRuleList(listEl, rules, { readonly = false } = {}) {
   listEl.innerHTML = rules.map(rule => {
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
+    const limitStr = limitMs === 0 ? 'Never' : `${formatMs(limitMs)} per ${rule.period}`;
     const actions = readonly ? '' : `
       <button class="edit-btn square-btn" data-id="${rule.id}">✎</button>
       <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
@@ -197,7 +198,7 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
       ${faviconHtml}
       <div class="rule-info">
         <span class="site-label">${matchLabel(rule)}</span>
-        <span class="text-meta">${SCOPE_LABELS[rule.matchType]} · ${formatMs(limitMs)} per ${rule.period} · ${MODE_LABELS[rule.mode]}</span>
+        <span class="text-meta">${SCOPE_LABELS[rule.matchType]} · ${limitStr} · ${MODE_LABELS[rule.mode]}</span>
       </div>${actions}
     </li>`;
   }).join('');

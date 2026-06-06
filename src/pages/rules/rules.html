@@ -112,7 +112,7 @@
               </div>
               <div class="form-row" id="limit-row">
                 <span>Limit to</span>
-                <input id="form-limit" class="form-limit number-input" type="number" value="10" min="1" />
+                <input id="form-limit" class="form-limit number-input" type="number" value="10" min="0" />
                 <div class="custom-dropdown">
                   <button type="button" class="dropdown-btn form-unit-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
                   <div class="dropdown-menu form-unit-menu" id="form-unit-menu">
@@ -139,6 +139,7 @@
                     <button type="button" value="active+audio">active + audio</button>
                   </div>
                 </div>
+                <label class="always-block-label"><input type="checkbox" id="cb-always-url" /> Always block</label>
               </div>
               <div id="rule-preview" class="callout">
                 <span id="preview-text"></span>
@@ -165,7 +166,7 @@
               </div>
               <div class="form-row" id="regex-limit-row">
                 <span>Limit to</span>
-                <input id="regex-limit" class="regex-limit number-input" type="number" value="10" min="1" />
+                <input id="regex-limit" class="regex-limit number-input" type="number" value="10" min="0" />
                 <div class="custom-dropdown">
                   <button type="button" class="dropdown-btn regex-unit-btn" id="regex-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
                   <div class="dropdown-menu regex-unit-menu" id="regex-unit-menu">
@@ -192,6 +193,7 @@
                     <button type="button" value="active+audio">active + audio</button>
                   </div>
                 </div>
+                <label class="always-block-label"><input type="checkbox" id="cb-always-regex" /> Always block</label>
               </div>
               <div id="regex-preview" class="callout">
                 <span id="regex-preview-text"></span>
@@ -210,7 +212,7 @@
               </div>
               <div class="form-row" id="keyword-limit-row">
                 <span>Limit to</span>
-                <input id="keyword-limit" class="kw-limit number-input" type="number" value="10" min="1" />
+                <input id="keyword-limit" class="kw-limit number-input" type="number" value="10" min="0" />
                 <div class="custom-dropdown">
                   <button type="button" class="dropdown-btn kw-unit-btn" id="kw-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
                   <div class="dropdown-menu kw-unit-menu" id="kw-unit-menu">
@@ -237,6 +239,7 @@
                     <button type="button" value="active+audio">active + audio</button>
                   </div>
                 </div>
+                <label class="always-block-label"><input type="checkbox" id="cb-always-kw" /> Always block</label>
               </div>
               <div id="keyword-preview" class="callout">
                 <span id="kw-preview-text"></span>
