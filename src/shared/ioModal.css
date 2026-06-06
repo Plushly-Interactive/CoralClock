@@ -41,6 +41,8 @@
   overflow-y: auto;
 }
 
+#io-error { margin-bottom: 16px; }
+
 #io-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -53,15 +53,23 @@ function formatCountdown(ms) {
   if (!rule) return;
 
   const targetEl = document.querySelector('#target');
-  const faviconImg = document.createElement('img');
-  faviconImg.className = 'site-favicon';
-  faviconImg.src = faviconUrl(rule.target);
-  faviconImg.alt = '';
-  faviconImg.addEventListener('error', () => { faviconImg.style.display = 'none'; });
-  targetEl.append(faviconImg, matchLabel(rule));
+  let faviconHost = rule.target ?? null;
+  if (!faviconHost) {
+    const original = params.get('url');
+    try { faviconHost = new URL(original).hostname.replace(/^www\./, ''); } catch {}
+  }
+  if (faviconHost) {
+    const faviconImg = document.createElement('img');
+    faviconImg.className = 'site-favicon';
+    faviconImg.src = faviconUrl(faviconHost);
+    faviconImg.alt = '';
+    faviconImg.addEventListener('error', () => { faviconImg.style.display = 'none'; });
+    targetEl.append(faviconImg);
+  }
+  targetEl.append(matchLabel(rule));
 
   const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
-  document.querySelector('#stat-limit').textContent = `${formatMs(limitMs)} / ${rule.period}`;
+  document.querySelector('#stat-limit').textContent = limitMs === 0 ? 'Never' : `${formatMs(limitMs)} / ${rule.period}`;
 
   const dayKey = localDayKey(Date.now());
   const activeMs = computeRuleSpent(rule, dayKey, stores);

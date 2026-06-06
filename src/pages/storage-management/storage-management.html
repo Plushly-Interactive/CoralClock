@@ -224,6 +224,7 @@
       </div>
       <div id="io-modal-body">
         <input type="file" id="import-input" accept=".json" style="display:none">
+        <div id="io-error" class="callout" hidden></div>
         <div id="io-columns">
           <section class="io-section" id="io-section-bg">
             <h3 class="io-section-title">BiteGuard format</h3>
@@ -233,8 +234,8 @@
               <li class="io-yes">Visit counts per site</li>
               <li class="io-yes">Audio time per site</li>
               <li class="io-yes">Per subpage data</li>
-              <li class="io-no">Site rules &amp; limits <span class="io-soon">(coming soon)</span></li>
-              <li class="io-no">Settings <span class="io-soon">(coming soon)</span></li>
+              <li class="io-yes">Site rules &amp; limits</li>
+              <li class="io-yes">Settings</li>
             </ul>
             <div class="io-actions">
               <button id="bg-export-btn" class="btn io-btn">Export</button>
