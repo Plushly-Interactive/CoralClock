@@ -124,15 +124,6 @@ export function computeOverage(rules, stores, now = Date.now()) {
 
 // --- DNR publisher (chrome APIs) ---
 
-// Map a rule UUID to a positive 31-bit integer for use as a DNR rule id.
-// Deterministic, so the same rule always maps to the same dnr id across ticks.
-// Collisions are astronomically unlikely for a handful of rules; acceptable v1.
-function dnrIdFor(uuid) {
-  let h = 0;
-  for (let i = 0; i < uuid.length; i++) h = (Math.imul(31, h) + uuid.charCodeAt(i)) | 0;
-  return (h & 0x7fffffff) || 1;
-}
-
 function blockedUrl(ruleId, entry, originalUrl) {
   const params = new URLSearchParams({ rule: ruleId });
   if (entry.target) {
@@ -143,10 +134,10 @@ function blockedUrl(ruleId, entry, originalUrl) {
   return chrome.runtime.getURL(`src/pages/blocked/blocked.html?${params}`);
 }
 
-function buildRule(ruleId, entry) {
+function buildRule(ruleId, entry, id) {
   const { kind, value } = describeRule(entry);
   return {
-    id: dnrIdFor(ruleId),
+    id,
     priority: 1,
     action: { type: 'redirect', redirect: { url: blockedUrl(ruleId, entry) } },
     condition: { [kind]: value, resourceTypes: ['main_frame'] },
@@ -221,9 +212,35 @@ async function returnUnblockedTabs(overage) {
 // the source of truth so it self-heals across service-worker restarts.
 export async function publishOverage(overage) {
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
-  const existingIds = new Set(existing.map(r => r.id));
-  const desired = new Map([...overage].map(([ruleId, entry]) => [dnrIdFor(ruleId), buildRule(ruleId, entry)]));
 
+  // Reconstruct ruleId → dnrId from existing redirect URLs so we reuse the
+  // same integer IDs across ticks (no hash, no collisions).
+  const liveMap = new Map();
+  const usedIds = new Set();
+  for (const r of existing) {
+    usedIds.add(r.id);
+    try {
+      const ruleId = new URL(r.action.redirect.url).searchParams.get('rule');
+      if (ruleId) liveMap.set(ruleId, r.id);
+    } catch {}
+  }
+
+  let nextId = 1;
+  function freshId() {
+    while (usedIds.has(nextId)) nextId++;
+    usedIds.add(nextId);
+    return nextId++;
+  }
+
+  const desired = new Map();
+  const newRuleIds = new Set();
+  for (const [ruleId, entry] of overage) {
+    const id = liveMap.get(ruleId) ?? freshId();
+    desired.set(id, buildRule(ruleId, entry, id));
+    if (!liveMap.has(ruleId)) newRuleIds.add(ruleId);
+  }
+
+  const existingIds = new Set(existing.map(r => r.id));
   const addRules = [...desired.values()].filter(r => !existingIds.has(r.id));
   const removeRuleIds = existing.map(r => r.id).filter(id => !desired.has(id));
 
@@ -235,10 +252,8 @@ export async function publishOverage(overage) {
     const dayKey = localDayKey(Date.now());
     const { [BLOCKS_DAY_KEY]: blocksByDay = {} } = await chrome.storage.local.get(BLOCKS_DAY_KEY);
     const today = blocksByDay[dayKey] ?? {};
-    // addRules contains newly-triggered blocks; find which ruleIds they correspond to.
-    const addedDnrIds = new Set(addRules.map(r => r.id));
     for (const [ruleId, entry] of overage) {
-      if (addedDnrIds.has(dnrIdFor(ruleId))) {
+      if (newRuleIds.has(ruleId)) {
         const key = blockKey(entry);
         today[key] = (today[key] ?? 0) + 1;
       }

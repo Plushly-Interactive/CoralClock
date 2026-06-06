@@ -2,7 +2,9 @@ import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
 import { showNotification } from '../shared/utils.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../shared/msgTypes.js';
-import { PREF_LAST_EXPORT_AT } from '../shared/prefKeys.js';
+import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../shared/prefKeys.js';
+
+const EXPORT_PREF_KEYS = [PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START];
 
 export const IMPORT_COMPLETE = 'importcomplete';
 
@@ -95,17 +97,26 @@ document.addEventListener('keydown', (e) => {
 });
 
 export async function exportBiteGuardData() {
-  const {
-    [SITES_DAY_KEY]: sitesByDay = {},
-    [SITES_HOUR_KEY]: sitesByHour = {},
-    [SUBPAGES_DAY_KEY]: subpagesByDay = {},
-    [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
-  } = await chrome.storage.local.get([SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
+  const stored = await chrome.storage.local.get([
+    SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
+    'rules', ...EXPORT_PREF_KEYS,
+  ]);
+  const sitesByDay = stored[SITES_DAY_KEY] ?? {};
+  const sitesByHour = stored[SITES_HOUR_KEY] ?? {};
+  const subpagesByDay = stored[SUBPAGES_DAY_KEY] ?? {};
+  const subpagesByHour = stored[SUBPAGES_HOUR_KEY] ?? {};
+  const rules = stored.rules ?? [];
+  const prefs = {};
+  for (const k of EXPORT_PREF_KEYS) {
+    if (stored[k] !== undefined) prefs[k] = stored[k];
+  }
 
   const payload = {
     format: 'biteguard',
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
+    rules,
+    prefs,
     data: {
       [SITES_DAY_KEY]: sitesByDay,
       [SITES_HOUR_KEY]: sitesByHour,
@@ -313,7 +324,7 @@ async function applyTtImport(importData, currentByDay, daysToReplace) {
 let pendingImport = null;
 
 async function handleBgImport(json) {
-  if ((json.version !== 1 && json.version !== 2) || !json.data || typeof json.data !== 'object') {
+  if ((json.version !== 1 && json.version !== 2 && json.version !== 3) || !json.data || typeof json.data !== 'object') {
     showNotification('Unrecognized BiteGuard format');
     return;
   }
@@ -327,6 +338,9 @@ async function handleBgImport(json) {
   normalizeSubpageBuckets(importSubpagesByDay);
   normalizeSubpageBuckets(importSubpagesByHour);
 
+  const importRules = Array.isArray(json.rules) ? json.rules : null;
+  const importPrefs = json.prefs && typeof json.prefs === 'object' ? json.prefs : null;
+
   const {
     [SITES_DAY_KEY]: sitesByDay = {},
     [SITES_HOUR_KEY]: sitesByHour = {},
@@ -337,15 +351,15 @@ async function handleBgImport(json) {
   const conflicts = Object.keys(importByDay).filter((d) => sitesByDay[d]).sort();
 
   if (conflicts.length === 0) {
-    await applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, sitesByDay, sitesByHour, subpagesByDay, subpagesByHour, new Set());
+    await applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, sitesByDay, sitesByHour, subpagesByDay, subpagesByHour, new Set(), importRules, importPrefs);
     return;
   }
 
-  pendingImport = { importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay: sitesByDay, currentByHour: sitesByHour, currentSubpagesByDay: subpagesByDay, currentSubpagesByHour: subpagesByHour, conflicts };
+  pendingImport = { importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay: sitesByDay, currentByHour: sitesByHour, currentSubpagesByDay: subpagesByDay, currentSubpagesByHour: subpagesByHour, conflicts, importRules, importPrefs };
   showConflictView(conflicts);
 }
 
-async function applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour, daysToReplace) {
+async function applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour, daysToReplace, importRules = null, importPrefs = null) {
   const daysToTake = new Set();
   for (const d of Object.keys(importByDay)) {
     if (!currentByDay[d] || daysToReplace.has(d)) daysToTake.add(d);
@@ -373,14 +387,28 @@ async function applyBgImport(importByDay, importByHour, importSubpagesByDay, imp
     }
   }
 
-  await chrome.storage.local.set({
+  const update = {
     [SITES_DAY_KEY]: currentByDay,
     [SITES_HOUR_KEY]: currentByHour,
     [SUBPAGES_DAY_KEY]: currentSubpagesByDay,
     [SUBPAGES_HOUR_KEY]: currentSubpagesByHour,
-  });
+  };
+
+  if (importRules !== null) update.rules = importRules;
+
+  if (importPrefs !== null) {
+    for (const k of EXPORT_PREF_KEYS) {
+      if (importPrefs[k] !== undefined) update[k] = importPrefs[k];
+    }
+  }
+
+  await chrome.storage.local.set(update);
   await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE });
-  showNotification(`Imported ${daysToTake.size} day(s)`);
+
+  const parts = [`${daysToTake.size} day(s)`];
+  if (importRules !== null) parts.push(`${importRules.length} rule(s)`);
+  if (importPrefs !== null) parts.push('settings');
+  showNotification(`Imported ${parts.join(', ')}`);
   window.dispatchEvent(new CustomEvent(IMPORT_COMPLETE));
 }
 
@@ -413,9 +441,9 @@ conflictKeep.addEventListener('click', async () => {
     hideConflictView();
     await applyTtImport(importData, currentByDay, new Set());
   } else {
-    const { importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour } = pendingImport;
+    const { importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour, importRules, importPrefs } = pendingImport;
     hideConflictView();
-    await applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour, new Set());
+    await applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour, new Set(), importRules, importPrefs);
   }
 });
 
@@ -425,8 +453,8 @@ conflictReplace.addEventListener('click', async () => {
     hideConflictView();
     await applyTtImport(importData, currentByDay, new Set(conflicts));
   } else {
-    const { importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour, conflicts } = pendingImport;
+    const { importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour, conflicts, importRules, importPrefs } = pendingImport;
     hideConflictView();
-    await applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour, new Set(conflicts));
+    await applyBgImport(importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, currentByDay, currentByHour, currentSubpagesByDay, currentSubpagesByHour, new Set(conflicts), importRules, importPrefs);
   }
 });
