@@ -48,7 +48,20 @@ function pathUnder(p, rulePath) {
 // `{ siteId: { path: cell } }` map).
 function sumBucket(rule, siteBucket, subpageBucket) {
   if (!siteBucket && !subpageBucket) return 0;
-  const { target, matchType, mode, path } = rule;
+  const { target, matchType, mode, path, pattern } = rule;
+
+  if (matchType === 'regex') {
+    try {
+      const re = new RegExp(pattern);
+      let sum = 0;
+      for (const [siteId, paths] of Object.entries(subpageBucket ?? {})) {
+        for (const [p, cell] of Object.entries(paths)) {
+          if (re.test(`https://${siteId}${p}`)) sum += cellUsage(cell, mode);
+        }
+      }
+      return sum;
+    } catch { return 0; }
+  }
 
   if (matchType === 'host') {
     return cellUsage(siteBucket?.[target], mode);
@@ -89,7 +102,10 @@ export function computeOverage(rules, stores, now = Date.now()) {
 
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
     if (used > limitMs) {
-      overage.set(rule.id, { target: rule.target, matchType: rule.matchType, path: rule.path, overBy: used - limitMs });
+      const entry = rule.matchType === 'regex'
+        ? { matchType: 'regex', pattern: rule.pattern, overBy: used - limitMs }
+        : { target: rule.target, matchType: rule.matchType, path: rule.path, overBy: used - limitMs };
+      overage.set(rule.id, entry);
     }
   }
   return overage;
@@ -107,14 +123,17 @@ function dnrIdFor(uuid) {
 }
 
 function blockedUrl(ruleId, entry, originalUrl) {
-  const params = new URLSearchParams({ rule: ruleId, site: entry.target });
-  if (entry.path) params.set('path', entry.path);
+  const params = new URLSearchParams({ rule: ruleId });
+  if (entry.matchType !== 'regex') {
+    params.set('site', entry.target);
+    if (entry.path) params.set('path', entry.path);
+  }
   if (originalUrl) params.set('url', originalUrl);
   return chrome.runtime.getURL(`src/pages/blocked/blocked.html?${params}`);
 }
 
 function buildRule(ruleId, entry) {
-  const { kind, value } = describeRule({ target: entry.target, path: entry.path, matchType: entry.matchType });
+  const { kind, value } = describeRule(entry);
   return {
     id: dnrIdFor(ruleId),
     priority: 1,
@@ -127,6 +146,9 @@ function buildRule(ruleId, entry) {
 // matching (same siteId/path normalization), so reloaded tabs are exactly the
 // ones DNR will then redirect.
 function tabMatchesEntry(url, entry) {
+  if (entry.matchType === 'regex') {
+    try { return new RegExp(entry.pattern).test(url); } catch { return false; }
+  }
   const siteId = siteIdFromUrl(url);
   if (!siteId) return false;
   if (entry.matchType === 'subdomain') return siteId === entry.target || siteId.endsWith(`.${entry.target}`);

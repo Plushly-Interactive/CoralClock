@@ -31,6 +31,12 @@ const urlForm        = document.querySelector('#url-form');
 const regexForm      = document.querySelector('#regex-form');
 const keywordForm    = document.querySelector('#keyword-form');
 
+const regexPatternInput = document.querySelector('#regex-pattern');
+const regexPatternClear = document.querySelector('#regex-pattern-clear');
+const regexPreviewText  = document.querySelector('#regex-preview-text');
+const regexPreviewPat   = document.querySelector('#regex-preview-pattern');
+const regexSaveBtn      = document.querySelector('#regex-save-btn');
+
 let scope = 'subdomain';
 let currentRules = [];
 let sort = { key: 'site', dir: 1 };
@@ -201,9 +207,10 @@ previewText.addEventListener('click', (e) => {
 // ── Sort ──
 
 function sortedRules() {
+  function sortKey(r) { return r.matchType === 'regex' ? r.pattern : r.target + (r.path || ''); }
   const cmp = sort.key === 'status'
     ? (a, b) => Number(b.enabled) - Number(a.enabled)
-    : (a, b) => (a.target + (a.path || '')).localeCompare(b.target + (b.path || ''));
+    : (a, b) => sortKey(a).localeCompare(sortKey(b));
   return [...currentRules].sort((a, b) => sort.dir * cmp(a, b));
 }
 
@@ -288,6 +295,65 @@ redundantDisableBtn.addEventListener('click', async () => {
 
 redundantKeepBtn.addEventListener('click', () => {
   redundantPrompt.style.display = 'none';
+});
+
+// ── Regex form logic ──
+
+function regexLimitFields() {
+  return {
+    limit:     parseInt(document.querySelector('#regex-limit').value),
+    limitUnit: document.querySelector('#regex-unit-btn').dataset.value,
+    period:    document.querySelector('#regex-period-btn').dataset.value,
+    mode:      document.querySelector('#regex-mode-btn').dataset.value,
+  };
+}
+
+function refreshRegexPreview() {
+  const pat = regexPatternInput.value.trim();
+  if (!pat) {
+    regexPreviewText.textContent = 'Enter a regex pattern above.';
+    regexPreviewPat.textContent = '';
+    regexSaveBtn.disabled = true;
+    return;
+  }
+  try {
+    new RegExp(pat);
+  } catch (e) {
+    regexPreviewText.textContent = `Invalid pattern: ${e.message}`;
+    regexPreviewPat.textContent = '';
+    regexSaveBtn.disabled = true;
+    return;
+  }
+  regexPreviewText.textContent = 'Will block URLs matching this pattern.';
+  regexPreviewPat.textContent = pat;
+  regexSaveBtn.disabled = false;
+}
+
+const syncRegexClear = attachInputClear(regexPatternInput, regexPatternClear, refreshRegexPreview, { escStopPropagation: true });
+
+document.querySelectorAll('#regex-unit-menu button, #regex-period-menu button').forEach(opt => {
+  opt.addEventListener('click', () => { constrainLimitForm('regex'); refreshRegexPreview(); });
+});
+document.querySelectorAll('#regex-mode-menu button').forEach(opt => opt.addEventListener('click', refreshRegexPreview));
+document.querySelector('#regex-limit').addEventListener('input', () => {
+  const el = document.querySelector('#regex-limit');
+  const max = parseInt(el.max);
+  if (max && parseInt(el.value) > max) el.value = max;
+  refreshRegexPreview();
+});
+
+regexSaveBtn.addEventListener('click', async () => {
+  const pat = regexPatternInput.value.trim();
+  if (!pat) return;
+  try { new RegExp(pat); } catch { return; }
+  const fields = regexLimitFields();
+  if (!fields.limit) return;
+
+  await addRule({ pattern: pat, matchType: 'regex', ...fields });
+  regexPatternInput.value = '';
+  syncRegexClear();
+  refreshRegexPreview();
+  await render();
 });
 
 // ── Inline row editor ──
@@ -417,7 +483,7 @@ async function renderStats() {
 
   document.querySelector('#stat-blocks').textContent = weekTotal;
   document.querySelector('#stat-most-blocked').textContent = mostBlocked;
-  if (topRule) {
+  if (topRule && topRule.matchType !== 'regex') {
     mostBlockedFavicon.src = faviconUrl(topRule.target);
     mostBlockedFavicon.removeAttribute('hidden');
     mostBlockedFavicon.style.display = '';
@@ -472,6 +538,7 @@ if (prefillTarget) {
 
 initCustomDropdowns();
 constrainLimitForm();
+constrainLimitForm('regex');
 
 document.querySelectorAll('#form-unit-menu button, #form-period-menu button').forEach(opt => {
   opt.addEventListener('click', () => { constrainLimitForm(); refreshPreview(); });
@@ -484,6 +551,7 @@ formLimit.addEventListener('input', () => {
 });
 
 refreshPreview();
+refreshRegexPreview();
 await loadFaviconCache();
 render();
 

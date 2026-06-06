@@ -5,13 +5,15 @@ export const RULE_MULTIPLIERS = { minutes: 60000, hours: 3600000, days: 86400000
 export const BLOCKS_DAY_KEY = 'blocksByDay';
 
 export function blockKey(rule) {
+  if (rule.matchType === 'regex') return `${rule.pattern}|regex|`;
   return `${rule.target}|${rule.matchType}|${rule.path ?? ''}`;
 }
 
 const MODE_LABELS = { active: 'active', audio: 'audio', 'active+audio': 'active + audio' };
-const SCOPE_LABELS = { host: 'This host only', subdomain: 'Whole site', pathPrefix: 'A specific page' };
+const SCOPE_LABELS = { host: 'This host only', subdomain: 'Whole site', pathPrefix: 'A specific page', regex: 'Regex pattern' };
 
 export function matchLabel(rule) {
+  if (rule.matchType === 'regex') return rule.pattern;
   if (rule.matchType === 'subdomain') return `*.${rule.target}`;
   if (rule.matchType === 'pathPrefix') return rule.path ? `${rule.target}/${rule.path}` : `${rule.target}/`;
   return rule.target;
@@ -26,7 +28,10 @@ function reEsc(s) {
 // it compiles to: { kind: 'urlFilter' | 'regexFilter', value }. Pure — used by
 // the form's live preview and (later) the DNR publisher. See the spec's
 // "Matching against tracking data" section for why each shape is what it is.
-export function describeRule({ target, path, matchType }) {
+export function describeRule({ target, path, matchType, pattern }) {
+  if (matchType === 'regex') {
+    return { text: `URLs matching /${pattern}/`, kind: 'regexFilter', value: pattern };
+  }
   const host = target || 'google.com';
   if (matchType === 'subdomain') {
     // Subdomains are wanted here — DNR's || domain anchor is naturally inclusive.
@@ -55,6 +60,7 @@ export function describeRule({ target, path, matchType }) {
 //  - pathPrefix covers a pathPrefix whose path sits under its own path.
 // Equal scope is covered by all three branches (a == b ⇒ true).
 function coversScope(a, b) {
+  if (a.matchType === 'regex' || b.matchType === 'regex') return false;
   if (a.matchType === 'subdomain') {
     return b.target === a.target || b.target.endsWith(`.${a.target}`);
   }
@@ -114,10 +120,9 @@ export async function getRules() {
   return rules;
 }
 
-export async function addRule({ target, path, matchType, limit, limitUnit, period, mode }) {
+export async function addRule({ target, path, pattern, matchType, limit, limitUnit, period, mode }) {
   const rule = {
     id: crypto.randomUUID(),
-    target,
     matchType,
     limit,
     limitUnit,
@@ -125,7 +130,12 @@ export async function addRule({ target, path, matchType, limit, limitUnit, perio
     enabled: true,
     mode,
   };
-  if (path) rule.path = path;
+  if (matchType === 'regex') {
+    rule.pattern = pattern;
+  } else {
+    rule.target = target;
+    if (path) rule.path = path;
+  }
   const rules = await getRules();
   await chrome.storage.local.set({ rules: [...rules, rule] });
 }
@@ -171,9 +181,12 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
       <button class="edit-btn square-btn" data-id="${rule.id}">✎</button>
       <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
       <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>`;
+    const faviconHtml = rule.matchType === 'regex'
+      ? ''
+      : `<img class="site-favicon" src="${faviconUrl(rule.target)}" alt="">`;
     return `
     <li id="rule-${rule.id}" class="${rule.enabled ? '' : 'disabled'}">
-      <img class="site-favicon" src="${faviconUrl(rule.target)}" alt="">
+      ${faviconHtml}
       <div class="rule-info">
         <span class="site-label">${matchLabel(rule)}</span>
         <span class="text-meta">${SCOPE_LABELS[rule.matchType]} · ${formatMs(limitMs)} per ${rule.period} · ${MODE_LABELS[rule.mode]}</span>
@@ -198,6 +211,19 @@ export function computeRuleSpent(rule, dayKey, stores) {
     const audio = cell?.audioMs ?? 0;
     const overlap = cell?.overlapMs ?? 0;
     return active + audio - overlap;
+  }
+
+  if (rule.matchType === 'regex') {
+    try {
+      const re = new RegExp(rule.pattern);
+      let total = 0;
+      for (const [siteId, paths] of Object.entries(subpageBucket ?? {})) {
+        for (const [p, cell] of Object.entries(paths)) {
+          if (re.test(`https://${siteId}${p}`)) total += sumCell(cell);
+        }
+      }
+      return total;
+    } catch { return 0; }
   }
 
   if (rule.matchType === 'pathPrefix') {
@@ -234,6 +260,19 @@ export function computeRuleVisits(rule, dayKey, stores) {
 
   const siteBucket = sitesByDay[dayKey];
   const subpageBucket = subpagesByDay[dayKey];
+
+  if (rule.matchType === 'regex') {
+    try {
+      const re = new RegExp(rule.pattern);
+      let visits = 0;
+      for (const [siteId, paths] of Object.entries(subpageBucket ?? {})) {
+        for (const [p, cell] of Object.entries(paths)) {
+          if (re.test(`https://${siteId}${p}`)) visits += cell.visits ?? 0;
+        }
+      }
+      return visits;
+    } catch { return 0; }
+  }
 
   if (rule.matchType === 'pathPrefix') {
     const paths = subpageBucket?.[rule.target];

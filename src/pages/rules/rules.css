@@ -85,7 +85,8 @@
   border-top: 1px solid var(--color-border);
 }
 
-#form-target-wrap { margin-bottom: 12px; margin-top: 14px; }
+#form-target-wrap  { margin-bottom: 12px; margin-top: 14px; }
+#regex-target-wrap { margin-bottom: 12px; margin-top: 14px; }
 
 .scope-cards {
   display: grid;
@@ -120,12 +121,12 @@
   word-break: break-all;
 }
 
-#limit-row { flex-wrap: wrap; margin-bottom: 12px; }
+#limit-row, #regex-limit-row { flex-wrap: wrap; margin-bottom: 12px; }
 
-#rule-preview { margin-bottom: 12px; }
+#rule-preview, #regex-preview { margin-bottom: 12px; }
 #redundant-prompt { margin-bottom: 12px; }
 #redundant-prompt #redundant-list { margin: 8px 0; }
-#preview-pattern { font-family: monospace; }
+#preview-pattern, #regex-preview-pattern { font-family: monospace; }
 
 .form-submit-row {
   display: flex;

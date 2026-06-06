@@ -157,9 +157,49 @@
               </div>
             </div>
 
-            <!-- Regex stub -->
+            <!-- Regex form -->
             <div id="regex-form" hidden>
-              <p class="text-hint">Regex rules are coming soon.</p>
+              <div id="regex-target-wrap" class="input-wrap">
+                <input id="regex-pattern" class="text-input" type="text" placeholder="news[./]|[./]news([./?]|$)" />
+                <button id="regex-pattern-clear" class="icon-btn input-clear" aria-label="Clear" hidden>&times;</button>
+              </div>
+              <div class="form-row" id="regex-limit-row">
+                <span>Limit to</span>
+                <input id="regex-limit" class="regex-limit number-input" type="number" value="10" min="1" />
+                <div class="custom-dropdown">
+                  <button type="button" class="dropdown-btn regex-unit-btn" id="regex-unit-btn" data-value="minutes">min<span class="dropdown-arrow">▼</span></button>
+                  <div class="dropdown-menu regex-unit-menu" id="regex-unit-menu">
+                    <button type="button" value="minutes">min</button>
+                    <button type="button" value="hours">hours</button>
+                    <button type="button" value="days">days</button>
+                  </div>
+                </div>
+                <span>per</span>
+                <div class="custom-dropdown">
+                  <button type="button" class="dropdown-btn regex-period-btn" id="regex-period-btn" data-value="hour">hour<span class="dropdown-arrow">▼</span></button>
+                  <div class="dropdown-menu regex-period-menu" id="regex-period-menu">
+                    <button type="button" value="hour">hour</button>
+                    <button type="button" value="day">day</button>
+                    <button type="button" value="week">week</button>
+                  </div>
+                </div>
+                <span>counting</span>
+                <div class="custom-dropdown">
+                  <button type="button" class="dropdown-btn" id="regex-mode-btn" data-value="active+audio">active + audio<span class="dropdown-arrow">▼</span></button>
+                  <div class="dropdown-menu" id="regex-mode-menu">
+                    <button type="button" value="active">active</button>
+                    <button type="button" value="audio">audio</button>
+                    <button type="button" value="active+audio">active + audio</button>
+                  </div>
+                </div>
+              </div>
+              <div id="regex-preview" class="callout">
+                <span id="regex-preview-text"></span>
+                <code id="regex-preview-pattern" class="text-meta"></code>
+              </div>
+              <div class="form-submit-row">
+                <button id="regex-save-btn" type="button" class="btn">Add rule</button>
+              </div>
             </div>
 
             <!-- Keyword stub -->
