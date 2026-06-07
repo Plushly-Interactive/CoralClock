@@ -466,7 +466,6 @@ document.querySelector('#repair-all-btn').addEventListener('click', async () => 
   };
 
   applyRepairs(stores, cachedIssues);
-
   await chrome.storage.local.set({ sitesByDay: stores.sitesByDay, sitesByHour: stores.sitesByHour, subpagesByDay: stores.subpagesByDay, subpagesByHour: stores.subpagesByHour });
   try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
 
