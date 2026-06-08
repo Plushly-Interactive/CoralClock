@@ -55,12 +55,6 @@ let idleStartedAt = null;
 // onStateChanged listener can compute the retroactive clip point synchronously.
 let cachedIdleThresholdMs = DEFAULT_IDLE_THRESHOLD_SEC * 1000;
 
-// Tracks which rules have already fired an approaching-limit notification this
-// period (ruleId → period window key). Prevents re-firing every flush tick.
-// In-memory: resets on service-worker restart, but so does the period window
-// for hourly rules, and daily/weekly keys naturally change with the calendar.
-const approachNotified = new Map();
-
 function approachWindowKey(period, now) {
   if (period === 'hour') return localHourKey(now);
   if (period === 'week') {
@@ -82,11 +76,46 @@ function fmtMs(ms) {
   return rem ? `${h}h ${rem}m` : `${h}h`;
 }
 
-function notifyApproaching(approaching, now) {
+// Both notifyBlocked and notifyApproaching persist their fired-state to
+// chrome.storage.session so deduplication survives MV3 service-worker restarts
+// within the same browser session. Without this the SW wakes up on every
+// navigation with empty in-memory state and re-fires on every wake.
+
+async function notifyBlocked(overage) {
+  const { _blockedNotified: stored = [] } = await chrome.storage.session.get('_blockedNotified');
+  const notified = new Set(stored);
+  for (const ruleId of notified) {
+    if (!overage.has(ruleId)) notified.delete(ruleId);
+  }
+  const toFire = [];
+  for (const [ruleId, entry] of overage) {
+    if (notified.has(ruleId)) continue;
+    notified.add(ruleId);
+    toFire.push([ruleId, entry]);
+  }
+  if (toFire.length || notified.size !== stored.length) {
+    await chrome.storage.session.set({ _blockedNotified: [...notified] });
+  }
+  for (const [ruleId, entry] of toFire) {
+    const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
+    chrome.notifications.create(`blocked-${ruleId}`, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('resources/icons/biteguard-icon-blue-square-128px.png'),
+      title: 'Time limit reached',
+      message: `${label} is now blocked`,
+    });
+  }
+}
+
+async function notifyApproaching(approaching, now) {
+  const { _approachNotified: stored = {} } = await chrome.storage.session.get('_approachNotified');
+  const notified = { ...stored };
+  let changed = false;
   for (const [ruleId, entry] of approaching) {
     const windowKey = approachWindowKey(entry.period, now);
-    if (approachNotified.get(ruleId) === windowKey) continue;
-    approachNotified.set(ruleId, windowKey);
+    if (notified[ruleId] === windowKey) continue;
+    notified[ruleId] = windowKey;
+    changed = true;
     const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
     const pct = Math.round(entry.pct * 100);
     const left = fmtMs(entry.remainingMs);
@@ -97,6 +126,7 @@ function notifyApproaching(approaching, now) {
       message: `${label} — ${pct}% of ${entry.limit} ${entry.limitUnit} ${PERIOD_LABEL[entry.period] ?? entry.period} limit used (${left} left)`,
     });
   }
+  if (changed) await chrome.storage.session.set({ _approachNotified: notified });
 }
 
 // Drop the in-memory site caches after storage is rewritten (flush), so
@@ -510,7 +540,8 @@ async function checkEnforcement(now) {
 
   const { overage, approaching } = computeOverage(rules, { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, now);
   await publishOverage(overage);
-  notifyApproaching(approaching, now);
+  await notifyBlocked(overage);
+  await notifyApproaching(approaching, now);
 }
 
 // Pre-emptive block: on a main-frame navigation, flush the tracker's accrued
