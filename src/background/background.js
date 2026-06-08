@@ -23,6 +23,7 @@ import {
 } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
 import { dbg, isDebug, initDebug } from './trackingUtils.js';
+import { updateBadge } from './badge.js';
 import {
   MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
@@ -66,6 +67,7 @@ chrome.alarms.get('flush').then(existing => {
   if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
 });
 const bootstrapDone = bootstrap();
+bootstrapDone.then(() => updateBadge());
 
 chrome.runtime.onStartup.addListener(() => {
   coldStart = true;
@@ -262,6 +264,7 @@ chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
   const path = pathFromUrl(tab.url);
   setWindowSite(windowId, siteId);
   setWindowPath(windowId, siteId, path);
+  updateBadge();
 });
 
 async function cacheFavicon(hostname, url) {
@@ -295,6 +298,7 @@ chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
     const path = pathFromUrl(tab.url);
     setWindowSite(tab.windowId, siteId);
     setWindowPath(tab.windowId, siteId, path);
+    updateBadge();
   }
   if (changeInfo.status === 'complete') {
     // Catches audible tab navigating between sites without going silent (changeInfo.audible won't fire)
@@ -335,6 +339,11 @@ chrome.windows.onCreated.addListener(async (window) => {
   const path = pathFromUrl(tab?.url);
   setWindowSite(window.id, siteId);
   setWindowPath(window.id, siteId, path);
+});
+
+chrome.windows.onFocusChanged.addListener(async (_windowId) => {
+  await bootstrapDone;
+  updateBadge();
 });
 
 chrome.windows.onRemoved.addListener(async (windowId) => {
@@ -380,6 +389,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   invalidateSitesCache();
 
   await checkEnforcement(flushAt);
+  updateBadge();
 });
 
 // React to rule edits immediately (enable/disable/add/delete) rather than
