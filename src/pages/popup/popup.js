@@ -142,8 +142,8 @@ function renderHourChart(hourMs, clockFormat) {
   const labels = [0, 6, 12, 18].map(h => {
     const x = h === 0 ? 1 : (h * gap).toFixed(1);
     const anchor = h === 0 ? 'start' : 'middle';
-    return `<text x="${x}" y="${H - 2}" text-anchor="${anchor}" font-size="9" fill="${colorText}">${String(h).padStart(2, '0')}</text>`;
-  }).join('') + `<text x="${(W - 1).toFixed(1)}" y="${H - 2}" text-anchor="end" font-size="9" fill="${colorText}">00</text>`;
+    return `<text x="${x}" y="${H - 2}" text-anchor="${anchor}" font-size="9" fill="${colorText}">${formatHourLabel(h, clockFormat)}</text>`;
+  }).join('') + `<text x="${(W - 1).toFixed(1)}" y="${H - 2}" text-anchor="end" font-size="9" fill="${colorText}">${formatHourLabel(0, clockFormat)}</text>`;
 
   svg.innerHTML = rects + labels;
 

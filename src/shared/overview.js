@@ -66,7 +66,7 @@ export function buildOverviewData({ range, dayKeys, getDayEntry, getHourEntry, c
   return dayKeys.map(d => ({ label: shortLabel ? d.slice(5) : d, range: d, ...getDayEntry(d) }));
 }
 
-export function drawTimeChart({ svgEl, tooltipEl, legendEl, data, maxVal, formatVal, onBarClick, scale, gridLineWidth }) {
+export function drawTimeChart({ svgEl, tooltipEl, legendEl, data, maxVal, formatVal, onBarClick, scale, gridLineWidth, labelEvery }) {
   const rootStyle = getComputedStyle(document.documentElement);
   const hasAudio = data.some(d => d.audioMs > 0);
   if (legendEl) legendEl.style.display = hasAudio ? 'flex' : 'none';
@@ -90,6 +90,7 @@ export function drawTimeChart({ svgEl, tooltipEl, legendEl, data, maxVal, format
     onBarClick,
     scale,
     gridLineWidth,
+    labelEvery,
   });
 }
 
@@ -101,7 +102,7 @@ export function buildHourlyBuckets(avgPerHours, clockFormat = '24h') {
   }));
 }
 
-export function drawHourlyChart({ svgEl, tooltipEl, data, maxVal, scale, gridLineWidth }) {
+export function drawHourlyChart({ svgEl, tooltipEl, data, maxVal, scale, gridLineWidth, labelEvery }) {
   const rootStyle = getComputedStyle(document.documentElement);
   drawBarChart({
     svgEl,
@@ -113,10 +114,11 @@ export function drawHourlyChart({ svgEl, tooltipEl, data, maxVal, scale, gridLin
     color: rootStyle.getPropertyValue('--color-chart-hourly'),
     scale,
     gridLineWidth,
+    labelEvery,
   });
 }
 
-export function drawVisitsChart({ svgEl, tooltipEl, data, maxVal, onBarClick, scale, gridLineWidth }) {
+export function drawVisitsChart({ svgEl, tooltipEl, data, maxVal, onBarClick, scale, gridLineWidth, labelEvery }) {
   const rootStyle = getComputedStyle(document.documentElement);
   drawBarChart({
     svgEl,
@@ -131,6 +133,7 @@ export function drawVisitsChart({ svgEl, tooltipEl, data, maxVal, onBarClick, sc
     onBarClick,
     scale,
     gridLineWidth,
+    labelEvery,
   });
 }
 

@@ -140,7 +140,7 @@ export function drawBarChart(opts) {
   _drawBarChart(opts);
 }
 
-function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick, scale = 'linear', gridLineWidth = 1 }) {
+function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, formatTooltip = formatVal, hideMidTicks = () => false, color, series, onBarClick, scale = 'linear', gridLineWidth = 1, labelEvery: labelEveryProp }) {
   const rect = svgEl.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return;
   const W = rect.width, H = rect.height;
@@ -148,7 +148,9 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
   const gap = innerW / data.length;
-  const labelEvery = data.length === 24 ? 3 : Math.ceil(data.length / 10);
+  const is24h = data.length === 24;
+  const labelEvery = labelEveryProp ?? (is24h ? 6 : Math.ceil(data.length / 10));
+  const isDateLabel = !is24h && /^\d{2}-\d{2}$|^\d{4}-\d{2}(?:-\d{2})?$/.test(data[0]?.label ?? '');
 
   const rootStyle = getComputedStyle(document.documentElement);
   const gridColor = rootStyle.getPropertyValue('--color-border').trim() || '#f0f0f0';
@@ -174,8 +176,11 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
   let rects;
   if (series) {
     rects = data.map((d, i) => {
-      const showLabel = i % labelEvery === 0 || i === data.length - 1;
-      const labelHtml = showLabel ? `<text x="${padLeft + i * gap + gap / 2}" y="${H - 8}" text-anchor="middle" class="chart-axis-label" fill="var(--color-text-secondary)">${d.label}</text>` : '';
+      const showLabel = i % labelEvery === 0 || (i === data.length - 1 && !is24h);
+      const labelX = is24h ? padLeft + i * gap - (i > 0 ? 1 : 0) : padLeft + i * gap + gap / 2;
+      const labelAnchor = is24h ? (i === 0 ? 'start' : 'middle') : 'middle';
+      const labelText = isDateLabel && i !== 0 && i !== data.length - 1 ? d.label.slice(-2) : d.label;
+      const labelHtml = showLabel ? `<text x="${labelX}" y="${H - 8}" text-anchor="${labelAnchor}" class="chart-axis-label" fill="var(--color-text-secondary)">${labelText}</text>` : '';
 
       const nonZeroBars = series.filter(s => s.getValue(d) > 0);
       const hasAnyData = nonZeroBars.length > 0;
@@ -222,7 +227,7 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
       const x = padLeft + i * gap;
       const y = padTop + innerH - barH;
       const cx = padLeft + i * gap + gap / 2;
-      const showLabel = i % labelEvery === 0 || i === data.length - 1;
+      const showLabel = i % labelEvery === 0 || (i === data.length - 1 && !is24h);
       let faviconEl = '', labelEl = '';
       if (showLabel) {
         if (d.faviconDataUrl) {
@@ -230,7 +235,10 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
           faviconEl = `<image href="${d.faviconDataUrl}" x="${groupX}" y="${H - 21}" width="16" height="16"/>`;
           labelEl = `<text x="${groupX + 20}" y="${H - 8}" text-anchor="start" class="chart-axis-label" fill="var(--color-text-secondary)">${d.label}</text>`;
         } else {
-          labelEl = `<text x="${cx}" y="${H - 8}" text-anchor="middle" class="chart-axis-label" fill="var(--color-text-secondary)">${d.label}</text>`;
+          const lx = is24h ? padLeft + i * gap - (i > 0 ? 1 : 0) : cx;
+          const anchor = is24h ? (i === 0 ? 'start' : 'middle') : 'middle';
+          const lt = isDateLabel && i !== 0 && i !== data.length - 1 ? d.label.slice(-2) : d.label;
+          labelEl = `<text x="${lx}" y="${H - 8}" text-anchor="${anchor}" class="chart-axis-label" fill="var(--color-text-secondary)">${lt}</text>`;
         }
       }
       return `
@@ -242,7 +250,10 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
     }).join('');
   }
 
-  svgEl.innerHTML = gridlines + rects;
+  const closingLabel = is24h
+    ? `<text x="${W - padRight}" y="${H - 8}" text-anchor="end" class="chart-axis-label" fill="var(--color-text-secondary)">${data[0].label}</text>`
+    : '';
+  svgEl.innerHTML = gridlines + rects + closingLabel;
 
   let hoverOverlay = null;
 
