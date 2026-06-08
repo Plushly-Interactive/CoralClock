@@ -76,27 +76,41 @@ function fmtMs(ms) {
   return rem ? `${h}h ${rem}m` : `${h}h`;
 }
 
-// Both notifyBlocked and notifyApproaching persist their fired-state to
-// chrome.storage.session so deduplication survives MV3 service-worker restarts
-// within the same browser session. Without this the SW wakes up on every
-// navigation with empty in-memory state and re-fires on every wake.
+// Notification dedup state. Loaded once from chrome.storage.session into a
+// cached Promise so concurrent checkEnforcement calls (e.g. rapid navigations
+// or redirect chains) share the same in-memory object and never read stale
+// storage. Persisted back so state survives MV3 SW restarts within a session.
+let _notifyStateP = null;
+
+function getNotifyState() {
+  if (!_notifyStateP) {
+    _notifyStateP = chrome.storage.session.get('_notifyState').then(({ _notifyState: s }) => ({
+      blocked: new Set(s?.blocked ?? []),
+      approaching: new Map(Object.entries(s?.approaching ?? {})),
+    }));
+  }
+  return _notifyStateP;
+}
+
+function persistNotifyState(state) {
+  chrome.storage.session.set({
+    _notifyState: {
+      blocked: [...state.blocked],
+      approaching: Object.fromEntries(state.approaching),
+    },
+  });
+}
 
 async function notifyBlocked(overage) {
-  const { _blockedNotified: stored = [] } = await chrome.storage.session.get('_blockedNotified');
-  const notified = new Set(stored);
-  for (const ruleId of notified) {
-    if (!overage.has(ruleId)) notified.delete(ruleId);
+  const state = await getNotifyState();
+  for (const ruleId of state.blocked) {
+    if (!overage.has(ruleId)) state.blocked.delete(ruleId);
   }
-  const toFire = [];
+  let changed = false;
   for (const [ruleId, entry] of overage) {
-    if (notified.has(ruleId)) continue;
-    notified.add(ruleId);
-    toFire.push([ruleId, entry]);
-  }
-  if (toFire.length || notified.size !== stored.length) {
-    await chrome.storage.session.set({ _blockedNotified: [...notified] });
-  }
-  for (const [ruleId, entry] of toFire) {
+    if (state.blocked.has(ruleId)) continue;
+    state.blocked.add(ruleId);
+    changed = true;
     const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
     chrome.notifications.create(`blocked-${ruleId}`, {
       type: 'basic',
@@ -105,16 +119,16 @@ async function notifyBlocked(overage) {
       message: `${label} is now blocked`,
     });
   }
+  if (changed) persistNotifyState(state);
 }
 
 async function notifyApproaching(approaching, now) {
-  const { _approachNotified: stored = {} } = await chrome.storage.session.get('_approachNotified');
-  const notified = { ...stored };
+  const state = await getNotifyState();
   let changed = false;
   for (const [ruleId, entry] of approaching) {
     const windowKey = approachWindowKey(entry.period, now);
-    if (notified[ruleId] === windowKey) continue;
-    notified[ruleId] = windowKey;
+    if (state.approaching.get(ruleId) === windowKey) continue;
+    state.approaching.set(ruleId, windowKey);
     changed = true;
     const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
     const pct = Math.round(entry.pct * 100);
@@ -126,7 +140,7 @@ async function notifyApproaching(approaching, now) {
       message: `${label} — ${pct}% of ${entry.limit} ${entry.limitUnit} ${PERIOD_LABEL[entry.period] ?? entry.period} limit used (${left} left)`,
     });
   }
-  if (changed) await chrome.storage.session.set({ _approachNotified: notified });
+  if (changed) persistNotifyState(state);
 }
 
 // Drop the in-memory site caches after storage is rewritten (flush), so
