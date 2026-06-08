@@ -11,7 +11,13 @@ export async function updateBadge() {
     chrome.action.setBadgeText({ text: '' });
     return;
   }
-  const win = await chrome.windows.getLastFocused({ populate: true });
+  let win;
+  try {
+    win = await chrome.windows.getLastFocused({ populate: true });
+  } catch {
+    chrome.action.setBadgeText({ text: '' });
+    return;
+  }
   const tab = win?.tabs?.find(t => t.active);
   const siteId = siteIdFromUrl(tab?.url);
   if (!siteId) {
