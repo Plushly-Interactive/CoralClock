@@ -95,12 +95,18 @@ function sumBucket(rule, siteBucket, subpageBucket) {
   return sum;
 }
 
+const APPROACHING_THRESHOLD = 0.8;
+
 // Pure. For each enabled rule, sum usage over its period window and compare to
-// the limit. Returns Map<ruleId, { target, matchType, path, overBy }> for rules
-// currently over their limit. No chrome APIs.
+// the limit. Returns { overage, approaching } where:
+//   overage: Map<ruleId, { matchType, target?, path?, pattern?, keyword?, overBy }>
+//   approaching: Map<ruleId, { matchType, target?, pattern?, keyword?, period, pct, limit, limitUnit }>
+//     rules that have reached APPROACHING_THRESHOLD of their limit but are not yet over.
+// No chrome APIs.
 export function computeOverage(rules, stores, now = Date.now()) {
   const { sitesByDay = {}, sitesByHour = {}, subpagesByDay = {}, subpagesByHour = {} } = stores;
   const overage = new Map();
+  const approaching = new Map();
 
   for (const rule of rules) {
     if (!rule.enabled) continue;
@@ -118,9 +124,15 @@ export function computeOverage(rules, stores, now = Date.now()) {
                   : rule.matchType === 'keyword' ? { ...base, keyword: rule.keyword }
                   : { ...base, target: rule.target, path: rule.path };
       overage.set(rule.id, entry);
+    } else if (limitMs > 0 && used >= APPROACHING_THRESHOLD * limitMs) {
+      const base = { matchType: rule.matchType, period: rule.period, pct: used / limitMs, limit: rule.limit, limitUnit: rule.limitUnit, remainingMs: limitMs - used };
+      const entry = rule.matchType === 'regex'   ? { ...base, pattern: rule.pattern }
+                  : rule.matchType === 'keyword' ? { ...base, keyword: rule.keyword }
+                  : { ...base, target: rule.target };
+      approaching.set(rule.id, entry);
     }
   }
-  return overage;
+  return { overage, approaching };
 }
 
 // --- DNR publisher (chrome APIs) ---

@@ -1,4 +1,5 @@
-import { localDayKey } from '../shared/timeUtils.js';
+import { localDayKey, localHourKey } from '../shared/timeUtils.js';
+import { weekDow } from '../shared/weekStart.js';
 import { ensureStorageVersion } from '../data/migrations.js';
 import { TOUR_VERSION } from '../shared/tour.js';
 import { PREF_IDLE_THRESHOLD_SEC, PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
@@ -53,6 +54,50 @@ let idleStartedAt = null;
 // Mirrors the value passed to chrome.idle.setDetectionInterval so the
 // onStateChanged listener can compute the retroactive clip point synchronously.
 let cachedIdleThresholdMs = DEFAULT_IDLE_THRESHOLD_SEC * 1000;
+
+// Tracks which rules have already fired an approaching-limit notification this
+// period (ruleId → period window key). Prevents re-firing every flush tick.
+// In-memory: resets on service-worker restart, but so does the period window
+// for hourly rules, and daily/weekly keys naturally change with the calendar.
+const approachNotified = new Map();
+
+function approachWindowKey(period, now) {
+  if (period === 'hour') return localHourKey(now);
+  if (period === 'week') {
+    const dow = weekDow(new Date(now));
+    const base = new Date(now);
+    base.setDate(base.getDate() - dow);
+    return localDayKey(base.getTime());
+  }
+  return localDayKey(now);
+}
+
+const PERIOD_LABEL = { hour: 'hourly', day: 'daily', week: 'weekly' };
+
+function fmtMs(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(ms / 3600000);
+  const rem = Math.round((ms % 3600000) / 60000);
+  return rem ? `${h}h ${rem}m` : `${h}h`;
+}
+
+function notifyApproaching(approaching, now) {
+  for (const [ruleId, entry] of approaching) {
+    const windowKey = approachWindowKey(entry.period, now);
+    if (approachNotified.get(ruleId) === windowKey) continue;
+    approachNotified.set(ruleId, windowKey);
+    const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
+    const pct = Math.round(entry.pct * 100);
+    const left = fmtMs(entry.remainingMs);
+    chrome.notifications.create(`approach-${ruleId}`, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('resources/icons/biteguard-icon-blue-square-128px.png'),
+      title: 'Approaching time limit',
+      message: `${label} — ${pct}% of ${entry.limit} ${entry.limitUnit} ${PERIOD_LABEL[entry.period] ?? entry.period} limit used (${left} left)`,
+    });
+  }
+}
 
 // Drop the in-memory site caches after storage is rewritten (flush), so
 // the next query re-reads fresh data.
@@ -463,8 +508,9 @@ async function checkEnforcement(now) {
     [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
   } = await chrome.storage.local.get(['rules', SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
 
-  const overage = computeOverage(rules, { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, now);
+  const { overage, approaching } = computeOverage(rules, { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, now);
   await publishOverage(overage);
+  notifyApproaching(approaching, now);
 }
 
 // Pre-emptive block: on a main-frame navigation, flush the tracker's accrued
