@@ -12,11 +12,6 @@
 - **Suggest rules from analytics** — proactively surface "you might want to limit this" prompts when a site's usage crosses a heuristic (e.g. consistently high daily time, sharp week-over-week increase, or far above the user's per-site average). A suggestion would pre-fill the rules add card (reusing the existing `?target=<host>` pre-fill path) with a sensible default limit. Turns the passive analytics into actionable enforcement instead of waiting for the user to notice and act. Could surface on the dashboard or site page. Distinct from the existing [empty-state guidance](#onboarding), which is first-install only.
 - **Streak (limit compliance)** — e.g. "4 / 7 days under limit this week". Motivational, pattern-oriented. Requires per-day limit-compliance history. Natural fit on the blocked or rules page, but it's a cross-cutting insight. Distinct from the per-site activity streak under [Site page stats](#site-page-stats).
 
-## Popup
-
-- **Live "spent vs limit" progress bars** — the popup lists enabled rules read-only but shows no current usage. Add a per-rule mini progress bar (e.g. "8m / 10m this hour"), reusing the tracking data the background already holds in memory, so the popup is glanceable and actionable.
-- **Current-tab quick stats** — show time spent today on the active tab's site, plus a one-click "Limit this site" without leaving the popup.
-
 ## UI & visuals
 
 - **Per-site comparison / multi-select on dashboard** — the dashboard shows aggregate charts and `site.html` shows one site at a time; there's no way to pick 2–3 sites and view their trends together. Add multi-select (e.g. checkboxes on table rows) that overlays the selected sites' active-time series on one chart for side-by-side comparison. Pairs with the [dashboard list search bar](#ui--visuals) (find, then select). Distinct from the existing name-group / subdomain-merge controls, which *combine* sites into one total rather than comparing them.

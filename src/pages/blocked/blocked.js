@@ -85,9 +85,13 @@ function formatCountdown(ms) {
 })();
 
 import { pickQuote } from '../../shared/quotes.js';
+import { QUOTES } from '../../shared/quotes.data.js';
 
 (async () => {
-  const q = await pickQuote(site ?? '');
+  const quoteId = params.get('quoteId');
+  const q = quoteId
+    ? (QUOTES.find(q => q.id === quoteId) ?? await pickQuote(site ?? ''))
+    : await pickQuote(site ?? '');
   if (!q) return;
   const quoteEl = document.querySelector('#quote');
 

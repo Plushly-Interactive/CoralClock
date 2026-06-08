@@ -2,6 +2,7 @@ import { localDayKey, localHourKey } from '../shared/timeUtils.js';
 import { RULE_MULTIPLIERS, describeRule, BLOCKS_DAY_KEY, blockKey } from '../shared/rules.js';
 import { weekDow } from '../shared/weekStart.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
+import { pickQuote } from '../shared/quotes.js';
 
 // Usage contributed by one site/subpage cell under the rule's mode.
 function cellUsage(cell, mode) {
@@ -124,13 +125,14 @@ export function computeOverage(rules, stores, now = Date.now()) {
 
 // --- DNR publisher (chrome APIs) ---
 
-function blockedUrl(ruleId, entry, originalUrl) {
+function blockedUrl(ruleId, entry, originalUrl, quoteId) {
   const params = new URLSearchParams({ rule: ruleId });
   if (entry.target) {
     params.set('site', entry.target);
     if (entry.path) params.set('path', entry.path);
   }
   if (originalUrl) params.set('url', originalUrl);
+  if (quoteId) params.set('quoteId', quoteId);
   return chrome.runtime.getURL(`src/pages/blocked/blocked.html?${params}`);
 }
 
@@ -169,16 +171,18 @@ async function reloadMatchingTabs(overage) {
   const pairs = [...overage]; // [ruleId, entry]
   if (!pairs.length) return;
   const tabs = await chrome.tabs.query({});
-  for (const tab of tabs) {
-    if (!tab.url) continue;
+  const matching = tabs.filter(tab => tab.url && pairs.find(([, e]) => tabMatchesEntry(tab.url, e)));
+  const site = pairs[0][1].target ?? '';
+  const quote = matching.length ? await pickQuote(site) : null;
+  const quoteId = quote?.id ?? null;
+  for (const tab of matching) {
     const hit = pairs.find(([, e]) => tabMatchesEntry(tab.url, e));
-    if (!hit) continue;
     const [ruleId, entry] = hit;
     // We know the exact page this tab is on, so send it to the blocked page
     // ourselves with the original URL preserved — returnUnblockedTabs uses it to
     // restore the exact page on unblock. (DNR still catches fresh navigations;
     // those carry no original URL and fall back to the rule target.)
-    chrome.tabs.update(tab.id, { url: blockedUrl(ruleId, entry, tab.url) });
+    chrome.tabs.update(tab.id, { url: blockedUrl(ruleId, entry, tab.url, quoteId) });
   }
 }
 
