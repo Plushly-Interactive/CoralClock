@@ -1,4 +1,5 @@
 import { localDayKey, localHourKey, splitByHour } from '../shared/timeUtils.js';
+import { PREF_FIRST_BROWSE_BY_DAY } from '../shared/prefKeys.js';
 
 const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
 
@@ -141,7 +142,7 @@ export function createTrackingModule({
     tracker.flushAllElapsed(now);
     const { active, audio, overlap, idle, visits } = tracker.pending;
     if (active.size === 0 && audio.size === 0 && overlap.size === 0 && idle.size === 0 && visits.size === 0) return;
-    const stored = await chrome.storage.local.get([dayStorageKey, hourStorageKey]);
+    const stored = await chrome.storage.local.get([dayStorageKey, hourStorageKey, PREF_FIRST_BROWSE_BY_DAY]);
     const byDay = stored[dayStorageKey] ?? {};
     const byHour = stored[hourStorageKey] ?? {};
 
@@ -179,8 +180,14 @@ export function createTrackingModule({
       dbg(`flush[${hourStorageKey}]: +${count} visits → ${key} (hour total now ${getCell(byHour[hour], key).visits})`);
     }
 
+    const firstBrowseByDay = stored[PREF_FIRST_BROWSE_BY_DAY] ?? {};
+    const toWrite = { [dayStorageKey]: byDay, [hourStorageKey]: byHour };
+    if (visits.size > 0 && !firstBrowseByDay[day]) {
+      firstBrowseByDay[day] = now;
+      toWrite[PREF_FIRST_BROWSE_BY_DAY] = firstBrowseByDay;
+    }
     tracker.clearPending();
-    await chrome.storage.local.set({ [dayStorageKey]: byDay, [hourStorageKey]: byHour });
+    await chrome.storage.local.set(toWrite);
   }
 
   function applyIdleClip(idleSince, now) {
