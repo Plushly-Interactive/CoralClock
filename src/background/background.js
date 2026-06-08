@@ -1,7 +1,7 @@
 import { localDayKey } from '../shared/timeUtils.js';
 import { ensureStorageVersion } from '../data/migrations.js';
 import { TOUR_VERSION } from '../shared/tour.js';
-import { PREF_IDLE_THRESHOLD_SEC } from '../shared/prefKeys.js';
+import { PREF_IDLE_THRESHOLD_SEC, PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
 import { getIdleThresholdSec, DEFAULT_IDLE_THRESHOLD_SEC } from '../shared/idleConfig.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import {
@@ -399,6 +399,11 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== 'local' || !changes.rules) return;
   await bootstrapDone;
   await checkEnforcement(Date.now());
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !(PREF_BADGE_ENABLED in changes)) return;
+  updateBadge();
 });
 
 chrome.storage.onChanged.addListener(async (changes, area) => {
