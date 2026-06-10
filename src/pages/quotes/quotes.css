@@ -1,0 +1,72 @@
+#quotes-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+#empty-state {
+  margin: auto;
+  text-align: center;
+}
+
+#quotes-list:empty {
+  display: none;
+}
+
+#quotes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 0;
+}
+
+.quote-card {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.quote-text {
+  font-style: italic;
+  line-height: 1.5;
+  font-size: var(--font-sm);
+}
+
+.quote-text .link-btn {
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.quote-author {
+  font-size: var(--font-sm);
+}
+
+.unfav-btn {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  padding: 0;
+  margin-top: 4px;
+}
+
+.unfav-btn:hover {
+  color: var(--color-accent-light);
+}

@@ -42,9 +42,7 @@ Most features currently implemented all act *at the limit boundary* — measure 
 
 ## Quotes
 
-- **Quote philosophy page** — an in-app page (e.g. accessible from the blocked page or options) that explains the values behind the quote system to users: what makes a quote eligible, why authors are vetted, the mascot characters, and the curation philosophy. Based on the curation doc, keeping only end-user-relevant information (no sourcing rules, no JS field specs).
-- **Favorite / save quotes + a seen-quote history** — today `seenQuoteIds` is tracked only to avoid repeats within a cycle (`quotes.js`), then discarded; there's no way to revisit a quote that landed. Add an opt-in "favorite this quote" action on the blocked page and a persistent list of quotes the user has seen (and/or favorited), surfaced on the same page as the [quote philosophy](#quotes). Could tie into the [journaling prompt on block](#out-of-scope-v1--future): a quote the user saved becomes a prompt to reflect on in their journal, linking the curation system to the reflection log rather than keeping them separate.
-- Show the same suite on all pages that get blocked at the same time instead of a randomly pulled one each.
+- **Quote philosophy page** — an in-app page (e.g. accessible from the blocked page or options) that explains the values behind the quote system to users: what makes a quote eligible, why authors are vetted, the mascot characters, and the curation philosophy. Based on the curation doc, keeping only end-user-relevant information (no sourcing [text](about:blank#blocked)rules, no JS field specs).
 
 ## Settings & configuration
 
