@@ -86,6 +86,7 @@ function formatCountdown(ms) {
 
 import { pickQuote } from '../../shared/quotes.js';
 import { QUOTES } from '../../shared/quotes.data.js';
+import { PREF_FAVORITE_QUOTE_IDS } from '../../shared/prefKeys.js';
 
 (async () => {
   const quoteId = params.get('quoteId');
@@ -127,4 +128,18 @@ import { QUOTES } from '../../shared/quotes.data.js';
   }
 
   quoteEl.removeAttribute('hidden');
+
+  const actionsEl = document.querySelector('#quote-actions');
+  const favBtn = document.querySelector('#fav-btn');
+  const { [PREF_FAVORITE_QUOTE_IDS]: favIds = [] } = await chrome.storage.local.get(PREF_FAVORITE_QUOTE_IDS);
+  if (favIds.includes(q.id)) favBtn.classList.add('favorited');
+  actionsEl.removeAttribute('hidden');
+
+  favBtn.addEventListener('click', async () => {
+    const { [PREF_FAVORITE_QUOTE_IDS]: current = [] } = await chrome.storage.local.get(PREF_FAVORITE_QUOTE_IDS);
+    const isFav = current.includes(q.id);
+    const updated = isFav ? current.filter(id => id !== q.id) : [...current, q.id];
+    await chrome.storage.local.set({ [PREF_FAVORITE_QUOTE_IDS]: updated });
+    favBtn.classList.toggle('favorited', !isFav);
+  });
 })();

@@ -5,3 +5,4 @@ export const PREF_WEEK_START = 'weekStart';
 export const PREF_LAST_EXPORT_AT = 'lastExportAt';
 export const PREF_BADGE_ENABLED = 'badgeEnabled';
 export const PREF_FIRST_BROWSE_BY_DAY = 'firstBrowseByDay';
+export const PREF_FAVORITE_QUOTE_IDS = 'favoriteQuoteIds';
