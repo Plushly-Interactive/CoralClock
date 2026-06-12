@@ -126,14 +126,17 @@ export function createTrackingModule({
     const { activeKeys, audioKeys } = parseSnapshot(snap);
     dbg(`recover[${snapshotStorageKey}]: crediting ${endAt - snap.at}ms to`, activeKeys.length, 'active /', audioKeys.length, 'audio keys', idleSince !== null ? `(idle clip at ${idleSince})` : '');
     const activeKeySet = new Set(activeKeys);
+    const audioKeySet = new Set(audioKeys);
     for (const key of activeKeys) {
-      if (activeEndAt > snap.at) tracker.pushRange('active', key, [snap.at, activeEndAt]);
-      if (idleStartAt !== null && endAt > idleStartAt) tracker.pushRange('idle', key, [idleStartAt, endAt]);
+      // An audible key keeps full active time even past idleSince (matches applyIdleClip).
+      const keyActiveEnd = audioKeySet.has(key) ? endAt : activeEndAt;
+      if (keyActiveEnd > snap.at) tracker.pushRange('active', key, [snap.at, keyActiveEnd]);
+      if (!audioKeySet.has(key) && idleStartAt !== null && endAt > idleStartAt) tracker.pushRange('idle', key, [idleStartAt, endAt]);
     }
     for (const key of audioKeys) {
       tracker.pushRange('audio', key, [snap.at, endAt]);
-      if (activeKeySet.has(key) && activeEndAt > snap.at) {
-        tracker.pushRange('overlap', key, [snap.at, activeEndAt]);
+      if (activeKeySet.has(key) && endAt > snap.at) {
+        tracker.pushRange('overlap', key, [snap.at, endAt]);
       }
     }
   }
@@ -355,12 +358,14 @@ export function createRangeTracker() {
 
   // Splits in-flight ranges at `idleSince`: the portion before counts as active,
   // the portion after counts as idle. Audio is not clipped — a playing tab is
-  // real usage even while the user is away. Called by the flush alarm when
+  // real usage even while the user is away. An audible key also keeps its active
+  // time running full (clip = now): a tab the user is watching/listening to
+  // counts as active even while idle. Called by the flush alarm when
   // chrome.idle reports the user idle/locked; idleSince is `now - threshold`.
   function applyIdleClip(idleSince, now) {
     for (const [key, s] of states) {
       if (!s.wasActive && !s.wasAudible) continue;
-      const clip = Math.max(s.startedAt, Math.min(idleSince, now));
+      const clip = s.wasAudible ? now : Math.max(s.startedAt, Math.min(idleSince, now));
       if (s.wasActive && clip > s.startedAt) {
         const ranges = pendingActive.get(key) ?? [];
         ranges.push([s.startedAt, clip]);
