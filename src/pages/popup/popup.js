@@ -32,24 +32,30 @@ document.querySelector('#manage-btn').addEventListener('click', () => {
   window.close();
 });
 
+// True elapsed browser-active ms for one hour: the deduplicated wallClockByHour
+// value when present, else the per-site active+audio−overlap sum for hours that
+// predate wall-clock tracking.
+function wallClockHourMs(hourKey, wallClockByHour, sitesByHour) {
+  if (wallClockByHour[hourKey] != null) return wallClockByHour[hourKey];
+  const bucket = sitesByHour[hourKey] ?? {};
+  return Object.values(bucket).reduce((s, c) =>
+    s + (c.activeMs ?? 0) + (c.audioMs ?? 0) - (c.overlapMs ?? 0), 0);
+}
+
 async function renderTodayStats() {
   const today = localDayKey(Date.now());
-  const { sitesByDay = {}, sitesByHour = {}, [PREF_CLOCK_FORMAT]: clockFormat = '24h', [PREF_FIRST_BROWSE_BY_DAY]: firstBrowseByDay = {} } =
-    await chrome.storage.local.get(['sitesByDay', 'sitesByHour', PREF_CLOCK_FORMAT, PREF_FIRST_BROWSE_BY_DAY]);
+  const { sitesByDay = {}, sitesByHour = {}, wallClockByHour = {}, [PREF_CLOCK_FORMAT]: clockFormat = '24h', [PREF_FIRST_BROWSE_BY_DAY]: firstBrowseByDay = {} } =
+    await chrome.storage.local.get(['sitesByDay', 'sitesByHour', 'wallClockByHour', PREF_CLOCK_FORMAT, PREF_FIRST_BROWSE_BY_DAY]);
   const todaySites = sitesByDay[today] ?? {};
 
-  // --- per-site entries ---
-  const entries = Object.entries(todaySites)
-    .map(([siteId, cell]) => ({
-      siteId,
-      ms: (cell.activeMs ?? 0) + (cell.audioMs ?? 0) - (cell.overlapMs ?? 0),
-      visits: cell.visits ?? 0,
-    }))
-    .filter(e => e.ms > 0 || e.visits > 0)
-    .sort((a, b) => b.ms - a.ms);
-
-  // TODAY
-  const totalMs = entries.reduce((s, e) => s + e.ms, 0);
+  // TODAY — wall-clock total: overlapping parallel-window time counted once,
+  // summed across today's elapsed hours. Falls back to the per-site sum for any
+  // hour predating wall-clock tracking.
+  const currentHour = new Date().getHours();
+  let totalMs = 0;
+  for (let h = 0; h <= currentHour; h++) {
+    totalMs += wallClockHourMs(`${today}T${String(h).padStart(2, '0')}`, wallClockByHour, sitesByHour);
+  }
   document.querySelector('#stats-total-time').textContent = totalMs > 0 ? formatMs(totalMs) : '—';
 
   // SITES
@@ -57,7 +63,6 @@ async function renderTodayStats() {
   document.querySelector('#stats-sites-count').textContent = sitesCount > 0 ? sitesCount : '—';
 
   // VS AVG — compare today-so-far (hours 0→now) against same hours averaged across past days
-  const currentHour = new Date().getHours();
   const pastDayKeys = Object.keys(sitesByDay)
     .filter(k => k !== today)
     .sort()
@@ -65,9 +70,7 @@ async function renderTodayStats() {
   const pastTotals = pastDayKeys.map(dayKey => {
     let t = 0;
     for (let h = 0; h <= currentHour; h++) {
-      const bucket = sitesByHour[`${dayKey}T${String(h).padStart(2, '0')}`] ?? {};
-      t += Object.values(bucket).reduce((s, c) =>
-        s + (c.activeMs ?? 0) + (c.audioMs ?? 0) - (c.overlapMs ?? 0), 0);
+      t += wallClockHourMs(`${dayKey}T${String(h).padStart(2, '0')}`, wallClockByHour, sitesByHour);
     }
     return t;
   });
@@ -80,9 +83,10 @@ async function renderTodayStats() {
 
   // PEAK HOUR + FIRST BROWSE (from sitesByHour)
   const hourMs = Array.from({ length: 24 }, (_, h) => {
-    const bucket = sitesByHour[`${today}T${String(h).padStart(2, '0')}`] ?? {};
+    const hourKey = `${today}T${String(h).padStart(2, '0')}`;
+    const bucket = sitesByHour[hourKey] ?? {};
     return {
-      ms: Object.values(bucket).reduce((s, c) => s + (c.activeMs ?? 0), 0),
+      ms: wallClockHourMs(hourKey, wallClockByHour, sitesByHour),
       visits: Object.values(bucket).reduce((s, c) => s + (c.visits ?? 0), 0),
     };
   });

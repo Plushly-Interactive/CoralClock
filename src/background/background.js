@@ -11,7 +11,7 @@ import {
   flushToStorage, reconcileWindows, initTracking,
   saveSnapshot, recoverFromSnapshot,
   applyIdleClip,
-  SITES_DAY_KEY, SITES_HOUR_KEY,
+  SITES_DAY_KEY, SITES_HOUR_KEY, WALLCLOCK_HOUR_KEY,
 } from './siteTracking.js';
 import {
   setWindowPath, removeWindowPath,
@@ -41,6 +41,7 @@ console.log(`[BG-DBG ${new Date().toISOString()}] SERVICE WORKER STARTED`);
 
 let cachedByDay = null;
 let cachedByHour = null;
+let cachedWallClock = null;
 let cachedSubpagesByDay = null;
 let cachedSubpagesByHour = null;
 let bootstrapAt;
@@ -148,6 +149,7 @@ async function notifyApproaching(approaching, now) {
 function invalidateSitesCache() {
   cachedByDay = null;
   cachedByHour = null;
+  cachedWallClock = null;
   cachedSubpagesByDay = null;
   cachedSubpagesByHour = null;
 }
@@ -291,6 +293,10 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
     const { [SITES_HOUR_KEY]: sitesByHour = {} } = await chrome.storage.local.get(SITES_HOUR_KEY);
     cachedByHour = sitesByHour;
   }
+  if (!cachedWallClock) {
+    const { [WALLCLOCK_HOUR_KEY]: wallClockByHour = {} } = await chrome.storage.local.get(WALLCLOCK_HOUR_KEY);
+    cachedWallClock = wallClockByHour;
+  }
 
   if (!dayKeys) {
     const now = new Date();
@@ -326,6 +332,7 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
   const D = dayKeys.length;
   if (D === 0) return new Array(24).fill(0);
 
+  const browsing = c => (c?.activeMs ?? 0) + (c?.audioMs ?? 0) - (c?.overlapMs ?? 0);
   const sums = new Array(24).fill(0);
   for (const dayKey of dayKeys) {
     for (let h = 0; h < 24; h++) {
@@ -333,9 +340,12 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
       const bucket = cachedByHour[hourKey];
       if (!bucket) continue;
       if (siteIds?.length) {
-        for (const id of siteIds) sums[h] += bucket[id]?.activeMs ?? 0;
+        for (const id of siteIds) sums[h] += browsing(bucket[id]);
       } else {
-        for (const entry of Object.values(bucket)) sums[h] += entry.activeMs ?? 0;
+        // Aggregate: deduplicated wall-clock browsing time (parallel windows on
+        // different sites counted once), falling back to the per-site browsing
+        // sum for hours that predate wall-clock tracking.
+        sums[h] += cachedWallClock[hourKey] ?? Object.values(bucket).reduce((s, c) => s + browsing(c), 0);
       }
     }
   }
