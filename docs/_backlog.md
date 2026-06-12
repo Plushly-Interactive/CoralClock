@@ -23,7 +23,6 @@
 
 ## Notifications & awareness
 
-- **Browser notifications** — use `chrome.notifications` for "approaching limit" and "blocked" events. There is no notification surface today; everything is passive until a hard block.
 - **Weekly summary digest** — a periodic "here's your week" recap: total time, top sites, blocks triggered, limit-compliance, week-over-week change. Could surface as an in-app page opened from a `chrome.notifications` nudge each week, and/or an emailed digest (email requires an external send path — a backend or a mailto export — since an extension can't send mail directly). Complements the in-app comparisons under [Analytics & insights](#analytics--insights), but is a scheduled, pushed recap rather than a value the user has to go look for.
 
 ## Well-being & intention
