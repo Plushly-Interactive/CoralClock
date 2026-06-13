@@ -1,0 +1,39 @@
+#timeline-wrap {
+  margin: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+#timeline-chart {
+  width: 100%;
+  /* height is set in JS to the viewBox height so rows aren't vertically stretched */
+}
+
+#timeline-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-left: 10px;
+}
+.legend-active { background: var(--color-chart-time); }
+.legend-audio { background: var(--color-chart-audio); }
+.legend-idle { background: var(--color-text-secondary); }
+
+#timeline-tooltip {
+  position: fixed;
+}
+
+#timeline-empty {
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}

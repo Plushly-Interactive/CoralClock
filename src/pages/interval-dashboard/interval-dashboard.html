@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>BiteGuard Dashboard</title>
+    <title>BiteGuard — Interval dashboard</title>
     <script src="../../shared/theme.js"></script>
     <link rel="stylesheet" href="../../shared/theme.css" />
-    <link rel="stylesheet" href="../../shared/tour.css" />
-    <link rel="stylesheet" href="./dashboard.css" />
+    <link rel="stylesheet" href="../dashboard/dashboard.css" />
+    <link rel="stylesheet" href="./interval-dashboard.css" />
   </head>
   <body>
     <header>
@@ -15,19 +15,17 @@
           <img id="brand-logo" src="../../../resources/icons/biteguard-icon-blue-square-48px.png" alt="BiteGuard" />
           <span id="brand-name"><span class="brand-bite">Bite</span><span class="brand-guard">Guard</span></span>
         </div>
-        <button id="tour-btn" class="square-btn" title="Take the tour">?</button>
+        <span id="interval-badge" class="text-meta">interval data</span>
       </div>
       <div id="header-center"></div>
       <div id="header-right">
         <span id="storage-bar-label" class="text-meta"></span>
-        <button id="interval-dashboard-btn" class="btn">Interval dashboard</button>
+        <button id="timeline-btn" class="btn">Timeline</button>
         <button id="prune-btn" class="btn">Manage storage</button>
         <button id="rules-btn" class="btn" type="button">Manage rules</button>
         <button id="settings-btn" class="square-btn" title="Settings">⛭</button>
       </div>
     </header>
-
-
 
     <div id="dashboard-grid">
       <div id="dashboard-charts-col">
@@ -82,6 +80,6 @@
 
     <div id="notification" hidden></div>
 
-    <script type="module" src="./dashboard.js"></script>
+    <script type="module" src="./interval-dashboard.js"></script>
   </body>
 </html>

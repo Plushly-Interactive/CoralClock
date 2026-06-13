@@ -25,6 +25,9 @@ import {
 import { computeOverage, publishOverage } from './enforcement.js';
 import { dbg, isDebug, initDebug } from './trackingUtils.js';
 import { updateBadge } from './badge.js';
+// Self-contained interval-log sidecar: registers its own listeners on import and
+// shares no state with the trackers above. Delete this line + its files to remove.
+import './intervalTracker.js';
 import {
   MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,

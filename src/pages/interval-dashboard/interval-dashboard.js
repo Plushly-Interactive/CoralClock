@@ -1,20 +1,26 @@
 import { formatMs, localDayKey, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, formatBytes, navButton, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
-import { seedTestData } from '../../data/seedTestData.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
-import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
-import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
-import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
+import { getSitesByDay, getAvgPerClockHour } from '../../data/intervalAggregates.js';
+import { count } from '../../data/intervalLog.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+
+// Clone of the dashboard that renders the interval log instead of the scalar
+// aggregates. Render logic is duplicated from dashboard.js by design (isolated,
+// ditchable); only the two data sources differ — getSitesByDay /
+// getAvgPerClockHour from intervalAggregates. `visits` here = non-contiguous
+// presence intervals per domain (no audio visits). Row links open the real site
+// page (scalar data) — a known limitation, since there is no interval-data site
+// page.
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
 const PREF_SEARCH = 'siteSearch';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
-navButton(document.querySelector('#interval-dashboard-btn'), '../interval-dashboard/interval-dashboard.html');
+navButton(document.querySelector('#timeline-btn'), '../interval-timeline/interval-timeline.html');
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
 navButton(document.querySelector('#prune-btn'), '../storage-management/storage-management.html');
 navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
@@ -51,9 +57,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => fetchTrackingData({
-    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: null, range,
-  }),
+  loadAvgPerHour: (range) => getAvgPerClockHour(range),
   clockFormat,
 });
 
@@ -257,13 +261,6 @@ window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
 });
 
-(async () => {
-  if (new URLSearchParams(location.search).get('tour') === '1') {
-    await maybeEnableMockMode();
-  }
-  await loadAndRender();
-})();
-
 window.addEventListener('pageshow', () => {
   hideBrief = sessionStorage.getItem(PREF_HIDE_BRIEF) !== 'false';
   hideBriefToggle.checked = hideBrief;
@@ -278,22 +275,30 @@ window.addEventListener('pageshow', () => {
 });
 
 async function loadAndRender() {
-  if (new URL(location.href).searchParams.has('seed')) {
-    history.replaceState(null, '', location.pathname);
-    await seedTestData();
-  }
-  byDayCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_DAY });
+  byDayCache = await getSitesByDay();
   render();
-  renderStorageBar();
+  showIntervalSize();
 }
 
-document.querySelector('#seed-btn')?.addEventListener('click', async () => {
-  await seedTestData();
-  byDayCache = null;
-  hourly.clearCache();
-  await loadAndRender();
-});
+// Footprint comparison in the header: interval DB vs the regular (scalar)
+// tracking data. Interval size = navigator.storage.estimate() (origin IndexedDB
+// usage — the interval DB dominates it). Scalar size = bytes of the scalar
+// tracking keys in chrome.storage.local. Different measurement bases, so both
+// are approximate, but enough to compare orders of magnitude.
+const SCALAR_KEYS = ['sitesByDay', 'sitesByHour', 'wallClockByHour', 'subpagesByDay', 'subpagesByHour'];
 
+async function showIntervalSize() {
+  const el = document.querySelector('#storage-bar-label');
+  const n = await count().catch(() => 0);
+  let txt = `interval: ${n.toLocaleString()} rows`;
+  if (navigator.storage?.estimate) {
+    const est = await navigator.storage.estimate().catch(() => null);
+    if (est?.usage != null) txt += ` (~${formatBytes(est.usage)})`;
+  }
+  const scalarBytes = await chrome.storage.local.getBytesInUse(SCALAR_KEYS).catch(() => null);
+  if (scalarBytes != null) txt += ` · regular: ~${formatBytes(scalarBytes)}`;
+  el.textContent = txt;
+}
 
 function dayKeys(range) {
   const keys = [];
@@ -310,9 +315,9 @@ function dayKeys(range) {
 }
 
 const TOP_SUBHEADING = { time: '(active time)', audio: '(audio playback)', visits: '(visits)' };
-const TOP_COLOR = { 
-  time: rootStyle.getPropertyValue('--color-chart-time'), 
-  audio: rootStyle.getPropertyValue('--color-chart-audio'), 
+const TOP_COLOR = {
+  time: rootStyle.getPropertyValue('--color-chart-time'),
+  audio: rootStyle.getPropertyValue('--color-chart-audio'),
   visits: rootStyle.getPropertyValue('--color-chart-visits') };
 
 function renderTopChart() {
@@ -390,162 +395,5 @@ function render() {
   renderTable(filteredRows());
 }
 
-const tourBtn = document.querySelector('#tour-btn');
-
-const dashboardTourSteps = [
-  {
-    selector: '#tour-btn',
-    title: 'Welcome to BiteGuard',
-    body: 'This guided tour will walk you through each surface of BiteGuard.',
-  },
-  {
-    selector: '#range-select',
-    title: 'Time range',
-    body: 'Choose a time range here. All charts and the table update to match.',
-  },
-  {
-    selector: '#top-chart-container',
-    title: 'Top sites',
-    body: 'Your five most-active sites for the selected range.',
-  },
-  {
-    selector: '#dashboard-table-col',
-    title: 'All browsed sites',
-    body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
-  },
-  {
-    title: 'Open the popup',
-    body: 'Click the BiteGuard icon in your browser toolbar to continue the tour.',
-    tooltipPosition: 'top-right',
-    arrow: 'up',
-    handoff: { nextSurface: 'popup', mode: 'crossDocument' },
-  },
-  {
-    selector: '#dashboard-table-col',
-    title: 'See site details',
-    body: 'Click any row in the table to drill into a site and see per-day detail.',
-    handoff: { nextSurface: 'site', mode: 'inPage' },
-  },
-  {
-    selector: '#prune-btn',
-    title: 'Manage storage',
-    body: 'Click Manage storage to see your storage usage, clean up insignificant records, delete data by range, and check data consistency.',
-    handoff: { nextSurface: 'storage-management', mode: 'inPage' },
-    newInVersion: 3,
-  },
-  {
-    selector: '#settings-btn',
-    title: 'Settings',
-    body: 'Click Settings to configure BiteGuard and continue the tour.',
-    handoff: { nextSurface: 'settings', mode: 'inPage' },
-    newInVersion: 3,
-  },
-  {
-    selector: '#tour-btn',
-    title: 'Tour complete',
-    body: "That's every feature of BiteGuard. Click here any time to replay the tour.",
-  },
-];
-
-// Steps with newInVersion > completedVersion are shown in the update tour.
-// No constant needed — computed at runtime from the step list.
-function dashboardNewStepRange(completedVersion) {
-  const first = dashboardTourSteps.findIndex(s => (s.newInVersion ?? 0) > completedVersion);
-  if (first < 0) return null;
-  const last = dashboardTourSteps.reduce((acc, s, i) => ((s.newInVersion ?? 0) > completedVersion ? i : acc), first);
-  return { first, last };
-}
-
-async function maybeEnableMockMode() {
-  const { sitesByDay = {} } = await chrome.storage.local.get('sitesByDay');
-  const empty = Object.keys(sitesByDay).length === 0;
-  if (empty) {
-    await writeTourState({ useMockData: true });
-    clearMockModeCache();
-  }
-}
-
-let isTourRunning = false;
-let currentTourHandle = null;
-
-async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null, forceStart = false) {
-  if (isTourRunning) return;
-  const tourState = knownState ?? await readTourState();
-  if (!forceStart && tourState.completed && !tourState.inProgress) return;
-  isTourRunning = true;
-  if (startIndex === 0) {
-    const wasMock = tourState.useMockData;
-    await maybeEnableMockMode();
-    const nowState = await readTourState();
-    if (!wasMock && nowState.useMockData) {
-      await loadAndRender();
-    }
-  }
-  currentTourHandle = runTour({
-    surface: 'dashboard',
-    steps,
-    startIndex,
-    onClose: ({ skipped }) => {
-      isTourRunning = false;
-      currentTourHandle = null;
-      clearMockModeCache();
-      if (skipped) loadAndRender();
-    },
-  });
-}
-
-tourBtn.addEventListener('click', async () => {
-  await writeTourState({ completed: false, inProgress: null });
-  startDashboardTour(0);
-});
-
-async function checkResume() {
-  const state = await readTourState();
-  if (state.completed || state.inProgress?.surface !== 'dashboard') return;
-  const wantedIndex = state.inProgress.stepIndex || 0;
-  if (currentTourHandle) {
-    if (currentTourHandle.getIndex() !== wantedIndex) {
-      currentTourHandle.goto(wantedIndex);
-    }
-  } else if (!isTourRunning) {
-    startDashboardTour(wantedIndex);
-  }
-}
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') checkResume();
-});
-
-chrome.storage.onChanged.addListener((changes, area) => {
-  if (area !== 'local') return;
-  if (changes.tourAdvanceRequest) checkResume();
-});
-
-(async () => {
-  if (new URLSearchParams(location.search).get('tour') === '1') {
-    history.replaceState(null, '', location.pathname);
-    await clearTourProgress();
-    startDashboardTour(0);
-    return;
-  }
-  const state = await readTourState();
-  if (state.inProgress?.surface === 'dashboard') {
-    const stepIndex = state.inProgress.stepIndex || 0;
-    const range = state.completed ? dashboardNewStepRange(state.completedVersion ?? 0) : null;
-    const isUpdateResume = range != null && stepIndex >= range.first && stepIndex <= range.last;
-    const steps = isUpdateResume ? dashboardTourSteps.slice(range.first, range.last + 1) : dashboardTourSteps;
-    const adjustedIndex = isUpdateResume ? stepIndex - range.first : stepIndex;
-    startDashboardTour(adjustedIndex, steps, state);
-    return;
-  }
-  if (state.completed) {
-    const range = dashboardNewStepRange(state.completedVersion ?? 0);
-    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state, true);
-    return;
-  }
-  const pendingSurface = state.inProgress?.surface;
-  if (pendingSurface) {
-    const handoffIdx = dashboardTourSteps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
-    if (handoffIdx >= 0) startDashboardTour(handoffIdx, dashboardTourSteps, state);
-  }
-})();
+// Last: all consts (TOP_SUBHEADING/TOP_COLOR) and fns are now initialized.
+await loadAndRender();

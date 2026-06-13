@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>BiteGuard — Timeline</title>
+    <script src="../../shared/theme.js"></script>
+    <link rel="stylesheet" href="../../shared/theme.css" />
+    <link rel="stylesheet" href="./interval-timeline.css" />
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" href="#">
+          <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+        </a>
+      </div>
+      <div id="header-center"></div>
+      <div id="header-right">
+        <span id="timeline-legend" class="text-meta">
+          <span class="legend-swatch legend-active"></span> active
+          <span class="legend-swatch legend-audio"></span> audio
+          <span class="legend-swatch legend-idle"></span> idle
+        </span>
+      </div>
+    </header>
+
+    <div id="timeline-wrap" class="chart-container">
+      <h2 class="chart-heading">Top 5 sites — browsing timeline
+        <span id="timeline-subheading" class="chart-subheading text-meta"></span>
+      </h2>
+      <svg id="timeline-chart"></svg>
+      <div class="tooltip text-meta" id="timeline-tooltip" hidden></div>
+      <p id="timeline-empty" class="empty-msg text-meta" style="display:none">No data for this period.</p>
+    </div>
+
+    <script type="module" src="./interval-timeline.js"></script>
+  </body>
+</html>
