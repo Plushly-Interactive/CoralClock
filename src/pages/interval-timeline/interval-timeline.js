@@ -2,7 +2,7 @@ import { formatMs } from '../../shared/timeUtils.js';
 import { faviconUrl, loadFaviconCache } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
-import { allIntervals } from '../../data/intervalLog.js';
+import { allIntervals, SESSION_GAP_MS } from '../../data/intervalLog.js';
 
 // Visualization only (not in the spec): a horizontal timeline of the top-5 sites'
 // browsing history, with active + audio + idle bars per site. Reads the raw
@@ -37,7 +37,15 @@ function midnight(daysAgo) {
 function windowBounds() {
   const now = Date.now();
   const r = rangeSelect.dataset.value;
-  if (r === 'today') return [midnight(0), now];
+  if (r === 'today') {
+    const day0 = midnight(0);
+    let lo = Infinity, hi = -Infinity;
+    for (const x of rows) {
+      const f = Math.max(x.from, day0), t = Math.min(x.to, now);
+      if (t > f) { if (f < lo) lo = f; if (t > hi) hi = t; }
+    }
+    return lo === Infinity ? [day0, now] : [lo, hi];
+  }
   if (r === 'all') {
     if (rows.length === 0) return [now - 3600000, now];
     let lo = Infinity, hi = -Infinity;
@@ -63,6 +71,23 @@ function unionLen(ranges) {
     else if (e > ce) ce = e;
   }
   return total + (ce - cs);
+}
+
+// Merge overlapping/abutting ranges into disjoint blocks. The timeline shows no
+// path detail, so a domain's path-level rows are unioned per kind. Path switches
+// leave a sub-second seam (close/open aren't exactly simultaneous), so ranges
+// within SESSION_GAP_MS — the same threshold the row-coalesce uses — are joined.
+// A real (> 1s) gap stays a gap; no away-time is bridged.
+function mergeRanges(ranges) {
+  if (ranges.length === 0) return [];
+  ranges.sort((a, b) => a[0] - b[0]);
+  const out = [ranges[0].slice()];
+  for (let i = 1; i < ranges.length; i++) {
+    const [s, e] = ranges[i], last = out[out.length - 1];
+    if (s <= last[1] + SESSION_GAP_MS) { if (e > last[1]) last[1] = e; }
+    else out.push([s, e]);
+  }
+  return out;
 }
 
 function fmtTick(t, spanMs) {
@@ -117,9 +142,9 @@ function render() {
   // Lay out rows: only the lanes that have data; row height grows with lane count.
   const laid = top.map(site => {
     const lanes = [
-      ['active', site.active, colActive],
-      ['audio', site.audio, colAudio],
-      ['idle', site.idle, colIdle],
+      ['active', mergeRanges(site.active), colActive],
+      ['audio', mergeRanges(site.audio), colAudio],
+      ['idle', mergeRanges(site.idle), colIdle],
     ].filter(l => l[1].length > 0);
     return { site, lanes, rowH: Math.max(ROW_MIN, lanes.length * STRIDE + 8) };
   });
