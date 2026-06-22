@@ -1,7 +1,8 @@
-import { localDayKey } from '../shared/timeUtils.js';
+import { localDayKey, localHourKey } from '../shared/timeUtils.js';
+import { weekDow } from '../shared/weekStart.js';
 import { ensureStorageVersion } from '../data/migrations.js';
 import { TOUR_VERSION } from '../shared/tour.js';
-import { PREF_IDLE_THRESHOLD_SEC } from '../shared/prefKeys.js';
+import { PREF_IDLE_THRESHOLD_SEC, PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
 import { getIdleThresholdSec, DEFAULT_IDLE_THRESHOLD_SEC } from '../shared/idleConfig.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import {
@@ -10,7 +11,7 @@ import {
   flushToStorage, reconcileWindows, initTracking,
   saveSnapshot, recoverFromSnapshot,
   applyIdleClip,
-  SITES_DAY_KEY, SITES_HOUR_KEY,
+  SITES_DAY_KEY, SITES_HOUR_KEY, WALLCLOCK_HOUR_KEY,
 } from './siteTracking.js';
 import {
   setWindowPath, removeWindowPath,
@@ -23,6 +24,7 @@ import {
 } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
 import { dbg, isDebug, initDebug } from './trackingUtils.js';
+import { updateBadge } from './badge.js';
 import {
   MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
@@ -39,6 +41,7 @@ console.log(`[BG-DBG ${new Date().toISOString()}] SERVICE WORKER STARTED`);
 
 let cachedByDay = null;
 let cachedByHour = null;
+let cachedWallClock = null;
 let cachedSubpagesByDay = null;
 let cachedSubpagesByHour = null;
 let bootstrapAt;
@@ -53,11 +56,100 @@ let idleStartedAt = null;
 // onStateChanged listener can compute the retroactive clip point synchronously.
 let cachedIdleThresholdMs = DEFAULT_IDLE_THRESHOLD_SEC * 1000;
 
+function approachWindowKey(period, now) {
+  if (period === 'hour') return localHourKey(now);
+  if (period === 'week') {
+    const dow = weekDow(new Date(now));
+    const base = new Date(now);
+    base.setDate(base.getDate() - dow);
+    return localDayKey(base.getTime());
+  }
+  return localDayKey(now);
+}
+
+const PERIOD_LABEL = { hour: 'hourly', day: 'daily', week: 'weekly' };
+
+function fmtMs(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(ms / 3600000);
+  const rem = Math.round((ms % 3600000) / 60000);
+  return rem ? `${h}h ${rem}m` : `${h}h`;
+}
+
+// Notification dedup state. Loaded once from chrome.storage.session into a
+// cached Promise so concurrent checkEnforcement calls (e.g. rapid navigations
+// or redirect chains) share the same in-memory object and never read stale
+// storage. Persisted back so state survives MV3 SW restarts within a session.
+let _notifyStateP = null;
+
+function getNotifyState() {
+  if (!_notifyStateP) {
+    _notifyStateP = chrome.storage.session.get('_notifyState').then(({ _notifyState: s }) => ({
+      blocked: new Set(s?.blocked ?? []),
+      approaching: new Map(Object.entries(s?.approaching ?? {})),
+    }));
+  }
+  return _notifyStateP;
+}
+
+function persistNotifyState(state) {
+  chrome.storage.session.set({
+    _notifyState: {
+      blocked: [...state.blocked],
+      approaching: Object.fromEntries(state.approaching),
+    },
+  });
+}
+
+async function notifyBlocked(overage) {
+  const state = await getNotifyState();
+  for (const ruleId of state.blocked) {
+    if (!overage.has(ruleId)) state.blocked.delete(ruleId);
+  }
+  let changed = false;
+  for (const [ruleId, entry] of overage) {
+    if (state.blocked.has(ruleId)) continue;
+    state.blocked.add(ruleId);
+    changed = true;
+    const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
+    chrome.notifications.create(`blocked-${ruleId}`, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('resources/icons/biteguard-icon-blue-square-128px.png'),
+      title: 'Time limit reached',
+      message: `${label} is now blocked`,
+    });
+  }
+  if (changed) persistNotifyState(state);
+}
+
+async function notifyApproaching(approaching, now) {
+  const state = await getNotifyState();
+  let changed = false;
+  for (const [ruleId, entry] of approaching) {
+    const windowKey = approachWindowKey(entry.period, now);
+    if (state.approaching.get(ruleId) === windowKey) continue;
+    state.approaching.set(ruleId, windowKey);
+    changed = true;
+    const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
+    const pct = Math.round(entry.pct * 100);
+    const left = fmtMs(entry.remainingMs);
+    chrome.notifications.create(`approach-${ruleId}`, {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('resources/icons/biteguard-icon-blue-square-128px.png'),
+      title: 'Approaching time limit',
+      message: `${label} — ${pct}% of ${entry.limit} ${entry.limitUnit} ${PERIOD_LABEL[entry.period] ?? entry.period} limit used (${left} left)`,
+    });
+  }
+  if (changed) persistNotifyState(state);
+}
+
 // Drop the in-memory site caches after storage is rewritten (flush), so
 // the next query re-reads fresh data.
 function invalidateSitesCache() {
   cachedByDay = null;
   cachedByHour = null;
+  cachedWallClock = null;
   cachedSubpagesByDay = null;
   cachedSubpagesByHour = null;
 }
@@ -66,6 +158,7 @@ chrome.alarms.get('flush').then(existing => {
   if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
 });
 const bootstrapDone = bootstrap();
+bootstrapDone.then(() => updateBadge());
 
 chrome.runtime.onStartup.addListener(() => {
   coldStart = true;
@@ -200,6 +293,10 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
     const { [SITES_HOUR_KEY]: sitesByHour = {} } = await chrome.storage.local.get(SITES_HOUR_KEY);
     cachedByHour = sitesByHour;
   }
+  if (!cachedWallClock) {
+    const { [WALLCLOCK_HOUR_KEY]: wallClockByHour = {} } = await chrome.storage.local.get(WALLCLOCK_HOUR_KEY);
+    cachedWallClock = wallClockByHour;
+  }
 
   if (!dayKeys) {
     const now = new Date();
@@ -235,6 +332,7 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
   const D = dayKeys.length;
   if (D === 0) return new Array(24).fill(0);
 
+  const browsing = c => (c?.activeMs ?? 0) + (c?.audioMs ?? 0) - (c?.overlapMs ?? 0);
   const sums = new Array(24).fill(0);
   for (const dayKey of dayKeys) {
     for (let h = 0; h < 24; h++) {
@@ -242,9 +340,12 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
       const bucket = cachedByHour[hourKey];
       if (!bucket) continue;
       if (siteIds?.length) {
-        for (const id of siteIds) sums[h] += bucket[id]?.activeMs ?? 0;
+        for (const id of siteIds) sums[h] += browsing(bucket[id]);
       } else {
-        for (const entry of Object.values(bucket)) sums[h] += entry.activeMs ?? 0;
+        // Aggregate: deduplicated wall-clock browsing time (parallel windows on
+        // different sites counted once), falling back to the per-site browsing
+        // sum for hours that predate wall-clock tracking.
+        sums[h] += cachedWallClock[hourKey] ?? Object.values(bucket).reduce((s, c) => s + browsing(c), 0);
       }
     }
   }
@@ -262,6 +363,7 @@ chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
   const path = pathFromUrl(tab.url);
   setWindowSite(windowId, siteId);
   setWindowPath(windowId, siteId, path);
+  updateBadge();
 });
 
 async function cacheFavicon(hostname, url) {
@@ -295,6 +397,7 @@ chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
     const path = pathFromUrl(tab.url);
     setWindowSite(tab.windowId, siteId);
     setWindowPath(tab.windowId, siteId, path);
+    updateBadge();
   }
   if (changeInfo.status === 'complete') {
     // Catches audible tab navigating between sites without going silent (changeInfo.audible won't fire)
@@ -335,6 +438,11 @@ chrome.windows.onCreated.addListener(async (window) => {
   const path = pathFromUrl(tab?.url);
   setWindowSite(window.id, siteId);
   setWindowPath(window.id, siteId, path);
+});
+
+chrome.windows.onFocusChanged.addListener(async (_windowId) => {
+  await bootstrapDone;
+  updateBadge();
 });
 
 chrome.windows.onRemoved.addListener(async (windowId) => {
@@ -380,6 +488,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   invalidateSitesCache();
 
   await checkEnforcement(flushAt);
+  updateBadge();
 });
 
 // React to rule edits immediately (enable/disable/add/delete) rather than
@@ -389,6 +498,11 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== 'local' || !changes.rules) return;
   await bootstrapDone;
   await checkEnforcement(Date.now());
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !(PREF_BADGE_ENABLED in changes)) return;
+  updateBadge();
 });
 
 chrome.storage.onChanged.addListener(async (changes, area) => {
@@ -448,8 +562,10 @@ async function checkEnforcement(now) {
     [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
   } = await chrome.storage.local.get(['rules', SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
 
-  const overage = computeOverage(rules, { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, now);
+  const { overage, approaching } = computeOverage(rules, { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, now);
   await publishOverage(overage);
+  await notifyBlocked(overage);
+  await notifyApproaching(approaching, now);
 }
 
 // Pre-emptive block: on a main-frame navigation, flush the tracker's accrued

@@ -1,4 +1,5 @@
 import { localDayKey, localHourKey, splitByHour } from '../shared/timeUtils.js';
+import { PREF_FIRST_BROWSE_BY_DAY } from '../shared/prefKeys.js';
 
 const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
 
@@ -30,6 +31,24 @@ export function dbg(...args) {
   console.log(`[BG-DBG ${date} ${time}]`, ...args);
 }
 
+// Total length covered by a set of [from, to] ranges after merging overlaps.
+// Sorts by start, walks left→right extending the current span, and sums spans.
+// Used for true wall-clock active time: parallel windows on different sites
+// overlap in real time, so summing per-site activeMs double-counts; the union
+// counts each overlapping instant once.
+function unionLength(ranges) {
+  if (ranges.length === 0) return 0;
+  ranges.sort((a, b) => a[0] - b[0]);
+  let total = 0;
+  let [curStart, curEnd] = ranges[0];
+  for (let i = 1; i < ranges.length; i++) {
+    const [s, e] = ranges[i];
+    if (s > curEnd) { total += curEnd - curStart; curStart = s; curEnd = e; }
+    else if (e > curEnd) curEnd = e;
+  }
+  return total + (curEnd - curStart);
+}
+
 export function createTrackingModule({
   urlToKey,
   dayStorageKey,
@@ -37,6 +56,7 @@ export function createTrackingModule({
   snapshotStorageKey,
   getCell,
   recoverLegacy,
+  wallClockHourKey,
 }) {
   const tracker = createRangeTracker();
   let _recovered = false;
@@ -64,7 +84,7 @@ export function createTrackingModule({
   }
 
   async function reconcile() {
-    dbg('reconcile: start (tracked windows=', tracker.getTrackedWindowIds().length, 'audible tabs=', tracker.getTrackedAudibleTabIds().length, ')');
+    dbg(`reconcile[${hourStorageKey}]: start (tracked windows=`, tracker.getTrackedWindowIds().length, 'audible tabs=', tracker.getTrackedAudibleTabIds().length, ')');
     const windows = await chrome.windows.getAll();
     const liveById = new Map(windows.map(w => [w.id, w]));
     for (const id of tracker.getTrackedWindowIds()) {
@@ -125,14 +145,17 @@ export function createTrackingModule({
     const { activeKeys, audioKeys } = parseSnapshot(snap);
     dbg(`recover[${snapshotStorageKey}]: crediting ${endAt - snap.at}ms to`, activeKeys.length, 'active /', audioKeys.length, 'audio keys', idleSince !== null ? `(idle clip at ${idleSince})` : '');
     const activeKeySet = new Set(activeKeys);
+    const audioKeySet = new Set(audioKeys);
     for (const key of activeKeys) {
-      if (activeEndAt > snap.at) tracker.pushRange('active', key, [snap.at, activeEndAt]);
-      if (idleStartAt !== null && endAt > idleStartAt) tracker.pushRange('idle', key, [idleStartAt, endAt]);
+      // An audible key keeps full active time even past idleSince (matches applyIdleClip).
+      const keyActiveEnd = audioKeySet.has(key) ? endAt : activeEndAt;
+      if (keyActiveEnd > snap.at) tracker.pushRange('active', key, [snap.at, keyActiveEnd]);
+      if (!audioKeySet.has(key) && idleStartAt !== null && endAt > idleStartAt) tracker.pushRange('idle', key, [idleStartAt, endAt]);
     }
     for (const key of audioKeys) {
       tracker.pushRange('audio', key, [snap.at, endAt]);
-      if (activeKeySet.has(key) && activeEndAt > snap.at) {
-        tracker.pushRange('overlap', key, [snap.at, activeEndAt]);
+      if (activeKeySet.has(key) && endAt > snap.at) {
+        tracker.pushRange('overlap', key, [snap.at, endAt]);
       }
     }
   }
@@ -141,7 +164,9 @@ export function createTrackingModule({
     tracker.flushAllElapsed(now);
     const { active, audio, overlap, idle, visits } = tracker.pending;
     if (active.size === 0 && audio.size === 0 && overlap.size === 0 && idle.size === 0 && visits.size === 0) return;
-    const stored = await chrome.storage.local.get([dayStorageKey, hourStorageKey]);
+    const getKeys = [dayStorageKey, hourStorageKey, PREF_FIRST_BROWSE_BY_DAY];
+    if (wallClockHourKey) getKeys.push(wallClockHourKey);
+    const stored = await chrome.storage.local.get(getKeys);
     const byDay = stored[dayStorageKey] ?? {};
     const byHour = stored[hourStorageKey] ?? {};
 
@@ -179,8 +204,43 @@ export function createTrackingModule({
       dbg(`flush[${hourStorageKey}]: +${count} visits → ${key} (hour total now ${getCell(byHour[hour], key).visits})`);
     }
 
+    const firstBrowseByDay = stored[PREF_FIRST_BROWSE_BY_DAY] ?? {};
+    const toWrite = { [dayStorageKey]: byDay, [hourStorageKey]: byHour };
+
+    // Wall-clock active time: union of all keys' active+audio ranges per hour, so
+    // overlapping parallel-window time counts once. Only the site tracker passes
+    // wallClockHourKey; the subpage tracker skips this (same browsing, no second
+    // tally). Overlap ranges aren't added — the union already merges active∩audio.
+    if (wallClockHourKey) {
+      const wallByHour = stored[wallClockHourKey] ?? {};
+      const rangesByHour = {};
+      for (const map of [active, audio]) {
+        for (const ranges of map.values()) {
+          for (const [from, to] of ranges) {
+            let t = from;
+            while (t < to) {
+              const nextHour = new Date(t);
+              nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
+              const end = Math.min(nextHour.getTime(), to);
+              (rangesByHour[localHourKey(t)] ??= []).push([t, end]);
+              t = end;
+            }
+          }
+        }
+      }
+      for (const [hourKey, ranges] of Object.entries(rangesByHour)) {
+        const added = unionLength(ranges);
+        wallByHour[hourKey] = Math.min((wallByHour[hourKey] ?? 0) + added, 3600000);
+        dbg(`flush[${wallClockHourKey}]: +${added}ms union → ${hourKey} (total ${wallByHour[hourKey]})`);
+      }
+      toWrite[wallClockHourKey] = wallByHour;
+    }
+    if (visits.size > 0 && !firstBrowseByDay[day]) {
+      firstBrowseByDay[day] = now;
+      toWrite[PREF_FIRST_BROWSE_BY_DAY] = firstBrowseByDay;
+    }
     tracker.clearPending();
-    await chrome.storage.local.set({ [dayStorageKey]: byDay, [hourStorageKey]: byHour });
+    await chrome.storage.local.set(toWrite);
   }
 
   function applyIdleClip(idleSince, now) {
@@ -348,12 +408,14 @@ export function createRangeTracker() {
 
   // Splits in-flight ranges at `idleSince`: the portion before counts as active,
   // the portion after counts as idle. Audio is not clipped — a playing tab is
-  // real usage even while the user is away. Called by the flush alarm when
+  // real usage even while the user is away. An audible key also keeps its active
+  // time running full (clip = now): a tab the user is watching/listening to
+  // counts as active even while idle. Called by the flush alarm when
   // chrome.idle reports the user idle/locked; idleSince is `now - threshold`.
   function applyIdleClip(idleSince, now) {
     for (const [key, s] of states) {
       if (!s.wasActive && !s.wasAudible) continue;
-      const clip = Math.max(s.startedAt, Math.min(idleSince, now));
+      const clip = s.wasAudible ? now : Math.max(s.startedAt, Math.min(idleSince, now));
       if (s.wasActive && clip > s.startedAt) {
         const ranges = pendingActive.get(key) ?? [];
         ranges.push([s.startedAt, clip]);

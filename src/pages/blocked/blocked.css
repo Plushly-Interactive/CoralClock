@@ -78,3 +78,39 @@ body {
 #quote-author-wrapper .link-btn {
   margin-left: 2px;
 }
+
+#quote-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+#fav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+}
+
+#fav-btn:hover {
+  color: var(--color-accent-light);
+}
+
+#fav-btn.favorited #fav-icon path {
+  fill: currentColor;
+}
+
+#saved-quotes-link {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+#saved-quotes-link:hover {
+  color: var(--color-accent-light);
+}

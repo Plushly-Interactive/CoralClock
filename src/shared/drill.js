@@ -339,6 +339,7 @@ async function renderDrillChart() {
       onBarClick,
       scale: drillScale,
       gridLineWidth: 0.5,
+      labelEvery: isDayDrill ? 3 : undefined,
     });
   } else if (drillMetric === 'visits') {
     ctx.drillLegend.style.display = 'none';
@@ -349,6 +350,7 @@ async function renderDrillChart() {
       onBarClick,
       scale: drillScale,
       gridLineWidth: 0.5,
+      labelEvery: isDayDrill ? 3 : undefined,
     });
   } else if (drillMetric === 'hour') {
     ctx.drillLegend.style.display = 'none';
@@ -379,6 +381,7 @@ async function renderDrillChart() {
       maxVal: 3600000,
       scale: drillScale,
       gridLineWidth: 0.5,
+      labelEvery: 3,
     });
   }
 }

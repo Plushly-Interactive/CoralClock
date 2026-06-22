@@ -1,10 +1,10 @@
 import { scanSiteBucket, scanSubpageBucket, applySiteDeletions, applySubpageDeletions } from '../../data/prune.js';
 import { applySiteHourlyRangeDeletion, applySiteDailyReductions, applySubpageHourlyRangeDeletion, applySubpageDailyReductions, applyDirectDailyRangeDeletion, applyDirectSubpageDailyRangeDeletion, deleteSiteAllTime } from '../../data/targetedDelete.js';
-import { formatMs } from '../../shared/timeUtils.js';
+import { formatMs, formatHourLabel, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { showNotification, formatBytes, escapeHtml, attachInputClear } from '../../shared/utils.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../../shared/msgTypes.js';
-import { PREF_LAST_EXPORT_AT } from '../../shared/prefKeys.js';
+import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { exportBiteGuardData } from '../../data/importData.js';
 import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
@@ -21,19 +21,24 @@ const ISSUE_TYPE_LABELS = {
   'invalid':      'invalid values',
 };
 
-function buildHourDropdown(id, initHour, onChange) {
+function hourLabel(h, clockFormat) {
+  if (h === 24) return clockFormat === '12h' ? '12 AM +1' : '00:00 +1';
+  return formatHourLabel(h, clockFormat);
+}
+
+function buildHourDropdown(id, initHour, clockFormat, onChange) {
   const wrap = document.querySelector(`#${id}`);
   wrap.dataset.direction = 'up';
   const btn = document.createElement('button');
   btn.className = 'dropdown-btn';
   btn.dataset.value = initHour;
-  btn.innerHTML = `${String(initHour).padStart(2, '0')}:00<span class="dropdown-arrow">▼</span>`;
+  btn.innerHTML = `${hourLabel(initHour, clockFormat)}<span class="dropdown-arrow">▼</span>`;
   const menu = document.createElement('div');
   menu.className = 'dropdown-menu';
   for (let h = 0; h <= 24; h++) {
     const opt = document.createElement('button');
     opt.value = h;
-    opt.textContent = h === 24 ? '24:00' : String(h).padStart(2, '0') + ':00';
+    opt.textContent = hourLabel(h, clockFormat);
     menu.appendChild(opt);
   }
   wrap.append(btn, menu);
@@ -54,10 +59,15 @@ function buildHourDropdown(id, initHour, onChange) {
   });
 }
 
-buildHourDropdown('range-from-hour', 0, () => syncDeleteRangeBtn());
-buildHourDropdown('range-to-hour', 24, () => syncDeleteRangeBtn());
-buildHourDropdown('repeat-from-hour', 9, () => syncDeleteRangeBtn());
-buildHourDropdown('repeat-to-hour', 17, () => syncDeleteRangeBtn());
+async function initHourDropdowns() {
+  const stored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
+  const clockFormat = stored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
+  buildHourDropdown('range-from-hour', 0, clockFormat, () => syncDeleteRangeBtn());
+  buildHourDropdown('range-to-hour', 24, clockFormat, () => syncDeleteRangeBtn());
+  buildHourDropdown('repeat-from-hour', 9, clockFormat, () => syncDeleteRangeBtn());
+  buildHourDropdown('repeat-to-hour', 17, clockFormat, () => syncDeleteRangeBtn());
+  syncDeleteRangeBtn();
+}
 
 document.addEventListener('click', () => {
   document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
@@ -456,7 +466,6 @@ document.querySelector('#repair-all-btn').addEventListener('click', async () => 
   };
 
   applyRepairs(stores, cachedIssues);
-
   await chrome.storage.local.set({ sitesByDay: stores.sitesByDay, sitesByHour: stores.sitesByHour, subpagesByDay: stores.subpagesByDay, subpagesByHour: stores.subpagesByHour });
   try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
 
@@ -886,8 +895,8 @@ if (paramSite) {
   document.querySelector('#range-delete').scrollIntoView({ behavior: 'smooth' });
 }
 syncDeleteAllBtn();
-syncDeleteRangeBtn();
 syncDropBtn();
+initHourDropdowns();
 loadStats();
 loadPruneSettings();
 

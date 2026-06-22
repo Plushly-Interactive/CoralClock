@@ -49,14 +49,53 @@
     </div>
   </header>
 
-  <div id="rules-header">
-    <h2 id="rules-title">Active rules</h2>
-    <button id="manage-btn" class="btn">Manage rules</button>
+  <div id="popup-body">
+    <div id="stats-panel">
+      <div id="stats-header">
+        <h2 class="panel-title">Today's overview</h2>
+        <span class="stat-value" id="stats-total-time">—</span>
+      </div>
+      <div id="stats-content">
+      <svg id="stats-hour-chart"></svg>
+      <div id="stats-grid">
+        <div class="stat-cell">
+          <span class="stat-label">Sites</span>
+          <span class="stat-value" id="stats-sites-count">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-label">vs 7d avg</span>
+          <span class="stat-value" id="stats-vs-avg">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-label">Peak hour</span>
+          <span class="stat-value" id="stats-peak-hour">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-label">First browse</span>
+          <span class="stat-value" id="stats-first-browse">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-label">Tab visits</span>
+          <span class="stat-value" id="stats-sessions">—</span>
+        </div>
+        <div class="stat-cell">
+          <span class="stat-label">Idle</span>
+          <span class="stat-value" id="stats-idle">—</span>
+        </div>
+      </div>
+      </div>
+    </div>
+    <div id="rules-panel">
+      <div id="rules-header">
+        <h2 id="rules-title" class="panel-title">Active rules</h2>
+        <button id="manage-btn" class="btn">Manage rules</button>
+      </div>
+      <div id="no-rules-message"></div>
+      <ul id="rules-list" class="rules-list"></ul>
+    </div>
   </div>
 
-  <div id="no-rules-message"></div>
-  <ul id="rules-list" class="rules-list"></ul>
-
+  <div id="stats-chart-tooltip" hidden></div>
   <script type="module" src="./popup.js"></script>
 </body>
 

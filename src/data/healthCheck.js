@@ -146,7 +146,7 @@ export function applyRepairs(stores, issues) {
     const dateKey = issue.hourKey ?? issue.dayKey;
 
     if (issue.type === 'drift' || issue.type === 'orphan') {
-      if (issue.store === 'subpagesByDay') {
+      if (issue.store === 'subpagesByDay' && issue.path == null) {
         const sum = { activeMs: 0, audioMs: 0, overlapMs: 0, idleMs: 0 };
         let hasHourly = false;
         for (const [hourKey, bucket] of Object.entries(sitesByHour)) {

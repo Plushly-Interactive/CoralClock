@@ -61,6 +61,16 @@ export function formatHourLabel(h, clockFormat) {
   return `${hour12} ${period}`;
 }
 
+export function formatTimeOfDay(ts, clockFormat) {
+  const d = new Date(ts);
+  const h = d.getHours(), m = d.getMinutes();
+  if (clockFormat === '12h') {
+    const period = h < 12 ? 'AM' : 'PM';
+    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`;
+  }
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 export function formatHourRange(h, sep, clockFormat) {
   return `${formatHourLabel(h, clockFormat)}${sep}${formatHourLabel((h + 1) % 24, clockFormat)}`;
 }

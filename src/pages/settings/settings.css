@@ -21,8 +21,17 @@
   margin: 0;
 }
 
+.setting-card .form-row {
+  align-items: flex-start;
+}
+
 .setting-card .form-row > input,
 .setting-card .form-row > select,
 .setting-card .form-row > .custom-dropdown {
   margin-left: auto;
+}
+
+.setting-card .form-row > input[type="checkbox"],
+.setting-card .form-row > .text-meta {
+  align-self: center;
 }

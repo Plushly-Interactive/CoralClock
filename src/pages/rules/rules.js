@@ -31,6 +31,17 @@ const urlForm        = document.querySelector('#url-form');
 const regexForm      = document.querySelector('#regex-form');
 const keywordForm    = document.querySelector('#keyword-form');
 
+const regexPatternInput = document.querySelector('#regex-pattern');
+const regexPatternClear = document.querySelector('#regex-pattern-clear');
+const regexPreviewText  = document.querySelector('#regex-preview-text');
+const regexPreviewPat   = document.querySelector('#regex-preview-pattern');
+const regexSaveBtn      = document.querySelector('#regex-save-btn');
+
+const kwInput      = document.querySelector('#keyword-input');
+const kwInputClear = document.querySelector('#keyword-input-clear');
+const kwPreviewText = document.querySelector('#kw-preview-text');
+const kwSaveBtn    = document.querySelector('#kw-save-btn');
+
 let scope = 'subdomain';
 let currentRules = [];
 let sort = { key: 'site', dir: 1 };
@@ -178,7 +189,8 @@ function refreshPreview() {
   }
 
   const { text, value } = describeRule({ target: host, path, matchType: scope });
-  previewText.textContent = `Will block ${text}.`;
+  const always = parseInt(formLimit.value) === 0;
+  previewText.textContent = always ? `Will always block ${text}.` : `Will block ${text}.`;
   previewPattern.textContent = value;
   saveBtn.disabled = false;
 }
@@ -201,9 +213,14 @@ previewText.addEventListener('click', (e) => {
 // ── Sort ──
 
 function sortedRules() {
+  function sortKey(r) {
+    if (r.matchType === 'regex') return r.pattern;
+    if (r.matchType === 'keyword') return r.keyword;
+    return r.target + (r.path || '');
+  }
   const cmp = sort.key === 'status'
     ? (a, b) => Number(b.enabled) - Number(a.enabled)
-    : (a, b) => (a.target + (a.path || '')).localeCompare(b.target + (b.path || ''));
+    : (a, b) => sortKey(a).localeCompare(sortKey(b));
   return [...currentRules].sort((a, b) => sort.dir * cmp(a, b));
 }
 
@@ -242,7 +259,7 @@ async function render() {
 saveBtn.addEventListener('click', async () => {
   const { host, path } = parseTarget(formTarget.value);
   const fields = formLimitFields();
-  if (!host || !fields.limit || !isValidHost(host)) return;
+  if (!host || isNaN(fields.limit) || fields.limit < 0 || !isValidHost(host)) return;
   if (scope === 'pathPrefix' && !path) return;
 
   const newRule = {
@@ -290,6 +307,115 @@ redundantKeepBtn.addEventListener('click', () => {
   redundantPrompt.style.display = 'none';
 });
 
+// ── Regex form logic ──
+
+function regexLimitFields() {
+  return {
+    limit:     parseInt(document.querySelector('#regex-limit').value),
+    limitUnit: document.querySelector('#regex-unit-btn').dataset.value,
+    period:    document.querySelector('#regex-period-btn').dataset.value,
+    mode:      document.querySelector('#regex-mode-btn').dataset.value,
+  };
+}
+
+function refreshRegexPreview() {
+  const pat = regexPatternInput.value.trim();
+  if (!pat) {
+    regexPreviewText.textContent = 'Enter a regex pattern above.';
+    regexPreviewPat.textContent = '';
+    regexSaveBtn.disabled = true;
+    return;
+  }
+  try {
+    new RegExp(pat);
+  } catch (e) {
+    regexPreviewText.textContent = `Invalid pattern: ${e.message}`;
+    regexPreviewPat.textContent = '';
+    regexSaveBtn.disabled = true;
+    return;
+  }
+  const always = parseInt(document.querySelector('#regex-limit').value) === 0;
+  regexPreviewText.textContent = always ? 'Will always block URLs matching this pattern.' : 'Will block URLs matching this pattern.';
+  regexPreviewPat.textContent = pat;
+  regexSaveBtn.disabled = false;
+}
+
+const syncRegexClear = attachInputClear(regexPatternInput, regexPatternClear, refreshRegexPreview, { escStopPropagation: true });
+
+document.querySelectorAll('#regex-unit-menu button, #regex-period-menu button').forEach(opt => {
+  opt.addEventListener('click', () => { constrainLimitForm('regex'); refreshRegexPreview(); });
+});
+document.querySelectorAll('#regex-mode-menu button').forEach(opt => opt.addEventListener('click', refreshRegexPreview));
+document.querySelector('#regex-limit').addEventListener('input', () => {
+  const el = document.querySelector('#regex-limit');
+  const max = parseInt(el.max);
+  if (max && parseInt(el.value) > max) el.value = max;
+  refreshRegexPreview();
+});
+
+regexSaveBtn.addEventListener('click', async () => {
+  const pat = regexPatternInput.value.trim();
+  if (!pat) return;
+  try { new RegExp(pat); } catch { return; }
+  const fields = regexLimitFields();
+  if (isNaN(fields.limit) || fields.limit < 0) return;
+
+  await addRule({ pattern: pat, matchType: 'regex', ...fields });
+  regexPatternInput.value = '';
+  syncRegexClear();
+  refreshRegexPreview();
+  await render();
+});
+
+// ── Keyword form logic ──
+
+function kwLimitFields() {
+  return {
+    limit:     parseInt(document.querySelector('#keyword-limit').value),
+    limitUnit: document.querySelector('#kw-unit-btn').dataset.value,
+    period:    document.querySelector('#kw-period-btn').dataset.value,
+    mode:      document.querySelector('#kw-mode-btn').dataset.value,
+  };
+}
+
+function refreshKwPreview() {
+  const kw = kwInput.value.trim();
+  if (!kw) {
+    kwPreviewText.textContent = 'Enter a keyword above.';
+    kwSaveBtn.disabled = true;
+    return;
+  }
+  const always = parseInt(document.querySelector('#keyword-limit').value) === 0;
+  kwPreviewText.textContent = always ? `Will always block URLs containing "${kw}".` : `Will block URLs containing "${kw}".`;
+  kwSaveBtn.disabled = false;
+}
+
+const syncKwClear = attachInputClear(kwInput, kwInputClear, refreshKwPreview, { escStopPropagation: true });
+
+document.querySelectorAll('#kw-unit-menu button, #kw-period-menu button').forEach(opt => {
+  opt.addEventListener('click', () => { constrainLimitForm('kw'); refreshKwPreview(); });
+});
+document.querySelectorAll('#kw-mode-menu button').forEach(opt => opt.addEventListener('click', refreshKwPreview));
+document.querySelector('#keyword-limit').addEventListener('input', () => {
+  const el = document.querySelector('#keyword-limit');
+  const max = parseInt(el.max);
+  if (max && parseInt(el.value) > max) el.value = max;
+  refreshKwPreview();
+});
+
+kwSaveBtn.addEventListener('click', async () => {
+  const kw = kwInput.value.trim();
+  if (!kw) return;
+  const fields = kwLimitFields();
+  if (isNaN(fields.limit) || fields.limit < 0) return;
+
+  await addRule({ keyword: kw, matchType: 'keyword', ...fields });
+  kwInput.value = '';
+  syncKwClear();
+  refreshKwPreview();
+  await render();
+});
+
 // ── Inline row editor ──
 
 function editDropdown(id, options, selected) {
@@ -312,7 +438,7 @@ function openRowEditor(id) {
   li.querySelectorAll('.edit-btn, .toggle-btn, .delete-btn').forEach(b => b.remove());
   li.insertAdjacentHTML('beforeend', `
     <div class="form-row edit-controls">
-      <input class="edit-limit number-input" type="number" value="${rule.limit}" min="1" />
+      <input class="edit-limit number-input" type="number" value="${rule.limit}" min="0" />
       ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
@@ -321,6 +447,10 @@ function openRowEditor(id) {
     </div>`);
   initCustomDropdowns(li);
   constrainLimitForm('edit', li);
+  if (rule.limit === 0) {
+    li.querySelector('.edit-unit-btn').disabled = true;
+    li.querySelector('.edit-period-btn').disabled = true;
+  }
   li.querySelectorAll('.edit-unit-menu button, .edit-period-menu button').forEach(opt => {
     opt.addEventListener('click', () => constrainLimitForm('edit', li));
   });
@@ -328,6 +458,9 @@ function openRowEditor(id) {
     const el = li.querySelector('.edit-limit');
     const max = parseInt(el.max);
     if (max && parseInt(el.value) > max) el.value = max;
+    const always = parseInt(el.value) === 0;
+    li.querySelector('.edit-unit-btn').disabled = always;
+    li.querySelector('.edit-period-btn').disabled = always;
   });
   li.querySelector('.edit-limit').focus();
 }
@@ -337,7 +470,7 @@ rulesList.addEventListener('click', async (e) => {
   if (e.target.classList.contains('save-edit-btn')) {
     const id = e.target.dataset.id;
     const limit = parseInt(rulesList.querySelector('.edit-limit').value);
-    if (!limit) return;
+    if (isNaN(limit) || limit < 0) return;
     await updateRule(id, {
       limit,
       limitUnit: rulesList.querySelector('.edit-unit-btn').dataset.value,
@@ -417,7 +550,7 @@ async function renderStats() {
 
   document.querySelector('#stat-blocks').textContent = weekTotal;
   document.querySelector('#stat-most-blocked').textContent = mostBlocked;
-  if (topRule) {
+  if (topRule && topRule.matchType !== 'regex') {
     mostBlockedFavicon.src = faviconUrl(topRule.target);
     mostBlockedFavicon.removeAttribute('hidden');
     mostBlockedFavicon.style.display = '';
@@ -459,6 +592,46 @@ async function renderStats() {
   });
 }
 
+// ── Always-block checkboxes ──
+
+function wireAlwaysBlock(cbId, limitInputEl, unitBtnId, periodBtnId, modeBtnId, refreshFn, constrainPrefix) {
+  const cb = document.querySelector(`#${cbId}`);
+
+  function setDisabled(on) {
+    document.querySelector(`#${unitBtnId}`).disabled = on;
+    document.querySelector(`#${periodBtnId}`).disabled = on;
+    document.querySelector(`#${modeBtnId}`).disabled = on;
+  }
+
+  cb.addEventListener('change', () => {
+    const on = cb.checked;
+    if (on) {
+      cb.dataset.prev = limitInputEl.value;
+      limitInputEl.value = '0';
+    } else {
+      limitInputEl.value = cb.dataset.prev || '10';
+    }
+    setDisabled(on);
+    constrainLimitForm(constrainPrefix);
+    refreshFn();
+  });
+
+  limitInputEl.addEventListener('input', () => {
+    const val = parseInt(limitInputEl.value);
+    if (val === 0 && !cb.checked) {
+      cb.checked = true;
+      setDisabled(true);
+      constrainLimitForm(constrainPrefix);
+      refreshFn();
+    } else if (!isNaN(val) && val > 0 && cb.checked) {
+      cb.checked = false;
+      setDisabled(false);
+      constrainLimitForm(constrainPrefix);
+      refreshFn();
+    }
+  });
+}
+
 // ── Init ──
 
 const prefillTarget = new URLSearchParams(location.search).get('target');
@@ -472,6 +645,11 @@ if (prefillTarget) {
 
 initCustomDropdowns();
 constrainLimitForm();
+constrainLimitForm('regex');
+constrainLimitForm('kw');
+wireAlwaysBlock('cb-always-url',   formLimit,                                'form-unit-btn',  'form-period-btn',  'form-mode-btn',  refreshPreview,      'form');
+wireAlwaysBlock('cb-always-regex', document.querySelector('#regex-limit'),   'regex-unit-btn', 'regex-period-btn', 'regex-mode-btn', refreshRegexPreview, 'regex');
+wireAlwaysBlock('cb-always-kw',    document.querySelector('#keyword-limit'), 'kw-unit-btn',    'kw-period-btn',    'kw-mode-btn',    refreshKwPreview,    'kw');
 
 document.querySelectorAll('#form-unit-menu button, #form-period-menu button').forEach(opt => {
   opt.addEventListener('click', () => { constrainLimitForm(); refreshPreview(); });
@@ -484,6 +662,8 @@ formLimit.addEventListener('input', () => {
 });
 
 refreshPreview();
+refreshRegexPreview();
+refreshKwPreview();
 await loadFaviconCache();
 render();
 

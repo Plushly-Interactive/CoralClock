@@ -3,12 +3,14 @@ import { createTrackingModule } from './trackingUtils.js';
 
 export const SITES_DAY_KEY = 'sitesByDay';
 export const SITES_HOUR_KEY = 'sitesByHour';
+export const WALLCLOCK_HOUR_KEY = 'wallClockByHour';
 
 const mod = createTrackingModule({
   urlToKey: siteIdFromUrl,
   dayStorageKey: SITES_DAY_KEY,
   hourStorageKey: SITES_HOUR_KEY,
   snapshotStorageKey: '_trackingSnapshot',
+  wallClockHourKey: WALLCLOCK_HOUR_KEY,
   getCell(bucket, key) {
     bucket[key] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, idleMs: 0, visits: 0 };
     return bucket[key];
