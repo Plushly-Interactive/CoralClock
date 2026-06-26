@@ -3,3 +3,14 @@ dist/
 *.local
 .DS_Store
 .claude/settings.local.json
+
+# secrets / local env
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+*.key
+*.pem
+
+# wrangler local state
+.wrangler/
