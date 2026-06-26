@@ -1,6 +1,6 @@
 # Architecture
 
-BiteGuard has two halves: **tracking** (track per-site and per-subpage time) and **enforcement** (block sites after a limit). Only the tracking half is implemented today - see [Gaps](#gaps).
+BiteGuard has two halves: **tracking** (track per-site and per-subpage time) and **enforcement** (block sites after a limit). Both are implemented. Tracking is an event-sourced aggregator; enforcement is a pure limit-checker (`computeOverage` in `enforcement.js`) that publishes `declarativeNetRequest` redirect rules to `blocked.html` (`publishOverage`).
 
 Tracking is an *event-sourced aggregator* running in the background service worker. Chrome events mutate in-memory state, a 1-minute alarm flushes aggregates to `chrome.storage.local`, and UI pages read those aggregates back via `chrome.runtime.sendMessage`. The UI is strictly read-only over tracking data; it never writes them.
 
@@ -123,7 +123,12 @@ All messages go UI → background via `chrome.runtime.sendMessage`.
 | `getSubpagesByHour` | - | `subpagesByHour` map | path-level hourly history |
 | `invalidateSitesCache` | - | `true` | force background to drop cached reads (called by import / seed) |
 
+## Enforcement
+
+Implemented in `enforcement.js`, driven from `background.js`. `computeOverage(rules, { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, now)` is **pure**: for each enabled rule it sums usage over the period window (`hour`/`day`/`week`) under the rule's mode (`active` / `audio` / `active+audio`), and returns the over-limit and approaching (≥80%) sets. `publishOverage` reconciles `declarativeNetRequest` dynamic rules against the overage set, redirects matching open tabs to `blocked.html` (preserving the original URL for unblock), returns tabs when a limit resets, and counts blocks into `blocksByDay`. Rule match types: `host`, `subdomain`, `pathPrefix`, `regex`, `keyword`.
+
+Because `computeOverage` is pure and shape-driven, its data source is swappable — the [bucket → interval migration](../features/bucket-to-interval-tracking-migration.md) feeds it interval-derived shapes instead of scalar buckets with no logic change.
+
 ## Gaps
 
-- **Enforcement is mid-rewrite, not unplanned.** The previous enforcement system (`timeRecords`, `dailyRecords`, `checkAndBlock`, `resetPeriod`) was removed during the tracking redesign and has not been rebuilt. The tracking half now exposes all inputs the planned three blocking modes need (`activeMs`, `audioMs`, `overlapMs`). What's missing: a limit-checker in background, a `declarativeNetRequest` ruleset publisher, a `mode` field on each rule, and a redirect path to `blocked.html`. See [enforcement.md](enforcement.md) for the rebuild plan.
 - **Seven message handlers in `background.js` each re-implement the same read-through cache.** A single generic `getCached(key)` would collapse them.
