@@ -57,7 +57,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => getAvgPerClockHour(range),
+  loadAvgPerHour: (range) => getAvgPerClockHour(null, range),
   clockFormat,
 });
 
@@ -210,7 +210,7 @@ function renderTable(rows) {
       href = `../site/site.html?ids=${encodeURIComponent([...row.hostnames].join(','))}`;
       subtitle = `${etld1Count} sites · ${hostCount} subdomains`;
     }
-    return `<tr class="clickable" data-href="${href}">
+    return `<tr class="clickable" data-href="${href}&source=interval">
       <td><div class="site-cell-content"><img class="site-favicon" src="${faviconUrl(faviconHost)}" alt=""><div class="site-text"><span class="site-label">${escapeHtml(siteLabel)}</span><span class="site-id text-meta">${escapeHtml(subtitle)}</span></div></div></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(activeMs))}</span></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(audioMs))}</span></td>
@@ -328,9 +328,9 @@ function renderTopChart() {
 
   const top = [...getDisplayRows()].sort((a, b) => getVal(b) - getVal(a)).slice(0, 5).map(row => {
     const ids = row.siteIds ?? [row.siteId];
-    const href = ids.length === 1
+    const href = (ids.length === 1
       ? `../site/site.html?id=${encodeURIComponent(ids[0])}`
-      : `../site/site.html?ids=${encodeURIComponent(ids.join(','))}`;
+      : `../site/site.html?ids=${encodeURIComponent(ids.join(','))}`) + '&source=interval';
     return { label: row.siteLabel, range: ids.join(', '), val: getVal(row), href, faviconDataUrl: faviconUrl(ids[0]) };
   });
   const hrefByRange = new Map(top.map(d => [d.range, d.href]));

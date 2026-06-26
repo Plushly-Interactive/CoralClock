@@ -42,17 +42,55 @@ function unionLen(ranges) {
   return total + (ce - cs);
 }
 
+// active/audio/overlap for one cell (domain or domain+path) within one hour.
+// overlap = active∩audio via inclusion-exclusion (|A|+|B|-|A∪B|) — reuses
+// unionLen instead of a separate intersect sweep. Every segment is already
+// hour-clamped by hourBounds, so all three terms are ≤ HOUR_CAP and exact.
+function cellMs(active, audio) {
+  const activeMs = Math.min(unionLen(active), HOUR_CAP);
+  const audioMs = Math.min(unionLen(audio), HOUR_CAP);
+  const unionMs = Math.min(unionLen([...active, ...audio]), HOUR_CAP);
+  return { activeMs, audioMs, overlapMs: activeMs + audioMs - unionMs };
+}
+
+// Merge a key's presence (active+audio+idle) into disjoint runs and credit one
+// visit per run that contains active presence, to the run's start day. Audio/idle
+// during an active gap keep the run open; SESSION_GAP_MS bridges sub-second seams
+// so a row boundary and a visit boundary agree. Background-audio-only → 0 visits.
+function creditVisits(items, onVisit) {
+  items.sort((a, b) => a.from - b.from);
+  let cs = items[0].from, ce = items[0].to, hasActive = items[0].active;
+  for (let i = 1; i < items.length; i++) {
+    const it = items[i];
+    if (it.from <= ce + SESSION_GAP_MS) {        // same run — active/audio/idle bridges
+      if (it.to > ce) ce = it.to;
+      if (it.active) hasActive = true;
+    } else {
+      if (hasActive) onVisit(cs);                 // count only runs that had active
+      cs = it.from; ce = it.to; hasActive = it.active;
+    }
+  }
+  if (hasActive) onVisit(cs);
+}
+
+// idleMs is intentionally NOT emitted (scalar stores it but no reader consumes it).
+// Every cell (day AND hour, site AND subpage) carries visits — the site "today"
+// view and dashboard read per-hour visits, matching scalar's dual byDay/byHour
+// increment.
+const zeroCell = () => ({ activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 });
+
 async function build() {
   const intervals = await allIntervals();
 
-  const hours = {};              // hourKey -> { domains: {domain:{active:[],audio:[]}}, wall:[] }
-  const presenceByDomain = {};   // domain -> [{from,to,active}] (for visit counting)
+  const hours = {};              // hourKey -> { domains: {domain:{active,audio}}, paths: {domain:{path:{active,audio}}}, wall:[] }
+  const presenceByDomain = {};   // domain -> [{from,to,active}] (domain visit counting)
+  const presenceByPath = {};     // domain -> path -> [{from,to,active}] (path visit counting)
   for (const r of intervals) {
     if (r.kind === 'active' || r.kind === 'audio') {
       for (const seg of hourBounds(r.from, r.to)) {
-        const h = (hours[seg.hourKey] ??= { domains: {}, wall: [] });
-        const dd = (h.domains[r.domain] ??= { active: [], audio: [] });
-        dd[r.kind].push([seg.from, seg.to]);
+        const h = (hours[seg.hourKey] ??= { domains: {}, paths: {}, wall: [] });
+        ((h.domains[r.domain] ??= { active: [], audio: [] })[r.kind]).push([seg.from, seg.to]);
+        (((h.paths[r.domain] ??= {})[r.path] ??= { active: [], audio: [] })[r.kind]).push([seg.from, seg.to]);
         h.wall.push([seg.from, seg.to]);
       }
     }
@@ -60,50 +98,63 @@ async function build() {
     // an AFK stretch during an active gap doesn't split it); but a run only counts
     // as a visit if it actually contains `active` (so background-audio-only is 0).
     if (r.kind === 'active' || r.kind === 'audio' || r.kind === 'idle') {
-      (presenceByDomain[r.domain] ??= []).push({ from: r.from, to: r.to, active: r.kind === 'active' });
+      const p = { from: r.from, to: r.to, active: r.kind === 'active' };
+      (presenceByDomain[r.domain] ??= []).push(p);
+      (((presenceByPath[r.domain] ??= {})[r.path] ??= [])).push(p);
     }
   }
 
   const sitesByDay = {};
+  const sitesByHour = {};
+  const subpagesByDay = {};
+  const subpagesByHour = {};
   const wallByHour = {};
   const hourKeys = Object.keys(hours);
   for (const hourKey of hourKeys) {
     const h = hours[hourKey];
     const dayKey = hourKey.slice(0, 10);
     wallByHour[hourKey] = Math.min(unionLen(h.wall), HOUR_CAP);
-    for (const [domain, dd] of Object.entries(h.domains)) {
-      const d = ((sitesByDay[dayKey] ??= {})[domain] ??= { activeMs: 0, audioMs: 0, visits: 0 });
-      d.activeMs += Math.min(unionLen(dd.active), HOUR_CAP);
-      d.audioMs += Math.min(unionLen(dd.audio), HOUR_CAP);
-    }
-  }
 
-  // Domain visits: merge a domain's presence (active+audio+idle) into disjoint
-  // runs — audio/idle during an active gap keep the run open. A run is a visit
-  // only if it contains active presence (background-audio-only → not a visit).
-  // SESSION_GAP_MS (same threshold as the live-row coalesce) bridges sub-second
-  // seams, so a row boundary and a visit boundary agree.
-  for (const [domain, items] of Object.entries(presenceByDomain)) {
-    items.sort((a, b) => a.from - b.from);
-    let cs = items[0].from, ce = items[0].to, hasActive = items[0].active;
-    const credit = (start) => {
-      const dayKey = localDayKey(start);
-      ((sitesByDay[dayKey] ??= {})[domain] ??= { activeMs: 0, audioMs: 0, visits: 0 }).visits += 1;
-    };
-    for (let i = 1; i < items.length; i++) {
-      const it = items[i];
-      if (it.from <= ce + SESSION_GAP_MS) {        // same run — active/audio/idle bridges
-        if (it.to > ce) ce = it.to;
-        if (it.active) hasActive = true;
-      } else {
-        if (hasActive) credit(cs);                  // count only runs that had active
-        cs = it.from; ce = it.to; hasActive = it.active;
+    for (const [domain, dd] of Object.entries(h.domains)) {
+      const c = cellMs(dd.active, dd.audio);
+      const hd = ((sitesByHour[hourKey] ??= {})[domain] ??= zeroCell());
+      hd.activeMs += c.activeMs; hd.audioMs += c.audioMs; hd.overlapMs += c.overlapMs;
+      const d = ((sitesByDay[dayKey] ??= {})[domain] ??= zeroCell());
+      d.activeMs += c.activeMs; d.audioMs += c.audioMs; d.overlapMs += c.overlapMs;
+    }
+
+    for (const [domain, paths] of Object.entries(h.paths)) {
+      const phDomain = ((subpagesByHour[hourKey] ??= {})[domain] ??= {});
+      const pdDomain = ((subpagesByDay[dayKey] ??= {})[domain] ??= {});
+      for (const [path, dd] of Object.entries(paths)) {
+        const c = cellMs(dd.active, dd.audio);
+        const hd = (phDomain[path] ??= zeroCell());
+        hd.activeMs += c.activeMs; hd.audioMs += c.audioMs; hd.overlapMs += c.overlapMs;
+        const d = (pdDomain[path] ??= zeroCell());
+        d.activeMs += c.activeMs; d.audioMs += c.audioMs; d.overlapMs += c.overlapMs;
       }
     }
-    if (hasActive) credit(cs);
   }
 
-  return { sitesByDay, wallByHour, hourKeys };
+  // Visits: credit each run to its start day AND start hour, for both the domain
+  // (sites*) and domain+path (subpages*) keys — same run-merge semantics, mirroring
+  // scalar's dual byDay/byHour increment on a visit.
+  for (const [domain, items] of Object.entries(presenceByDomain)) {
+    creditVisits(items, (start) => {
+      ((sitesByDay[localDayKey(start)] ??= {})[domain] ??= zeroCell()).visits += 1;
+      ((sitesByHour[localHourKey(start)] ??= {})[domain] ??= zeroCell()).visits += 1;
+    });
+  }
+  for (const [domain, paths] of Object.entries(presenceByPath)) {
+    for (const [path, items] of Object.entries(paths)) {
+      creditVisits(items, (start) => {
+        (((subpagesByDay[localDayKey(start)] ??= {})[domain] ??= {})[path] ??= zeroCell()).visits += 1;
+        (((subpagesByHour[localHourKey(start)] ??= {})[domain] ??= {})[path] ??= zeroCell()).visits += 1;
+      });
+    }
+  }
+
+  return { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour, wallByHour, hourKeys };
 }
 
 function load() {
@@ -119,42 +170,64 @@ export async function getSitesByDay() {
   return (await load()).sitesByDay;
 }
 
-// 24-length array: average per clock hour over the range's days, excluding today
-// — mirrors background.js's aggregate getAvgPerClockHour (same day set + divisor).
-export async function getAvgPerClockHour(range) {
-  const { wallByHour, hourKeys } = await load();
+export async function getSitesByHour() {
+  return (await load()).sitesByHour;
+}
+
+export async function getSubpagesByDay() {
+  return (await load()).subpagesByDay;
+}
+
+export async function getSubpagesByHour() {
+  return (await load()).subpagesByHour;
+}
+
+// 24-length array: average per clock hour over the day set, excluding today —
+// mirrors background.js's getAvgPerClockHour (same signature, day set, divisor).
+// With siteIds: sum those sites' browsing (active+audio-overlap) per hour. Without:
+// the deduplicated wall-clock (parallel same-time windows counted once).
+export async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
+  const { sitesByHour, wallByHour, hourKeys } = await load();
   const now = new Date();
   const today = localDayKey(now.getTime());
 
-  let dayKeys;
-  if (range === 'all') {
-    if (hourKeys.length === 0) return new Array(24).fill(0);
-    const dates = hourKeys.map(k => k.slice(0, 10)).sort();
-    const [y, m, d] = dates[0].split('-').map(Number);
-    dayKeys = [];
-    for (let date = new Date(y, m - 1, d); ; date.setDate(date.getDate() + 1)) {
-      const k = localDayKey(date.getTime());
-      if (k === today) break;
-      dayKeys.push(k);
-    }
-  } else {
-    const n = parseInt(range);
-    dayKeys = [];
-    if (Number.isFinite(n)) {
-      for (let i = 1; i <= n; i++) {
-        const day = new Date(now);
-        day.setDate(day.getDate() - i);
-        dayKeys.push(localDayKey(day.getTime()));
+  if (!dayKeys) {
+    if (range === 'all') {
+      if (hourKeys.length === 0) return new Array(24).fill(0);
+      const dates = hourKeys.map(k => k.slice(0, 10)).sort();
+      const [y, m, d] = dates[0].split('-').map(Number);
+      dayKeys = [];
+      for (let date = new Date(y, m - 1, d); ; date.setDate(date.getDate() + 1)) {
+        const k = localDayKey(date.getTime());
+        if (k === today) break;
+        dayKeys.push(k);
+      }
+    } else {
+      const n = parseInt(range);
+      dayKeys = [];
+      if (Number.isFinite(n)) {
+        for (let i = 1; i <= n; i++) {
+          const day = new Date(now);
+          day.setDate(day.getDate() - i);
+          dayKeys.push(localDayKey(day.getTime()));
+        }
       }
     }
   }
 
   const D = dayKeys.length;
   if (D === 0) return new Array(24).fill(0);
+  const browsing = c => (c?.activeMs ?? 0) + (c?.audioMs ?? 0) - (c?.overlapMs ?? 0);
   const sums = new Array(24).fill(0);
   for (const dayKey of dayKeys) {
     for (let h = 0; h < 24; h++) {
-      sums[h] += wallByHour[`${dayKey}T${String(h).padStart(2, '0')}`] ?? 0;
+      const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
+      if (siteIds?.length) {
+        const bucket = sitesByHour[hourKey];
+        if (bucket) for (const id of siteIds) sums[h] += browsing(bucket[id]);
+      } else {
+        sums[h] += wallByHour[hourKey] ?? 0;
+      }
     }
   }
   return sums.map(s => s / D);

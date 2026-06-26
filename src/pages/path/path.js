@@ -8,6 +8,7 @@ import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
+import { intervalFetch } from '../../data/intervalProvider.js';
 import { MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR } from '../../shared/msgTypes.js';
 import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 
@@ -22,6 +23,11 @@ const prefix = drillParams.get('prefix') === '1';
 const stripParams = drillParams.get('stripParams') === '1';
 const siteId = siteIds[0];
 const isMerged = siteIds.length > 1;
+// ?source=interval routes data reads through the interval log; Phase B drops this.
+const SOURCE = drillParams.get('source');
+const fetchData = SOURCE === 'interval' ? intervalFetch : fetchTrackingData;
+const SRC_Q = SOURCE ? `&source=${encodeURIComponent(SOURCE)}` : '';
+const DASH = SOURCE === 'interval' ? '../interval-dashboard/interval-dashboard.html' : '../dashboard/dashboard.html';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 const limitBtn = document.querySelector('#limit-btn');
@@ -183,10 +189,10 @@ function renderPathLinks(entries) {
   }
 }
 
-const siteHref = isMerged
+const siteHref = (isMerged
   ? `../site/site.html?ids=${encodeURIComponent(siteIds.join(','))}`
-  : `../site/site.html?id=${encodeURIComponent(siteId)}`;
-backBtn.href = '../dashboard/dashboard.html';
+  : `../site/site.html?id=${encodeURIComponent(siteId)}`) + SRC_Q;
+backBtn.href = DASH;
 crumbSite.href = siteHref;
 
 const stats = [
@@ -289,8 +295,8 @@ const loadAndRenderPromise = loadAndRender();
 
 async function loadAndRender() {
   [byDayCache, byHourCache] = await Promise.all([
-    fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_DAY }),
-    fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_HOUR }),
+    fetchData({ type: MSG_GET_SUBPAGES_BY_DAY }),
+    fetchData({ type: MSG_GET_SUBPAGES_BY_HOUR }),
   ]);
   if (isMerged) {
     const owner = resolveOwningDomain();

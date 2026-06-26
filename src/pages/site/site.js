@@ -9,6 +9,7 @@ import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
+import { intervalFetch } from '../../data/intervalProvider.js';
 import {
   MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
@@ -23,6 +24,11 @@ const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
 const siteIds = params.get('ids')?.split(',') ?? null;
 const isMerged = !!siteIds;
+// ?source=interval routes every data read through the interval log instead of the
+// scalar message API (Phase A drilldown validation). Phase B drops this ternary.
+const SOURCE = params.get('source');
+const fetchData = SOURCE === 'interval' ? intervalFetch : fetchTrackingData;
+const DASH = SOURCE === 'interval' ? '../interval-dashboard/interval-dashboard.html' : '../dashboard/dashboard.html';
 let effectiveSiteIds = isMerged ? siteIds : [siteId];
 let isAggregatedEtld1 = false;
 document.querySelector('#header-center').appendChild(createRangeDropdown());
@@ -195,7 +201,7 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days from earliest data, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => fetchTrackingData({
+  loadAvgPerHour: (range) => fetchData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
   }),
   clockFormat,
@@ -207,10 +213,11 @@ window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
 });
 
+backBtn.href = DASH;
 backBtn.addEventListener('click', (e) => {
   if (!isInDrillMode()) return;
   e.preventDefault();
-  location.href = '../dashboard/dashboard.html';
+  location.href = DASH;
 });
 
 initDrill({
@@ -220,7 +227,7 @@ initDrill({
   clockFormat,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
-    const hourData = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_FOR_DAY, dayKey });
+    const hourData = await fetchData({ type: MSG_GET_SITES_BY_HOUR_FOR_DAY, dayKey });
     const result = {};
     for (let h = 0; h < 24; h++) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
@@ -228,7 +235,7 @@ initDrill({
     }
     return result;
   },
-  getAvgPerClockHour: (dayKeys) => fetchTrackingData({
+  getAvgPerClockHour: (dayKeys) => fetchData({
     type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range: null, dayKeys,
   }),
   render,
@@ -248,8 +255,8 @@ window.addEventListener('pageshow', () => {
 });
 
 async function loadAndRender() {
-  byDayCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_DAY });
-  subpagesByDayCache = await fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_DAY });
+  byDayCache = await fetchData({ type: MSG_GET_SITES_BY_DAY });
+  subpagesByDayCache = await fetchData({ type: MSG_GET_SUBPAGES_BY_DAY });
   resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
@@ -271,7 +278,7 @@ function resolveAggregationMode() {
 
 async function loadByHour() {
   if (byHourCache) return;
-  byHourCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_TODAY });
+  byHourCache = await fetchData({ type: MSG_GET_SITES_BY_HOUR_TODAY });
 }
 
 function siteDayKeysForRange(range) {
@@ -483,6 +490,7 @@ function renderSubpages(range) {
     params.set('path', row.path);
     if (row.truncated) params.set('prefix', '1');
     if (stripParams) params.set('stripParams', '1');
+    if (SOURCE) params.set('source', SOURCE);
     const pathHref = `../path/path.html?${params}`;
     navButton(drill, pathHref);
     let openPath = row.path;
