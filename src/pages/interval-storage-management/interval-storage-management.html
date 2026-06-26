@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BiteGuard — Storage management</title>
+  <script src="../../shared/theme.js"></script>
+  <link rel="stylesheet" href="../../shared/theme.css" />
+  <link rel="stylesheet" href="../storage-management/storage-management.css" />
+</head>
+<body>
+  <header>
+    <div id="header-left">
+      <a id="back-btn" href="../interval-dashboard/interval-dashboard.html">
+        <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
+      </a>
+    </div>
+    <div id="header-center"><h1 class="page-title">Storage management</h1></div>
+    <div id="header-right"></div>
+  </header>
+
+  <main id="page-main">
+
+    <!-- Stats band -->
+    <div id="overview">
+      <div id="counts-row">
+        <div class="count-chip">
+          <span id="count-domains" class="stat-value">—</span>
+          <span class="stat-label">Domains</span>
+        </div>
+        <div class="count-chip">
+          <span id="count-subpages" class="stat-value">—</span>
+          <span class="stat-label">Subpages</span>
+        </div>
+        <div class="count-chip">
+          <span id="count-records" class="stat-value">—</span>
+          <span class="stat-label">Rows</span>
+        </div>
+        <div class="count-chip" id="span-chip">
+          <span class="stat-value-row">
+            <span id="span-value" class="stat-value">—</span>
+            <span id="span-info" class="stat-info">ⓘ</span>
+          </span>
+          <span class="stat-label">Of data</span>
+          <div class="tooltip text-meta" id="span-tooltip"></div>
+        </div>
+      </div>
+
+      <div id="stats-row">
+        <div class="chart-container">
+          <span class="chart-heading">Browsing data</span>
+          <div class="quota-row">
+            <div class="store-bar">
+              <div id="bar-active" style="width:0%;background:var(--color-accent)"></div>
+              <div id="bar-audio" style="width:0%;background:var(--color-secondary)"></div>
+              <div id="bar-idle" style="width:0%;background:var(--color-border)"></div>
+            </div>
+            <span id="interval-total-text" class="text-meta"></span>
+          </div>
+          <div class="store-bar-legend">
+            <div class="legend-stores" style="flex:2;min-width:max-content">
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent)"></span><span id="legend-active">Active</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary)"></span><span id="legend-audio">Audio</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-border)"></span><span id="legend-idle">Idle</span></div>
+            </div>
+            <div style="flex:3">
+              <div class="text-meta">Stored in IndexedDB, outside the 10 MB cap. The bar shows the kind mix.</div>
+              <div class="text-meta" style="margin-top:6px">Row = one uninterrupted page visit.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <span class="chart-heading">Extension storage</span>
+          <div class="quota-row">
+            <div class="quota-bar-track"><div id="quota-bar-fill" class="quota-bar-fill" style="width:0%"></div></div>
+            <span id="quota-text" class="text-meta"></span>
+          </div>
+          <span id="quota-warn" class="quota-warn" hidden></span>
+          <span class="text-meta">The 10 MB cap covers settings, favicon cache, rules and data imported from other apps, not the browsing data.</span>
+        </div>
+
+        <div class="chart-container">
+          <span class="chart-heading">Last export</span>
+          <div>
+            <div id="export-age" class="export-age">—</div>
+            <div id="export-label" class="export-label"></div>
+          </div>
+          <span class="text-meta">Back up before running a large prune or delete.</span>
+          <button id="export-btn" class="btn" style="align-self:flex-start">Quick export</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tools grid (panels wired incrementally) -->
+    <div id="tools-grid">
+    </div>
+  </main>
+
+  <div id="notification" hidden></div>
+
+  <script type="module" src="./interval-storage-management.js"></script>
+</body>
+</html>

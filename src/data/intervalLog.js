@@ -45,3 +45,24 @@ export function clearAll() {
 export function count() {
   return db.intervals.count();
 }
+
+// Rows, distinct domains/subpages, and date span in one streaming pass (each()
+// does not build a full array, so this stays low-memory as the log grows).
+// earliest/latest are ms timestamps, null when empty.
+export async function intervalStats() {
+  let rows = 0, earliest = Infinity, latest = -Infinity;
+  const domains = new Set(), subpages = new Set();
+  const kinds = { active: 0, audio: 0, idle: 0 };
+  await db.intervals.each(r => {
+    rows++;
+    domains.add(r.domain);
+    subpages.add(`${r.domain}\n${r.path}`);
+    if (r.kind in kinds) kinds[r.kind]++;
+    if (r.from < earliest) earliest = r.from;
+    if (r.to > latest) latest = r.to;
+  });
+  return {
+    rows, domains: domains.size, subpages: subpages.size, kinds,
+    earliest: rows ? earliest : null, latest: rows ? latest : null,
+  };
+}

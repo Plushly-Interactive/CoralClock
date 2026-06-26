@@ -22,7 +22,7 @@ const PREF_SEARCH = 'siteSearch';
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 navButton(document.querySelector('#timeline-btn'), '../interval-timeline/interval-timeline.html');
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
-navButton(document.querySelector('#prune-btn'), '../storage-management/storage-management.html');
+navButton(document.querySelector('#prune-btn'), '../interval-storage-management/interval-storage-management.html');
 navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
 const rangeSelect = document.querySelector('#range-select');
 const dashboardTable = document.querySelector('#dashboard-table');

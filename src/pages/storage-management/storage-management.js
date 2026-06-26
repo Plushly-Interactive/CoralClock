@@ -1,6 +1,6 @@
 import { scanSiteBucket, scanSubpageBucket, applySiteDeletions, applySubpageDeletions } from '../../data/prune.js';
 import { applySiteHourlyRangeDeletion, applySiteDailyReductions, applySubpageHourlyRangeDeletion, applySubpageDailyReductions, applyDirectDailyRangeDeletion, applyDirectSubpageDailyRangeDeletion, deleteSiteAllTime } from '../../data/targetedDelete.js';
-import { formatMs, formatHourLabel, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
+import { formatMs, formatHourLabel, formatSpan, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { showNotification, formatBytes, escapeHtml, attachInputClear } from '../../shared/utils.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../../shared/msgTypes.js';
@@ -875,16 +875,6 @@ async function loadStats() {
   updateHourlyCallout();
   syncDropBtn();
   loadHealthCard();
-}
-
-function formatSpan(earliest, latest) {
-  const days = Math.round((new Date(latest) - new Date(earliest)) / 86400000);
-  if (days < 1)   return '1 day';
-  if (days < 14)  return `${days} day${days !== 1 ? 's' : ''}`;
-  if (days < 60)  { const w = Math.round(days / 7);  return `${w} week${w !== 1 ? 's' : ''}`; }
-  if (days < 730) { const m = Math.round(days / 30.44); return `${m} month${m !== 1 ? 's' : ''}`; }
-  const y = (days / 365.25).toFixed(1);
-  return `${y} year${y !== '1.0' ? 's' : ''}`;
 }
 
 const urlParams = new URLSearchParams(location.search);
