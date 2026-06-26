@@ -41,6 +41,11 @@ export function clearAll() {
   return db.intervals.clear();
 }
 
+// Delete rows by id (for import conflict resolution).
+export function deleteByIds(ids) {
+  return db.intervals.bulkDelete(ids);
+}
+
 // Row count, for the dashboard's size indicator.
 export function count() {
   return db.intervals.count();

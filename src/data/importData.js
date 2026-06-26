@@ -2,11 +2,11 @@ import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
 import { showNotification } from '../shared/utils.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../shared/msgTypes.js';
-import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../shared/prefKeys.js';
+import { EXPORT_PREF_KEYS, downloadBiteGuardExport } from './exportPayload.js';
+import { IMPORT_COMPLETE, TT_VERSION, parseTtStats, applyTtImport, downloadTt } from './ttImport.js';
+import { downloadDailyCsv, downloadHourlyCsv } from './csvExport.js';
 
-const EXPORT_PREF_KEYS = [PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START];
-
-export const IMPORT_COMPLETE = 'importcomplete';
+export { IMPORT_COMPLETE };
 
 function normalizeHost(host) {
   return host.startsWith('www.') ? host.slice(4) : host;
@@ -45,8 +45,6 @@ function normalizeSubpageBuckets(buckets) {
     buckets[bucketKey] = next;
   }
 }
-
-const TT_VERSION = '4.2.1';
 
 const importBtn = document.querySelector('#import-btn');
 const importInput = document.querySelector('#import-input');
@@ -109,96 +107,17 @@ document.addEventListener('keydown', (e) => {
 });
 
 export async function exportBiteGuardData() {
-  const stored = await chrome.storage.local.get([
-    SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
-    'rules', ...EXPORT_PREF_KEYS,
-  ]);
-  const sitesByDay = stored[SITES_DAY_KEY] ?? {};
-  const sitesByHour = stored[SITES_HOUR_KEY] ?? {};
-  const subpagesByDay = stored[SUBPAGES_DAY_KEY] ?? {};
-  const subpagesByHour = stored[SUBPAGES_HOUR_KEY] ?? {};
-  const rules = stored.rules ?? [];
-  const prefs = {};
-  for (const k of EXPORT_PREF_KEYS) {
-    if (stored[k] !== undefined) prefs[k] = stored[k];
-  }
-
-  const payload = {
-    format: 'biteguard',
-    version: 3,
-    exportedAt: new Date().toISOString(),
-    rules,
-    prefs,
-    data: {
-      [SITES_DAY_KEY]: sitesByDay,
-      [SITES_HOUR_KEY]: sitesByHour,
-      [SUBPAGES_DAY_KEY]: subpagesByDay,
-      [SUBPAGES_HOUR_KEY]: subpagesByHour,
-    },
-  };
-
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const filename = `biteguard-export-${new Date().toISOString().slice(0, 10)}.json`;
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-
-  await chrome.storage.local.set({ [PREF_LAST_EXPORT_AT]: Date.now() });
-
-  showNotification(`Exported to "${filename}"`);
+  await downloadBiteGuardExport();
 }
 
 bgExportBtn.addEventListener('click', exportBiteGuardData);
-
-function csvField(value) {
-  return /[,"\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
-}
-
-function downloadCsv(rows, filename) {
-  if (rows.length === 1) {
-    showNotification('No data to export');
-    return;
-  }
-  const blob = new Blob([rows.join('\r\n')], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-  showNotification(`Exported to "${filename}"`);
-}
-
-function siteRow(prefix, host, cell) {
-  return `${prefix},${host},,${((cell.activeMs ?? 0) / 60000).toFixed(2)},${((cell.audioMs ?? 0) / 60000).toFixed(2)},${cell.visits ?? 0}`;
-}
-
-function subpageRow(prefix, host, path, cell) {
-  return `${prefix},${host},${csvField(path)},${((cell.activeMs ?? 0) / 60000).toFixed(2)},${((cell.audioMs ?? 0) / 60000).toFixed(2)},${cell.visits ?? 0}`;
-}
 
 csvDailyBtn.addEventListener('click', async () => {
   const {
     [SITES_DAY_KEY]: sitesByDay = {},
     [SUBPAGES_DAY_KEY]: subpagesByDay = {},
   } = await chrome.storage.local.get([SITES_DAY_KEY, SUBPAGES_DAY_KEY]);
-  const rows = ['date,host,path,active_min,audio_min,visits'];
-  for (const [day, sites] of Object.entries(sitesByDay).sort()) {
-    for (const [host, cell] of Object.entries(sites).sort()) {
-      const paths = subpagesByDay[day]?.[host];
-      if (paths && Object.keys(paths).length > 0) {
-        for (const [path, pathCell] of Object.entries(paths).sort()) {
-          rows.push(subpageRow(day, host, path, pathCell));
-        }
-      } else {
-        rows.push(siteRow(day, host, cell));
-      }
-    }
-  }
-  downloadCsv(rows, `biteguard-daily-${new Date().toISOString().slice(0, 10)}.csv`);
+  downloadDailyCsv(sitesByDay, subpagesByDay);
 });
 
 csvHourlyBtn.addEventListener('click', async () => {
@@ -206,59 +125,12 @@ csvHourlyBtn.addEventListener('click', async () => {
     [SITES_HOUR_KEY]: sitesByHour = {},
     [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
   } = await chrome.storage.local.get([SITES_HOUR_KEY, SUBPAGES_HOUR_KEY]);
-  const rows = ['date,hour,host,path,active_min,audio_min,visits'];
-  for (const [bucket, sites] of Object.entries(sitesByHour).sort()) {
-    const [date, time] = bucket.split('T');
-    const hour = parseInt(time, 10);
-    const prefix = `${date},${hour}`;
-    for (const [host, cell] of Object.entries(sites).sort()) {
-      const paths = subpagesByHour[bucket]?.[host];
-      if (paths && Object.keys(paths).length > 0) {
-        for (const [path, pathCell] of Object.entries(paths).sort()) {
-          rows.push(subpageRow(prefix, host, path, pathCell));
-        }
-      } else {
-        rows.push(siteRow(prefix, host, cell));
-      }
-    }
-  }
-  downloadCsv(rows, `biteguard-hourly-${new Date().toISOString().slice(0, 10)}.csv`);
+  downloadHourlyCsv(sitesByHour, subpagesByHour);
 });
 
 ttExportBtn.addEventListener('click', async () => {
   const { [SITES_DAY_KEY]: sitesByDay = {} } = await chrome.storage.local.get(SITES_DAY_KEY);
-
-  const __stat__ = [];
-  for (const [day, sites] of Object.entries(sitesByDay)) {
-    const date = day.replaceAll('-', '');
-    for (const [host, entry] of Object.entries(sites)) {
-      __stat__.push({
-        host,
-        date,
-        focus: entry.activeMs ?? 0,
-        time: entry.visits ?? 0,
-      });
-    }
-  }
-
-  const payload = {
-    __meta__: { version: TT_VERSION, ts: Date.now() },
-    __stat__,
-    __limit__: [],
-    __merge__: [],
-    __whitelist__: [],
-  };
-
-  const blob = new Blob([JSON.stringify(payload, null, 4)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const filename = `time-tracker-export-${new Date().toISOString().slice(0, 10)}.json`;
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-
-  showNotification(`Exported to "${filename}"`);
+  downloadTt(sitesByDay);
 });
 
 ttImportBtn.addEventListener('click', () => {
@@ -294,19 +166,8 @@ importInput.addEventListener('change', async () => {
 });
 
 async function handleTtImport(json) {
-  const data = {};
-  for (const { host, date, focus, time } of json.__stat__) {
-    if (!host || !date || focus == null) continue;
-    const dayKey = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}`;
-    const siteId = normalizeHost(host);
-    data[dayKey] ??= {};
-    data[dayKey][siteId] ??= { activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 };
-    data[dayKey][siteId].activeMs += focus;
-    data[dayKey][siteId].visits += time ?? 0;
-  }
-
+  const data = parseTtStats(json);
   const { [SITES_DAY_KEY]: sitesByDay = {} } = await chrome.storage.local.get(SITES_DAY_KEY);
-
   const conflicts = Object.keys(data).filter((d) => sitesByDay[d]).sort();
 
   if (conflicts.length === 0) {
@@ -316,22 +177,6 @@ async function handleTtImport(json) {
 
   pendingImport = { importData: data, currentByDay: sitesByDay, conflicts, isTt: true };
   showConflictView(conflicts);
-}
-
-async function applyTtImport(importData, currentByDay, daysToReplace) {
-  const daysToTake = new Set();
-  for (const d of Object.keys(importData)) {
-    if (!currentByDay[d] || daysToReplace.has(d)) daysToTake.add(d);
-  }
-
-  for (const d of daysToTake) {
-    currentByDay[d] = importData[d];
-  }
-
-  await chrome.storage.local.set({ [SITES_DAY_KEY]: currentByDay });
-  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE });
-  showNotification(`Imported ${daysToTake.size} day(s)`);
-  window.dispatchEvent(new CustomEvent(IMPORT_COMPLETE));
 }
 
 let pendingImport = null;

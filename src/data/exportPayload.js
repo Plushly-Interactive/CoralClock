@@ -1,0 +1,47 @@
+import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
+import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
+import { allIntervals } from './intervalLog.js';
+import { showNotification } from '../shared/utils.js';
+import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../shared/prefKeys.js';
+
+// Pure export logic, no modal/DOM wiring — safe to import from any page (unlike
+// importData.js, which self-wires the io-modal at load). Both the bucket storage
+// page and the interval storage page build the same complete backup file here.
+export const EXPORT_PREF_KEYS = [PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START];
+
+export async function buildBiteGuardPayload() {
+  const stored = await chrome.storage.local.get([
+    SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
+    'rules', ...EXPORT_PREF_KEYS,
+  ]);
+  const prefs = {};
+  for (const k of EXPORT_PREF_KEYS) if (stored[k] !== undefined) prefs[k] = stored[k];
+  return {
+    format: 'biteguard',
+    version: 3,
+    exportedAt: new Date().toISOString(),
+    rules: stored.rules ?? [],
+    prefs,
+    data: {
+      [SITES_DAY_KEY]: stored[SITES_DAY_KEY] ?? {},
+      [SITES_HOUR_KEY]: stored[SITES_HOUR_KEY] ?? {},
+      [SUBPAGES_DAY_KEY]: stored[SUBPAGES_DAY_KEY] ?? {},
+      [SUBPAGES_HOUR_KEY]: stored[SUBPAGES_HOUR_KEY] ?? {},
+    },
+    intervals: await allIntervals(),
+  };
+}
+
+export async function downloadBiteGuardExport() {
+  const payload = await buildBiteGuardPayload();
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const filename = `biteguard-export-${new Date().toISOString().slice(0, 10)}.json`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  await chrome.storage.local.set({ [PREF_LAST_EXPORT_AT]: Date.now() });
+  showNotification(`Exported to "${filename}"`);
+}
