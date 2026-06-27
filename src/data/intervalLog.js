@@ -46,6 +46,58 @@ export function deleteByIds(ids) {
   return db.intervals.bulkDelete(ids);
 }
 
+// Delete every row for a domain. Resolves to the number deleted.
+export function deleteByDomain(domain) {
+  return db.intervals.filter(r => r.domain === domain).delete();
+}
+
+// Delete rows that START within [fromTs, toTs), optionally only for `domain`.
+// Resolves to the number deleted.
+export function deleteRange(fromTs, toTs, domain = null) {
+  return db.intervals.filter(r => r.from >= fromTs && r.from < toTs && (!domain || r.domain === domain)).delete();
+}
+
+// Delete every row for one domain+path. Resolves to the number deleted.
+export function deletePath(domain, path) {
+  return db.intervals.filter(r => r.domain === domain && r.path === path).delete();
+}
+
+// Collapse rows that START before `beforeTs` to site level: drop the path and
+// merge each domain's same-kind ranges into the fewest disjoint rows. Preserves
+// site-level active/audio time (a union, same as the aggregates compute) while
+// shedding per-page detail and shrinking the log. Resolves to rows removed.
+export async function dropPathsBefore(beforeTs) {
+  const old = await db.intervals.filter(r => r.from < beforeTs).toArray();
+  if (old.length === 0) return 0;
+
+  const byKey = new Map();  // "domain\nkind" -> [[from,to], ...]
+  for (const r of old) {
+    const k = `${r.domain}\n${r.kind}`;
+    let arr = byKey.get(k);
+    if (!arr) { arr = []; byKey.set(k, arr); }
+    arr.push([r.from, r.to]);
+  }
+
+  const merged = [];
+  for (const [k, ranges] of byKey) {
+    const [domain, kind] = k.split('\n');
+    ranges.sort((a, b) => a[0] - b[0]);
+    let [cs, ce] = ranges[0];
+    for (let i = 1; i < ranges.length; i++) {
+      const [s, e] = ranges[i];
+      if (s <= ce) { if (e > ce) ce = e; }            // overlap/touch -> extend
+      else { merged.push({ domain, path: '/', kind, from: cs, to: ce }); cs = s; ce = e; }
+    }
+    merged.push({ domain, path: '/', kind, from: cs, to: ce });
+  }
+
+  await db.transaction('rw', db.intervals, async () => {
+    await db.intervals.bulkDelete(old.map(r => r.id));
+    await db.intervals.bulkAdd(merged);
+  });
+  return old.length - merged.length;
+}
+
 // Row count, for the dashboard's size indicator.
 export function count() {
   return db.intervals.count();

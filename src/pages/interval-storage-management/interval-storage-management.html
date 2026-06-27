@@ -97,6 +97,108 @@
 
     <!-- Tools grid (panels wired incrementally) -->
     <div id="tools-grid">
+
+      <div class="chart-container" id="insig-card">
+        <h2 class="chart-heading">Remove insignificant rows</h2>
+        <p class="card-desc">Brief visits and accidental clicks accumulate. Scan and remove sites or pages whose total tracked time falls below a threshold.</p>
+        <div class="field-group">
+          <div class="setting-label">Threshold</div>
+          <div id="threshold-row">
+            <input id="threshold-input" class="number-input" type="number" min="1" value="30" />
+            <span>seconds</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="setting-label">Scan</div>
+          <div id="insig-stores">
+            <label class="scope-check"><input type="checkbox" id="insig-scope-sites" checked> Sites</label>
+            <label class="scope-check"><input type="checkbox" id="insig-scope-subpages" checked> Subpages</label>
+          </div>
+        </div>
+        <div class="right-row"><button id="scan-btn" class="btn">Scan</button></div>
+      </div>
+
+      <div class="chart-container" id="range-delete">
+        <h2 class="chart-heading">Targeted deletion</h2>
+        <p class="card-desc">Delete all data for a specific site, or remove records within an exact date and time window.</p>
+        <div id="site-filter-row">
+          <span class="setting-label">Site (optional)</span>
+          <div id="site-filter-wrap" class="input-wrap">
+            <input type="text" id="site-filter-input" class="text-input" placeholder="e.g. google.com" />
+            <button id="site-filter-clear" class="icon-btn input-clear" hidden>&times;</button>
+          </div>
+        </div>
+        <div id="delete-all-site-row">
+          <button id="delete-all-site-btn" class="btn">Delete all data</button>
+        </div>
+        <hr class="card-divider" />
+        <div id="range-mode-row">
+          <div id="range-mode-toggle" class="seg-control">
+            <button id="mode-contiguous-btn" class="seg-btn active">Contiguous</button>
+            <button id="mode-repeat-btn" class="seg-btn">Repeat daily</button>
+          </div>
+        </div>
+        <div id="range-form-row">
+          <div id="range-form-col">
+            <div class="range-line">
+              <span class="setting-label">From</span>
+              <div class="dt-group">
+                <input type="date" id="range-from-date" />
+                <div class="custom-dropdown hour-dropdown" id="range-from-hour"></div>
+              </div>
+            </div>
+            <div class="range-line">
+              <span class="setting-label">To</span>
+              <div class="dt-group">
+                <input type="date" id="range-to-date" />
+                <div class="custom-dropdown hour-dropdown" id="range-to-hour"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="repeat-form" style="display:none">
+          <div class="repeat-row">
+            <span class="repeat-label setting-label">Dates</span>
+            <input type="date" id="repeat-from-date" />
+            <span class="text-meta">–</span>
+            <input type="date" id="repeat-to-date" />
+          </div>
+          <div class="repeat-row">
+            <span class="repeat-label setting-label">Hours</span>
+            <div class="custom-dropdown hour-dropdown" id="repeat-from-hour"></div>
+            <span class="text-meta">–</span>
+            <div class="custom-dropdown hour-dropdown" id="repeat-to-hour"></div>
+          </div>
+        </div>
+        <div class="right-row">
+          <button id="delete-range-btn" class="btn">Delete range</button>
+        </div>
+      </div>
+
+      <div class="chart-container" id="drop-card">
+        <h2 class="chart-heading">Drop subpage detail</h2>
+        <p class="card-desc">Collapse old rows to site level by dropping their page path. Keeps site totals, sheds per-page detail to shrink the log.</p>
+        <div id="drop-row">
+          <span class="setting-label">Collapse rows older than</span>
+          <input id="drop-days-input" class="number-input" type="number" min="0" value="30" />
+          <span>days</span>
+        </div>
+        <div class="right-row"><button id="drop-paths-btn" class="btn">Drop subpage detail</button></div>
+      </div>
+
+      <div class="chart-container" id="integrity-card">
+        <h2 class="chart-heading">Integrity check</h2>
+        <p class="card-desc">Scans for malformed rows: zero or negative duration, future-dated, or stuck-open (over 12 hours) rows.</p>
+        <div class="health-status">
+          <span id="integrity-dot" class="health-dot"></span>
+          <span id="integrity-status-text">Not scanned yet.</span>
+        </div>
+        <div class="right-row">
+          <button id="integrity-scan-btn" class="btn">Scan</button>
+          <button id="integrity-repair-btn" class="btn" style="display:none">Delete bad rows</button>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -180,6 +282,20 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Scan overlay (remove insignificant rows) -->
+  <div id="scan-overlay" style="display:none">
+    <div class="overlay-header">
+      <span class="overlay-title">Scan results</span>
+      <span id="overlay-params" class="text-meta"></span>
+      <button id="overlay-close" class="overlay-close">×</button>
+    </div>
+    <div id="overlay-results" class="overlay-results"></div>
+    <div class="overlay-footer">
+      <span id="overlay-summary" class="text-meta"></span>
+      <button id="overlay-delete-btn" class="btn">Delete selected</button>
     </div>
   </div>
 

@@ -1,12 +1,13 @@
-import { formatBytes, showNotification } from '../../shared/utils.js';
-import { localDayKey, formatSpan } from '../../shared/timeUtils.js';
-import { intervalStats, appendIntervals, allIntervals, deleteByIds } from '../../data/intervalLog.js';
+import { formatBytes, showNotification, attachInputClear, escapeHtml } from '../../shared/utils.js';
+import { localDayKey, formatSpan, formatMs, formatHourLabel, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
+import { intervalStats, appendIntervals, allIntervals, deleteByIds, deleteByDomain, deleteRange, dropPathsBefore } from '../../data/intervalLog.js';
 import { invalidate, getSitesByDay, getSubpagesByDay, getSitesByHour, getSubpagesByHour } from '../../data/intervalAggregates.js';
+import { confirmDialog } from '../../shared/confirmDialog.js';
 import { downloadBiteGuardExport } from '../../data/exportPayload.js';
 import { parseTtStats, applyTtImport, downloadTt, TT_VERSION } from '../../data/ttImport.js';
 import { downloadDailyCsv, downloadHourlyCsv, downloadIntervalsCsv } from '../../data/csvExport.js';
 import { SITES_DAY_KEY } from '../../background/siteTracking.js';
-import { PREF_LAST_EXPORT_AT } from '../../shared/prefKeys.js';
+import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 
 const spanChip = document.querySelector('#span-chip');
 const spanTooltip = document.querySelector('#span-tooltip');
@@ -212,6 +213,464 @@ document.querySelector('#io-conflict-replace').addEventListener('click', async (
   }
   const { overlapping } = splitByOverlap(p.currentRows, p.importUnion);  // drop current rows that overlap
   await finishImport(p.imported, overlapping.map(r => r.id));
+});
+
+// --- Targeted deletion (UI cloned from the bucket storage page; deletes interval rows) ---
+function delHourLabel(h, clockFormat) {
+  if (h === 24) return clockFormat === '12h' ? '12 AM +1' : '00:00 +1';
+  return formatHourLabel(h, clockFormat);
+}
+
+function buildHourDropdown(id, initHour, clockFormat, onChange) {
+  const wrap = document.querySelector(`#${id}`);
+  wrap.dataset.direction = 'up';
+  const btn = document.createElement('button');
+  btn.className = 'dropdown-btn';
+  btn.dataset.value = initHour;
+  btn.innerHTML = `${delHourLabel(initHour, clockFormat)}<span class="dropdown-arrow">▼</span>`;
+  const menu = document.createElement('div');
+  menu.className = 'dropdown-menu';
+  for (let h = 0; h <= 24; h++) {
+    const opt = document.createElement('button');
+    opt.value = h;
+    opt.textContent = delHourLabel(h, clockFormat);
+    menu.appendChild(opt);
+  }
+  wrap.append(btn, menu);
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const isOpen = menu.classList.contains('open');
+    document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+    if (!isOpen) menu.classList.add('open');
+  });
+  menu.querySelectorAll('button').forEach(opt => {
+    opt.addEventListener('click', e => {
+      e.stopPropagation();
+      btn.firstChild.textContent = opt.textContent;
+      btn.dataset.value = opt.value;
+      menu.classList.remove('open');
+      if (onChange) onChange();
+    });
+  });
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+});
+
+const contiguousForm = document.querySelector('#range-form-row');
+const repeatForm = document.querySelector('#repeat-form');
+const modeRepeatBtn = document.querySelector('#mode-repeat-btn');
+const rangeFromDate = document.querySelector('#range-from-date');
+const rangeToDate = document.querySelector('#range-to-date');
+const repeatFromDate = document.querySelector('#repeat-from-date');
+const repeatToDate = document.querySelector('#repeat-to-date');
+const siteInput = document.querySelector('#site-filter-input');
+const deleteAllBtn = document.querySelector('#delete-all-site-btn');
+
+document.querySelector('#mode-contiguous-btn').addEventListener('click', () => {
+  contiguousForm.style.display = '';
+  repeatForm.style.display = 'none';
+  document.querySelector('#mode-contiguous-btn').classList.add('active');
+  modeRepeatBtn.classList.remove('active');
+  syncDeleteRangeBtn();
+});
+modeRepeatBtn.addEventListener('click', () => {
+  contiguousForm.style.display = 'none';
+  repeatForm.style.display = '';
+  modeRepeatBtn.classList.add('active');
+  document.querySelector('#mode-contiguous-btn').classList.remove('active');
+  syncDeleteRangeBtn();
+});
+
+function syncDeleteAllBtn() { deleteAllBtn.disabled = !siteInput.value.trim(); }
+attachInputClear(siteInput, document.querySelector('#site-filter-clear'), syncDeleteAllBtn);
+const delSiteParam = new URLSearchParams(location.search).get('site');
+if (delSiteParam) siteInput.value = delSiteParam;
+syncDeleteAllBtn();
+
+function getHourValue(id) {
+  return parseInt(document.querySelector(`#${id} .dropdown-btn`).dataset.value, 10);
+}
+
+function syncDeleteRangeBtn() {
+  const btn = document.querySelector('#delete-range-btn');
+  const isRepeat = modeRepeatBtn.classList.contains('active');
+  if (isRepeat) {
+    const fromDate = repeatFromDate.value, toDate = repeatToDate.value;
+    btn.disabled = !fromDate || !toDate || fromDate > toDate || getHourValue('repeat-from-hour') >= getHourValue('repeat-to-hour');
+  } else {
+    const fromDate = rangeFromDate.value, toDate = rangeToDate.value;
+    const fromKey = fromDate ? `${fromDate}T${String(getHourValue('range-from-hour')).padStart(2, '0')}` : '';
+    const toKey = toDate ? `${toDate}T${String(getHourValue('range-to-hour')).padStart(2, '0')}` : '';
+    btn.disabled = !fromDate || !toDate || fromKey >= toKey;
+  }
+}
+rangeFromDate.addEventListener('input', syncDeleteRangeBtn);
+rangeToDate.addEventListener('input', syncDeleteRangeBtn);
+repeatFromDate.addEventListener('input', syncDeleteRangeBtn);
+repeatToDate.addEventListener('input', syncDeleteRangeBtn);
+
+function buildRepeatPairs(fromDate, toDate, fromHour, toHour) {
+  const pairs = [];
+  const cur = new Date(fromDate + 'T12:00:00');
+  const end = new Date(toDate + 'T12:00:00');
+  while (cur <= end) {
+    const d = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`;
+    pairs.push([`${d}T${String(fromHour).padStart(2, '0')}`, `${d}T${String(toHour).padStart(2, '0')}`]);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return pairs;
+}
+
+// "YYYY-MM-DDTHH" -> ms; hour 24 rolls to next-day 00:00.
+function keyToTs(key) {
+  const [date, hh] = key.split('T');
+  const d = new Date(date + 'T00:00:00');
+  d.setHours(parseInt(hh, 10));
+  return d.getTime();
+}
+
+deleteAllBtn.addEventListener('click', async () => {
+  const siteId = siteInput.value.trim();
+  const ok = await confirmDialog({
+    message: `Delete all rows for ${siteId}? This permanently removes every interval row for ${siteId} across all dates. This cannot be undone.`,
+    confirmLabel: 'Delete',
+  });
+  if (!ok) return;
+  const n = await deleteByDomain(siteId);
+  invalidate();
+  await loadStats();
+  showNotification(`Deleted ${n.toLocaleString()} row${n === 1 ? '' : 's'} for ${siteId}`);
+});
+
+document.querySelector('#delete-range-btn').addEventListener('click', async () => {
+  const isRepeat = modeRepeatBtn.classList.contains('active');
+  const siteId = siteInput.value.trim() || null;
+  const scope = siteId ? ` for ${siteId}` : '';
+  let confirmMsg, pairs;
+  if (isRepeat) {
+    const fromDate = repeatFromDate.value, toDate = repeatToDate.value;
+    const fromHour = getHourValue('repeat-from-hour'), toHour = getHourValue('repeat-to-hour');
+    pairs = buildRepeatPairs(fromDate, toDate, fromHour, toHour);
+    confirmMsg = `Delete rows${scope} for hours ${String(fromHour).padStart(2, '0')}:00–${String(toHour).padStart(2, '0')}:00 daily from ${fromDate} to ${toDate}? This cannot be undone.`;
+  } else {
+    const fromDate = rangeFromDate.value, toDate = rangeToDate.value;
+    const fromHour = getHourValue('range-from-hour'), toHour = getHourValue('range-to-hour');
+    pairs = [[`${fromDate}T${String(fromHour).padStart(2, '0')}`, `${toDate}T${String(toHour).padStart(2, '0')}`]];
+    confirmMsg = `Delete all rows${scope} from ${fromDate} ${String(fromHour).padStart(2, '0')}:00 to ${toDate} ${String(toHour).padStart(2, '0')}:00? This cannot be undone.`;
+  }
+  const ok = await confirmDialog({ message: confirmMsg, confirmLabel: 'Delete' });
+  if (!ok) return;
+  let n = 0;
+  for (const [fromKey, toKey] of pairs) n += await deleteRange(keyToTs(fromKey), keyToTs(toKey), siteId);
+  invalidate();
+  await loadStats();
+  showNotification(`Deleted ${n.toLocaleString()} row${n === 1 ? '' : 's'}`);
+});
+
+async function initHourDropdowns() {
+  const stored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
+  const clockFormat = stored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
+  buildHourDropdown('range-from-hour', 0, clockFormat, syncDeleteRangeBtn);
+  buildHourDropdown('range-to-hour', 24, clockFormat, syncDeleteRangeBtn);
+  buildHourDropdown('repeat-from-hour', 9, clockFormat, syncDeleteRangeBtn);
+  buildHourDropdown('repeat-to-hour', 17, clockFormat, syncDeleteRangeBtn);
+  syncDeleteRangeBtn();
+}
+initHourDropdowns();
+
+// --- Remove insignificant rows (scan overlay; aggregates raw rows per site/page) ---
+let _cbId = 0;
+let scanState = null;
+const scanOverlay = document.querySelector('#scan-overlay');
+const thresholdInput = document.querySelector('#threshold-input');
+
+function syncScanBtn() {
+  const num = Number(thresholdInput.value);
+  const valid = thresholdInput.value !== '' && !isNaN(num) && num > 0;
+  const scopeOk = document.querySelector('#insig-scope-sites').checked || document.querySelector('#insig-scope-subpages').checked;
+  document.querySelector('#scan-btn').disabled = !valid || !scopeOk;
+}
+thresholdInput.addEventListener('input', () => {
+  thresholdInput.value = thresholdInput.value.replace(/[^0-9]/g, '');  // digits only
+  syncScanBtn();
+  const num = Number(thresholdInput.value);
+  if (num > 0) chrome.storage.local.set({ pruneThresholdSeconds: num });
+});
+document.querySelector('#insig-scope-sites').addEventListener('change', syncScanBtn);
+document.querySelector('#insig-scope-subpages').addEventListener('change', syncScanBtn);
+document.querySelector('#scan-btn').addEventListener('click', runScan);
+document.querySelector('#overlay-close').addEventListener('click', () => { scanOverlay.style.display = 'none'; });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && scanOverlay.style.display !== 'none') scanOverlay.style.display = 'none'; });
+document.querySelector('#overlay-delete-btn').addEventListener('click', deleteSelectedInsignificant);
+
+function rowKey(r) { return `${r.isSub ? 'p' : 's'}\n${r.siteId}\n${r.path ?? ''}`; }
+
+async function runScan() {
+  const thresholdMs = Number(thresholdInput.value) * 1000;
+  const scanSites = document.querySelector('#insig-scope-sites').checked;
+  const scanSubpages = document.querySelector('#insig-scope-subpages').checked;
+
+  const rows = await allIntervals();
+  const siteAgg = new Map();
+  const pathAgg = new Map();
+  for (const r of rows) {
+    const dur = Math.max(0, r.to - r.from);
+    let s = siteAgg.get(r.domain);
+    if (!s) { s = { siteId: r.domain, totalActive: 0, totalAudio: 0, recordCount: 0, lastTo: 0 }; siteAgg.set(r.domain, s); }
+    s.recordCount++; if (r.to > s.lastTo) s.lastTo = r.to;
+    if (r.kind === 'active') s.totalActive += dur; else if (r.kind === 'audio') s.totalAudio += dur;
+    const pk = `${r.domain}\n${r.path}`;
+    let p = pathAgg.get(pk);
+    if (!p) { p = { siteId: r.domain, path: r.path, totalActive: 0, totalAudio: 0, recordCount: 0, lastTo: 0 }; pathAgg.set(pk, p); }
+    p.recordCount++; if (r.to > p.lastTo) p.lastTo = r.to;
+    if (r.kind === 'active') p.totalActive += dur; else if (r.kind === 'audio') p.totalAudio += dur;
+  }
+
+  const below = a => a.totalActive < thresholdMs && a.totalAudio < thresholdMs;
+  const groups = [];
+  if (scanSites) {
+    const results = [...siteAgg.values()].filter(below).map(a => ({ ...a, isSub: false, lastVisit: localDayKey(a.lastTo) }));
+    groups.push({ label: 'Sites', isSub: false, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
+  }
+  if (scanSubpages) {
+    const results = [...pathAgg.values()].filter(below).map(a => ({ ...a, isSub: true, lastVisit: localDayKey(a.lastTo) }));
+    groups.push({ label: 'Subpages', isSub: true, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
+  }
+  scanState = { groups, thresholdMs };
+  renderScanResults();
+  scanOverlay.style.display = '';
+}
+
+function renderScanResults() {
+  const { groups, thresholdMs } = scanState;
+  document.querySelector('#overlay-params').textContent = `${thresholdMs / 1000}s · ${groups.map(g => g.label).join(' + ')}`;
+  const resultsEl = document.querySelector('#overlay-results');
+  resultsEl.innerHTML = '';
+  if (!groups.some(g => g.results.length > 0)) {
+    const msg = document.createElement('p');
+    msg.className = 'text-meta';
+    msg.style.cssText = 'padding:20px;text-align:center';
+    msg.textContent = 'No rows below the threshold.';
+    resultsEl.appendChild(msg);
+    document.querySelector('#overlay-delete-btn').style.display = 'none';
+    document.querySelector('#overlay-summary').textContent = '';
+    return;
+  }
+  document.querySelector('#overlay-delete-btn').style.display = '';
+  for (const group of groups) if (group.results.length > 0) resultsEl.appendChild(buildGroupEl(group));
+  updateScanSummary();
+}
+
+function buildGroupEl(group) {
+  const details = document.createElement('details');
+  details.className = 'result-group';
+  details.open = true;
+  group.el = details;
+  const colHeader = group.isSub ? 'Page' : 'Site';
+  details.innerHTML = `
+    <summary class="result-group-title">${group.label} (${group.results.length})</summary>
+    <table class="data-table">
+      <thead><tr>
+        <th class="td-site" data-col="siteId" data-label="${colHeader}">${colHeader}</th>
+        <th class="td-narrow" data-col="lastVisit" data-label="Last visit">Last visit</th>
+        <th class="td-narrow" data-col="totalActive" data-label="Active">Active</th>
+        <th class="td-narrow" data-col="totalAudio" data-label="Audio">Audio</th>
+        <th class="td-narrow" data-col="recordCount" data-label="Rows">Rows</th>
+        <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="group-all-check"> All</label></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>`;
+  rerenderGroupBody(group, details);
+  details.querySelectorAll('th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      group.sortDir = group.sortCol === th.dataset.col && group.sortDir === 'asc' ? 'desc' : 'asc';
+      group.sortCol = th.dataset.col;
+      rerenderGroupBody(group, details);
+    });
+  });
+  details.querySelector('.group-all-check').addEventListener('change', e => {
+    if (e.target.checked) group.results.forEach(r => group.selectedKeys.add(rowKey(r)));
+    else group.selectedKeys.clear();
+    // Deselecting all pages also deselects their sites, and vice versa (see per-row handler).
+    if (group.isSub && !e.target.checked) {
+      const sites = scanState.groups.find(g => !g.isSub);
+      if (sites) {
+        for (const r of group.results) sites.selectedKeys.delete(`s\n${r.siteId}\n`);
+        if (sites.el) rerenderGroupBody(sites, sites.el);
+      }
+    } else if (!group.isSub && !e.target.checked) {
+      const subs = scanState.groups.find(g => g.isSub);
+      if (subs) {
+        const domains = new Set(group.results.map(s => s.siteId));
+        for (const pr of subs.results) if (domains.has(pr.siteId)) subs.selectedKeys.delete(rowKey(pr));
+        if (subs.el) rerenderGroupBody(subs, subs.el);
+      }
+    }
+    rerenderGroupBody(group, details);
+    updateScanSummary();
+  });
+  return details;
+}
+
+function rerenderGroupBody(group, details) {
+  const sorted = [...group.results].sort((a, b) => {
+    let av = a[group.sortCol], bv = b[group.sortCol];
+    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+    return group.sortDir === 'asc' ? cmp : -cmp;
+  });
+  details.querySelectorAll('th[data-col]').forEach(th => {
+    const isSorted = th.dataset.col === group.sortCol;
+    th.textContent = th.dataset.label + (isSorted ? (group.sortDir === 'desc' ? ' ↓' : ' ↑') : '');
+    th.classList.toggle('sorted', isSorted);
+  });
+  const tbody = details.querySelector('tbody');
+  tbody.innerHTML = '';
+  for (const r of sorted) tbody.appendChild(buildRowEl(r, group, details));
+  syncGroupAllCheck(group, details);
+}
+
+function buildRowEl(r, group, details) {
+  const key = rowKey(r);
+  const checked = group.selectedKeys.has(key);
+  const tr = document.createElement('tr');
+  if (!checked) tr.classList.add('unchecked');
+  const siteCell = group.isSub
+    ? `<td class="td-site"><span class="site-label truncate" title="${escapeHtml(r.siteId)}">${escapeHtml(r.siteId)}</span><span class="text-meta truncate" title="${escapeHtml(r.path)}">${escapeHtml(r.path)}</span></td>`
+    : `<td class="td-site"><span class="truncate" title="${escapeHtml(r.siteId)}">${escapeHtml(r.siteId)}</span></td>`;
+  tr.innerHTML = `${siteCell}<td>${r.lastVisit}</td><td>${formatMs(r.totalActive)}</td><td>${formatMs(r.totalAudio)}</td><td>${r.recordCount}</td><td class="td-check"><input type="checkbox" id="scan-row-${++_cbId}" ${checked ? 'checked' : ''}></td>`;
+  tr.querySelector('input[type="checkbox"]').addEventListener('change', e => {
+    if (e.target.checked) { group.selectedKeys.add(key); tr.classList.remove('unchecked'); }
+    else { group.selectedKeys.delete(key); tr.classList.add('unchecked'); }
+    // Keep site and its pages in sync: unchecking a page unchecks its site (a
+    // selected site deletes the whole domain), and unchecking a site unchecks its
+    // pages. Mutate keys + re-render (no change events fired, so no loop).
+    if (group.isSub && !e.target.checked) {
+      const sites = scanState.groups.find(g => !g.isSub);
+      if (sites?.selectedKeys.delete(`s\n${r.siteId}\n`) && sites.el) rerenderGroupBody(sites, sites.el);
+    } else if (!group.isSub && !e.target.checked) {
+      const subs = scanState.groups.find(g => g.isSub);
+      if (subs) {
+        let changed = false;
+        for (const pr of subs.results) if (pr.siteId === r.siteId) changed = subs.selectedKeys.delete(rowKey(pr)) || changed;
+        if (changed && subs.el) rerenderGroupBody(subs, subs.el);
+      }
+    }
+    syncGroupAllCheck(group, details);
+    updateScanSummary();
+  });
+  return tr;
+}
+
+function syncGroupAllCheck(group, details) {
+  const total = group.results.length;
+  const selected = group.results.filter(r => group.selectedKeys.has(rowKey(r))).length;
+  const check = details.querySelector('.group-all-check');
+  check.checked = selected === total && total > 0;
+  check.indeterminate = selected > 0 && selected < total;
+}
+
+function updateScanSummary() {
+  let identities = 0, records = 0;
+  const totalResults = scanState.groups.reduce((s, g) => s + g.results.length, 0);
+  for (const group of scanState.groups)
+    for (const r of group.results)
+      if (group.selectedKeys.has(rowKey(r))) { identities++; records += r.recordCount; }
+  const deleteBtn = document.querySelector('#overlay-delete-btn');
+  const summaryEl = document.querySelector('#overlay-summary');
+  if (identities === 0) { summaryEl.textContent = 'Nothing selected'; deleteBtn.disabled = true; return; }
+  deleteBtn.disabled = false;
+  summaryEl.textContent = `${identities} of ${totalResults} selected (${records.toLocaleString()} rows)`;
+}
+
+async function deleteSelectedInsignificant() {
+  const ok = await confirmDialog({ message: 'Delete all selected insignificant rows? This cannot be undone.', confirmLabel: 'Delete' });
+  if (!ok) return;
+  const domains = new Set();                  // selected whole sites
+  const paths = new Set();                     // selected pages, keyed "domain\npath"
+  for (const group of scanState.groups) {
+    for (const r of group.results) {
+      if (!group.selectedKeys.has(rowKey(r))) continue;
+      if (group.isSub) paths.add(`${r.siteId}\n${r.path}`);
+      else domains.add(r.siteId);
+    }
+  }
+  // One pass, one bulk delete — avoids N full-store scans and partial failures.
+  const rows = await allIntervals();
+  const ids = rows.filter(r => domains.has(r.domain) || paths.has(`${r.domain}\n${r.path}`)).map(r => r.id);
+  await deleteByIds(ids);
+  scanOverlay.style.display = 'none';
+  invalidate();
+  await loadStats();
+  showNotification(`Deleted ${ids.length.toLocaleString()} row${ids.length === 1 ? '' : 's'}`);
+}
+
+(async () => {
+  const { pruneThresholdSeconds } = await chrome.storage.local.get('pruneThresholdSeconds');
+  if (pruneThresholdSeconds != null) thresholdInput.value = pruneThresholdSeconds;
+  syncScanBtn();
+})();
+
+// --- Drop subpage detail (collapse old rows to site level) ---
+const dropDaysInput = document.querySelector('#drop-days-input');
+dropDaysInput.addEventListener('input', () => {
+  dropDaysInput.value = dropDaysInput.value.replace(/[^0-9]/g, '');  // digits only
+});
+document.querySelector('#drop-paths-btn').addEventListener('click', async () => {
+  const days = parseInt(document.querySelector('#drop-days-input').value, 10);
+  if (!Number.isFinite(days) || days < 0) { showNotification('Enter a valid number of days'); return; }
+  // Day-aligned: keep the last `days` calendar days detailed, collapse everything
+  // before. cutoff = tomorrow 00:00 - days. days=0 collapses all; never splits a day.
+  const c = new Date();
+  c.setHours(0, 0, 0, 0);
+  c.setDate(c.getDate() + 1 - days);
+  const ok = await confirmDialog({
+    message: `Collapse rows older than ${days} day(s) to site level, dropping their page paths? Site totals stay; per-page detail is lost. This cannot be undone.`,
+    confirmLabel: 'Drop',
+  });
+  if (!ok) return;
+  const n = await dropPathsBefore(c.getTime());
+  invalidate();
+  await loadStats();
+  showNotification(n > 0 ? `Removed ${n.toLocaleString()} row${n === 1 ? '' : 's'} by collapsing` : `No rows older than ${days} day(s)`);
+});
+
+// --- Integrity check ---
+let integrityBad = null;
+const integrityDot = document.querySelector('#integrity-dot');
+const integrityStatus = document.querySelector('#integrity-status-text');
+const integrityRepairBtn = document.querySelector('#integrity-repair-btn');
+
+document.querySelector('#integrity-scan-btn').addEventListener('click', async () => {
+  const now = Date.now();
+  const MAX_MS = 12 * 3600000;
+  const rows = await allIntervals();
+  integrityBad = rows.filter(r => r.to <= r.from || r.from > now || r.to > now || (r.to - r.from) > MAX_MS);
+  if (integrityBad.length === 0) {
+    integrityDot.className = 'health-dot ok';
+    integrityStatus.innerHTML = '<strong>All rows look healthy</strong>';
+    integrityRepairBtn.style.display = 'none';
+  } else {
+    integrityDot.className = 'health-dot';
+    integrityStatus.innerHTML = `<strong>${integrityBad.length.toLocaleString()} malformed row${integrityBad.length === 1 ? '' : 's'}</strong> — zero/negative, future-dated, or stuck-open`;
+    integrityRepairBtn.style.display = '';
+  }
+});
+
+integrityRepairBtn.addEventListener('click', async () => {
+  if (!integrityBad?.length) return;
+  const ok = await confirmDialog({ message: `Delete ${integrityBad.length.toLocaleString()} malformed row(s)? This cannot be undone.`, confirmLabel: 'Delete' });
+  if (!ok) return;
+  await deleteByIds(integrityBad.map(r => r.id));
+  integrityBad = null;
+  invalidate();
+  await loadStats();
+  integrityDot.className = 'health-dot ok';
+  integrityStatus.innerHTML = '<strong>Malformed rows deleted</strong>';
+  integrityRepairBtn.style.display = 'none';
+  showNotification('Deleted malformed rows');
 });
 
 async function renderInterval() {
