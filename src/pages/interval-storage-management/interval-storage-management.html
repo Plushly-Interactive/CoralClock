@@ -186,16 +186,23 @@
         <div class="right-row"><button id="drop-paths-btn" class="btn">Drop subpage detail</button></div>
       </div>
 
-      <div class="chart-container" id="integrity-card">
-        <h2 class="chart-heading">Integrity check</h2>
-        <p class="card-desc">Scans for malformed rows: zero or negative duration, future-dated, or stuck-open (over 12 hours) rows.</p>
+      <div class="chart-container" id="favicon-card">
+        <h2 class="chart-heading">Favicon cache</h2>
+        <p class="card-desc">Cached site icons, stored in the 10 MB extension storage. Clearing frees space; icons reload from the browser as you visit sites.</p>
         <div class="health-status">
-          <span id="integrity-dot" class="health-dot"></span>
-          <span id="integrity-status-text">Not scanned yet.</span>
+          <span id="favicon-stats">—</span>
         </div>
         <div class="right-row">
-          <button id="integrity-scan-btn" class="btn">Scan</button>
-          <button id="integrity-repair-btn" class="btn" style="display:none">Delete bad rows</button>
+          <button id="favicon-clear-btn" class="btn">Clear all</button>
+        </div>
+        <hr class="card-divider" />
+        <div id="favicon-stale-row" style="display:flex;align-items:center;gap:8px">
+          <span class="setting-label">Clear icons not visited in</span>
+          <input id="favicon-days-input" class="number-input" type="number" min="1" value="30" />
+          <span>days</span>
+        </div>
+        <div class="right-row">
+          <button id="favicon-stale-btn" class="btn">Clear unused</button>
         </div>
       </div>
 

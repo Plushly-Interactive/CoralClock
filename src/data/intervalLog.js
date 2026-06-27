@@ -51,10 +51,38 @@ export function deleteByDomain(domain) {
   return db.intervals.filter(r => r.domain === domain).delete();
 }
 
-// Delete rows that START within [fromTs, toTs), optionally only for `domain`.
-// Resolves to the number deleted.
-export function deleteRange(fromTs, toTs, domain = null) {
-  return db.intervals.filter(r => r.from >= fromTs && r.from < toTs && (!domain || r.domain === domain)).delete();
+// Clear the time window [fromTs, toTs) from every overlapping row (optionally only
+// for `domain`): rows fully inside are deleted, rows crossing an edge are truncated,
+// rows spanning the whole window are split in two. So a row that started before the
+// window but runs into it loses exactly its in-window part. Resolves to rows touched.
+export async function deleteRange(fromTs, toTs, domain = null) {
+  if (fromTs >= toTs) return 0;  // empty/inverted window
+  const affected = await db.intervals
+    .filter(r => r.from < toTs && r.to > fromTs && (!domain || r.domain === domain))
+    .toArray();
+  if (affected.length === 0) return 0;
+
+  const toDelete = [], toUpdate = [], toAdd = [];
+  for (const r of affected) {
+    const keepLeft = r.from < fromTs;   // part before the window survives
+    const keepRight = r.to > toTs;      // part after the window survives
+    if (keepLeft && keepRight) {
+      toUpdate.push([r.id, { to: fromTs }]);
+      toAdd.push({ domain: r.domain, path: r.path, kind: r.kind, from: toTs, to: r.to });
+    } else if (keepLeft) {
+      toUpdate.push([r.id, { to: fromTs }]);
+    } else if (keepRight) {
+      toUpdate.push([r.id, { from: toTs }]);
+    } else {
+      toDelete.push(r.id);
+    }
+  }
+  await db.transaction('rw', db.intervals, async () => {
+    if (toDelete.length) await db.intervals.bulkDelete(toDelete);
+    for (const [id, changes] of toUpdate) await db.intervals.update(id, changes);
+    if (toAdd.length) await db.intervals.bulkAdd(toAdd);
+  });
+  return affected.length;
 }
 
 // Delete every row for one domain+path. Resolves to the number deleted.

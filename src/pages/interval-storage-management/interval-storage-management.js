@@ -366,7 +366,7 @@ document.querySelector('#delete-range-btn').addEventListener('click', async () =
   for (const [fromKey, toKey] of pairs) n += await deleteRange(keyToTs(fromKey), keyToTs(toKey), siteId);
   invalidate();
   await loadStats();
-  showNotification(`Deleted ${n.toLocaleString()} row${n === 1 ? '' : 's'}`);
+  showNotification(`Cleared the range across ${n.toLocaleString()} row${n === 1 ? '' : 's'}`);
 });
 
 async function initHourDropdowns() {
@@ -637,41 +637,56 @@ document.querySelector('#drop-paths-btn').addEventListener('click', async () => 
   showNotification(n > 0 ? `Removed ${n.toLocaleString()} row${n === 1 ? '' : 's'} by collapsing` : `No rows older than ${days} day(s)`);
 });
 
-// --- Integrity check ---
-let integrityBad = null;
-const integrityDot = document.querySelector('#integrity-dot');
-const integrityStatus = document.querySelector('#integrity-status-text');
-const integrityRepairBtn = document.querySelector('#integrity-repair-btn');
-
-document.querySelector('#integrity-scan-btn').addEventListener('click', async () => {
-  const now = Date.now();
-  const MAX_MS = 12 * 3600000;
-  const rows = await allIntervals();
-  integrityBad = rows.filter(r => r.to <= r.from || r.from > now || r.to > now || (r.to - r.from) > MAX_MS);
-  if (integrityBad.length === 0) {
-    integrityDot.className = 'health-dot ok';
-    integrityStatus.innerHTML = '<strong>All rows look healthy</strong>';
-    integrityRepairBtn.style.display = 'none';
-  } else {
-    integrityDot.className = 'health-dot';
-    integrityStatus.innerHTML = `<strong>${integrityBad.length.toLocaleString()} malformed row${integrityBad.length === 1 ? '' : 's'}</strong> — zero/negative, future-dated, or stuck-open`;
-    integrityRepairBtn.style.display = '';
-  }
-});
-
-integrityRepairBtn.addEventListener('click', async () => {
-  if (!integrityBad?.length) return;
-  const ok = await confirmDialog({ message: `Delete ${integrityBad.length.toLocaleString()} malformed row(s)? This cannot be undone.`, confirmLabel: 'Delete' });
+// --- Favicon cache ---
+const faviconStats = document.querySelector('#favicon-stats');
+async function loadFaviconStats() {
+  const [data, bytes] = await Promise.all([
+    chrome.storage.local.get('faviconCache'),
+    chrome.storage.local.getBytesInUse('faviconCache'),
+  ]);
+  const n = Object.keys(data.faviconCache ?? {}).length;
+  faviconStats.textContent = `${n.toLocaleString()} icon${n === 1 ? '' : 's'} (${formatBytes(bytes)})`;
+  document.querySelector('#favicon-clear-btn').disabled = n === 0;
+}
+document.querySelector('#favicon-clear-btn').addEventListener('click', async () => {
+  const ok = await confirmDialog({ message: 'Clear all favicons? Icons reload from the browser as you visit sites.', confirmLabel: 'Clear' });
   if (!ok) return;
-  await deleteByIds(integrityBad.map(r => r.id));
-  integrityBad = null;
-  invalidate();
-  await loadStats();
-  integrityDot.className = 'health-dot ok';
-  integrityStatus.innerHTML = '<strong>Malformed rows deleted</strong>';
-  integrityRepairBtn.style.display = 'none';
-  showNotification('Deleted malformed rows');
+  await chrome.storage.local.remove('faviconCache');
+  await loadFaviconStats();
+  await loadStats();  // refresh the extension-storage quota
+  showNotification('Favicon cache cleared');
 });
+
+const faviconDaysInput = document.querySelector('#favicon-days-input');
+faviconDaysInput.addEventListener('input', () => {
+  faviconDaysInput.value = faviconDaysInput.value.replace(/[^0-9]/g, '');  // digits only
+});
+document.querySelector('#favicon-stale-btn').addEventListener('click', async () => {
+  const days = parseInt(faviconDaysInput.value, 10);
+  if (!Number.isFinite(days) || days < 1) { showNotification('Enter a valid number of days'); return; }
+  const cutoff = Date.now() - days * 86400000;
+  // Last activity per domain (favicon keys are the same eTLD+1 domain).
+  const lastTo = new Map();
+  for (const r of await allIntervals()) {
+    const cur = lastTo.get(r.domain) ?? 0;
+    if (r.to > cur) lastTo.set(r.domain, r.to);
+  }
+  const { faviconCache = {} } = await chrome.storage.local.get('faviconCache');
+  const stale = Object.keys(faviconCache).filter(h => (lastTo.get(h) ?? 0) < cutoff);
+  if (stale.length === 0) { showNotification(`No icons unused for ${days}+ days`); return; }
+  const ok = await confirmDialog({
+    message: `Clear ${stale.length.toLocaleString()} icon(s) for sites not visited in the last ${days} day(s)? They reload from the browser when next visited.`,
+    confirmLabel: 'Clear',
+  });
+  if (!ok) return;
+  for (const h of stale) delete faviconCache[h];
+  await chrome.storage.local.set({ faviconCache });
+  await loadFaviconStats();
+  await loadStats();
+  showNotification(`Cleared ${stale.length.toLocaleString()} unused icon(s)`);
+});
+
+loadFaviconStats();
 
 async function renderInterval() {
   const [stats, est] = await Promise.all([
