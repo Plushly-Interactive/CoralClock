@@ -14,23 +14,43 @@
           <img src="../../../resources/icons/biteguard-icon-blue-square-48px.png" width="24" height="24" alt="BiteGuard">
         </a>
       </div>
-      <div id="header-center"></div>
-      <div id="header-right">
+      <div id="header-center"><h1 class="page-title">Browsing timeline</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <div id="tl-view">
+      <div id="tl-top">
+        <button id="tl-parent-link" class="link-btn" style="display:none"></button>
+      </div>
+      <div id="tl-controls">
+        <label id="tl-clip-label" class="text-meta"><input type="checkbox" id="tl-clip"> Trim empty time</label>
+        <div id="tl-nav">
+          <button id="tl-prev" class="link-btn" aria-label="Previous period"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+          <span id="tl-label"></span>
+          <button id="tl-next" class="link-btn" aria-label="Next period"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+        </div>
         <span id="timeline-legend" class="text-meta">
           <span class="legend-swatch legend-active"></span> active
           <span class="legend-swatch legend-audio"></span> audio
           <span class="legend-swatch legend-idle"></span> idle
         </span>
       </div>
-    </header>
-
-    <div id="timeline-wrap" class="chart-container">
-      <h2 class="chart-heading">Top 5 sites — browsing timeline
-        <span id="timeline-subheading" class="chart-subheading text-meta"></span>
-      </h2>
-      <svg id="timeline-chart"></svg>
-      <div class="tooltip text-meta" id="timeline-tooltip" hidden></div>
-      <p id="timeline-empty" class="empty-msg text-meta" style="display:none">No data for this period.</p>
+      <div id="tl-chart-wrapper">
+        <button id="tl-keys-btn" class="square-btn">&#215;</button>
+        <div id="tl-keys-popup" class="tooltip text-meta">
+          <div id="tl-keys-title">Keyboard shortcuts</div>
+          <div><kbd>←</kbd><kbd>→</kbd> Navigate period</div>
+          <div><kbd>↑</kbd> Go up one level (day → week → month)</div>
+          <div><kbd>↓</kbd> Go to first day / week with data</div>
+          <div><kbd>Esc</kbd> Reset to today</div>
+        </div>
+        <div id="tl-scroll">
+          <svg id="timeline-chart"></svg>
+        </div>
+        <svg id="timeline-axis"></svg>
+        <div class="tooltip text-meta" id="timeline-tooltip" hidden></div>
+        <p id="timeline-empty" class="empty-msg text-meta" style="display:none">No data for this period.</p>
+      </div>
     </div>
 
     <script type="module" src="./interval-timeline.js"></script>

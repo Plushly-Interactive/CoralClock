@@ -26,6 +26,7 @@
   --color-chart-audio: var(--color-secondary-light);
   --color-chart-visits: var(--color-accent);
   --color-chart-hourly: var(--color-secondary);
+  --color-chart-idle: #c79a3a;
 
   --color-bg: #e8e8e8;
   --color-border: #d0d0d0;
