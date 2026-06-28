@@ -405,7 +405,7 @@ const dashboardTourSteps = [
   {
     selector: '#tour-btn',
     title: 'Welcome to BiteGuard',
-    body: 'This guided tour will walk you through each surface of BiteGuard.',
+    body: 'A quick walk through every surface of BiteGuard, about two minutes. Use the × in the corner to leave anytime.',
   },
   {
     selector: '#range-select',
@@ -424,7 +424,7 @@ const dashboardTourSteps = [
   },
   {
     title: 'Open the popup',
-    body: 'Click the BiteGuard icon in your browser toolbar to continue the tour.',
+    body: 'Click the BiteGuard icon in your browser toolbar.',
     tooltipPosition: 'top-right',
     arrow: 'up',
     handoff: { nextSurface: 'popup', mode: 'crossDocument' },
@@ -438,15 +438,22 @@ const dashboardTourSteps = [
   {
     selector: '#prune-btn',
     title: 'Manage storage',
-    body: 'Click Manage storage to see your storage usage, clean up insignificant records, delete data by range, and check data consistency.',
+    body: 'Open Manage storage to review usage, prune insignificant rows, and delete data by range.',
     handoff: { nextSurface: 'storage-management', mode: 'inPage' },
     newInVersion: 3,
   },
   {
     selector: '#settings-btn',
     title: 'Settings',
-    body: 'Click Settings to configure BiteGuard and continue the tour.',
+    body: 'Open Settings to set idle threshold, clock format and week start.',
     handoff: { nextSurface: 'settings', mode: 'inPage' },
+    newInVersion: 3,
+  },
+  {
+    selector: '#timeline-link',
+    title: 'Browsing timeline',
+    body: 'Click View timeline to see exactly when you were on each site, plotted across the day, week or month.',
+    handoff: { nextSurface: 'timeline', mode: 'inPage' },
     newInVersion: 3,
   },
   {

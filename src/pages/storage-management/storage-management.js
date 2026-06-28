@@ -8,6 +8,7 @@ import { parseTtStats, applyTtImport, downloadTt, TT_VERSION } from '../../data/
 import { downloadDailyCsv, downloadHourlyCsv, downloadIntervalsCsv } from '../../data/csvExport.js';
 import { SITES_DAY_KEY } from '../../background/siteTracking.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
+import { autoStartIfMatches } from '../../shared/tour.js';
 
 const spanChip = document.querySelector('#span-chip');
 const spanTooltip = document.querySelector('#span-tooltip');
@@ -764,3 +765,27 @@ async function loadStats() {
 }
 
 await loadStats();
+
+const storageTourSteps = [
+  {
+    selector: '#overview',
+    title: 'Storage overview',
+    body: 'At a glance: how many domains, subpages and rows you have, the active/audio/idle mix of your browsing data, your 10 MB quota headroom, and when you last exported.',
+    newInVersion: 3,
+  },
+  {
+    selector: '#tools-grid',
+    title: 'Manage your data',
+    body: 'Tools to manage your data: remove insignificant rows, delete by site or date range, drop subpage detail, and clear the favicon cache.',
+    newInVersion: 3,
+  },
+  {
+    selector: '#back-btn',
+    title: "That's the tour",
+    body: "You've seen every surface of BiteGuard. Click the back arrow to return to the dashboard.",
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 7, mode: 'inPage' },
+    newInVersion: 3,
+  },
+];
+
+autoStartIfMatches('storage-management', storageTourSteps);

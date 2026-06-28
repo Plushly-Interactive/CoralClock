@@ -195,17 +195,11 @@ const popupTourSteps = [
   {
     selector: '#brand',
     title: 'The popup',
-    body: 'You can open this popup from your browser toolbar at any time to manage rules.',
+    body: "Open this from your browser toolbar any time. It shows today's browsing at a glance and your enabled rules.",
   },
   {
     selector: '#manage-btn',
     title: 'Manage your rules',
-    body: 'Click here to open the rules page, where you can add and edit limits for specific sites.',
-    keepTooltipPosition: true,
-  },
-  {
-    selector: '#manage-btn',
-    title: 'Rules page',
     body: 'Click Manage rules to open the rules page and continue the tour.',
     handoff: { nextSurface: 'rules', mode: 'crossDocument' },
   },

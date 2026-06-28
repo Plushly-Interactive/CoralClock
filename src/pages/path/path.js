@@ -3,7 +3,7 @@ import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOU
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
-import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
+import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
@@ -326,69 +326,11 @@ function renderStats(data, range) {
   document.querySelector('#overview-subheading').textContent = subheadingText(range);
 }
 
-function ensureDrillOpen() {
-  if (isInDrillMode()) return;
-  const days = Object.keys(byDayCache ?? {}).sort();
-  const pick = days[days.length - 1];
-  if (pick) enterDrill(pick, null, 'time');
-}
-
 const pathTourSteps = [
   {
     selector: '#path-subheader',
     title: 'Path details',
-    body: 'This page shows everything BiteGuard tracks for a single subpage. The site and path are shown here.',
-  },
-  {
-    selector: '#time-chart-container',
-    title: 'Time spent',
-    body: 'Active browsing time and audio playback on this subpage, per day in the selected range.',
-  },
-  {
-    selector: '#stats-container',
-    title: 'Overview',
-    body: 'Aggregate stats for this subpage: daily average, peak day, total time and more.',
-  },
-  {
-    selector: '#visits-chart-container',
-    title: 'Visits',
-    body: 'Number of separate visits to this subpage per day.',
-  },
-  {
-    selector: '#hourly-chart-container',
-    title: 'Average per clock hour',
-    body: 'Your typical browsing pattern on this subpage across the 24 hours of the day.',
-  },
-  {
-    selector: '#time-chart-container',
-    title: 'Drill into a day',
-    body: 'Click any day in the time chart to see hourly detail for that single day.',
-    advanceOn: 'click',
-  },
-  {
-    selector: '#drill-chart-wrapper',
-    title: 'Daily detail',
-    body: 'This shows the activity for the chosen day in finer granularity.',
-    drillStep: true,
-    onEnter: ensureDrillOpen,
-    onExit: ({ direction }) => {
-      if (direction === 'backward' && isInDrillMode()) exitDrillCompletely();
-    },
-  },
-  {
-    selector: '#drill-controls',
-    title: 'Navigate and switch metric',
-    body: 'Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
-    drillStep: true,
-    onEnter: ensureDrillOpen,
-  },
-  {
-    selector: '#nav-close',
-    title: 'Back to overview',
-    body: 'Click Overview to leave drill mode and return to the full range.',
-    advanceOn: 'click',
-    drillStep: true,
-    onEnter: ensureDrillOpen,
+    body: 'The same view as the site page, for a single subpage: the charts, day drill-down and stats all work the same way.',
   },
   {
     selector: '#back-btn',

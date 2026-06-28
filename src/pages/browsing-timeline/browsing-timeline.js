@@ -5,6 +5,8 @@ import { displayPath } from '../../shared/paths.js';
 import { periodLevel, formatPeriodLabel, stepPeriod, periodBounds, levelUp, levelDown } from '../../shared/period.js';
 import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { allIntervals, SESSION_GAP_MS } from '../../data/intervalLog.js';
+import { autoStartIfMatches } from '../../shared/tour.js';
+import { isMockMode, mockIntervals } from '../../shared/tourMockData.js';
 
 // Visualization only (not in the spec): a horizontal browsing timeline of the top
 // sites, navigated period-by-period (day / week / month) like the drill views. Each
@@ -79,6 +81,7 @@ keysBtn.addEventListener('click', () => {
 });
 
 window.addEventListener('keydown', (e) => {
+  if (document.querySelector('#tour-overlay')) return;  // tour owns the arrow keys
   if (e.key === 'ArrowLeft') { e.preventDefault(); currentPeriod = stepPeriod(currentPeriod, -1); afterNav(); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); currentPeriod = stepPeriod(currentPeriod, 1); afterNav(); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); currentPeriod = levelUp(currentPeriod); afterNav(); }
@@ -379,8 +382,32 @@ ro.observe(scrollDiv);
 
 await loadFaviconCache();
 clockFormat = (await chrome.storage.local.get(PREF_CLOCK_FORMAT))[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
-rows = await allIntervals();
+rows = await isMockMode() ? mockIntervals() : await allIntervals();
 for (const r of rows) { daysWithData.add(localDayKey(r.from)); daysWithData.add(localDayKey(r.to)); }
 labelEl.textContent = formatPeriodLabel(currentPeriod);
 updateParentLink();
 render();
+
+const timelineTourSteps = [
+  {
+    selector: '#tl-chart-wrapper',
+    title: 'Your browsing, plotted',
+    body: 'Each row is a site; the bars show active, audio and idle time laid along a real clock.',
+    newInVersion: 3,
+  },
+  {
+    selector: '#tl-nav',
+    title: 'Move through time',
+    body: 'Step between periods with the arrows. Press up or down to switch between day, week and month; Escape jumps back to today.',
+    newInVersion: 3,
+  },
+  {
+    selector: '#back-btn',
+    title: "That's the timeline",
+    body: 'Click the back arrow to return to the dashboard.',
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 9, mode: 'inPage' },
+    newInVersion: 3,
+  },
+];
+
+autoStartIfMatches('timeline', timelineTourSteps);

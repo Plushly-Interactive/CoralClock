@@ -53,9 +53,10 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
 
   const closeBtn = document.createElement('button');
   closeBtn.id = 'tour-close-btn';
-  closeBtn.className = 'square-btn';
+  closeBtn.className = 'icon-btn';
   closeBtn.title = 'Close the tour';
-  closeBtn.textContent = '✕';
+  closeBtn.setAttribute('aria-label', 'Close the tour');
+  closeBtn.innerHTML = '&times;';
   if (!showCloseButton) closeBtn.style.display = 'none';
 
   const tooltip = document.createElement('div');
@@ -83,7 +84,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     </div>
   `;
 
-  document.body.append(overlay, spotlight, tooltip, closeBtn, confirm);
+  document.body.append(overlay, spotlight, tooltip, confirm);
+  tooltip.appendChild(closeBtn);
 
   const titleEl = tooltip.querySelector('#tour-tooltip-title');
   const bodyEl = tooltip.querySelector('#tour-tooltip-body');
@@ -324,7 +326,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
       const surfaceUrls = {
         dashboard: 'src/pages/dashboard/dashboard.html',
         rules: 'src/pages/rules/rules.html',
-        'storage-management': 'src/pages/legacy-storage-management/legacy-storage-management.html',
+        'storage-management': 'src/pages/storage-management/storage-management.html',
+        timeline: 'src/pages/browsing-timeline/browsing-timeline.html',
         settings: 'src/pages/settings/settings.html',
       };
       const url = surfaceUrls[currentStep.handoff.nextSurface];

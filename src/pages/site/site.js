@@ -533,24 +533,9 @@ const siteTourSteps = [
     body: 'This page shows everything BiteGuard tracks for a single site. The site name and ID are shown here.',
   },
   {
-    selector: '#time-chart-container',
-    title: 'Time spent',
-    body: 'Active browsing time and audio playback on this site, per day in the selected range.',
-  },
-  {
-    selector: '#stats-container',
-    title: 'Overview',
-    body: 'Aggregate stats for the range: daily average, peak day, total time and more.',
-  },
-  {
-    selector: '#visits-chart-container',
-    title: 'Visits',
-    body: 'Number of separate visits to this site per day.',
-  },
-  {
-    selector: '#hourly-chart-container',
-    title: 'Average per clock hour',
-    body: 'Your typical browsing pattern on this site across the 24 hours of the day.',
+    selector: '#charts-grid',
+    title: 'The charts',
+    body: 'Four views of this site: active and audio time per day, an overview of totals and peaks, daily visit counts, and your typical pattern across the 24 clock hours.',
   },
   {
     selector: '#time-chart-container',
@@ -559,21 +544,14 @@ const siteTourSteps = [
     advanceOn: 'click',
   },
   {
-    selector: '#drill-chart-wrapper',
+    selector: '#drill-controls',
     title: 'Daily detail',
-    body: 'This shows the activity for the chosen day in finer granularity.',
+    body: 'The chosen day in finer detail. Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
     drillStep: true,
     onEnter: ensureDrillOpen,
     onExit: ({ direction }) => {
       if (direction === 'backward' && isInDrillMode()) exitDrillCompletely();
     },
-  },
-  {
-    selector: '#drill-controls',
-    title: 'Navigate and switch metric',
-    body: 'Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
-    drillStep: true,
-    onEnter: ensureDrillOpen,
   },
   {
     selector: '#nav-close',

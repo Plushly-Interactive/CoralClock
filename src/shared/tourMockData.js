@@ -10,6 +10,14 @@ import {
 const MIN = 60_000;
 const HOUR = 3_600_000;
 
+const SITES = ['news.example.com', 'vid.example.com', 'social.example.com', 'forgot.example.com'];
+const SUBPAGES = {
+  'news.example.com':   ['/world', '/tech', '/sports', '/old-article-7849173'],
+  'vid.example.com':    ['/watch/abc', '/watch/xyz'],
+  'social.example.com': ['/home', '/profile'],
+  'forgot.example.com': ['/landing'],
+};
+
 function buildFixture() {
   const now = new Date();
   const todayKey = localDayKey(now.getTime());
@@ -19,14 +27,6 @@ function buildFixture() {
     day.setDate(day.getDate() - d);
     dayKeys.push(localDayKey(day.getTime()));
   }
-
-  const SITES = ['news.example.com', 'vid.example.com', 'social.example.com', 'forgot.example.com'];
-  const SUBPAGES = {
-    'news.example.com':   ['/world', '/tech', '/sports', '/old-article-7849173'],
-    'vid.example.com':    ['/watch/abc', '/watch/xyz'],
-    'social.example.com': ['/home', '/profile'],
-    'forgot.example.com': ['/landing'],
-  };
 
   function recordFor(siteId, dayIdx) {
     const base = {
@@ -123,6 +123,63 @@ function fixture() {
   return fixtureCache;
 }
 
+// The timeline reads interval rows straight from IndexedDB, so the bucket fixture
+// above can't feed it. Synthesize plausible {domain,path,kind,from,to} rows from
+// the same sites: fixed-clock sessions over the prior 6 days for week/month
+// navigation, plus a few sessions anchored to "now" so today's default view is
+// never empty during the tour.
+const SITE_SESSIONS = {
+  'news.example.com':   { hours: [9, 14, 20],     minLen: 12, audio: false },
+  'vid.example.com':    { hours: [12, 18],        minLen: 24, audio: true },
+  'social.example.com': { hours: [9, 13, 18, 21], minLen: 7,  audio: false },
+  'forgot.example.com': { hours: [16],            minLen: 1,  audio: false },
+};
+
+function buildIntervalFixture() {
+  const rows = [];
+  const now = Date.now();
+  const push = (domain, path, kind, from, to) => { if (to - from >= MIN) rows.push({ domain, path, kind, from, to }); };
+
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+  const todayStart = todayMidnight.getTime();
+
+  for (let d = 1; d <= 6; d++) {
+    const day = new Date();
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() - d);
+    const dayStart = day.getTime();
+    for (const siteId of SITES) {
+      const cfg = SITE_SESSIONS[siteId];
+      cfg.hours.forEach((h, i) => {
+        const path = SUBPAGES[siteId][i % SUBPAGES[siteId].length];
+        const from = dayStart + h * HOUR + 5 * MIN;
+        const to = from + (cfg.minLen + ((d + i) % 3) * 3) * MIN;
+        push(siteId, path, 'active', from, to);
+        if (cfg.audio) push(siteId, path, 'audio', from + 2 * MIN, to - MIN);
+        push(siteId, path, 'idle', to, to + 3 * MIN);
+      });
+    }
+  }
+
+  ['news.example.com', 'vid.example.com', 'social.example.com'].forEach((siteId, i) => {
+    const cfg = SITE_SESSIONS[siteId];
+    const path = SUBPAGES[siteId][0];
+    const end = now - (i * 35 + 8) * MIN;
+    const start = Math.max(todayStart, end - (cfg.minLen + 5) * MIN);
+    push(siteId, path, 'active', start, end);
+    if (cfg.audio) push(siteId, path, 'audio', start + 2 * MIN, end - MIN);
+  });
+
+  return rows;
+}
+
+let intervalFixtureCache = null;
+export function mockIntervals() {
+  if (!intervalFixtureCache) intervalFixtureCache = buildIntervalFixture();
+  return intervalFixtureCache;
+}
+
 function avgPerClockHour(siteIds, range, dayKeys = null) {
   const { sitesByHour } = fixture();
   if (!dayKeys) {
@@ -193,6 +250,7 @@ export async function isMockMode() {
 export function clearMockModeCache() {
   mockModeCache = null;
   fixtureCache = null;
+  intervalFixtureCache = null;
 }
 
 export async function fetchTrackingData(msg) {

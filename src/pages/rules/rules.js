@@ -671,19 +671,14 @@ render();
 
 const rulesTourSteps = [
   {
+    selector: '#rules-grid',
+    title: 'Your rules',
+    body: 'This page shows your existing rules and general stats about how often they block.',
+  },
+  {
     selector: '#add-card',
     title: 'Add a rule',
     body: 'Use this form to set a time limit for any site. Choose the scope, set a limit, and click Add rule.',
-  },
-  {
-    selector: '#list-area',
-    title: 'Your rules',
-    body: 'All your active rules are listed here. You can toggle, edit, or delete each one.',
-  },
-  {
-    selector: '#sparkline-card',
-    title: 'Blocks per day',
-    body: 'This chart shows how often your rules triggered a block over the last 7 days.',
   },
   {
     selector: '#back-btn',
