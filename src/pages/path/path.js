@@ -335,7 +335,7 @@ const pathTourSteps = [
   {
     selector: '#back-btn',
     title: 'Back to the dashboard',
-    body: 'Use back to return to the site, then back again to the dashboard, where the tour continues.',
+    body: 'Go back to the site, then back to the dashboard, where the tour continues.',
     handoff: { nextSurface: 'dashboard', nextStepIndex: 6, mode: 'inPage' },
   },
 ];

@@ -418,9 +418,27 @@ const dashboardTourSteps = [
     body: 'Your five most-active sites for the selected range.',
   },
   {
+    selector: '#hourly-chart-container',
+    title: 'Average per clock hour',
+    body: 'Your typical browsing pattern across the 24 hours of the day, averaged over the range.',
+  },
+  {
     selector: '#dashboard-table-col',
     title: 'All browsed sites',
     body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
+  },
+  {
+    selector: '#dashboard-table-col',
+    title: 'See site details',
+    body: 'Click any row in the table to drill into a site and see per-day detail.',
+    handoff: { nextSurface: 'site', mode: 'inPage' },
+  },
+  {
+    selector: '#timeline-link',
+    title: 'Browsing timeline',
+    body: 'Click View timeline to see exactly when you were on each site, plotted across the day, week or month.',
+    handoff: { nextSurface: 'timeline', mode: 'inPage' },
+    newInVersion: 3,
   },
   {
     title: 'Open the popup',
@@ -428,12 +446,6 @@ const dashboardTourSteps = [
     tooltipPosition: 'top-right',
     arrow: 'up',
     handoff: { nextSurface: 'popup', mode: 'crossDocument' },
-  },
-  {
-    selector: '#dashboard-table-col',
-    title: 'See site details',
-    body: 'Click any row in the table to drill into a site and see per-day detail.',
-    handoff: { nextSurface: 'site', mode: 'inPage' },
   },
   {
     selector: '#prune-btn',
@@ -447,13 +459,6 @@ const dashboardTourSteps = [
     title: 'Settings',
     body: 'Open Settings to set idle threshold, clock format and week start.',
     handoff: { nextSurface: 'settings', mode: 'inPage' },
-    newInVersion: 3,
-  },
-  {
-    selector: '#timeline-link',
-    title: 'Browsing timeline',
-    body: 'Click View timeline to see exactly when you were on each site, plotted across the day, week or month.',
-    handoff: { nextSurface: 'timeline', mode: 'inPage' },
     newInVersion: 3,
   },
   {

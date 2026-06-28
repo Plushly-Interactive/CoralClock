@@ -684,7 +684,7 @@ const rulesTourSteps = [
     selector: '#back-btn',
     title: 'Back to the dashboard',
     body: 'Click the BiteGuard logo to return to the dashboard and continue the tour.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 5, mode: 'crossDocument' },
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'crossDocument' },
   },
 ];
 

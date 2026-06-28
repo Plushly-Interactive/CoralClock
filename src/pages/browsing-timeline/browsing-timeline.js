@@ -403,9 +403,9 @@ const timelineTourSteps = [
   },
   {
     selector: '#back-btn',
-    title: "That's the timeline",
-    body: 'Click the back arrow to return to the dashboard.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 9, mode: 'inPage' },
+    title: 'Back to the dashboard',
+    body: 'Click the BiteGuard logo to return to the dashboard; the tour continues there.',
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 7, mode: 'inPage' },
     newInVersion: 3,
   },
 ];

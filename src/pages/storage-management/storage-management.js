@@ -781,9 +781,9 @@ const storageTourSteps = [
   },
   {
     selector: '#back-btn',
-    title: "That's the tour",
-    body: "You've seen every surface of BiteGuard. Click the back arrow to return to the dashboard.",
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 7, mode: 'inPage' },
+    title: 'Back to the dashboard',
+    body: 'Click the BiteGuard logo to return to the dashboard; the tour continues there.',
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 9, mode: 'inPage' },
     newInVersion: 3,
   },
 ];
