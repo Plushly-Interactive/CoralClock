@@ -1,5 +1,6 @@
 import { readTourState } from './tour.js';
 import { localDayKey } from './timeUtils.js';
+import { blockKey } from './rules.js';
 import { scanSiteBucket, scanSubpageBucket } from '../data/prune.js';
 import {
   MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
@@ -178,6 +179,58 @@ let intervalFixtureCache = null;
 export function mockIntervals() {
   if (!intervalFixtureCache) intervalFixtureCache = buildIntervalFixture();
   return intervalFixtureCache;
+}
+
+// Storage overview reads intervalStats() straight from IndexedDB, which is empty
+// during the tour. Derive the same shape from the in-memory mock rows instead.
+export function mockIntervalStats() {
+  const rows = mockIntervals();
+  const domains = new Set(), subpages = new Set();
+  const kinds = { active: 0, audio: 0, idle: 0 };
+  let earliest = Infinity, latest = -Infinity;
+  for (const r of rows) {
+    domains.add(r.domain);
+    subpages.add(`${r.domain}\n${r.path}`);
+    if (r.kind in kinds) kinds[r.kind]++;
+    if (r.from < earliest) earliest = r.from;
+    if (r.to > latest) latest = r.to;
+  }
+  return {
+    rows: rows.length, domains: domains.size, subpages: subpages.size, kinds,
+    earliest: rows.length ? earliest : null, latest: rows.length ? latest : null,
+  };
+}
+
+// Seeded rules + a week of block history for the tour. A fresh user has no rules
+// in storage, so the Rules surface (list and stats) would be blank during
+// onboarding. Never persisted: render()/renderStats() swap these in only while the
+// mock flag is set, and the list is shown read-only so its buttons stay inert.
+const MOCK_RULES = [
+  { id: 'tour-rule-1', matchType: 'subdomain', target: 'social.example.com', limit: 30, limitUnit: 'minutes', period: 'day', mode: 'active', enabled: true },
+  { id: 'tour-rule-2', matchType: 'subdomain', target: 'vid.example.com', limit: 1, limitUnit: 'hours', period: 'day', mode: 'active+audio', enabled: true },
+  { id: 'tour-rule-3', matchType: 'keyword', keyword: 'shorts', limit: 0, limitUnit: 'minutes', period: 'day', mode: 'active', enabled: false },
+];
+
+export function mockRules() {
+  return MOCK_RULES.map(r => ({ ...r }));
+}
+
+export function mockBlocksByDay() {
+  // Keyed by blockKey(rule) so most-blocked resolves; social weighted highest.
+  const weights = { 'tour-rule-1': 3, 'tour-rule-2': 1 };
+  const byDay = {};
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(now);
+    day.setDate(day.getDate() - i);
+    const counts = {};
+    for (const rule of MOCK_RULES) {
+      const w = weights[rule.id];
+      if (w) counts[blockKey(rule)] = w + ((i * 2) % 3);
+    }
+    byDay[localDayKey(day.getTime())] = counts;
+  }
+  return byDay;
 }
 
 function avgPerClockHour(siteIds, range, dayKeys = null) {

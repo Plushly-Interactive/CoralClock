@@ -9,6 +9,7 @@ import { downloadDailyCsv, downloadHourlyCsv, downloadIntervalsCsv } from '../..
 import { SITES_DAY_KEY } from '../../background/siteTracking.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
+import { isMockMode, mockIntervalStats } from '../../shared/tourMockData.js';
 
 const spanChip = document.querySelector('#span-chip');
 const spanTooltip = document.querySelector('#span-tooltip');
@@ -694,9 +695,10 @@ document.querySelector('#favicon-stale-btn').addEventListener('click', async () 
 loadFaviconStats();
 
 async function renderInterval() {
+  const mock = await isMockMode();
   const [stats, est] = await Promise.all([
-    intervalStats(),
-    navigator.storage?.estimate ? navigator.storage.estimate().catch(() => null) : null,
+    mock ? mockIntervalStats() : intervalStats(),
+    mock ? null : (navigator.storage?.estimate ? navigator.storage.estimate().catch(() => null) : null),
   ]);
   document.querySelector('#count-domains').textContent  = stats.domains.toLocaleString();
   document.querySelector('#count-subpages').textContent = stats.subpages.toLocaleString();
@@ -716,7 +718,9 @@ async function renderInterval() {
   // Per-kind size is the IndexedDB total apportioned by row share (rows are uniform
   // shape, so this is a fair ~estimate; the total itself includes index overhead).
   const { active, audio, idle } = stats.kinds;
-  const intervalBytes = est?.usage ?? null;
+  // Mock rows live only in memory, so navigator.storage can't size them;
+  // approximate from the row count to keep the overview's sizes plausible.
+  const intervalBytes = mock ? stats.rows * 90 : (est?.usage ?? null);
   const pct = n => stats.rows > 0 ? `${(n / stats.rows * 100).toFixed(1)}%` : '0%';
   const sizeOf = n => intervalBytes != null && stats.rows > 0
     ? ` (~${formatBytes(intervalBytes * n / stats.rows)})` : '';

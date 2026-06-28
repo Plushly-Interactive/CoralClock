@@ -5,6 +5,7 @@ import { localDayKey } from '../../shared/timeUtils.js';
 import { weekDow, rotatedDayLabels } from '../../shared/weekStart.js';
 import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear } from '../../shared/utils.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
+import { isMockMode, mockRules, mockBlocksByDay } from '../../shared/tourMockData.js';
 
 const formTarget          = document.querySelector('#form-target');
 const formTargetClearBtn  = document.querySelector('#form-target-clear');
@@ -44,6 +45,7 @@ const kwSaveBtn    = document.querySelector('#kw-save-btn');
 
 let scope = 'subdomain';
 let currentRules = [];
+let mockMode = false;  // tour: seeded rules shown read-only, never persisted
 let sort = { key: 'site', dir: 1 };
 
 // ── Add card collapse toggle ──
@@ -236,7 +238,7 @@ function setSort(key) {
   if (sort.key === key) sort.dir *= -1;
   else sort = { key, dir: 1 };
   updateSortArrows();
-  renderRuleList(rulesList, sortedRules());
+  renderRuleList(rulesList, sortedRules(), { readonly: mockMode });
 }
 
 sortSiteBtn.addEventListener('click', () => setSort('site'));
@@ -245,11 +247,12 @@ sortStatusBtn.addEventListener('click', () => setSort('status'));
 // ── Render rules list ──
 
 async function render() {
-  currentRules = await getRules();
+  mockMode = await isMockMode();
+  currentRules = mockMode ? mockRules() : await getRules();
   const empty = currentRules.length === 0;
   noRulesMsg.style.display = empty ? '' : 'none';
   updateSortArrows();
-  renderRuleList(rulesList, sortedRules());
+  renderRuleList(rulesList, sortedRules(), { readonly: mockMode });
   refreshPreview();
   renderStats();
 }
@@ -516,7 +519,9 @@ function thisWeekKeys() {
 }
 
 async function renderStats() {
-  const { [BLOCKS_DAY_KEY]: blocksByDay = {} } = await chrome.storage.local.get(BLOCKS_DAY_KEY);
+  const blocksByDay = mockMode
+    ? mockBlocksByDay()
+    : (await chrome.storage.local.get(BLOCKS_DAY_KEY))[BLOCKS_DAY_KEY] ?? {};
   const rules = currentRules;
 
   // Overview card
