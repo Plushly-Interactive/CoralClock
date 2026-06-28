@@ -37,7 +37,7 @@ Most features currently implemented all act *at the limit boundary* — measure 
 ## Onboarding
 
 - **Empty-state guidance on first install** — beyond the guided tour, the dashboard and rules pages with zero data could show a "here's how to add your first limit" call-to-action.
-- **Versioning & "what's new" surface** — the manifest version is still `0.1.0` (`manifest.json`) and there's no changelog or release-notes page. On `update`, the background already opens the update tour when `TOUR_VERSION` advanced (`background.js`); a lighter "what's new in vX" page (or section) would communicate changes that don't warrant a full tour. Includes settling a version-bump convention (semver on each release). Distinct from the [weekly summary digest](#notifications--awareness), which recaps *the user's usage*, not *the extension's changes*.
+- **Changelog popup on update** — the guided tour's update-tour mechanism (which re-walked new steps on version bump, gated by `TOUR_VERSION` / `newInVersion`) was removed; on `update` the background now does nothing (`background.js`). Replace it with a lightweight "what's new in vX" changelog popup shown on update: a curated list of changes that doesn't warrant re-walking the tour. Includes settling a version-bump convention (semver on each release); the manifest version is still `0.1.0` (`manifest.json`). Distinct from the [weekly summary digest](#notifications--awareness), which recaps *the user's usage*, not *the extension's changes*.
 
 ## Quotes
 

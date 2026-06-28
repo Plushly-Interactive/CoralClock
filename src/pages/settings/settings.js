@@ -100,14 +100,10 @@ autoStartIfMatches('settings', [
   {
     selector: '#settings-main',
     title: 'Settings',
-    body: 'Adjust idle threshold, clock format, and week start day. Changes take effect immediately.',
-    newInVersion: 3,
-  },
+    body: 'Adjust idle threshold, clock format, and week start day. Changes take effect immediately.',  },
   {
     selector: '#back-btn',
     title: 'Back to the dashboard',
     body: 'Click the BiteGuard logo to return to the dashboard and finish the tour.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 10, mode: 'inPage' },
-    newInVersion: 3,
-  },
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 10, mode: 'inPage' },  },
 ]);

@@ -1,7 +1,6 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
 import { weekDow } from '../shared/weekStart.js';
 import { ensureStorageVersion } from '../data/migrations.js';
-import { TOUR_VERSION } from '../shared/tour.js';
 import { PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
 import { siteIdFromUrl } from './siteResolution.js';
 // Scalar buckets are frozen legacy: no capture functions are imported, only the
@@ -145,19 +144,8 @@ chrome.alarms.clear('intervalFlush');
 const bootstrapDone = bootstrap();
 bootstrapDone.then(() => updateBadge());
 
-// First page to open for the update tour. The tour hands off between surfaces
-// via nextUpdateSurface — only the entry point needs to be opened here.
-const TOUR_UPDATE_ENTRY = 'src/pages/dashboard/dashboard.html';
-
-chrome.runtime.onInstalled.addListener(async (details) => {
-  if (details.reason !== 'install' && details.reason !== 'update') return;
-  if (details.reason === 'update') {
-    const { tour = {} } = await chrome.storage.local.get('tour');
-    if (tour.completed && (tour.completedVersion ?? 0) < TOUR_VERSION) {
-      chrome.tabs.create({ url: chrome.runtime.getURL(TOUR_UPDATE_ENTRY) });
-      return;
-    }
-  }
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason !== 'install') return;
   chrome.tabs.create({
     url: chrome.runtime.getURL('src/pages/dashboard/dashboard.html?tour=1'),
   });

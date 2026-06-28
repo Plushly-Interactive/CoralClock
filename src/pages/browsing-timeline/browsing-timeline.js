@@ -392,22 +392,16 @@ const timelineTourSteps = [
   {
     selector: '#tl-chart-wrapper',
     title: 'Your browsing, plotted',
-    body: 'Each row is a site; the bars show active, audio and idle time laid along a real clock.',
-    newInVersion: 3,
-  },
+    body: 'Each row is a site; the bars show active, audio and idle time laid along a real clock.',  },
   {
     selector: '#tl-nav',
     title: 'Move through time',
-    body: 'Step between periods with the arrows. Press up or down to switch between day, week and month; Escape jumps back to today.',
-    newInVersion: 3,
-  },
+    body: 'Step between periods with the arrows. Press up or down to switch between day, week and month; Escape jumps back to today.',  },
   {
     selector: '#back-btn',
     title: 'Back to the dashboard',
     body: 'Click the BiteGuard logo to return to the dashboard; the tour continues there.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 7, mode: 'inPage' },
-    newInVersion: 3,
-  },
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 7, mode: 'inPage' },  },
 ];
 
 autoStartIfMatches('timeline', timelineTourSteps);

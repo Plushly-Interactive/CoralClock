@@ -770,22 +770,16 @@ const storageTourSteps = [
   {
     selector: '#overview',
     title: 'Storage overview',
-    body: 'At a glance: how many domains, subpages and rows you have, the active/audio/idle mix of your browsing data, your 10 MB quota headroom, and when you last exported.',
-    newInVersion: 3,
-  },
+    body: 'At a glance: how many domains, subpages and rows you have, the active/audio/idle mix of your browsing data, your 10 MB quota headroom, and when you last exported.',  },
   {
     selector: '#tools-grid',
     title: 'Manage your data',
-    body: 'Tools to manage your data: remove insignificant rows, delete by site or date range, drop subpage detail, and clear the favicon cache.',
-    newInVersion: 3,
-  },
+    body: 'Tools to manage your data: remove insignificant rows, delete by site or date range, drop subpage detail, and clear the favicon cache.',  },
   {
     selector: '#back-btn',
     title: 'Back to the dashboard',
     body: 'Click the BiteGuard logo to return to the dashboard; the tour continues there.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 9, mode: 'inPage' },
-    newInVersion: 3,
-  },
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 9, mode: 'inPage' },  },
 ];
 
 autoStartIfMatches('storage-management', storageTourSteps);

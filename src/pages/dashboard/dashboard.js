@@ -437,9 +437,7 @@ const dashboardTourSteps = [
     selector: '#timeline-link',
     title: 'Browsing timeline',
     body: 'Click View timeline to see exactly when you were on each site, plotted across the day, week or month.',
-    handoff: { nextSurface: 'timeline', mode: 'inPage' },
-    newInVersion: 3,
-  },
+    handoff: { nextSurface: 'timeline', mode: 'inPage' },  },
   {
     title: 'Open the popup',
     body: 'Click the BiteGuard icon in your browser toolbar.',
@@ -451,31 +449,18 @@ const dashboardTourSteps = [
     selector: '#prune-btn',
     title: 'Manage storage',
     body: 'Open Manage storage to review usage, prune insignificant rows, and delete data by range.',
-    handoff: { nextSurface: 'storage-management', mode: 'inPage' },
-    newInVersion: 3,
-  },
+    handoff: { nextSurface: 'storage-management', mode: 'inPage' },  },
   {
     selector: '#settings-btn',
     title: 'Settings',
     body: 'Open Settings to set idle threshold, clock format and week start.',
-    handoff: { nextSurface: 'settings', mode: 'inPage' },
-    newInVersion: 3,
-  },
+    handoff: { nextSurface: 'settings', mode: 'inPage' },  },
   {
     selector: '#tour-btn',
     title: 'Tour complete',
     body: "That's every feature of BiteGuard. Click here any time to replay the tour.",
   },
 ];
-
-// Steps with newInVersion > completedVersion are shown in the update tour.
-// No constant needed — computed at runtime from the step list.
-function dashboardNewStepRange(completedVersion) {
-  const first = dashboardTourSteps.findIndex(s => (s.newInVersion ?? 0) > completedVersion);
-  if (first < 0) return null;
-  const last = dashboardTourSteps.reduce((acc, s, i) => ((s.newInVersion ?? 0) > completedVersion ? i : acc), first);
-  return { first, last };
-}
 
 async function maybeEnableMockMode() {
   // Mock fixtures are shown during the tour only for a user with no real data.
@@ -492,10 +477,10 @@ async function maybeEnableMockMode() {
 let isTourRunning = false;
 let currentTourHandle = null;
 
-async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null, forceStart = false) {
+async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null) {
   if (isTourRunning) return;
   const tourState = knownState ?? await readTourState();
-  if (!forceStart && tourState.completed && !tourState.inProgress) return;
+  if (tourState.completed && !tourState.inProgress) return;
   isTourRunning = true;
   if (startIndex === 0) {
     const wasMock = tourState.useMockData;
@@ -554,19 +539,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   const state = await readTourState();
   if (state.inProgress?.surface === 'dashboard') {
-    const stepIndex = state.inProgress.stepIndex || 0;
-    const range = state.completed ? dashboardNewStepRange(state.completedVersion ?? 0) : null;
-    const isUpdateResume = range != null && stepIndex >= range.first && stepIndex <= range.last;
-    const steps = isUpdateResume ? dashboardTourSteps.slice(range.first, range.last + 1) : dashboardTourSteps;
-    const adjustedIndex = isUpdateResume ? stepIndex - range.first : stepIndex;
-    startDashboardTour(adjustedIndex, steps, state);
+    startDashboardTour(state.inProgress.stepIndex || 0, dashboardTourSteps, state);
     return;
   }
-  if (state.completed) {
-    const range = dashboardNewStepRange(state.completedVersion ?? 0);
-    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state, true);
-    return;
-  }
+  if (state.completed) return;
   const pendingSurface = state.inProgress?.surface;
   if (pendingSurface) {
     const handoffIdx = dashboardTourSteps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
