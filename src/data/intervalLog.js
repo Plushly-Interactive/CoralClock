@@ -37,6 +37,14 @@ export function allIntervals() {
   return db.intervals.toArray();
 }
 
+// Rows whose range reaches into [fromTs, ∞): every row still relevant to a recent
+// window (enforcement / badge). No time index on the store (by design), so this is
+// still an O(n) row walk, but it materializes only the recent rows, not the whole
+// log. Switch to .where('to').above(fromTs) if an index is ever added.
+export function intervalsSince(fromTs) {
+  return db.intervals.filter(r => r.to >= fromTs).toArray();
+}
+
 export function clearAll() {
   return db.intervals.clear();
 }

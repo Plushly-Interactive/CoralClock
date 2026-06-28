@@ -23,6 +23,7 @@ import {
   SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
 } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
+import { usageSince } from '../data/intervalAggregates.js';
 import { dbg, isDebug, initDebug } from './trackingUtils.js';
 import { updateBadge } from './badge.js';
 // Self-contained interval-log sidecar: registers its own listeners on import and
@@ -554,18 +555,26 @@ chrome.idle.onStateChanged.addListener((state) => {
   }
 });
 
-// Compute which rules are over their limit and publish DNR redirect rules so
-// over-limit sites are blocked until the period window rolls over.
-async function checkEnforcement(now) {
-  const {
-    rules = [],
-    [SITES_DAY_KEY]: sitesByDay = {},
-    [SITES_HOUR_KEY]: sitesByHour = {},
-    [SUBPAGES_DAY_KEY]: subpagesByDay = {},
-    [SUBPAGES_HOUR_KEY]: subpagesByHour = {},
-  } = await chrome.storage.local.get(['rules', SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY]);
+// Earliest instant any active rule window can reach back to: this calendar week's
+// start (covers week rules; day/hour windows are nested inside it). Matches
+// enforcement.js windowKeys' week-start (weekDow from the user's week-start day).
+function enforcementWindowStart(now) {
+  const dow = weekDow(new Date(now));
+  const d = new Date(now);
+  d.setDate(d.getDate() - dow);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
 
-  const { overage, approaching } = computeOverage(rules, { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, now);
+// Compute which rules are over their limit and publish DNR redirect rules so
+// over-limit sites are blocked until the period window rolls over. Reads usage
+// from the interval log (the authoritative tracker) over the active rule window;
+// computeOverage is unchanged, only its data source is interval-derived now.
+async function checkEnforcement(now) {
+  const { rules = [] } = await chrome.storage.local.get('rules');
+  const stores = await usageSince(enforcementWindowStart(now));
+
+  const { overage, approaching } = computeOverage(rules, stores, now);
   await publishOverage(overage);
   await notifyBlocked(overage);
   await notifyApproaching(approaching, now);
