@@ -2,33 +2,21 @@ import { localDayKey, localHourKey } from '../shared/timeUtils.js';
 import { weekDow } from '../shared/weekStart.js';
 import { ensureStorageVersion } from '../data/migrations.js';
 import { TOUR_VERSION } from '../shared/tour.js';
-import { PREF_IDLE_THRESHOLD_SEC, PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
-import { getIdleThresholdSec, DEFAULT_IDLE_THRESHOLD_SEC } from '../shared/idleConfig.js';
-import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
-import {
-  setWindowSite, removeWindowSite,
-  addAudibleTab, removeAudibleTab,
-  flushToStorage, reconcileWindows, initTracking,
-  saveSnapshot, recoverFromSnapshot,
-  applyIdleClip,
-  SITES_DAY_KEY, SITES_HOUR_KEY, WALLCLOCK_HOUR_KEY,
-} from './siteTracking.js';
-import {
-  setWindowPath, removeWindowPath,
-  addAudibleTabPath, removeAudibleTabPath,
-  initSubpageTracking, reconcileSubpagePaths,
-  flushSubpagesToStorage,
-  saveSubpageSnapshot, recoverSubpagesFromSnapshot,
-  applyIdleClipSubpages,
-  SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY,
-} from './subpageTracking.js';
+import { PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
+import { siteIdFromUrl } from './siteResolution.js';
+// Scalar buckets are frozen legacy: no capture functions are imported, only the
+// storage keys the read message API still serves them under.
+import { SITES_DAY_KEY, SITES_HOUR_KEY, WALLCLOCK_HOUR_KEY } from './siteTracking.js';
+import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
 import { usageSince } from '../data/intervalAggregates.js';
-import { dbg, isDebug, initDebug } from './trackingUtils.js';
+import { dbg, initDebug } from './trackingUtils.js';
 import { updateBadge } from './badge.js';
-// Self-contained interval-log sidecar: registers its own listeners on import and
-// shares no state with the trackers above. Delete this line + its files to remove.
-import './intervalTracker.js';
+// The interval tracker is the sole live capturer. It self-registers its capture
+// listeners on import; background drives its periodic flush via flushNow() and a
+// lighter per-navigation drain via flushToStorage.
+import { flushNow } from './intervalTracker.js';
+import { flushToStorage as drainIntervals } from './intervalPageTracking.js';
 import {
   MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
@@ -43,22 +31,12 @@ import {
 // carries no URL/sensitive data — just a timestamp.
 console.log(`[BG-DBG ${new Date().toISOString()}] SERVICE WORKER STARTED`);
 
+// In-memory read caches for the frozen scalar buckets, served by the message API.
 let cachedByDay = null;
 let cachedByHour = null;
 let cachedWallClock = null;
 let cachedSubpagesByDay = null;
 let cachedSubpagesByHour = null;
-let bootstrapAt;
-let coldStart = false;
-// Set by chrome.idle.onStateChanged when the user goes idle/locked; cleared
-// when they become active. Used by the flush handler as the exact clip point.
-// In-memory only: a service-worker restart loses the head of the idle stretch
-// — the bootstrap query re-seeds this to `now - threshold` if the user is
-// still idle, so at most one detection window of idle time is miscounted.
-let idleStartedAt = null;
-// Mirrors the value passed to chrome.idle.setDetectionInterval so the
-// onStateChanged listener can compute the retroactive clip point synchronously.
-let cachedIdleThresholdMs = DEFAULT_IDLE_THRESHOLD_SEC * 1000;
 
 function approachWindowKey(period, now) {
   if (period === 'hour') return localHourKey(now);
@@ -161,13 +139,11 @@ function invalidateSitesCache() {
 chrome.alarms.get('flush').then(existing => {
   if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
 });
+// Cutover left the old scalar interval-flush alarm orphaned on installed
+// instances; clear it once so only the single 'flush' alarm fires.
+chrome.alarms.clear('intervalFlush');
 const bootstrapDone = bootstrap();
 bootstrapDone.then(() => updateBadge());
-
-chrome.runtime.onStartup.addListener(() => {
-  coldStart = true;
-  chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
-});
 
 // First page to open for the update tour. The tour hands off between surfaces
 // via nextUpdateSurface — only the entry point needs to be opened here.
@@ -187,21 +163,16 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   });
 });
 
+// Capture init lives in the interval tracker now; background's bootstrap only
+// readies debug logging and the storage schema before its listeners run.
 async function bootstrap() {
   await initDebug();
   dbg('bootstrap: start');
   try {
     await ensureStorageVersion();
-    bootstrapAt = Date.now();
-    await initTracking();
-    await initSubpageTracking();
-    await seedIdleState();
-    dbg('bootstrap: done, bootstrapAt=', bootstrapAt);
+    dbg('bootstrap: done');
     return;
   } catch (e) {
-    // A throw here means init never restored live tabs into the tracker, so
-    // subsequent events run against empty state (the root of phantom visits we
-    // chased). Surface it loudly instead of failing silently.
     dbg('bootstrap: FAILED', e?.message ?? e, e?.stack);
     throw e;
   }
@@ -358,15 +329,8 @@ async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
 
 // --- Tab / window events ---
 
-chrome.tabs.onActivated.addListener(async ({ windowId, tabId }) => {
+chrome.tabs.onActivated.addListener(async () => {
   await bootstrapDone;
-  const tab = await chrome.tabs.get(tabId);
-  dbg('onActivated: windowId=', windowId, 'tabId=', tabId, 'url=', tab.url, 'pendingUrl=', tab.pendingUrl, 'status=', tab.status, 'discarded=', tab.discarded, 'active=', tab.active);
-  if (!tab.active) return;
-  const siteId = siteIdFromUrl(tab.url);
-  const path = pathFromUrl(tab.url);
-  setWindowSite(windowId, siteId);
-  setWindowPath(windowId, siteId, path);
   updateBadge();
 });
 
@@ -389,59 +353,15 @@ async function cacheFavicon(hostname, url) {
   } catch { /* ignore network errors */ }
 }
 
+// Favicon caching and the badge live here; all usage capture (active/audio/idle)
+// is the interval tracker's own onUpdated listener.
 chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   await bootstrapDone;
   if (changeInfo.favIconUrl) {
     const hostname = siteIdFromUrl(tab.url);
     if (hostname) cacheFavicon(hostname, changeInfo.favIconUrl);
   }
-  if (isDebug()) dbg('onUpdated: tabId=', _tabId, 'changeInfo=', JSON.stringify(changeInfo), 'url=', tab.url, 'active=', tab.active, 'audible=', tab.audible, 'muted=', tab.mutedInfo?.muted);
-  if (changeInfo.status === 'complete' && tab.active) {
-    const siteId = siteIdFromUrl(tab.url);
-    const path = pathFromUrl(tab.url);
-    setWindowSite(tab.windowId, siteId);
-    setWindowPath(tab.windowId, siteId, path);
-    updateBadge();
-  }
-  if (changeInfo.status === 'complete') {
-    // Catches audible tab navigating between sites without going silent (changeInfo.audible won't fire)
-    if (tab.audible && !tab.mutedInfo?.muted) {
-      const siteId = siteIdFromUrl(tab.url);
-      const path = pathFromUrl(tab.url);
-      addAudibleTab(tab.id, siteId);
-      addAudibleTabPath(tab.id, siteId, path);
-    } else {
-      removeAudibleTab(tab.id);
-      removeAudibleTabPath(tab.id);
-    }
-  }
-  if ('audible' in changeInfo) {
-    if (changeInfo.audible && !tab.mutedInfo?.muted) {
-      const siteId = siteIdFromUrl(tab.url);
-      const path = pathFromUrl(tab.url);
-      addAudibleTab(tab.id, siteId);
-      addAudibleTabPath(tab.id, siteId, path);
-    } else {
-      removeAudibleTab(tab.id);
-      removeAudibleTabPath(tab.id);
-    }
-  }
-});
-
-chrome.tabs.onRemoved.addListener(async (tabId) => {
-  await bootstrapDone;
-  removeAudibleTab(tabId);
-  removeAudibleTabPath(tabId);
-});
-
-chrome.windows.onCreated.addListener(async (window) => {
-  await bootstrapDone;
-  if (window.state === 'minimized') return;
-  const [tab] = await chrome.tabs.query({ windowId: window.id, active: true });
-  const siteId = siteIdFromUrl(tab?.url);
-  const path = pathFromUrl(tab?.url);
-  setWindowSite(window.id, siteId);
-  setWindowPath(window.id, siteId, path);
+  if (changeInfo.status === 'complete' && tab.active) updateBadge();
 });
 
 chrome.windows.onFocusChanged.addListener(async (_windowId) => {
@@ -449,49 +369,17 @@ chrome.windows.onFocusChanged.addListener(async (_windowId) => {
   updateBadge();
 });
 
-chrome.windows.onRemoved.addListener(async (windowId) => {
-  await bootstrapDone;
-  removeWindowSite(windowId);
-  removeWindowPath(windowId);
-});
-
-// SPA navigation — domain unchanged, only path changes. tabs.onUpdated with
-// status:complete handles full loads; this handles history.pushState etc.
-chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
-  await bootstrapDone;
-  if (details.frameId !== 0) return;
-  const tab = await chrome.tabs.get(details.tabId).catch(() => null);
-  if (!tab) return;
-  const siteId = siteIdFromUrl(details.url);
-  const path = pathFromUrl(details.url);
-  if (tab.active) setWindowPath(tab.windowId, siteId, path);
-  if (tab.audible && !tab.mutedInfo?.muted) {
-    addAudibleTabPath(tab.id, siteId, path);
-  }
-});
-
 // --- Flush alarm ---
 
+// One alarm drives the interval tracker's flush, then the enforcement check that
+// reads its freshly-written rows, then the badge — in sequence, so enforcement
+// never reads pre-flush usage.
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'flush') return;
   await bootstrapDone;
-  if (coldStart) {
-    await chrome.storage.local.remove(['_trackingSnapshot', '_subpageSnapshot']);
-    coldStart = false;
-  }
-  await recoverFromSnapshot(bootstrapAt, idleStartedAt);
-  await recoverSubpagesFromSnapshot(bootstrapAt, idleStartedAt);
-  await reconcileWindows();
-  await reconcileSubpagePaths();
-  const flushAt = Date.now();
-  clipIfIdle(flushAt);
-  await flushToStorage(flushAt);
-  await flushSubpagesToStorage(flushAt);
-  await saveSnapshot(flushAt);
-  await saveSubpageSnapshot(flushAt);
-  invalidateSitesCache();
-
-  await checkEnforcement(flushAt);
+  const now = Date.now();
+  await flushNow();
+  await checkEnforcement(now);
   updateBadge();
 });
 
@@ -507,52 +395,6 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local' || !(PREF_BADGE_ENABLED in changes)) return;
   updateBadge();
-});
-
-chrome.storage.onChanged.addListener(async (changes, area) => {
-  if (area !== 'local' || !changes[PREF_IDLE_THRESHOLD_SEC]) return;
-  const sec = await getIdleThresholdSec();
-  cachedIdleThresholdMs = sec * 1000;
-  chrome.idle.setDetectionInterval(sec);
-  dbg('idle threshold changed → setDetectionInterval(', sec, ')');
-});
-
-async function seedIdleState() {
-  const sec = await getIdleThresholdSec();
-  cachedIdleThresholdMs = sec * 1000;
-  chrome.idle.setDetectionInterval(sec);
-  const state = await chrome.idle.queryState(sec);
-  if (state === 'idle' || state === 'locked') {
-    idleStartedAt = Date.now() - cachedIdleThresholdMs;
-    dbg('bootstrap: user already', state, '— seeding idleStartedAt=', idleStartedAt);
-  }
-}
-
-function clipIfIdle(flushAt) {
-  if (idleStartedAt === null) return;
-  applyIdleClip(idleStartedAt, flushAt);
-  applyIdleClipSubpages(idleStartedAt, flushAt);
-  dbg('flush: clipped active at idleStartedAt=', idleStartedAt);
-}
-
-chrome.idle.onStateChanged.addListener((state) => {
-  if (state === 'idle' || state === 'locked') {
-    // Chrome fires this event only after the user has been idle for the full
-    // detection interval, so subtract the threshold to get the retroactive
-    // actual-idle start rather than the (too-late) detection time.
-    if (idleStartedAt === null) idleStartedAt = Date.now() - cachedIdleThresholdMs;
-    dbg('idle.onStateChanged:', state, 'idleStartedAt=', idleStartedAt);
-  } else {
-    const activeAt = Date.now();
-    dbg('idle.onStateChanged: active (was idleStartedAt=', idleStartedAt, ')');
-    // Clip the in-flight window (since the last flush) before clearing the
-    // timestamp, otherwise that window gets counted as active on the next flush.
-    if (idleStartedAt !== null) {
-      applyIdleClip(idleStartedAt, activeAt);
-      applyIdleClipSubpages(idleStartedAt, activeAt);
-    }
-    idleStartedAt = null;
-  }
 });
 
 // Earliest instant any active rule window can reach back to: this calendar week's
@@ -580,19 +422,17 @@ async function checkEnforcement(now) {
   await notifyApproaching(approaching, now);
 }
 
-// Pre-emptive block: on a main-frame navigation, flush the tracker's accrued
-// usage to storage and re-check limits *before* relying on the next flush tick.
-// flushToStorage drains the pending in-memory ranges up to `now`, so the check
-// sees usage as current as this instant — catching a crossing that happened
-// since the last flush. The freshly-published DNR rule plus reloadMatchingTabs
-// then block the site without waiting up to a minute for the flush alarm.
+// Pre-emptive block: on a main-frame navigation, drain the interval tracker's
+// accrued ranges to the log and re-check limits *before* relying on the next flush
+// tick. drainIntervals writes the pending in-memory ranges up to `now`, so the
+// check (which reads the log) sees usage as current as this instant — catching a
+// crossing since the last flush. The freshly-published DNR rule plus
+// reloadMatchingTabs then block the site without waiting for the flush alarm.
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   if (details.frameId !== 0) return; // main frame only
   if (!details.url?.startsWith('http')) return;
   await bootstrapDone;
   const now = Date.now();
-  await flushToStorage(now);
-  await flushSubpagesToStorage(now);
-  invalidateSitesCache();
+  await drainIntervals(now);
   await checkEnforcement(now);
 });

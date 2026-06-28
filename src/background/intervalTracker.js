@@ -7,21 +7,17 @@ import {
 import { getIdleThresholdSec, DEFAULT_IDLE_THRESHOLD_SEC } from '../shared/idleConfig.js';
 import { PREF_IDLE_THRESHOLD_SEC } from '../shared/prefKeys.js';
 
-// Interval-tracking sidecar entry. Mirrors background.js's SUBPAGE-tracking
-// wiring (same listeners incl. SPA navigation, same bootstrap, same flush alarm,
-// same idle handling) but drives the duplicated interval module keyed on
-// domain+path, so capture is identical to the real subpage tracker. No
-// enforcement/badge/messaging. Self-registers on import; delete this file + its
-// import line + the other interval files to remove the experiment.
+// The sole live tracker. Self-registers its capture listeners (tab/window/SPA
+// navigation), bootstrap, and idle handling on import; drives the interval module
+// keyed on domain+path. Its periodic flush is no longer a private alarm: it is
+// exported as flushNow() and driven by background.js's single 'flush' alarm, so
+// the flush and the enforcement check that reads its output run in one sequence.
 
 let bootstrapAt;
 let coldStart = false;
 let idleStartedAt = null;
 let cachedIdleThresholdMs = DEFAULT_IDLE_THRESHOLD_SEC * 1000;
 
-chrome.alarms.get('intervalFlush').then(existing => {
-  if (!existing) chrome.alarms.create('intervalFlush', { periodInMinutes: 1 });
-});
 const bootstrapDone = bootstrap();
 
 chrome.runtime.onStartup.addListener(() => {
@@ -92,10 +88,9 @@ chrome.webNavigation.onHistoryStateUpdated.addListener(async (details) => {
   if (tab.audible && !tab.mutedInfo?.muted) addAudibleTabPath(tab.id, siteId, path);
 });
 
-// --- flush alarm (mirrors background.js's flush handler) ---
+// --- flush (driven by background.js's 'flush' alarm) ---
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name !== 'intervalFlush') return;
+export async function flushNow() {
   await bootstrapDone;
   if (coldStart) {
     await chrome.storage.local.remove('_intervalSnapshot');
@@ -107,7 +102,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (idleStartedAt !== null) applyIdleClip(idleStartedAt, flushAt);
   await flushToStorage(flushAt);
   await saveSnapshot(flushAt);
-});
+}
 
 // --- idle ---
 
