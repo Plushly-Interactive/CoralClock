@@ -295,6 +295,14 @@ button:disabled {
   letter-spacing: 0.04em;
 }
 
+/* Headings that carry a trailing subheading lay them out on one row, vertically
+   centered, so the parenthetical sits identically across every chart card. */
+.chart-heading:has(.chart-subheading) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .setting-label {
   font-weight: 600;
 }

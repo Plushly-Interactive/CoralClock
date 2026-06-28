@@ -24,12 +24,9 @@ const stripParams = drillParams.get('stripParams') === '1';
 const siteId = siteIds[0];
 const isMerged = siteIds.length > 1;
 // Interval log is authoritative; loadMergedTrackingData serves interval days and
-// merges frozen legacy buckets underneath. ?source is a no-op kept for link
-// compatibility.
-const SOURCE = drillParams.get('source');
+// merges frozen legacy buckets underneath.
 const fetchData = loadMergedTrackingData;
-const SRC_Q = SOURCE ? `&source=${encodeURIComponent(SOURCE)}` : '';
-const DASH = SOURCE === 'interval' ? '../interval-dashboard/interval-dashboard.html' : '../dashboard/dashboard.html';
+const DASH = '../dashboard/dashboard.html';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 const limitBtn = document.querySelector('#limit-btn');
@@ -191,9 +188,9 @@ function renderPathLinks(entries) {
   }
 }
 
-const siteHref = (isMerged
+const siteHref = isMerged
   ? `../site/site.html?ids=${encodeURIComponent(siteIds.join(','))}`
-  : `../site/site.html?id=${encodeURIComponent(siteId)}`) + SRC_Q;
+  : `../site/site.html?id=${encodeURIComponent(siteId)}`;
 backBtn.href = DASH;
 crumbSite.href = siteHref;
 

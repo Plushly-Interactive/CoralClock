@@ -11,7 +11,7 @@ import { allIntervals, SESSION_GAP_MS } from '../../data/intervalLog.js';
 // site is one overlapped band — active at full height, audio inset over it, idle a
 // thin base track — mirroring the dashboard time chart, laid along the time axis.
 
-document.querySelector('#back-btn').href = '../interval-dashboard/interval-dashboard.html';
+document.querySelector('#back-btn').href = '../dashboard/dashboard.html';
 const svg = document.querySelector('#timeline-chart');
 const axisSvg = document.querySelector('#timeline-axis');
 const scrollDiv = document.querySelector('#tl-scroll');
@@ -36,6 +36,7 @@ let lastTop = [];                    // sites in the current render, indexed by 
 let hoverCtx = null;                 // { winStart, span, x0, plotW } for cursor->time mapping
 let cursorLine = null;               // the crosshair <line>, repositioned on mousemove
 let clockFormat = DEFAULT_CLOCK_FORMAT;   // user's 12h/24h setting, loaded at startup
+let lastW = 0;                       // last measured scroll-area width (resize guard)
 
 function hasDay(dayKey) { return daysWithData.has(dayKey); }
 
@@ -200,6 +201,7 @@ function render() {
   svg.style.height = `${H}px`;
 
   const W = scrollDiv.clientWidth || 900;
+  lastW = W;
   const x0 = LABEL_W, x1 = W - PAD_R;
   const plotW = Math.max(1, x1 - x0);
   const xOf = (t) => x0 + ((t - winStart) / span) * plotW;
@@ -266,7 +268,7 @@ function render() {
     lane(mergeRanges(site.idle), bandY, idleH, colIdle);
     // Label cell (first column only): one clickable <a> with favicon + name + duration
     // and a dashboard-style hover background. Click-through to the site page is here.
-    const href = `../site/site.html?id=${encodeURIComponent(site.domain)}&source=interval`;
+    const href = `../site/site.html?id=${encodeURIComponent(site.domain)}`;
     parts.push(`<foreignObject x="0" y="${y}" width="${x0}" height="${ROW_H}"><a xmlns="http://www.w3.org/1999/xhtml" class="tl-rowlabel" href="${href}" title="${escapeHtml(label)}"><img class="tl-rowfav" src="${faviconUrl(site.domain)}" width="16" height="16"/><span class="tl-rowname">${escapeHtml(label)}</span><span class="tl-rowdur">${formatMs(site.total)}</span></a></foreignObject>`);
     if (i < top.length - 1) parts.push(`<line x1="0" y1="${y + ROW_H}" x2="${x1}" y2="${y + ROW_H}" stroke="${colBorder}" stroke-width="0.5"/>`);
     y += ROW_H;
@@ -368,7 +370,12 @@ function drillAtClientX(clientX) {
 svg.addEventListener('click', (e) => drillAtClientX(e.clientX));
 axisSvg.addEventListener('click', (e) => drillAtClientX(e.clientX));
 
-window.addEventListener('resize', () => { if (rows.length) render(); });
+// Re-render when the scroll area's width actually changes. Covers the initial
+// layout settling (the first synchronous render can measure a pre-scrollbar width,
+// which letterboxes the svg) and window resizes. Guarded on a real width change so
+// the vertical scrollbar that render itself toggles doesn't cause a feedback loop.
+const ro = new ResizeObserver(() => { if (rows.length && scrollDiv.clientWidth !== lastW) render(); });
+ro.observe(scrollDiv);
 
 await loadFaviconCache();
 clockFormat = (await chrome.storage.local.get(PREF_CLOCK_FORMAT))[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;

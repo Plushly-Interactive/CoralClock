@@ -1,8 +1,9 @@
 import { formatMs, localDayKey, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, navButton, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
+import { count as intervalRowCount } from '../../data/intervalLog.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
@@ -15,7 +16,7 @@ const PREF_GROUP_MODE = 'groupMode';
 const PREF_SEARCH = 'siteSearch';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
-navButton(document.querySelector('#interval-dashboard-btn'), '../interval-dashboard/interval-dashboard.html');
+navButton(document.querySelector('#timeline-link'), '../browsing-timeline/browsing-timeline.html');
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
 navButton(document.querySelector('#prune-btn'), '../storage-management/storage-management.html');
 navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
@@ -261,6 +262,14 @@ window.addEventListener('storage', (e) => {
 (async () => {
   if (new URLSearchParams(location.search).get('tour') === '1') {
     await maybeEnableMockMode();
+  } else {
+    // Mock data belongs to an in-progress tour only. Clear a leftover flag so a
+    // real user isn't stuck on fixtures after abandoning the tour mid-way.
+    const state = await readTourState();
+    if (state.useMockData && !state.inProgress) {
+      await writeTourState({ useMockData: false });
+      clearMockModeCache();
+    }
   }
   await loadAndRender();
 })();
@@ -285,7 +294,6 @@ async function loadAndRender() {
   }
   byDayCache = await loadMergedTrackingData({ type: MSG_GET_SITES_BY_DAY });
   render();
-  renderStorageBar();
 }
 
 document.querySelector('#seed-btn')?.addEventListener('click', async () => {
@@ -458,9 +466,12 @@ function dashboardNewStepRange(completedVersion) {
 }
 
 async function maybeEnableMockMode() {
+  // Mock fixtures are shown during the tour only for a user with no real data.
+  // Post-cutover the authoritative store is the interval log, so check it (the
+  // frozen scalar buckets may be empty even when the user has interval history).
   const { sitesByDay = {} } = await chrome.storage.local.get('sitesByDay');
-  const empty = Object.keys(sitesByDay).length === 0;
-  if (empty) {
+  const hasData = Object.keys(sitesByDay).length > 0 || (await intervalRowCount()) > 0;
+  if (!hasData) {
     await writeTourState({ useMockData: true });
     clearMockModeCache();
   }

@@ -1,5 +1,13 @@
 # Interval storage for precise overlap merging
 
+> **Status: superseded by the cutover.** The interval log is no longer a removable
+> experiment running beside the scalar trackers; it is now the single authoritative
+> tracker. The scalar capture stack has been removed and its buckets frozen as
+> read-only legacy. The "removable experiment" framing, the revert steps, and the
+> separate interval-dashboard described below are historical. See
+> [bucket-to-interval-tracking-migration.md](bucket-to-interval-tracking-migration.md)
+> for the current architecture.
+
 Store raw browsing **presence intervals** (`{domain, path, kind, from, to}`) in
 an IndexedDB log, captured by a **duplicate of the existing tracking stack**. The
 current goal is to **validate interval storage against the scalar trackers**:

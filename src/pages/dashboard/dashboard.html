@@ -19,8 +19,6 @@
       </div>
       <div id="header-center"></div>
       <div id="header-right">
-        <span id="storage-bar-label" class="text-meta"></span>
-        <button id="interval-dashboard-btn" class="btn">Interval dashboard</button>
         <button id="prune-btn" class="btn">Manage storage</button>
         <button id="rules-btn" class="btn" type="button">Manage rules</button>
         <button id="settings-btn" class="square-btn" title="Settings">⛭</button>
@@ -42,6 +40,7 @@
           <h2 class="chart-heading">
             Average per clock hour
             <span id="hourly-subheading" class="chart-subheading text-meta"></span>
+            <button id="timeline-link" class="link-btn" style="margin-left:auto;font-size:var(--font-base);text-transform:none">View timeline →</button>
           </h2>
           <svg id="hourly-chart" class="chart-svg"></svg>
           <div class="tooltip text-meta" id="hourly-tooltip"></div>

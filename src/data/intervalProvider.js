@@ -7,10 +7,9 @@ import {
   MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
 } from '../shared/msgTypes.js';
 
-// Drop-in for fetchTrackingData on site/path pages opened with ?source=interval:
-// same message shapes, but served from the interval log (intervalAggregates)
-// instead of the scalar background message API. Phase B promotes this to the sole
-// provider (wrapped in the bucket stitch); only the ?source ternary is dropped.
+// The interval-log reader behind the dashboards: answers the same message shapes
+// as the scalar background API, served from intervalAggregates instead. Wrapped by
+// mergeDataSources, which merges these interval days with frozen legacy buckets.
 function hoursForDay(byHour, dayKey) {
   const out = {};
   for (const [hourKey, cells] of Object.entries(byHour)) {

@@ -25,11 +25,9 @@ const siteId = params.get('id');
 const siteIds = params.get('ids')?.split(',') ?? null;
 const isMerged = !!siteIds;
 // Interval log is authoritative; loadMergedTrackingData serves interval days and
-// falls back to frozen legacy buckets for pre-interval days. The ?source param is
-// a no-op kept only so existing interval-dashboard links still resolve.
-const SOURCE = params.get('source');
+// falls back to frozen legacy buckets for pre-interval days.
 const fetchData = loadMergedTrackingData;
-const DASH = SOURCE === 'interval' ? '../interval-dashboard/interval-dashboard.html' : '../dashboard/dashboard.html';
+const DASH = '../dashboard/dashboard.html';
 let effectiveSiteIds = isMerged ? siteIds : [siteId];
 let isAggregatedEtld1 = false;
 document.querySelector('#header-center').appendChild(createRangeDropdown());
@@ -491,7 +489,6 @@ function renderSubpages(range) {
     params.set('path', row.path);
     if (row.truncated) params.set('prefix', '1');
     if (stripParams) params.set('stripParams', '1');
-    if (SOURCE) params.set('source', SOURCE);
     const pathHref = `../path/path.html?${params}`;
     navButton(drill, pathHref);
     let openPath = row.path;

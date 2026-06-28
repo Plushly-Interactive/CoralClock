@@ -4,9 +4,9 @@ import { allIntervals } from './intervalLog.js';
 import { showNotification } from '../shared/utils.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../shared/prefKeys.js';
 
-// Pure export logic, no modal/DOM wiring — safe to import from any page (unlike
-// importData.js, which self-wires the io-modal at load). Both the bucket storage
-// page and the interval storage page build the same complete backup file here.
+// Pure export logic, no modal/DOM wiring, safe to import from any page. Both the
+// bucket storage page and the interval storage page build the same complete backup
+// file here.
 export const EXPORT_PREF_KEYS = [PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START];
 
 export async function buildBiteGuardPayload() {

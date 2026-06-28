@@ -2,9 +2,9 @@ import { SITES_DAY_KEY } from '../background/siteTracking.js';
 import { showNotification } from '../shared/utils.js';
 import { MSG_INVALIDATE_SITES_CACHE } from '../shared/msgTypes.js';
 
-// Time Tracker import logic, no modal/DOM wiring — callable from any page (unlike
-// importData.js, which self-wires the bucket io-modal at load). TT data is coarse
-// daily aggregates, so it lands in the scalar bucket tier, not the interval log.
+// Time Tracker import logic, no modal/DOM wiring, callable from any page. TT data
+// is coarse daily aggregates, so it lands in the scalar bucket tier, not the
+// interval log.
 export const IMPORT_COMPLETE = 'importcomplete';
 export const TT_VERSION = '4.2.1';
 
