@@ -215,6 +215,22 @@ round-trips both tiers natively.)
   operate on buckets for legacy days; they do **not** touch the interval log (that
   integration is cloud-sync's concern, not this migration's).
 
+## Follow-ups (deferred, post-cutover)
+
+- **Unify the merged reader's two access paths.** `mergeDataSources` (the Phase B
+  authoritative reader) is a *mixed reader*: it function-reads interval days from
+  IndexedDB and message-reads legacy bucket days from the service worker. The two
+  paths exist only because the tiers live in different stores. The message API's one
+  real value is merging the SW's live un-flushed snapshot, which applies to **today**
+  only, and the merge never serves today from buckets (today is always an interval
+  day). So for this reader the SW round-trip buys nothing: it reads already-persisted
+  `chrome.storage.local`. The unification is to extract the bucket day/hour
+  aggregation out of `background.js` into a page-side reader (dropping the live
+  today-merge branch) so `mergeDataSources` calls two plain functions, one access
+  model. Left mixed for now: it is correct as-is and the asymmetry is cosmetic. Note:
+  the SW message API can't be deleted outright, other consumers (storage-management,
+  CSV/TT export) still use it; this only removes the merged reader's dependence.
+
 ## Out of scope
 
 - **Cloud sync** — separate spec; this migration is its prerequisite. The *sync*

@@ -183,7 +183,7 @@ function mockAnswer(msg) {
 }
 
 let mockModeCache = null;
-async function isMockMode() {
+export async function isMockMode() {
   if (mockModeCache !== null) return mockModeCache;
   const state = await readTourState();
   mockModeCache = !!state.useMockData;

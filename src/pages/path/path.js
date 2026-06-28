@@ -7,8 +7,8 @@ import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../..
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
-import { intervalFetch } from '../../data/intervalProvider.js';
+import { clearMockModeCache } from '../../shared/tourMockData.js';
+import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import { MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR } from '../../shared/msgTypes.js';
 import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 
@@ -23,9 +23,11 @@ const prefix = drillParams.get('prefix') === '1';
 const stripParams = drillParams.get('stripParams') === '1';
 const siteId = siteIds[0];
 const isMerged = siteIds.length > 1;
-// ?source=interval routes data reads through the interval log; Phase B drops this.
+// Interval log is authoritative; loadMergedTrackingData serves interval days and
+// merges frozen legacy buckets underneath. ?source is a no-op kept for link
+// compatibility.
 const SOURCE = drillParams.get('source');
-const fetchData = SOURCE === 'interval' ? intervalFetch : fetchTrackingData;
+const fetchData = loadMergedTrackingData;
 const SRC_Q = SOURCE ? `&source=${encodeURIComponent(SOURCE)}` : '';
 const DASH = SOURCE === 'interval' ? '../interval-dashboard/interval-dashboard.html' : '../dashboard/dashboard.html';
 

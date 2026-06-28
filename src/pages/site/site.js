@@ -8,8 +8,8 @@ import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
-import { intervalFetch } from '../../data/intervalProvider.js';
+import { clearMockModeCache } from '../../shared/tourMockData.js';
+import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import {
   MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
   MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
@@ -24,10 +24,11 @@ const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
 const siteIds = params.get('ids')?.split(',') ?? null;
 const isMerged = !!siteIds;
-// ?source=interval routes every data read through the interval log instead of the
-// scalar message API (Phase A drilldown validation). Phase B drops this ternary.
+// Interval log is authoritative; loadMergedTrackingData serves interval days and
+// falls back to frozen legacy buckets for pre-interval days. The ?source param is
+// a no-op kept only so existing interval-dashboard links still resolve.
 const SOURCE = params.get('source');
-const fetchData = SOURCE === 'interval' ? intervalFetch : fetchTrackingData;
+const fetchData = loadMergedTrackingData;
 const DASH = SOURCE === 'interval' ? '../interval-dashboard/interval-dashboard.html' : '../dashboard/dashboard.html';
 let effectiveSiteIds = isMerged ? siteIds : [siteId];
 let isAggregatedEtld1 = false;

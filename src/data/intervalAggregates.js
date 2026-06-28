@@ -166,6 +166,17 @@ export function invalidate() {
   cachePromise = null;
 }
 
+// Earliest day with interval data (active/audio hours), as a YYYY-MM-DD key, or
+// null when the log is empty. The stitch boundary: days before this read buckets,
+// this day and after read intervals.
+export async function earliestDayKey() {
+  const { hourKeys } = await load();
+  if (hourKeys.length === 0) return null;
+  let min = hourKeys[0];
+  for (const k of hourKeys) if (k < min) min = k;
+  return min.slice(0, 10);
+}
+
 export async function getSitesByDay() {
   return (await load()).sitesByDay;
 }
