@@ -52,6 +52,17 @@ export function formatMsAsDays(ms) {
   return `${days.toFixed(1)}d`;
 }
 
+// Human span between two dates (Date-parseable: 'YYYY-MM-DD' strings or ms).
+export function formatSpan(earliest, latest) {
+  const days = Math.round((new Date(latest) - new Date(earliest)) / 86400000);
+  if (days < 1)   return '1 day';
+  if (days < 14)  return `${days} day${days !== 1 ? 's' : ''}`;
+  if (days < 60)  { const w = Math.round(days / 7);  return `${w} week${w !== 1 ? 's' : ''}`; }
+  if (days < 730) { const m = Math.round(days / 30.44); return `${m} month${m !== 1 ? 's' : ''}`; }
+  const y = (days / 365.25).toFixed(1);
+  return `${y} year${y !== '1.0' ? 's' : ''}`;
+}
+
 export const DEFAULT_CLOCK_FORMAT = '24h';
 
 export function formatHourLabel(h, clockFormat) {

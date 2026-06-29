@@ -189,43 +189,19 @@ recent write before merging.
 `tour` key is treated as `{ completed: false, useMockData: false, inProgress: null }` — auto-start fires on the next dashboard
 open following a fresh `onInstalled` event.
 
-## Adding new steps in a future version
+## Versioning and updates
 
-When a feature ships and you want returning users to see new tour steps
-automatically on extension reload, follow these steps:
+The tour has **no update-on-version mechanism**. An earlier system
+re-walked newly added steps when the extension updated, gated by a
+`TOUR_VERSION` constant and per-step `newInVersion` markers; it was
+removed. On `update` the background does nothing; on first install it
+opens the full tour once (`?tour=1`). Steps added to a surface are
+simply picked up the next time the full tour runs (the `?` replay
+button, or a fresh install).
 
-1. **Bump `TOUR_VERSION`** in `src/shared/tour.js`.
-2. **Mark each new step** with `newInVersion: TOUR_VERSION`:
-  ```js
-   {
-     selector: '#my-new-element',
-     title: 'New feature',
-     body: 'Here is what it does.',
-     newInVersion: 3,   // ← set to the new TOUR_VERSION value
-   }
-  ```
-   Insert the marked steps *before* any existing handoff step on the
-   same surface so that replay (full tour) includes them in order.
-3. **Set `TOUR_UPDATE_ENTRY*`* in `src/background/background.js` to
-  the HTML path of the first surface that has new steps, e.g.:
-   On extension reload `onInstalled` opens this page automatically for
-   users whose `completedVersion` is below the new `TOUR_VERSION`.
-4. **Chain surfaces** (optional). If new steps span more than one
-  navigable surface (rules → dashboard, dashboard → storage-pruning),
-   pass `nextUpdateSurface` to `autoStartIfMatches` on the earlier
-   surface so the update tour hands off automatically:
-   `autoStartIfMatches` injects a "Continue →" handoff on the last new
-   step and opens the next surface when the user clicks it.
-
-**What happens automatically** (no extra work needed):
-
-- `autoStartIfMatches` finds the first step where `newInVersion > completedVersion` and slices from there, so you never hardcode an
-index.
-- The dashboard does the same scan via `dashboardNewStepRange`, so
-update-tour resume works correctly after a page reload mid-tour.
-- Surfaces that cannot be opened directly (site, path, popup) cannot  
-be the `TOUR_UPDATE_ENTRY` or a `nextUpdateSurface` target, but new  
-steps added there are picked up automatically during full tour replay.
+Communicating changes to returning users is deferred to a planned
+**changelog popup on update** (see `docs/_backlog.md`), which will
+replace the update tour with a lightweight "what's new" surface.
 
 ## Open questions
 

@@ -5,9 +5,9 @@
   <title>BiteGuard — Storage management</title>
   <script src="../../shared/theme.js"></script>
   <link rel="stylesheet" href="../../shared/theme.css" />
-  <link rel="stylesheet" href="../../shared/tour.css" />
   <link rel="stylesheet" href="../../shared/ioModal.css" />
   <link rel="stylesheet" href="../../shared/confirmDialog.css" />
+  <link rel="stylesheet" href="../../shared/tour.css" />
   <link rel="stylesheet" href="./storage-management.css" />
 </head>
 <body>
@@ -19,7 +19,7 @@
     </div>
     <div id="header-center"><h1 class="page-title">Storage management</h1></div>
     <div id="header-right">
-      <button id="import-btn" class="btn">Import/Export data</button>
+      <button id="io-open-btn" class="btn">Import/Export data</button>
     </div>
   </header>
 
@@ -38,7 +38,7 @@
         </div>
         <div class="count-chip">
           <span id="count-records" class="stat-value">—</span>
-          <span class="stat-label">Records</span>
+          <span class="stat-label">Rows</span>
         </div>
         <div class="count-chip" id="span-chip">
           <span class="stat-value-row">
@@ -52,36 +52,37 @@
 
       <div id="stats-row">
         <div class="chart-container">
-          <span class="chart-heading">Storage by store</span>
+          <span class="chart-heading">Browsing data</span>
           <div class="quota-row">
             <div class="store-bar">
-              <div id="bar-site-day" style="width:0%;background:var(--color-accent)"></div>
-              <div id="bar-site-hour" style="width:0%;background:var(--color-accent-light)"></div>
-              <div id="bar-sub-day" style="width:0%;background:var(--color-secondary)"></div>
-              <div id="bar-sub-hour" style="width:0%;background:var(--color-secondary-light)"></div>
-              <div id="bar-other" style="width:0%;background:var(--color-border)"></div>
+              <div id="bar-active" style="width:0%;background:var(--color-accent)"></div>
+              <div id="bar-audio" style="width:0%;background:var(--color-secondary)"></div>
+              <div id="bar-idle" style="width:0%;background:var(--color-border)"></div>
             </div>
-            <span id="store-total-text" class="text-meta"></span>
+            <span id="interval-total-text" class="text-meta"></span>
           </div>
           <div class="store-bar-legend">
-            <div class="legend-stores">
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent)"></span><span id="legend-site-day">Sites daily</span></div>
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent-light)"></span><span id="legend-site-hour">Sites hourly</span></div>
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary)"></span><span id="legend-sub-day">Subpages daily</span></div>
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary-light)"></span><span id="legend-sub-hour">Subpages hourly</span></div>
+            <div class="legend-stores" style="flex:2;min-width:max-content">
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent)"></span><span id="legend-active">Active</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary)"></span><span id="legend-audio">Audio</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-border)"></span><span id="legend-idle">Idle</span></div>
             </div>
-            <div id="legend-other" class="legend-row" hidden><span class="legend-dot" style="background:var(--color-border)"></span><span id="legend-other-text">Other</span></div>
+            <div style="flex:3">
+              <div class="text-meta">Stored in IndexedDB, outside the 10 MB cap. The bar shows the kind mix.</div>
+              <div class="text-meta" style="margin-top:6px">Row = one uninterrupted page visit.</div>
+            </div>
           </div>
         </div>
 
         <div class="chart-container">
-          <span class="chart-heading">Quota</span>
+          <span class="chart-heading">Extension storage</span>
           <div class="quota-row">
             <div class="quota-bar-track"><div id="quota-bar-fill" class="quota-bar-fill" style="width:0%"></div></div>
             <span id="quota-text" class="text-meta"></span>
           </div>
           <span id="quota-warn" class="quota-warn" hidden></span>
-          <span class="text-meta">Chrome caps extension storage at 10 MB by default. Adding <code>unlimitedStorage</code> to the manifest removes this limit.</span>
+          <span class="text-meta">The 10 MB cap covers settings, favicon cache, rules and data imported from other apps, not the browsing data.</span>
+          <button id="legacy-storage-btn" class="btn" style="align-self:flex-start;display:none">Legacy storage</button>
         </div>
 
         <div class="chart-container">
@@ -96,16 +97,16 @@
       </div>
     </div>
 
-    <!-- Tools grid -->
+    <!-- Tools grid (panels wired incrementally) -->
     <div id="tools-grid">
 
       <div class="chart-container" id="insig-card">
-        <h2 class="chart-heading">Remove insignificant records</h2>
-        <p class="card-desc">Over time, brief visits and accidental clicks accumulate noise. Scan and remove entries whose total tracked time falls below a threshold.</p>
+        <h2 class="chart-heading">Remove insignificant rows</h2>
+        <p class="card-desc">Brief visits and accidental clicks accumulate. Scan and remove sites or pages whose total tracked time falls below a threshold.</p>
         <div class="field-group">
           <div class="setting-label">Threshold</div>
           <div id="threshold-row">
-            <input id="threshold-input" class="number-input" type="number" value="30" />
+            <input id="threshold-input" class="number-input" type="number" min="1" value="30" />
             <span>seconds</span>
           </div>
         </div>
@@ -176,46 +177,41 @@
         </div>
       </div>
 
-      <div class="chart-container" id="hourly-card">
-        <h2 class="chart-heading">Hourly data</h2>
-        <p class="card-desc">Hourly stores track the same time as daily, at finer granularity. Old hourly data can be dropped once daily aggregates are accurate.</p>
-        <div class="callout">
-          <div id="callout-sites-hour"></div>
-          <div id="callout-sub-hour"></div>
-          <div id="callout-hourly-total" class="text-meta" style="margin-top:4px"></div>
-        </div>
-        <div class="field-group">
-          <div class="setting-label">Scope</div>
-          <div id="drop-stores">
-            <label class="scope-check"><input type="checkbox" id="drop-scope-sites" checked> Sites</label>
-            <label class="scope-check"><input type="checkbox" id="drop-scope-subpages" checked> Subpages</label>
-          </div>
-        </div>
+      <div class="chart-container" id="drop-card">
+        <h2 class="chart-heading">Drop subpage detail</h2>
+        <p class="card-desc">Collapse old rows to site level by dropping their page path. Keeps site totals, sheds per-page detail to shrink the log.</p>
         <div id="drop-row">
-          <span class="setting-label">Drop data older than</span>
-          <input id="drop-days-input" class="number-input" type="number" value="30" />
+          <span class="setting-label">Collapse rows older than</span>
+          <input id="drop-days-input" class="number-input" type="number" min="0" value="30" />
           <span>days</span>
-          <span id="drop-estimate" class="text-meta">~280 KB</span>
         </div>
-        <div class="right-row"><button id="drop-hourly-btn" class="btn">Drop data</button></div>
+        <div class="right-row"><button id="drop-paths-btn" class="btn">Drop subpage detail</button></div>
       </div>
 
-      <div class="chart-container" id="health-card">
-        <h2 class="chart-heading">Data health</h2>
-        <p class="card-desc">Verifies hourly and daily aggregates are consistent. Targeted deletion reduces daily values from hourly data, small drifts accumulate over time.</p>
+      <div class="chart-container" id="favicon-card">
+        <h2 class="chart-heading">Favicon cache</h2>
+        <p class="card-desc">Cached site icons, stored in the 10 MB extension storage. Clearing frees space; icons reload from the browser as you visit sites.</p>
         <div class="health-status">
-          <span id="health-dot" class="health-dot"></span>
-          <span id="health-status-text"></span>
+          <span id="favicon-stats">—</span>
         </div>
         <div class="right-row">
-          <button id="repair-btn" class="btn">Repair</button>
+          <button id="favicon-clear-btn" class="btn">Clear all</button>
+        </div>
+        <hr class="card-divider" />
+        <div id="favicon-stale-row" style="display:flex;align-items:center;gap:8px">
+          <span class="setting-label">Clear icons not visited in</span>
+          <input id="favicon-days-input" class="number-input" type="number" min="1" value="30" />
+          <span>days</span>
+        </div>
+        <div class="right-row">
+          <button id="favicon-stale-btn" class="btn">Clear unused</button>
         </div>
       </div>
 
     </div>
   </main>
 
-  <!-- Import/Export modal -->
+  <!-- Import/Export modal (BiteGuard format only; TT + CSV land in a later step) -->
   <div id="io-modal-overlay" hidden>
     <div id="io-modal" role="dialog" aria-labelledby="io-modal-title" aria-modal="true">
       <div id="io-modal-header">
@@ -223,28 +219,25 @@
         <button id="io-modal-close" class="icon-btn" aria-label="Close">&times;</button>
       </div>
       <div id="io-modal-body">
-        <input type="file" id="import-input" accept=".json" style="display:none">
+        <input type="file" id="io-import-input" accept=".json" style="display:none">
         <div id="io-error" class="callout" hidden></div>
         <div id="io-columns">
           <section class="io-section" id="io-section-bg">
             <h3 class="io-section-title">BiteGuard format</h3>
-            <p class="io-section-desc">Back up your BiteGuard data or transfer it between installs. Includes all daily and hourly browsing stats and settings.</p>
+            <p class="io-section-desc">Back up everything, or restore from a BiteGuard export: browsing data, rules and settings. New data merges in; wherever the file differs from your current data, you choose per category to keep yours or take the file's.</p>
             <ul class="io-bullets">
-              <li class="io-yes">Active time per site</li>
-              <li class="io-yes">Visit counts per site</li>
-              <li class="io-yes">Audio time per site</li>
-              <li class="io-yes">Per subpage data</li>
+              <li class="io-yes">All browsing rows (active, audio, idle)</li>
               <li class="io-yes">Site rules &amp; limits</li>
               <li class="io-yes">Settings</li>
             </ul>
             <div class="io-actions">
-              <button id="bg-export-btn" class="btn io-btn">Export</button>
-              <button id="bg-import-btn" class="btn io-btn">Import</button>
+              <button id="io-bg-export-btn" class="btn io-btn">Export</button>
+              <button id="io-bg-import-btn" class="btn io-btn">Import</button>
             </div>
           </section>
           <section class="io-section" id="io-section-tt">
             <h3 class="io-section-title">Time Tracker compatibility</h3>
-            <p class="io-section-desc">Exchange data with the "Time Tracker - Web Habit Builder" extension (v<span id="tt-version"></span>). Not all data is compatible.</p>
+            <p class="io-section-desc">Exchange data with the "Time Tracker - Web Habit Builder" extension (v<span id="io-tt-version"></span>). Not all data is compatible. Imports land in a separate legacy store, kept apart from your tracked browsing: on any day that also has native tracking, the imported data stays hidden behind it.</p>
             <ul class="io-bullets">
               <li class="io-yes">Active time per site (daily only)</li>
               <li class="io-yes">Visit counts per site (daily only)</li>
@@ -253,70 +246,65 @@
               <li class="io-no">Settings</li>
             </ul>
             <div class="io-actions">
-              <button id="tt-export-btn" class="btn io-btn">Export</button>
-              <button id="tt-import-btn" class="btn io-btn">Import</button>
+              <button id="io-tt-export-btn" class="btn io-btn">Export</button>
+              <button id="io-tt-import-btn" class="btn io-btn">Import</button>
             </div>
           </section>
           <section class="io-section" id="io-section-csv">
             <h3 class="io-section-title">CSV / Spreadsheet</h3>
-            <p class="io-section-desc">Export site stats as a CSV file, openable in any spreadsheet app. Times are in decimal minutes.</p>
-            <ul class="io-bullets">
-              <li class="io-yes">Active time per site (in minutes)</li>
-              <li class="io-yes">Audio time per site (in minutes)</li>
-              <li class="io-yes">Visit counts per site</li>
-              <li class="io-yes">Daily or hourly granularity (one button each)</li>
-              <li class="io-yes">Per subpage data</li>
-            </ul>
-            <div class="io-actions">
-              <button id="csv-daily-btn" class="btn io-btn">Export daily</button>
-              <button id="csv-hourly-btn" class="btn io-btn">Export hourly</button>
+            <p class="io-section-desc">Export your browsing data as a CSV file, openable in any spreadsheet app. Times are in decimal minutes.</p>
+            <div style="display:flex;gap:16px">
+              <div style="flex:1;display:flex;flex-direction:column">
+                <ul class="io-bullets">
+                  <li class="io-yes">One row per site/subpage, per day</li>
+                  <li class="io-yes">Active + audio minutes, visits</li>
+                </ul>
+                <button id="io-csv-daily-btn" class="btn io-btn" style="margin-top:auto">Export daily</button>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column">
+                <ul class="io-bullets">
+                  <li class="io-yes">Same, broken down per hour</li>
+                  <li class="io-yes">Active + audio minutes, visits</li>
+                </ul>
+                <button id="io-csv-hourly-btn" class="btn io-btn" style="margin-top:auto">Export hourly</button>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column">
+                <ul class="io-bullets">
+                  <li class="io-yes">Raw rows, exact start/end times</li>
+                  <li class="io-yes">Kind: active, audio, idle</li>
+                </ul>
+                <button id="io-csv-rows-btn" class="btn io-btn" style="margin-top:auto">Export rows</button>
+              </div>
             </div>
           </section>
         </div>
         <div id="io-conflict-view" hidden>
           <h3 id="io-conflict-title" class="dialog-title">
-            <span id="io-conflict-warning-symbol" aria-hidden="true">⚠</span>Conflicting days
+            <span id="io-conflict-warning-symbol" aria-hidden="true">⚠</span><span id="io-conflict-label">Overlapping data</span><span id="io-conflict-count"></span>
           </h3>
-          <p id="io-conflict-desc" class="io-section-desc">The following days exist both in your current data and the imported file. Choose what to do — the choice applies to all listed days.</p>
+          <p id="io-conflict-desc" class="io-section-desc">These current rows overlap the file's rows in time. Keep current discards the overlapping rows from the file; Replace drops the rows listed below and takes the file's. Rows that don't overlap are always kept.</p>
           <ul id="io-conflict-list"></ul>
           <div class="io-actions" id="io-conflict-actions">
             <button id="io-conflict-cancel" class="btn io-btn">Cancel</button>
-            <button id="io-conflict-keep" class="btn io-btn">Keep existing</button>
-            <button id="io-conflict-replace" class="btn io-btn">Replace with imported</button>
+            <button id="io-conflict-keep" class="btn io-btn">Keep current</button>
+            <button id="io-conflict-replace" class="btn io-btn">Replace with file</button>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Scan overlay -->
+  <!-- Scan overlay (remove insignificant rows) -->
   <div id="scan-overlay" style="display:none">
     <div class="overlay-header">
       <span class="overlay-title">Scan results</span>
-      <span id="overlay-params" class="text-meta">30s · Sites + Subpages</span>
+      <span id="overlay-params" class="text-meta"></span>
       <button id="overlay-close" class="overlay-close">×</button>
     </div>
     <div id="overlay-results" class="overlay-results"></div>
     <div class="overlay-footer">
       <span id="overlay-summary" class="text-meta"></span>
       <button id="overlay-delete-btn" class="btn">Delete selected</button>
-    </div>
-  </div>
-
-  <!-- Repair overlay -->
-  <div id="repair-overlay" style="display:none">
-    <div class="overlay-header">
-      <span class="overlay-title">Health issues</span>
-      <span id="repair-count" class="text-meta"></span>
-      <button id="repair-overlay-close" class="overlay-close">×</button>
-    </div>
-    <div id="repair-results" class="overlay-results"></div>
-    <div class="overlay-footer">
-      <span id="repair-footer-count" class="text-meta"></span>
-      <div style="display:flex;gap:8px">
-        <button id="repair-overlay-cancel-btn" class="btn">Cancel</button>
-        <button id="repair-all-btn" class="btn">Repair all</button>
-      </div>
     </div>
   </div>
 

@@ -26,6 +26,7 @@
   --color-chart-audio: var(--color-secondary-light);
   --color-chart-visits: var(--color-accent);
   --color-chart-hourly: var(--color-secondary);
+  --color-chart-idle: #c79a3a;
 
   --color-bg: #e8e8e8;
   --color-border: #d0d0d0;
@@ -292,6 +293,14 @@ button:disabled {
   margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* Headings that carry a trailing subheading lay them out on one row, vertically
+   centered, so the parenthetical sits identically across every chart card. */
+.chart-heading:has(.chart-subheading) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .setting-label {

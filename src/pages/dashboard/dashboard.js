@@ -1,19 +1,22 @@
 import { formatMs, localDayKey, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml, renderStorageBar, navButton, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, navButton, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
+import { count as intervalRowCount } from '../../data/intervalLog.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
-import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
-import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
+import { clearMockModeCache } from '../../shared/tourMockData.js';
+import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
+import { QUERY_SITES_BY_DAY, QUERY_AVG_PER_CLOCK_HOUR } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
 const PREF_SEARCH = 'siteSearch';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
+navButton(document.querySelector('#timeline-link'), '../browsing-timeline/browsing-timeline.html');
 navButton(document.querySelector('#rules-btn'), '../rules/rules.html');
 navButton(document.querySelector('#prune-btn'), '../storage-management/storage-management.html');
 navButton(document.querySelector('#settings-btn'), '../settings/settings.html');
@@ -50,8 +53,8 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => fetchTrackingData({
-    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: null, range,
+  loadAvgPerHour: (range) => loadMergedTrackingData({
+    type: QUERY_AVG_PER_CLOCK_HOUR, siteIds: null, range,
   }),
   clockFormat,
 });
@@ -259,6 +262,14 @@ window.addEventListener('storage', (e) => {
 (async () => {
   if (new URLSearchParams(location.search).get('tour') === '1') {
     await maybeEnableMockMode();
+  } else {
+    // Mock data belongs to an in-progress tour only. Clear a leftover flag so a
+    // real user isn't stuck on fixtures after abandoning the tour mid-way.
+    const state = await readTourState();
+    if (state.useMockData && !state.inProgress) {
+      await writeTourState({ useMockData: false });
+      clearMockModeCache();
+    }
   }
   await loadAndRender();
 })();
@@ -281,9 +292,8 @@ async function loadAndRender() {
     history.replaceState(null, '', location.pathname);
     await seedTestData();
   }
-  byDayCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_DAY });
+  byDayCache = await loadMergedTrackingData({ type: QUERY_SITES_BY_DAY });
   render();
-  renderStorageBar();
 }
 
 document.querySelector('#seed-btn')?.addEventListener('click', async () => {
@@ -395,7 +405,7 @@ const dashboardTourSteps = [
   {
     selector: '#tour-btn',
     title: 'Welcome to BiteGuard',
-    body: 'This guided tour will walk you through each surface of BiteGuard.',
+    body: 'A quick walk through every surface of BiteGuard, about two minutes. Use the × in the corner to leave anytime.',
   },
   {
     selector: '#range-select',
@@ -408,16 +418,14 @@ const dashboardTourSteps = [
     body: 'Your five most-active sites for the selected range.',
   },
   {
+    selector: '#hourly-chart-container',
+    title: 'Average per clock hour',
+    body: 'Your typical browsing pattern across the 24 hours of the day, averaged over the range.',
+  },
+  {
     selector: '#dashboard-table-col',
     title: 'All browsed sites',
     body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
-  },
-  {
-    title: 'Open the popup',
-    body: 'Click the BiteGuard icon in your browser toolbar to continue the tour.',
-    tooltipPosition: 'top-right',
-    arrow: 'up',
-    handoff: { nextSurface: 'popup', mode: 'crossDocument' },
   },
   {
     selector: '#dashboard-table-col',
@@ -426,19 +434,27 @@ const dashboardTourSteps = [
     handoff: { nextSurface: 'site', mode: 'inPage' },
   },
   {
+    selector: '#timeline-link',
+    title: 'Browsing timeline',
+    body: 'Click View timeline to see exactly when you were on each site, plotted across the day, week or month.',
+    handoff: { nextSurface: 'timeline', mode: 'inPage' },  },
+  {
+    title: 'Open the popup',
+    body: 'Click the BiteGuard icon in your browser toolbar.',
+    tooltipPosition: 'top-right',
+    arrow: 'up',
+    handoff: { nextSurface: 'popup', mode: 'crossDocument' },
+  },
+  {
     selector: '#prune-btn',
     title: 'Manage storage',
-    body: 'Click Manage storage to see your storage usage, clean up insignificant records, delete data by range, and check data consistency.',
-    handoff: { nextSurface: 'storage-management', mode: 'inPage' },
-    newInVersion: 3,
-  },
+    body: 'Open Manage storage to review usage, prune insignificant rows, and delete data by range.',
+    handoff: { nextSurface: 'storage-management', mode: 'inPage' },  },
   {
     selector: '#settings-btn',
     title: 'Settings',
-    body: 'Click Settings to configure BiteGuard and continue the tour.',
-    handoff: { nextSurface: 'settings', mode: 'inPage' },
-    newInVersion: 3,
-  },
+    body: 'Open Settings to set idle threshold, clock format and week start.',
+    handoff: { nextSurface: 'settings', mode: 'inPage' },  },
   {
     selector: '#tour-btn',
     title: 'Tour complete',
@@ -446,19 +462,13 @@ const dashboardTourSteps = [
   },
 ];
 
-// Steps with newInVersion > completedVersion are shown in the update tour.
-// No constant needed — computed at runtime from the step list.
-function dashboardNewStepRange(completedVersion) {
-  const first = dashboardTourSteps.findIndex(s => (s.newInVersion ?? 0) > completedVersion);
-  if (first < 0) return null;
-  const last = dashboardTourSteps.reduce((acc, s, i) => ((s.newInVersion ?? 0) > completedVersion ? i : acc), first);
-  return { first, last };
-}
-
 async function maybeEnableMockMode() {
+  // Mock fixtures are shown during the tour only for a user with no real data.
+  // Post-cutover the authoritative store is the interval log, so check it (the
+  // frozen scalar buckets may be empty even when the user has interval history).
   const { sitesByDay = {} } = await chrome.storage.local.get('sitesByDay');
-  const empty = Object.keys(sitesByDay).length === 0;
-  if (empty) {
+  const hasData = Object.keys(sitesByDay).length > 0 || (await intervalRowCount()) > 0;
+  if (!hasData) {
     await writeTourState({ useMockData: true });
     clearMockModeCache();
   }
@@ -467,10 +477,10 @@ async function maybeEnableMockMode() {
 let isTourRunning = false;
 let currentTourHandle = null;
 
-async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null, forceStart = false) {
+async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null) {
   if (isTourRunning) return;
   const tourState = knownState ?? await readTourState();
-  if (!forceStart && tourState.completed && !tourState.inProgress) return;
+  if (tourState.completed && !tourState.inProgress) return;
   isTourRunning = true;
   if (startIndex === 0) {
     const wasMock = tourState.useMockData;
@@ -529,19 +539,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   const state = await readTourState();
   if (state.inProgress?.surface === 'dashboard') {
-    const stepIndex = state.inProgress.stepIndex || 0;
-    const range = state.completed ? dashboardNewStepRange(state.completedVersion ?? 0) : null;
-    const isUpdateResume = range != null && stepIndex >= range.first && stepIndex <= range.last;
-    const steps = isUpdateResume ? dashboardTourSteps.slice(range.first, range.last + 1) : dashboardTourSteps;
-    const adjustedIndex = isUpdateResume ? stepIndex - range.first : stepIndex;
-    startDashboardTour(adjustedIndex, steps, state);
+    startDashboardTour(state.inProgress.stepIndex || 0, dashboardTourSteps, state);
     return;
   }
-  if (state.completed) {
-    const range = dashboardNewStepRange(state.completedVersion ?? 0);
-    if (range) startDashboardTour(0, dashboardTourSteps.slice(range.first, range.last + 1), state, true);
-    return;
-  }
+  if (state.completed) return;
   const pendingSurface = state.inProgress?.surface;
   if (pendingSurface) {
     const handoffIdx = dashboardTourSteps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
