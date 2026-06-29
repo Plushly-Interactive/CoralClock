@@ -16,6 +16,7 @@ import {
   QUERY_AVG_PER_CLOCK_HOUR,
 } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 
 const PREF_STRIP_PARAMS = 'subpagesStripParams';
 const PREF_SUBPAGE_SEARCH = 'subpageSearch';
@@ -135,7 +136,7 @@ function applyHeader() {
   else if (isAggregatedEtld1) secondary = effectiveSiteIds.join(', ');
   else secondary = siteId;
   document.querySelector('#site-id').textContent = secondary;
-  document.title = `BiteGuard — ${label}`;
+  document.title = `${BRAND_NAME} — ${label}`;
   const faviconEl = document.querySelector('#site-favicon');
   faviconEl.src = faviconUrl(primary);
   faviconEl.removeAttribute('hidden');
@@ -530,7 +531,7 @@ const siteTourSteps = [
   {
     selector: '#site-title',
     title: 'Site details',
-    body: 'This page shows everything BiteGuard tracks for a single site. The site name and ID are shown here.',
+    body: `This page shows everything ${BRAND_NAME} tracks for a single site. The site name and ID are shown here.`,
   },
   {
     selector: '#charts-grid',

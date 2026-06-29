@@ -6,6 +6,7 @@ import { initCustomDropdowns } from '../../shared/dropdown.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
 import { DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { DEFAULT_BADGE_ENABLED } from '../../background/badge.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 
 const CLOCK_FORMATS = ['24h', '12h'];
 
@@ -104,6 +105,6 @@ autoStartIfMatches('settings', [
   {
     selector: '#back-btn',
     title: 'Back to the dashboard',
-    body: 'Click the BiteGuard logo to return to the dashboard and finish the tour.',
+    body: `Click the ${BRAND_NAME} logo to return to the dashboard and finish the tour.`,
     handoff: { nextSurface: 'dashboard', nextStepIndex: 10, mode: 'inPage' },  },
 ]);

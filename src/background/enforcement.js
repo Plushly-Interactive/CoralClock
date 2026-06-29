@@ -18,8 +18,7 @@ function cellUsage(cell, mode) {
 // The day/hour bucket keys covering the rule's period window, ending at `now`.
 // `week` is a *calendar* week starting on the user's configured week-start day
 // (default Monday): from this week-start through today, resetting at the week
-// boundary like `day`/`hour`. A rolling-7-day variant is a deferred TODO
-// (see docs/features/enforcement.md).
+// boundary like `day`/`hour`.
 function windowKeys(period, now) {
   if (period === 'hour') return { type: 'hour', keys: [localHourKey(now)] };
   if (period === 'week') {

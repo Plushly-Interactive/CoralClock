@@ -12,6 +12,7 @@ import { SITES_DAY_KEY } from '../../data/bucketKeys.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../../shared/prefKeys.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervalStats } from '../../shared/tourMockData.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 
 const spanChip = document.querySelector('#span-chip');
 const spanTooltip = document.querySelector('#span-tooltip');
@@ -306,9 +307,9 @@ ioInput.addEventListener('change', async () => {
   let json;
   try { json = JSON.parse(await file.text()); }
   catch { showIoError("This file isn't valid JSON. It may be truncated or corrupted."); return; }
-  if (json.format === 'biteguard') { await importBiteGuard(json); return; }
+  if (json.format === 'reef' || json.format === 'biteguard') { await importBiteGuard(json); return; }
   if (Array.isArray(json.__stat__)) { await importTt(json); return; }
-  showIoError('Unrecognized file. Expected a BiteGuard export or a Time Tracker export.');
+  showIoError(`Unrecognized file. Expected a ${BRAND_NAME} export or a Time Tracker export.`);
 });
 
 document.querySelector('#io-conflict-cancel').addEventListener('click', () => {
@@ -893,7 +894,7 @@ const storageTourSteps = [
   {
     selector: '#back-btn',
     title: 'Back to the dashboard',
-    body: 'Click the BiteGuard logo to return to the dashboard; the tour continues there.',
+    body: `Click the ${BRAND_NAME} logo to return to the dashboard; the tour continues there.`,
     handoff: { nextSurface: 'dashboard', nextStepIndex: 9, mode: 'inPage' },  },
 ];
 

@@ -1,6 +1,7 @@
 import { SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from './bucketKeys.js';
 import { blockKey, RULE_MULTIPLIERS } from '../shared/rules.js';
 import { EXPORT_PREF_KEYS } from './exportPayload.js';
+import { BRAND_NAME } from '../shared/brand.js';
 
 // Restore the bucket tier, rules and prefs from a BiteGuard backup. Buckets are
 // frozen legacy data post-cutover, so they land in the same store the legacy page
@@ -48,10 +49,10 @@ function normalizeSubpageBuckets(buckets) {
 
 export function validateBgFile(json) {
   if (typeof json.version === 'number' && json.version > 3) {
-    return `This file was exported by a newer version of BiteGuard (version ${json.version}). Update the extension to import it.`;
+    return `This file was exported by a newer version of ${BRAND_NAME} (version ${json.version}). Update the extension to import it.`;
   }
   if (json.version !== 1 && json.version !== 2 && json.version !== 3) {
-    return 'Unrecognized BiteGuard file version.';
+    return `Unrecognized ${BRAND_NAME} file version.`;
   }
   if (!json.data || typeof json.data !== 'object' || Array.isArray(json.data)) {
     return "The file's tracking data section is missing or has an unexpected shape.";

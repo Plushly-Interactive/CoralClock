@@ -7,6 +7,7 @@ import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { allIntervals, SESSION_GAP_MS } from '../../data/intervalLog.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervals } from '../../shared/tourMockData.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 
 // Visualization only (not in the spec): a horizontal browsing timeline of the top
 // sites, navigated period-by-period (day / week / month) like the drill views. Each
@@ -400,7 +401,7 @@ const timelineTourSteps = [
   {
     selector: '#back-btn',
     title: 'Back to the dashboard',
-    body: 'Click the BiteGuard logo to return to the dashboard; the tour continues there.',
+    body: `Click the ${BRAND_NAME} logo to return to the dashboard; the tour continues there.`,
     handoff: { nextSurface: 'dashboard', nextStepIndex: 7, mode: 'inPage' },  },
 ];
 

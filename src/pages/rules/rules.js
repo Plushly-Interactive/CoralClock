@@ -6,6 +6,7 @@ import { weekDow, rotatedDayLabels } from '../../shared/weekStart.js';
 import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear } from '../../shared/utils.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockRules, mockBlocksByDay } from '../../shared/tourMockData.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 
 const formTarget          = document.querySelector('#form-target');
 const formTargetClearBtn  = document.querySelector('#form-target-clear');
@@ -688,7 +689,7 @@ const rulesTourSteps = [
   {
     selector: '#back-btn',
     title: 'Back to the dashboard',
-    body: 'Click the BiteGuard logo to return to the dashboard and continue the tour.',
+    body: `Click the ${BRAND_NAME} logo to return to the dashboard and continue the tour.`,
     handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'crossDocument' },
   },
 ];

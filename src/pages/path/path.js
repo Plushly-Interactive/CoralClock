@@ -11,6 +11,7 @@ import { clearMockModeCache } from '../../shared/tourMockData.js';
 import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import { QUERY_SUBPAGES_BY_DAY, QUERY_SUBPAGES_BY_HOUR } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 
 const drillParams = new URLSearchParams(location.search);
 if (!drillParams.has('ids') || !drillParams.has('path')) {
@@ -60,7 +61,7 @@ const faviconEl = document.querySelector('#site-favicon');
 faviconEl.src = faviconUrl(siteId);
 faviconEl.removeAttribute('hidden');
 faviconEl.addEventListener('error', () => { faviconEl.style.display = 'none'; });
-document.title = `BiteGuard — ${siteLabel} ${displayPath(path)}`;
+document.title = `${BRAND_NAME} — ${siteLabel} ${displayPath(path)}`;
 const crumbPath = document.querySelector('#path-crumb-path');
 const spacedPath = displayPath(path).replace(/\//g, ' / ').trimStart() + (prefix ? ' *' : '');
 crumbPath.textContent = spacedPath;
