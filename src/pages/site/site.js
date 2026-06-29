@@ -8,12 +8,13 @@ import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { mergePaths, displayPath, stripQuery } from '../../shared/paths.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
+import { clearMockModeCache } from '../../shared/tourMockData.js';
+import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import {
-  MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
-  MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
-  MSG_GET_AVG_PER_CLOCK_HOUR,
-} from '../../shared/msgTypes.js';
+  QUERY_SITES_BY_DAY, QUERY_SITES_BY_HOUR_TODAY,
+  QUERY_SITES_BY_HOUR_FOR_DAY, QUERY_SUBPAGES_BY_DAY,
+  QUERY_AVG_PER_CLOCK_HOUR,
+} from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 
 const PREF_STRIP_PARAMS = 'subpagesStripParams';
@@ -23,6 +24,10 @@ const params = new URLSearchParams(location.search);
 const siteId = params.get('id');
 const siteIds = params.get('ids')?.split(',') ?? null;
 const isMerged = !!siteIds;
+// Interval log is authoritative; loadMergedTrackingData serves interval days and
+// falls back to frozen legacy buckets for pre-interval days.
+const fetchData = loadMergedTrackingData;
+const DASH = '../dashboard/dashboard.html';
 let effectiveSiteIds = isMerged ? siteIds : [siteId];
 let isAggregatedEtld1 = false;
 document.querySelector('#header-center').appendChild(createRangeDropdown());
@@ -195,8 +200,8 @@ const hourly = createHourlyChart({
   notRelevant: hourlyNotRelevant,
   allDaysLabel: '(all days from earliest data, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
-  loadAvgPerHour: (range) => fetchTrackingData({
-    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
+  loadAvgPerHour: (range) => fetchData({
+    type: QUERY_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
   }),
   clockFormat,
 });
@@ -207,10 +212,11 @@ window.addEventListener('storage', (e) => {
   if (e.key === 'theme') render();
 });
 
+backBtn.href = DASH;
 backBtn.addEventListener('click', (e) => {
   if (!isInDrillMode()) return;
   e.preventDefault();
-  location.href = '../dashboard/dashboard.html';
+  location.href = DASH;
 });
 
 initDrill({
@@ -220,7 +226,7 @@ initDrill({
   clockFormat,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
-    const hourData = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_FOR_DAY, dayKey });
+    const hourData = await fetchData({ type: QUERY_SITES_BY_HOUR_FOR_DAY, dayKey });
     const result = {};
     for (let h = 0; h < 24; h++) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
@@ -228,8 +234,8 @@ initDrill({
     }
     return result;
   },
-  getAvgPerClockHour: (dayKeys) => fetchTrackingData({
-    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range: null, dayKeys,
+  getAvgPerClockHour: (dayKeys) => fetchData({
+    type: QUERY_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range: null, dayKeys,
   }),
   render,
 });
@@ -248,8 +254,8 @@ window.addEventListener('pageshow', () => {
 });
 
 async function loadAndRender() {
-  byDayCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_DAY });
-  subpagesByDayCache = await fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_DAY });
+  byDayCache = await fetchData({ type: QUERY_SITES_BY_DAY });
+  subpagesByDayCache = await fetchData({ type: QUERY_SUBPAGES_BY_DAY });
   resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
@@ -271,7 +277,7 @@ function resolveAggregationMode() {
 
 async function loadByHour() {
   if (byHourCache) return;
-  byHourCache = await fetchTrackingData({ type: MSG_GET_SITES_BY_HOUR_TODAY });
+  byHourCache = await fetchData({ type: QUERY_SITES_BY_HOUR_TODAY });
 }
 
 function siteDayKeysForRange(range) {
@@ -527,24 +533,9 @@ const siteTourSteps = [
     body: 'This page shows everything BiteGuard tracks for a single site. The site name and ID are shown here.',
   },
   {
-    selector: '#time-chart-container',
-    title: 'Time spent',
-    body: 'Active browsing time and audio playback on this site, per day in the selected range.',
-  },
-  {
-    selector: '#stats-container',
-    title: 'Overview',
-    body: 'Aggregate stats for the range: daily average, peak day, total time and more.',
-  },
-  {
-    selector: '#visits-chart-container',
-    title: 'Visits',
-    body: 'Number of separate visits to this site per day.',
-  },
-  {
-    selector: '#hourly-chart-container',
-    title: 'Average per clock hour',
-    body: 'Your typical browsing pattern on this site across the 24 hours of the day.',
+    selector: '#charts-grid',
+    title: 'The charts',
+    body: 'Four views of this site: active and audio time per day, an overview of totals and peaks, daily visit counts, and your typical pattern across the 24 clock hours.',
   },
   {
     selector: '#time-chart-container',
@@ -553,21 +544,14 @@ const siteTourSteps = [
     advanceOn: 'click',
   },
   {
-    selector: '#drill-chart-wrapper',
+    selector: '#drill-controls',
     title: 'Daily detail',
-    body: 'This shows the activity for the chosen day in finer granularity.',
+    body: 'The chosen day in finer detail. Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
     drillStep: true,
     onEnter: ensureDrillOpen,
     onExit: ({ direction }) => {
       if (direction === 'backward' && isInDrillMode()) exitDrillCompletely();
     },
-  },
-  {
-    selector: '#drill-controls',
-    title: 'Navigate and switch metric',
-    body: 'Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
-    drillStep: true,
-    onEnter: ensureDrillOpen,
   },
   {
     selector: '#nav-close',

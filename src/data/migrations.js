@@ -1,5 +1,4 @@
-import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
-import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
+import { SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from './bucketKeys.js';
 
 function normalizeHost(key) {
   return key.startsWith('www.') ? key.slice(4) : key;

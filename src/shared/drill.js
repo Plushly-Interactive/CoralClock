@@ -1,5 +1,6 @@
-import { formatMs, formatMsAsDays, localDayKey, formatHourLabel, formatHourRange } from './timeUtils.js';
-import { weekKeyForDate, daysInWeek, navigateWeek } from './weekStart.js';
+import { formatMs, formatMsAsDays, formatHourLabel, formatHourRange } from './timeUtils.js';
+import { weekKeyForDate, daysInWeek } from './weekStart.js';
+import { formatPeriodLabel, stepPeriod } from './period.js';
 import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from './utils.js';
 import { drawTimeChart, drawVisitsChart, drawHourlyChart, buildHourlyBuckets } from './overview.js';
 
@@ -222,35 +223,8 @@ function updateDrillButtons() {
   ctx.drillHourBtn.classList.toggle('active', drillMetric === 'hour');
 }
 
-function formatPeriodLabel(period) {
-  if (period.length === 7) {
-    const [y, m] = period.split('-');
-    return new Date(+y, +m - 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-  }
-  if (period.length === 11) {
-    const [y, m, d] = period.slice(0, 10).split('-').map(Number);
-    const start = new Date(y, m - 1, d);
-    const end = new Date(y, m - 1, d + 6);
-    const startStr = start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    const endStr = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    return `${startStr} – ${endStr}`;
-  }
-  const [y, m, d] = period.split('-');
-  return new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
 function navigatePeriod(dir) {
-  if (drillPeriod.length === 7) {
-    const [y, m] = drillPeriod.split('-').map(Number);
-    const d = new Date(y, m - 1 + dir, 1);
-    drillPeriod = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  } else if (drillPeriod.length === 11) {
-    drillPeriod = navigateWeek(drillPeriod, dir);
-  } else {
-    const [y, m, day] = drillPeriod.split('-').map(Number);
-    const d = new Date(y, m - 1, day + dir);
-    drillPeriod = localDayKey(d.getTime());
-  }
+  drillPeriod = stepPeriod(drillPeriod, dir);
   ctx.navLabel.textContent = formatPeriodLabel(drillPeriod);
   renderDrillChart();
 }
