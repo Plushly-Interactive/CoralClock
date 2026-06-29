@@ -1,4 +1,5 @@
 import { intervalFetch } from './intervalProvider.js';
+import { bucketFetch } from './bucketProvider.js';
 import { earliestDayKey } from './intervalAggregates.js';
 import { fetchTrackingData, isMockMode } from '../shared/tourMockData.js';
 import { localDayKey } from '../shared/timeUtils.js';
@@ -12,16 +13,16 @@ import {
 // the frozen legacy buckets underneath for days before interval tracking began.
 //
 // The boundary is data presence, not a stored marker: earliestDayKey() is the
-// first day with interval data; days strictly before it read buckets (via the
-// background message API behind fetchTrackingData), that day and after read
-// intervals (intervalFetch). 'YYYY-MM-DD' / 'YYYY-MM-DDTHH' keys compare
-// lexicographically = chronologically, so a plain string '<' is the split.
+// first day with interval data; days strictly before it read buckets (bucketFetch),
+// that day and after read intervals (intervalFetch). 'YYYY-MM-DD' / 'YYYY-MM-DDTHH'
+// keys compare lexicographically = chronologically, so a plain string '<' is the
+// split.
 //
-// The two reads use different access paths (SW message for buckets, direct
-// function for intervals) only because the tiers live in different stores. This
-// merger never queries buckets for today, so the message API's live-snapshot merge
-// is moot here and the bucket read could become a direct chrome.storage.local read.
-// Deferred follow-up: see bucket-to-interval-tracking-migration.md "Follow-ups".
+// Both tiers are read page-side by plain functions: intervalFetch from IndexedDB,
+// bucketFetch from chrome.storage.local. The buckets used to be read through the
+// background message API, but post-cutover nothing writes them in the worker, so the
+// API's live-snapshot merge was moot for this reader (which never queries buckets
+// for today anyway). bucketFetch drops that round-trip.
 //
 // Failsafes: in mock mode (guided tour) the fixtures are returned alone, no
 // interval merge; when the log is empty (boundary null) every read falls through
@@ -30,7 +31,7 @@ import {
 // Per-day dict shapes ({ dayKey: ... }): legacy bucket days, then every interval
 // day on top (interval keys are all >= boundary by construction).
 async function mergeByDay(msg, boundary) {
-  const [iv, bk] = await Promise.all([intervalFetch(msg), fetchTrackingData(msg)]);
+  const [iv, bk] = await Promise.all([intervalFetch(msg), bucketFetch(msg)]);
   const out = {};
   for (const dayKey in bk) if (dayKey < boundary) out[dayKey] = bk[dayKey];
   return Object.assign(out, iv);
@@ -38,7 +39,7 @@ async function mergeByDay(msg, boundary) {
 
 // Per-hour dict shapes ({ hourKey: ... }): same split, keyed on the hour's day.
 async function mergeByHour(msg, boundary) {
-  const [iv, bk] = await Promise.all([intervalFetch(msg), fetchTrackingData(msg)]);
+  const [iv, bk] = await Promise.all([intervalFetch(msg), bucketFetch(msg)]);
   const out = {};
   for (const hourKey in bk) if (hourKey.slice(0, 10) < boundary) out[hourKey] = bk[hourKey];
   return Object.assign(out, iv);
@@ -59,7 +60,7 @@ async function partitionAvgDays(msg, boundary) {
     if (msg.range === 'all') {
       const [iByDay, bByDay] = await Promise.all([
         intervalFetch({ type: MSG_GET_SITES_BY_DAY }),
-        fetchTrackingData({ type: MSG_GET_SITES_BY_DAY }),
+        bucketFetch({ type: MSG_GET_SITES_BY_DAY }),
       ]);
       days = [...new Set([...Object.keys(iByDay), ...Object.keys(bByDay)])];
     } else if (Number.isFinite(n)) {
@@ -87,7 +88,7 @@ async function mergeAvg(msg, boundary) {
   if (D === 0) return new Array(24).fill(0);
   const [arrI, arrB] = await Promise.all([
     Di ? intervalFetch({ ...msg, dayKeys: intervalDays }) : null,
-    Db ? fetchTrackingData({ ...msg, dayKeys: bucketDays }) : null,
+    Db ? bucketFetch({ ...msg, dayKeys: bucketDays }) : null,
   ]);
   const out = new Array(24).fill(0);
   for (let h = 0; h < 24; h++) out[h] = ((arrI?.[h] ?? 0) * Di + (arrB?.[h] ?? 0) * Db) / D;
@@ -97,7 +98,7 @@ async function mergeAvg(msg, boundary) {
 export async function loadMergedTrackingData(msg) {
   if (await isMockMode()) return fetchTrackingData(msg);
   const boundary = await earliestDayKey();
-  if (boundary === null) return fetchTrackingData(msg);
+  if (boundary === null) return bucketFetch(msg);
   switch (msg.type) {
     case MSG_GET_SITES_BY_DAY:
     case MSG_GET_SUBPAGES_BY_DAY:
@@ -107,10 +108,10 @@ export async function loadMergedTrackingData(msg) {
     case MSG_GET_SITES_BY_HOUR_TODAY:
       return intervalFetch(msg);
     case MSG_GET_SITES_BY_HOUR_FOR_DAY:
-      return msg.dayKey >= boundary ? intervalFetch(msg) : fetchTrackingData(msg);
+      return msg.dayKey >= boundary ? intervalFetch(msg) : bucketFetch(msg);
     case MSG_GET_AVG_PER_CLOCK_HOUR:
       return mergeAvg(msg, boundary);
     default:
-      return fetchTrackingData(msg);
+      return bucketFetch(msg);
   }
 }

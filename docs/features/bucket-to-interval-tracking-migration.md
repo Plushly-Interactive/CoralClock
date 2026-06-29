@@ -217,19 +217,15 @@ round-trips both tiers natively.)
 
 ## Follow-ups (deferred, post-cutover)
 
-- **Unify the merged reader's two access paths.** `mergeDataSources` (the Phase B
-  authoritative reader) is a *mixed reader*: it function-reads interval days from
-  IndexedDB and message-reads legacy bucket days from the service worker. The two
-  paths exist only because the tiers live in different stores. The message API's one
-  real value is merging the SW's live un-flushed snapshot, which applies to **today**
-  only, and the merge never serves today from buckets (today is always an interval
-  day). So for this reader the SW round-trip buys nothing: it reads already-persisted
-  `chrome.storage.local`. The unification is to extract the bucket day/hour
-  aggregation out of `background.js` into a page-side reader (dropping the live
-  today-merge branch) so `mergeDataSources` calls two plain functions, one access
-  model. Left mixed for now: it is correct as-is and the asymmetry is cosmetic. Note:
-  the SW message API can't be deleted outright, other consumers (storage-management,
-  CSV/TT export) still use it; this only removes the merged reader's dependence.
+- **Unify the merged reader's two access paths.** ✅ Done. `mergeDataSources` now
+  calls two plain page-side functions: `intervalFetch` (IndexedDB) and `bucketFetch`
+  (`src/data/bucketProvider.js`, reading `chrome.storage.local` directly), instead of
+  message-reading buckets from the service worker. `bucketProvider` mirrors the
+  background bucket handlers minus the live today-merge branch, which was moot here
+  (nothing writes buckets in the worker post-cutover, and the merger never serves
+  today from buckets). The SW message API stays for its other consumers
+  (storage-management, CSV/TT export); only the merged reader's dependence on it is
+  removed.
 
 ## Out of scope
 
