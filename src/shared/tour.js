@@ -1,7 +1,6 @@
 const TOUR_KEY = 'tour';
-export const TOUR_VERSION = 3;
 
-const DEFAULT_STATE = { completed: false, completedAt: null, completedVersion: 0, inProgress: null, useMockData: false };
+const DEFAULT_STATE = { completed: false, completedAt: null, inProgress: null, useMockData: false };
 
 export async function readTourState() {
   const { [TOUR_KEY]: state } = await chrome.storage.local.get(TOUR_KEY);
@@ -24,7 +23,6 @@ export function markTourCompleted() {
   return writeTourState({
     completed: true,
     completedAt: new Date().toISOString(),
-    completedVersion: TOUR_VERSION,
     inProgress: null,
     useMockData: false,
   });
@@ -53,9 +51,10 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
 
   const closeBtn = document.createElement('button');
   closeBtn.id = 'tour-close-btn';
-  closeBtn.className = 'square-btn';
+  closeBtn.className = 'icon-btn';
   closeBtn.title = 'Close the tour';
-  closeBtn.textContent = '✕';
+  closeBtn.setAttribute('aria-label', 'Close the tour');
+  closeBtn.innerHTML = '&times;';
   if (!showCloseButton) closeBtn.style.display = 'none';
 
   const tooltip = document.createElement('div');
@@ -74,7 +73,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
   const confirm = document.createElement('div');
   confirm.id = 'tour-confirm';
   confirm.className = 'modal-dialog';
-  confirm.hidden = true;
+  confirm.style.display = 'none';
   confirm.innerHTML = `
     <div id="tour-confirm-body">Are you sure you want to interrupt the guided tour?</div>
     <div id="tour-confirm-actions">
@@ -83,7 +82,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     </div>
   `;
 
-  document.body.append(overlay, spotlight, tooltip, closeBtn, confirm);
+  document.body.append(overlay, spotlight, tooltip, confirm);
+  tooltip.appendChild(closeBtn);
 
   const titleEl = tooltip.querySelector('#tour-tooltip-title');
   const bodyEl = tooltip.querySelector('#tour-tooltip-body');
@@ -234,10 +234,9 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     prevBtn.disabled = index === 0;
 
     const isHandoff = !!step.handoff;
-    const isUpdateHandoff = step.handoff?.updateHandoff === true;
     const advanceOnClick = step.advanceOn === 'click';
-    nextBtn.style.display = (isHandoff && !isUpdateHandoff) || advanceOnClick ? 'none' : '';
-    nextBtn.textContent = isUpdateHandoff ? 'Continue →' : index === steps.length - 1 ? 'Finish' : 'Next';
+    nextBtn.style.display = isHandoff || advanceOnClick ? 'none' : '';
+    nextBtn.textContent = index === steps.length - 1 ? 'Finish' : 'Next';
 
     tooltip.classList.toggle('has-arrow-up', step.arrow === 'up');
     const wasModalStep = document.body.classList.contains('tour-modal-step');
@@ -320,15 +319,6 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     confirm.remove();
     if (skipped || !handoffEngaged) {
       await markTourCompleted();
-    } else if (currentStep?.handoff?.updateHandoff) {
-      const surfaceUrls = {
-        dashboard: 'src/pages/dashboard/dashboard.html',
-        rules: 'src/pages/rules/rules.html',
-        'storage-management': 'src/pages/storage-management/storage-management.html',
-        settings: 'src/pages/settings/settings.html',
-      };
-      const url = surfaceUrls[currentStep.handoff.nextSurface];
-      if (url) chrome.tabs.create({ url: chrome.runtime.getURL(url) });
     }
     if (onClose) onClose({ skipped });
   }
@@ -391,8 +381,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
 
   prevBtn.addEventListener('click', () => showStep(currentIndex - 1));
   nextBtn.addEventListener('click', () => showStep(currentIndex + 1));
-  closeBtn.addEventListener('click', () => { confirm.hidden = false; });
-  confirmNo.addEventListener('click', () => { confirm.hidden = true; });
+  closeBtn.addEventListener('click', () => { confirm.style.display = ''; });
+  confirmNo.addEventListener('click', () => { confirm.style.display = 'none'; });
   confirmYes.addEventListener('click', () => finish(true));
   window.addEventListener('scroll', reposition, true);
   window.addEventListener('resize', reposition);
@@ -408,33 +398,9 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
   };
 }
 
-// Steps marked with `newInVersion: N` are shown in the update tour when a user
-// who completed version < N reloads the extension. To add steps to the update
-// tour: mark each new step with `newInVersion: TOUR_VERSION`, bump TOUR_VERSION,
-// and set TOUR_UPDATE_ENTRY in background.js to the first surface with new steps.
-// nextUpdateSurface: passed by callers that know the next surface in the update
-// chain; autoStartIfMatches injects an updateHandoff on the last new step.
 export async function autoStartIfMatches(surface, steps, options = {}) {
-  const { nextUpdateSurface, nextUpdateStepIndex, ...runOptions } = options;
   const state = await readTourState();
-
-  if (state.completed) {
-    const completedVersion = state.completedVersion ?? 0;
-    if (completedVersion < TOUR_VERSION) {
-      const firstNew = steps.findIndex(s => (s.newInVersion ?? 0) > completedVersion);
-      if (firstNew >= 0) {
-        const lastNew = steps.reduce((acc, s, i) => ((s.newInVersion ?? 0) > completedVersion ? i : acc), firstNew);
-        let updateSteps = steps.slice(firstNew, lastNew + 1);
-        if (nextUpdateSurface) {
-          const last = { ...updateSteps[updateSteps.length - 1] };
-          last.handoff = { nextSurface: nextUpdateSurface, nextStepIndex: nextUpdateStepIndex ?? 0, mode: 'crossDocument', updateHandoff: true };
-          updateSteps = [...updateSteps.slice(0, -1), last];
-        }
-        return runTour({ surface, steps: updateSteps, startIndex: 0, ...runOptions });
-      }
-    }
-    return null;
-  }
+  if (state.completed) return null;
 
   const pendingSurface = state.inProgress?.surface;
   if (!pendingSurface) return null;
@@ -443,7 +409,7 @@ export async function autoStartIfMatches(surface, steps, options = {}) {
       surface,
       steps,
       startIndex: state.inProgress.stepIndex || 0,
-      ...runOptions,
+      ...options,
     });
   }
   const handoffIdx = steps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
@@ -452,7 +418,7 @@ export async function autoStartIfMatches(surface, steps, options = {}) {
       surface,
       steps,
       startIndex: handoffIdx,
-      ...runOptions,
+      ...options,
     });
   }
   return null;

@@ -73,6 +73,7 @@ body.tour-modal-step .io-section:not(.tour-target) {
   font-size: var(--font-md);
   font-weight: 600;
   margin-bottom: 6px;
+  padding-right: 18px;
   color: var(--color-accent);
 }
 
@@ -93,19 +94,16 @@ body.tour-modal-step .io-section:not(.tour-target) {
   margin-right: auto;
 }
 
-#tour-close-btn {
-  position: fixed;
-  top: 50%;
-  left: 12px;
-  transform: translateY(-50%);
-  z-index: 3002;
-  width: 42px;
-  height: 42px;
-  font-size: calc(var(--font-lg) * 1.5);
-}
-
-#tour-close-btn:hover {
-  background-color: var(--color-border);
+#tour-tooltip #tour-close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
 }
 
 

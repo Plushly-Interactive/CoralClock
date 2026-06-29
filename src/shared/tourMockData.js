@@ -1,14 +1,23 @@
 import { readTourState } from './tour.js';
 import { localDayKey } from './timeUtils.js';
+import { blockKey } from './rules.js';
 import { scanSiteBucket, scanSubpageBucket } from '../data/prune.js';
 import {
-  MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
-  MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
-  MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
-} from './msgTypes.js';
+  QUERY_SITES_BY_DAY, QUERY_SITES_BY_HOUR_TODAY,
+  QUERY_SITES_BY_HOUR_FOR_DAY, QUERY_SUBPAGES_BY_DAY,
+  QUERY_SUBPAGES_BY_HOUR, QUERY_AVG_PER_CLOCK_HOUR,
+} from './queryTypes.js';
 
 const MIN = 60_000;
 const HOUR = 3_600_000;
+
+const SITES = ['news.example.com', 'vid.example.com', 'social.example.com', 'forgot.example.com'];
+const SUBPAGES = {
+  'news.example.com':   ['/world', '/tech', '/sports', '/old-article-7849173'],
+  'vid.example.com':    ['/watch/abc', '/watch/xyz'],
+  'social.example.com': ['/home', '/profile'],
+  'forgot.example.com': ['/landing'],
+};
 
 function buildFixture() {
   const now = new Date();
@@ -19,14 +28,6 @@ function buildFixture() {
     day.setDate(day.getDate() - d);
     dayKeys.push(localDayKey(day.getTime()));
   }
-
-  const SITES = ['news.example.com', 'vid.example.com', 'social.example.com', 'forgot.example.com'];
-  const SUBPAGES = {
-    'news.example.com':   ['/world', '/tech', '/sports', '/old-article-7849173'],
-    'vid.example.com':    ['/watch/abc', '/watch/xyz'],
-    'social.example.com': ['/home', '/profile'],
-    'forgot.example.com': ['/landing'],
-  };
 
   function recordFor(siteId, dayIdx) {
     const base = {
@@ -123,6 +124,115 @@ function fixture() {
   return fixtureCache;
 }
 
+// The timeline reads interval rows straight from IndexedDB, so the bucket fixture
+// above can't feed it. Synthesize plausible {domain,path,kind,from,to} rows from
+// the same sites: fixed-clock sessions over the prior 6 days for week/month
+// navigation, plus a few sessions anchored to "now" so today's default view is
+// never empty during the tour.
+const SITE_SESSIONS = {
+  'news.example.com':   { hours: [9, 14, 20],     minLen: 12, audio: false },
+  'vid.example.com':    { hours: [12, 18],        minLen: 24, audio: true },
+  'social.example.com': { hours: [9, 13, 18, 21], minLen: 7,  audio: false },
+  'forgot.example.com': { hours: [16],            minLen: 1,  audio: false },
+};
+
+function buildIntervalFixture() {
+  const rows = [];
+  const now = Date.now();
+  const push = (domain, path, kind, from, to) => { if (to - from >= MIN) rows.push({ domain, path, kind, from, to }); };
+
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+  const todayStart = todayMidnight.getTime();
+
+  for (let d = 1; d <= 6; d++) {
+    const day = new Date();
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() - d);
+    const dayStart = day.getTime();
+    for (const siteId of SITES) {
+      const cfg = SITE_SESSIONS[siteId];
+      cfg.hours.forEach((h, i) => {
+        const path = SUBPAGES[siteId][i % SUBPAGES[siteId].length];
+        const from = dayStart + h * HOUR + 5 * MIN;
+        const to = from + (cfg.minLen + ((d + i) % 3) * 3) * MIN;
+        push(siteId, path, 'active', from, to);
+        if (cfg.audio) push(siteId, path, 'audio', from + 2 * MIN, to - MIN);
+        push(siteId, path, 'idle', to, to + 3 * MIN);
+      });
+    }
+  }
+
+  ['news.example.com', 'vid.example.com', 'social.example.com'].forEach((siteId, i) => {
+    const cfg = SITE_SESSIONS[siteId];
+    const path = SUBPAGES[siteId][0];
+    const end = now - (i * 35 + 8) * MIN;
+    const start = Math.max(todayStart, end - (cfg.minLen + 5) * MIN);
+    push(siteId, path, 'active', start, end);
+    if (cfg.audio) push(siteId, path, 'audio', start + 2 * MIN, end - MIN);
+  });
+
+  return rows;
+}
+
+let intervalFixtureCache = null;
+export function mockIntervals() {
+  if (!intervalFixtureCache) intervalFixtureCache = buildIntervalFixture();
+  return intervalFixtureCache;
+}
+
+// Storage overview reads intervalStats() straight from IndexedDB, which is empty
+// during the tour. Derive the same shape from the in-memory mock rows instead.
+export function mockIntervalStats() {
+  const rows = mockIntervals();
+  const domains = new Set(), subpages = new Set();
+  const kinds = { active: 0, audio: 0, idle: 0 };
+  let earliest = Infinity, latest = -Infinity;
+  for (const r of rows) {
+    domains.add(r.domain);
+    subpages.add(`${r.domain}\n${r.path}`);
+    if (r.kind in kinds) kinds[r.kind]++;
+    if (r.from < earliest) earliest = r.from;
+    if (r.to > latest) latest = r.to;
+  }
+  return {
+    rows: rows.length, domains: domains.size, subpages: subpages.size, kinds,
+    earliest: rows.length ? earliest : null, latest: rows.length ? latest : null,
+  };
+}
+
+// Seeded rules + a week of block history for the tour. A fresh user has no rules
+// in storage, so the Rules surface (list and stats) would be blank during
+// onboarding. Never persisted: render()/renderStats() swap these in only while the
+// mock flag is set, and the list is shown read-only so its buttons stay inert.
+const MOCK_RULES = [
+  { id: 'tour-rule-1', matchType: 'subdomain', target: 'social.example.com', limit: 30, limitUnit: 'minutes', period: 'day', mode: 'active', enabled: true },
+  { id: 'tour-rule-2', matchType: 'subdomain', target: 'vid.example.com', limit: 1, limitUnit: 'hours', period: 'day', mode: 'active+audio', enabled: true },
+  { id: 'tour-rule-3', matchType: 'keyword', keyword: 'shorts', limit: 0, limitUnit: 'minutes', period: 'day', mode: 'active', enabled: false },
+];
+
+export function mockRules() {
+  return MOCK_RULES.map(r => ({ ...r }));
+}
+
+export function mockBlocksByDay() {
+  // Keyed by blockKey(rule) so most-blocked resolves; social weighted highest.
+  const weights = { 'tour-rule-1': 3, 'tour-rule-2': 1 };
+  const byDay = {};
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(now);
+    day.setDate(day.getDate() - i);
+    const counts = {};
+    for (const rule of MOCK_RULES) {
+      const w = weights[rule.id];
+      if (w) counts[blockKey(rule)] = w + ((i * 2) % 3);
+    }
+    byDay[localDayKey(day.getTime())] = counts;
+  }
+  return byDay;
+}
+
 function avgPerClockHour(siteIds, range, dayKeys = null) {
   const { sitesByHour } = fixture();
   if (!dayKeys) {
@@ -172,18 +282,18 @@ function hourBucketForDay(dayKey) {
 function mockAnswer(msg) {
   const f = fixture();
   switch (msg.type) {
-    case MSG_GET_SITES_BY_DAY: return f.sitesByDay;
-    case MSG_GET_SITES_BY_HOUR_TODAY: return {};
-    case MSG_GET_SITES_BY_HOUR_FOR_DAY: return hourBucketForDay(msg.dayKey);
-    case MSG_GET_SUBPAGES_BY_DAY: return f.subpagesByDay;
-    case MSG_GET_SUBPAGES_BY_HOUR: return f.subpagesByHour;
-    case MSG_GET_AVG_PER_CLOCK_HOUR: return avgPerClockHour(msg.siteIds, msg.range, msg.dayKeys);
+    case QUERY_SITES_BY_DAY: return f.sitesByDay;
+    case QUERY_SITES_BY_HOUR_TODAY: return {};
+    case QUERY_SITES_BY_HOUR_FOR_DAY: return hourBucketForDay(msg.dayKey);
+    case QUERY_SUBPAGES_BY_DAY: return f.subpagesByDay;
+    case QUERY_SUBPAGES_BY_HOUR: return f.subpagesByHour;
+    case QUERY_AVG_PER_CLOCK_HOUR: return avgPerClockHour(msg.siteIds, msg.range, msg.dayKeys);
     default: return null;
   }
 }
 
 let mockModeCache = null;
-async function isMockMode() {
+export async function isMockMode() {
   if (mockModeCache !== null) return mockModeCache;
   const state = await readTourState();
   mockModeCache = !!state.useMockData;
@@ -193,14 +303,18 @@ async function isMockMode() {
 export function clearMockModeCache() {
   mockModeCache = null;
   fixtureCache = null;
+  intervalFixtureCache = null;
 }
 
+// Used only on mergeDataSources' mock path: returns the guided-tour fixture for the
+// message shape. Real bucket reads go through bucketProvider now; there is no
+// service-worker data API to fall back to.
 export async function fetchTrackingData(msg) {
   if (await isMockMode()) {
     const answer = mockAnswer(msg);
     if (answer !== null) return answer;
   }
-  return chrome.runtime.sendMessage(msg);
+  return null;
 }
 
 export function mockScanResults(scopes, thresholdMs) {

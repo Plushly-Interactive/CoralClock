@@ -3,12 +3,13 @@ import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOU
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
-import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
+import { initDrill, isInDrillMode, enterDrill } from '../../shared/drill.js';
 import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats } from '../../shared/overview.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { fetchTrackingData, clearMockModeCache } from '../../shared/tourMockData.js';
-import { MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR } from '../../shared/msgTypes.js';
+import { clearMockModeCache } from '../../shared/tourMockData.js';
+import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
+import { QUERY_SUBPAGES_BY_DAY, QUERY_SUBPAGES_BY_HOUR } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 
 const drillParams = new URLSearchParams(location.search);
@@ -22,6 +23,10 @@ const prefix = drillParams.get('prefix') === '1';
 const stripParams = drillParams.get('stripParams') === '1';
 const siteId = siteIds[0];
 const isMerged = siteIds.length > 1;
+// Interval log is authoritative; loadMergedTrackingData serves interval days and
+// merges frozen legacy buckets underneath.
+const fetchData = loadMergedTrackingData;
+const DASH = '../dashboard/dashboard.html';
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 const limitBtn = document.querySelector('#limit-btn');
@@ -186,7 +191,7 @@ function renderPathLinks(entries) {
 const siteHref = isMerged
   ? `../site/site.html?ids=${encodeURIComponent(siteIds.join(','))}`
   : `../site/site.html?id=${encodeURIComponent(siteId)}`;
-backBtn.href = '../dashboard/dashboard.html';
+backBtn.href = DASH;
 crumbSite.href = siteHref;
 
 const stats = [
@@ -289,8 +294,8 @@ const loadAndRenderPromise = loadAndRender();
 
 async function loadAndRender() {
   [byDayCache, byHourCache] = await Promise.all([
-    fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_DAY }),
-    fetchTrackingData({ type: MSG_GET_SUBPAGES_BY_HOUR }),
+    fetchData({ type: QUERY_SUBPAGES_BY_DAY }),
+    fetchData({ type: QUERY_SUBPAGES_BY_HOUR }),
   ]);
   if (isMerged) {
     const owner = resolveOwningDomain();
@@ -321,74 +326,16 @@ function renderStats(data, range) {
   document.querySelector('#overview-subheading').textContent = subheadingText(range);
 }
 
-function ensureDrillOpen() {
-  if (isInDrillMode()) return;
-  const days = Object.keys(byDayCache ?? {}).sort();
-  const pick = days[days.length - 1];
-  if (pick) enterDrill(pick, null, 'time');
-}
-
 const pathTourSteps = [
   {
     selector: '#path-subheader',
     title: 'Path details',
-    body: 'This page shows everything BiteGuard tracks for a single subpage. The site and path are shown here.',
-  },
-  {
-    selector: '#time-chart-container',
-    title: 'Time spent',
-    body: 'Active browsing time and audio playback on this subpage, per day in the selected range.',
-  },
-  {
-    selector: '#stats-container',
-    title: 'Overview',
-    body: 'Aggregate stats for this subpage: daily average, peak day, total time and more.',
-  },
-  {
-    selector: '#visits-chart-container',
-    title: 'Visits',
-    body: 'Number of separate visits to this subpage per day.',
-  },
-  {
-    selector: '#hourly-chart-container',
-    title: 'Average per clock hour',
-    body: 'Your typical browsing pattern on this subpage across the 24 hours of the day.',
-  },
-  {
-    selector: '#time-chart-container',
-    title: 'Drill into a day',
-    body: 'Click any day in the time chart to see hourly detail for that single day.',
-    advanceOn: 'click',
-  },
-  {
-    selector: '#drill-chart-wrapper',
-    title: 'Daily detail',
-    body: 'This shows the activity for the chosen day in finer granularity.',
-    drillStep: true,
-    onEnter: ensureDrillOpen,
-    onExit: ({ direction }) => {
-      if (direction === 'backward' && isInDrillMode()) exitDrillCompletely();
-    },
-  },
-  {
-    selector: '#drill-controls',
-    title: 'Navigate and switch metric',
-    body: 'Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
-    drillStep: true,
-    onEnter: ensureDrillOpen,
-  },
-  {
-    selector: '#nav-close',
-    title: 'Back to overview',
-    body: 'Click Overview to leave drill mode and return to the full range.',
-    advanceOn: 'click',
-    drillStep: true,
-    onEnter: ensureDrillOpen,
+    body: 'The same view as the site page, for a single subpage: the charts, day drill-down and stats all work the same way.',
   },
   {
     selector: '#back-btn',
     title: 'Back to the dashboard',
-    body: 'Use back to return to the site, then back again to the dashboard, where the tour continues.',
+    body: 'Go back to the site, then back to the dashboard, where the tour continues.',
     handoff: { nextSurface: 'dashboard', nextStepIndex: 6, mode: 'inPage' },
   },
 ];

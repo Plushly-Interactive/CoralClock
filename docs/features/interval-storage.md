@@ -1,207 +1,223 @@
 # Interval storage for precise overlap merging
 
-Store raw browsing **presence intervals** (`{site, kind, from, to}`) in an
-append-only IndexedDB log so the extension can answer per-site temporal
-overlap questions — "while twitch played in the background, what was I
-actively browsing, and for how long" — which the shipped `wallClockByHour`
-scalar can't, because it pre-merges every site into one per-hour total and
-discards which sites overlapped.
+> **Status: superseded by the cutover.** The interval log is no longer a removable
+> experiment running beside the scalar trackers; it is now the single authoritative
+> tracker. The scalar capture stack has been removed and its buckets frozen as
+> read-only legacy. The "removable experiment" framing, the revert steps, and the
+> separate interval-dashboard described below are historical. See
+> [bucket-to-interval-tracking-migration.md](bucket-to-interval-tracking-migration.md)
+> for the current architecture.
 
-Built as a **self-contained sidecar**: its own capture listeners, its own
-IndexedDB database, its own retention pruning, its own UI page. It shares
-**nothing** with the existing tracking code and writes **nothing** the existing
-code reads. The single integration point is one `import` line in
-`background.js` (unavoidable — MV3 allows exactly one service-worker entry).
-This is deliberate: it's an experiment, and ditching it later is deleting a few
-files and one line (see [How to remove](#how-to-remove)).
+Store raw browsing **presence intervals** (`{domain, path, kind, from, to}`) in
+an IndexedDB log, captured by a **duplicate of the existing tracking stack**. The
+current goal is to **validate interval storage against the scalar trackers**:
+aggregating the raw ranges must reproduce the same active/audio time and visit
+counts the regular dashboard shows. Storing raw ranges (rather than the scalar
+ms cells) also keeps future per-site overlap analysis ("while twitch played,
+what was I actively browsing") possible — but no overlap UI ships in v1.
+
+The whole feature is a **removable experiment**. It is built by *copying* the
+tracking files under new names and changing only where they write — the original
+tracking code is **untouched**. Two small hooks wire it in: one `import` line in
+`background.js`, and one button on the main dashboard (→ the interval dashboard).
+Ditching it later is deleting the copied files and reverting those two hooks (see
+[How to remove](#how-to-remove)).
 
 This feature is **independent of**
 [Migrate tracking aggregates to IndexedDB](storage-management/aggregates-indexeddb.md):
-it does not migrate, read, or touch the scalar aggregates
-(`sitesByDay`/`sitesByHour`/`wallClockByHour`/subpages); it stands up a separate
-database alongside them.
+it does not migrate, read, or touch the scalar aggregates; it stands up a
+separate database alongside them.
 
 ## User stories
 
-- As a user, I want a page that shows which other sites I was browsing *at the
-  same time* as a given site, and for how long, so I can tell genuine focused
-  use from background noise.
-- As a user, I want to distinguish a site that was playing audio in the
-  background from one I was actively using, so "time spent" reflects reality.
-- As the developer, I want this to be a bolt-on I can remove cleanly if it
-  doesn't earn its keep, without having unpicked it from the tracking core.
+- As the developer, I want to validate that interval storage faithfully
+  reproduces the scalar tracker's numbers before considering it a replacement —
+  and to remove it cleanly if it doesn't earn its keep.
+- As the developer, I want the raw `from/to` ranges kept (not pre-merged scalar
+  cells) so a future per-site overlap view can be built without re-capturing.
 
 ## Acceptance criteria
 
-- [ ] The overlap page, for a chosen site, lists other sites browsed in
-      overlapping wall-clock windows with an overlap duration each.
-- [ ] Background-audio overlap (site A `audio` while site B `active`) is
-      reported distinctly from foreground-parallel overlap (A `active` while
-      B `active`).
-- [ ] No existing surface (popup, dashboard, site, path, rules, blocked,
-      storage-management) reads from or writes to the interval database; all
-      current stats render exactly as before.
-- [ ] The existing unified export, retention prune, and "forget this site"
-      flows are unchanged and do not act on interval data.
-- [ ] The sidecar prunes its own rows older than its retention window on a
-      self-scheduled alarm.
-- [ ] Periods that predate the log show "overlap data available since `<date>`"
-      rather than empty/zero results.
-- [ ] Removing the sidecar (delete its files + the one `import` line) leaves
-      every other file byte-for-byte unchanged and the extension fully
-      functional.
+- [ ] Aggregating the interval log reproduces the scalar **active/audio time**
+      shown on the regular dashboard (within one flush interval of skew, since
+      the two trackers flush on independent 1-min alarms).
+- [ ] The interval dashboard mirrors the main layout (top-5, avg-per-hour,
+      all-sites table), reached by a button on the main dashboard; every number
+      is derived from the interval log.
+- [ ] Existing tracking, stats surfaces, export, prune, "forget this site",
+      settings, and `onInstalled` neither read nor write the interval log.
+- [ ] Capture behaves identically to the real tracker (same range state machine,
+      snapshot/recover, per-path idle clipping) because it is a copy of it.
+- [ ] Interval rows are kept indefinitely (no auto-prune).
+- [ ] Removing the experiment (delete the copied files + revert the two hooks)
+      leaves tracking and the main dashboard byte-for-byte functional.
 
 ## Scope
 
 ### Surfaces involved
 
-| Surface | Role in this feature |
+| Surface | Role |
 |---|---|
-| background | A **separate** tracker module with its own tab/window/audible listeners and state, writing presence intervals + pruning on its own alarm. Reached by one `import` in `background.js`. |
-| overlap page | Standalone page that queries the interval DB and renders the per-site "browsed alongside" view. |
+| background | A **duplicate** site+path tracker (copied from the real one) with its own listeners, state, `intervalFlush` alarm, and `_intervalSnapshot` key, writing ranges to the interval DB. Reached by one `import` in `background.js`. |
+| interval dashboard | Clone of the main dashboard, rendering the interval log (via a derived-aggregates adapter) instead of the scalar stores. Reached by a button on the main dashboard. |
+| dashboard | One nav button → the interval dashboard. |
 
 ### Files
 
-**New (all the feature's logic lives here):**
+**New — the experiment is a copy of the tracking stack:**
 
-| File | Role |
-|---|---|
-| `src/background/intervalTracker.js` | Self-registers its own `chrome.tabs`/`chrome.windows` listeners on import; maintains its own active-site-per-window + audible-tabs state; closes/opens presence ranges and appends them to the log; owns a `chrome.alarms` retention-prune alarm. Imports nothing from the existing trackers. |
-| `src/data/intervalLog.js` | Owns the `biteguard-intervals` IndexedDB (open + `onupgradeneeded`); `append`, `queryRange`, `queryBySite`, `pruneOlderThan`. `DEFAULT_INTERVAL_RETENTION_DAYS` colocated here. |
-| `src/pages/overlap/overlap.{html,css,js}` | Standalone overlap view (reuses the shared header per `theme.css`; icon-back to dashboard). |
+| File | Copied from | Role / only difference |
+|---|---|---|
+| `src/background/intervalTrackingUtils.js` | `trackingUtils.js` | `createRangeTracker` is **verbatim**. `flushToStorage` is rewritten: instead of accumulating scalar ms cells it coalesces the pending `active`/`audio` ranges into **live rows** (extend the open row when a range abuts it, else start a new one), appends `idle` plainly, and never stores `overlap`. The open-row map is carried in the snapshot. Visits are **not** stored. |
+| `src/background/intervalPageTracking.js` | `subpageTracking.js` | Wiring keyed on `${domain}\n${path}` (so capture is at domain+path granularity); own `_intervalSnapshot` key. |
+| `src/background/intervalTracker.js` | background.js's subpage wiring | Listeners (`onActivated`/`onUpdated`/`onRemoved`/`windows.*`/`webNavigation`/`idle`), bootstrap, `intervalFlush` alarm, coldStart handling — driving the duplicate module. |
+| `src/data/intervalLog.js` | — | Owns the `biteguard-intervals` IndexedDB (one `intervals` store, **no secondary index** — the only reader scans all rows). `appendInterval` (insert → id, for live rows), `touch` (extend a row's `to`, returns the update count), `appendIntervals` (bulk, for idle), `allIntervals`, `clearAll`, and the shared `SESSION_GAP_MS` constant. No retention. |
+| `src/data/intervalAggregates.js` | — | Derives the dashboard shapes from the ranges (no stored aggregates, no stored visits): `getSitesByDay` and `getAvgPerClockHour`. |
+| `src/pages/interval-dashboard/interval-dashboard.{html,css,js}` | dashboard | Dashboard clone. Reuses `dashboard.css` + shared chart/range modules; the `.js` duplicates the render logic and swaps its two data sources to `intervalAggregates`. |
+| `src/vendor/dexie.min.mjs` | vendored | Dexie 4.4.3 (audited), the interval DB's only dependency. |
 
-**Modified (the only existing-file change):**
+**Modified — two small, clearly-marked hooks:**
 
 | File | Change |
 |---|---|
-| `src/background/background.js` | **One** additive top-level line: `import './intervalTracker.js';` (the module self-registers its listeners on import). Nothing else in this file changes. |
+| `src/background/background.js` | One additive line: `import './intervalTracker.js';`. |
+| `src/pages/dashboard/dashboard.{html,js}` | One `#interval-dashboard-btn` nav button → the interval dashboard. |
 
-No change to `trackingUtils.js`, `siteTracking.js`, `subpageTracking.js`,
-`migrations.js`, `prune.js`, `targetedDelete.js`, `importData.js`,
-`seedTestData.js`, `healthCheck.js`, `prefKeys.js`, or any existing page.
+The tracking **core is untouched**: `trackingUtils.js`, `siteTracking.js`,
+`subpageTracking.js`, `migrations.js`, `prune.js`, `targetedDelete.js`,
+`importData.js`, `seedTestData.js`, `healthCheck.js`, `prefKeys.js`, and
+storage-management.
 
-### Capture mechanism (how it works without touching the tracker)
+### Capture mechanism
 
-`intervalTracker.js` re-derives presence from the same Chrome signals the
-existing tracker uses, but with its **own** minimal state — it does not read the
-tracker's maps:
+Because `intervalTrackingUtils.js` reuses `createRangeTracker` **verbatim** and
+`intervalTracker.js` mirrors background's subpage wiring, **capture** is
+identical to the real subpage tracker: same per-(domain+path) range state
+machine, same visit/activation logic, same `chrome.idle` **per-path** clipping
+(active kept full only while *that path* is audible), same
+`intervalFlush`/reconcile/snapshot lifecycle. The two trackers run independently
+in one service worker, on separate alarms and snapshot keys, never sharing state.
 
-- Tracks the active tab's site per window (via `tabs.onActivated`,
-  `tabs.onUpdated`, `windows.onRemoved`) and the set of audible, unmuted tabs
-  (via `tabs.onUpdated`'s `audible`/`mutedInfo`).
-- On any state change it closes the affected site's open presence range
-  `[openedAt, now]` and appends it as a row, then opens a fresh one. A site's
-  back-to-back ranges are coalesced before the row is written.
-- `kind` is `active` (site is a foreground active tab) or `audio` (site has an
-  audible unmuted tab) — a site can contribute both.
+The divergence is **persistence**, and it lives entirely in `flushToStorage`
+(nothing writes the DB outside flush):
 
-This duplicates a modest amount of active-tab/audible detection. Accepted: the
-log is approximate analysis and need not match the scalar tracker exactly, and
-isolation is the explicit goal.
+- **active / audio → live rows.** Each continuous session is **one row**, grown
+  in place: flush extends the open row (`touch`) when a pending range is within
+  **`SESSION_GAP_MS`** of its end, or starts a new row (`appendInterval`) on a
+  larger gap. An in-memory `openRows` map (`key+kind → {rowId, lastTo}`) holds the
+  open row between flushes. Pending ranges are **sorted** first (recover credits
+  out of order) and the row's end only ever moves **forward**.
+- **`SESSION_GAP_MS` (1 s) is shared** with visit counting, so a row boundary and
+  a visit boundary mean the same thing. It bridges the sub-second flush/SW seams
+  (a wake's reseed segment starts a few ms after the last flush's end) so a
+  session that spans flushes/restarts stays **one** row.
+- **`openRows` rides the snapshot.** MV3 suspends the SW ~every 30 s; without
+  this, every wake would start a fresh row and re-fragment. `recoverFromSnapshot`
+  restores `openRows`, and the gap it credits then extends the same rows.
+- **Self-healing `touch`.** If `touch` updates **0 rows** — the row vanished,
+  e.g. the DB was cleared while the snapshot still referenced it — flush falls
+  back to `appendInterval`, recreating the row. Without this, a cleared DB +
+  stale snapshot would `touch` dead ids forever and never write anything.
+- **`idle` → plain appended** (small; only used for visit-bridging).
+- **`overlap` → never stored** (= active ∩ audio, derivable).
+
+`kind` ∈ `active` | `audio` | `idle`. Aggregating the rows reproduces the scalar
+tracker's time (a grown row sums the same as the chunks it replaces).
 
 ### Storage
 
-| Store | Shape | Read by | Written by | Notes |
-|---|---|---|---|---|
-| `intervals` (IndexedDB **`biteguard-intervals`**, own version) | one row per closed presence session: `{ id (auto), site, kind: 'active'\|'audio', from, to }` (epoch ms) | overlap page | `intervalTracker.js` | **separate database**, not the `biteguard` DB |
+| Store | Shape | Read by | Written by |
+|---|---|---|---|
+| `intervals` (IndexedDB **`biteguard-intervals`**, key `++id`, no secondary index) | `{ id, domain, path, kind, from, to }` (epoch ms) | `intervalAggregates` | `intervalTrackingUtils.flushToStorage` |
 
-Indexes on `intervals`:
-- `by_to` (`to`) — retention prune via `IDBKeyRange.upperBound(cutoff)`.
-- `by_site_from` (`[site, from]`) — per-site ordered reads.
-- `by_from` (`from`) — overlap range query over a day/range.
+One row per **session** (a continuous active/audio presence), grown in place by
+the live-row flush — not one row per flush tick. The URL is split into `domain`
+(the existing site id) and in-site `path`. **No secondary index**: the only
+reader (`intervalAggregates`) loads the whole store (`toArray`) and re-aggregates
+in JS; `touch` updates rows by primary key. **No retention** — the log only
+grows, bounded by IndexedDB's GB-class scale.
 
-The sidecar calls `navigator.storage.persist()` once on first open. Retention
-window is a const default in `intervalLog.js` for v1 (no settings-page touch —
-surfacing it as a pref is deferred to keep the sidecar isolated).
+### Reading: derived aggregates and derived visits
 
-### Why an append-only log (not cell-keyed scalar replacement)
+`intervalAggregates.js` reconstructs the dashboard's data **entirely from the
+ranges** — nothing (not even visits) is pre-stored:
 
-Decided across the full operation lifecycle:
+- **active/audio time** per domain per hour = the **union** of that domain's path
+  ranges (parallel same-site windows counted once), capped at one hour, summed
+  into the day. This reproduces the scalar site tracker's time.
+- **visits** = merge a domain's **active + audio + idle** presence into runs
+  (audio or an AFK/idle stretch during an active gap keeps the run open), then
+  count each run that **contains active** presence — credited to its **start
+  day**. So `active → audio → active` is one visit, and background-audio-only
+  (no active) is zero. The merge tolerance is the same `SESSION_GAP_MS` (1 s) the
+  live-row coalesce uses, so a row boundary and a visit boundary agree. The same
+  merge over rows whose `path` starts with a prefix gives
+  path- or prefix-level visits (`reddit.com`, `reddit.com/news`, exact path).
+  **No audio visits** — audio presence never counts as a visit (a deliberate
+  divergence from the scalar tracker, which counts audio starts).
+- **wall-clock per hour** = union of every site's active+audio (for "avg per
+  clock hour").
 
-- **Write** — capture is a pure `add()` of closed ranges; no read-modify-write,
-  cost independent of total history.
-- **Read** — only the overlap page touches the DB; everything else is untouched.
-- **Delete** — retention is one range delete on `by_to`.
-- **Migration** — the decisive constraint: intervals **cannot be backfilled**
-  from existing scalars (the boundaries were discarded), so intervals can only
-  ever accrue going forward. The log starts empty and overlap covers only
-  periods since it began — the same precedent as wall-clock and subpage
-  tracking being younger than the data.
+### How identical is it?
 
-Footprint is not the deciding factor: on the exported 40-day dataset the log
-holds ~2,000 site-level intervals (~0.1 MB), worst case ~42k (~1.2 MB JSON /
-0.65 MB IndexedDB) — comfortably bounded, especially with retention.
-
-#### Footprint estimate (method)
-
-The exact interval count can't be recovered from existing data — aggregation
-into the ms scalars discarded the boundaries. It was bracketed from a
-`biteguard` export, counting only the `*ByHour` cells (day buckets are derived,
-so they hold no intervals), with three data-grounded numbers per non-zero
-metric cell:
-
-- **floor** = 1 (a non-zero metric needs ≥ 1 interval) — the realistic site
-  count, because a site stays one continuous foreground interval while you
-  navigate within it (`visits` counts navigations, not activations).
-- **visit-proxy** = `max(1, visits)` — loose upper estimate (overcounts the
-  site tracker for the reason above).
-- **flush-cap** = `min(60, ceil(metricMs / 60000))` — physical worst case
-  (≤ one interval per flush-minute a cell spans); only full-hour audio cells
-  approach 60.
-
-Byte cost ≈ 30 B/interval-pair (storage.local JSON, 13-digit timestamps) or
-16 B/pair (IndexedDB doubles), plus shared structural overhead. Re-run against
-a fresh export to re-check as history grows.
-
-### Sessions are stored whole (no hour-clipping)
-
-A presence session that crosses an hour boundary is stored as one row. Precise
-overlap needs true session boundaries; clipping would fragment sessions and
-force stitching.
+- **active / audio time**: identical to the scalar **subpage** tracker, and to
+  the **site** dashboard for normal use, give or take ≤ one flush interval of
+  skew (independent flush clocks mean the in-flight tail of the open session is
+  captured by one tracker slightly before the other).
+- **visits**: presence-based and **audio-free** by design, so they differ from
+  the scalar dashboard for media sites (which counts audio-start visits).
 
 ## How to remove
 
-The feature is designed to be ditched cleanly:
+1. Delete `src/background/intervalTracker.js`, `intervalTrackingUtils.js`,
+   `intervalPageTracking.js`, `src/data/intervalLog.js`, `intervalAggregates.js`,
+   `src/vendor/dexie.min.mjs`, and `src/pages/interval-dashboard/`.
+2. Delete the `import './intervalTracker.js';` line in `background.js`.
+3. Revert the `#interval-dashboard-btn` button + `navButton` line in
+   `dashboard.{html,js}`.
+4. (Optional) drop the `biteguard-intervals` IndexedDB, clear the `intervalFlush`
+   alarm and `_intervalSnapshot` key — or leave them orphaned (inert once the
+   import is gone).
 
-1. Delete `src/background/intervalTracker.js`, `src/data/intervalLog.js`, and
-   `src/pages/overlap/`.
-2. Delete the single `import './intervalTracker.js';` line in `background.js`.
-3. (Optional) drop the `biteguard-intervals` IndexedDB once
-   (`indexedDB.deleteDatabase('biteguard-intervals')`), or leave it orphaned.
-
-Nothing else needs unpicking — no tracking, storage, prune, export, or page
-code was ever touched.
+The tracking core is never touched, so removal is mechanical.
 
 ## Edge cases
 
-- **Pre-log history**: periods before the log started have no rows; the overlap
-  page surfaces "overlap data available since `<date>`".
-- **Hour-crossing session**: stored as a single row, not split.
-- **Foreground-parallel vs background**: `active` ∩ `active` (multi-window real
-  parallel use) reported separately from `audio` ∩ `active` via the `kind` tag.
-- **SW suspend**: an open range whose `openedAt` is stale on the next SW
-  lifecycle is closed at a clamped time (sidecar keeps its own lightweight
-  snapshot, or simply drops the in-flight range — exactness isn't required).
-- **IndexedDB unavailable / quota exceeded**: the sidecar degrades off; nothing
-  else is affected.
-- **Coalescing**: a site's back-to-back ranges are merged before the row is
-  written.
+- **Pre-log history**: periods before the log started have no rows; the interval
+  dashboard simply shows nothing for them.
+- **SW suspend / restart**: handled by the copied `recoverFromSnapshot` — the
+  per-1-min snapshot credits the gap `[snap.at, bootstrapAt]` to the snapshot's
+  keys (active kept full when the path was audible), with a 5-min staleness
+  discard and `onStartup` cold-start clear. Identical to the real tracker.
+- **Idle**: per-path — a foreground path is clipped while the user is AFK unless
+  *that path* is the one playing audio. Audio is never idle-clipped.
+- **Minimized window**: closed on the next reconcile (≤ 1 min). Non-minimized
+  parallel windows are genuine parallel use and kept.
+- **DB cleared while the snapshot survives** (e.g. clearing the store in
+  devtools): the restored `openRows` point at deleted rows, so the next `touch`
+  updates 0 rows → flush recreates them via `appendInterval` (self-healing). For
+  a fully clean reset, clear both the DB and the `_intervalSnapshot` key.
+- **IndexedDB unavailable / quota**: writes fail silently; nothing else affected.
 
 ## Out of scope (v1)
 
-- Any integration into the existing unified export, retention pruner,
-  "forget this site", settings page, or storage-management usage bar — staying
-  out of them is the point. Integrate only if the feature is later promoted.
-- Replacing or deriving the scalar aggregates — additive sidecar only.
-- Subpage-level overlap — the log keys on site, not path.
-- `idle` intervals — only `active` and `audio` kinds.
-- A dashboard-wide "parallel browsing" aggregate view.
+- Any data-management integration — export/import, settings, a clear control,
+  and "forget this site" all leave the interval log alone. **Known consequence:**
+  deleting a site's data elsewhere does not remove its interval rows; the log can
+  be wiped only via devtools (`indexedDB.deleteDatabase` or `intervals.clear`).
+- Replacing or deriving the scalar aggregates — additive experiment only.
+- Retention / auto-pruning — kept indefinitely; a prune can be added later with
+  no schema change.
+- **Overlap / "browsed alongside" UI** — the original motivation, now deferred.
+  Rows store `domain`+`path`+`from`/`to`, so a parallel-browsing view can be
+  rebuilt later with no recapture; v1 ships only the dashboard clone.
+- Interval-data **drill-downs** — the interval dashboard's rows link to the
+  existing site/path pages, which still show scalar data (known mismatch).
+- Streaming/paged reads — `intervalAggregates` loads the whole log into memory.
+  Fine at current scale; revisit if it grows large.
 
 ## Open questions
 
-- Default retention window (7 / 14 / 30 days?).
-- How the overlap page is reached during the experiment — opened directly by
-  `chrome-extension://…/overlap.html` (zero-touch), vs. accepting one
-  `navButton` link from an existing page when ready for discoverability.
-- Whether to later promote the sidecar (integrate export/prune/settings) or
-  keep it standalone.
+- Whether to later promote the experiment (export/import, settings, retention, a
+  domain-level visit counter to match the scalar dashboard exactly) or keep the
+  current minimal-hook integration.

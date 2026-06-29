@@ -5,6 +5,7 @@ import { localDayKey } from '../../shared/timeUtils.js';
 import { weekDow, rotatedDayLabels } from '../../shared/weekStart.js';
 import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear } from '../../shared/utils.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
+import { isMockMode, mockRules, mockBlocksByDay } from '../../shared/tourMockData.js';
 
 const formTarget          = document.querySelector('#form-target');
 const formTargetClearBtn  = document.querySelector('#form-target-clear');
@@ -44,6 +45,7 @@ const kwSaveBtn    = document.querySelector('#kw-save-btn');
 
 let scope = 'subdomain';
 let currentRules = [];
+let mockMode = false;  // tour: seeded rules shown read-only, never persisted
 let sort = { key: 'site', dir: 1 };
 
 // ── Add card collapse toggle ──
@@ -236,7 +238,7 @@ function setSort(key) {
   if (sort.key === key) sort.dir *= -1;
   else sort = { key, dir: 1 };
   updateSortArrows();
-  renderRuleList(rulesList, sortedRules());
+  renderRuleList(rulesList, sortedRules(), { readonly: mockMode });
 }
 
 sortSiteBtn.addEventListener('click', () => setSort('site'));
@@ -245,11 +247,12 @@ sortStatusBtn.addEventListener('click', () => setSort('status'));
 // ── Render rules list ──
 
 async function render() {
-  currentRules = await getRules();
+  mockMode = await isMockMode();
+  currentRules = mockMode ? mockRules() : await getRules();
   const empty = currentRules.length === 0;
   noRulesMsg.style.display = empty ? '' : 'none';
   updateSortArrows();
-  renderRuleList(rulesList, sortedRules());
+  renderRuleList(rulesList, sortedRules(), { readonly: mockMode });
   refreshPreview();
   renderStats();
 }
@@ -516,7 +519,9 @@ function thisWeekKeys() {
 }
 
 async function renderStats() {
-  const { [BLOCKS_DAY_KEY]: blocksByDay = {} } = await chrome.storage.local.get(BLOCKS_DAY_KEY);
+  const blocksByDay = mockMode
+    ? mockBlocksByDay()
+    : (await chrome.storage.local.get(BLOCKS_DAY_KEY))[BLOCKS_DAY_KEY] ?? {};
   const rules = currentRules;
 
   // Overview card
@@ -671,25 +676,20 @@ render();
 
 const rulesTourSteps = [
   {
+    selector: '#rules-grid',
+    title: 'Your rules',
+    body: 'This page shows your existing rules and general stats about how often they block.',
+  },
+  {
     selector: '#add-card',
     title: 'Add a rule',
     body: 'Use this form to set a time limit for any site. Choose the scope, set a limit, and click Add rule.',
   },
   {
-    selector: '#list-area',
-    title: 'Your rules',
-    body: 'All your active rules are listed here. You can toggle, edit, or delete each one.',
-  },
-  {
-    selector: '#sparkline-card',
-    title: 'Blocks per day',
-    body: 'This chart shows how often your rules triggered a block over the last 7 days.',
-  },
-  {
     selector: '#back-btn',
     title: 'Back to the dashboard',
     body: 'Click the BiteGuard logo to return to the dashboard and continue the tour.',
-    handoff: { nextSurface: 'dashboard', nextStepIndex: 5, mode: 'crossDocument' },
+    handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'crossDocument' },
   },
 ];
 

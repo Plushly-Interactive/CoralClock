@@ -1,65 +1,19 @@
-import { localDayKey, localHourKey, splitByHour } from '../shared/timeUtils.js';
-import { PREF_FIRST_BROWSE_BY_DAY } from '../shared/prefKeys.js';
+import { appendInterval, touch, SESSION_GAP_MS } from '../data/intervalLog.js';
+import { dbg } from './trackingDebug.js';
 
 const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
+const KEY_SEP = '\n';   // engine keys are `${domain}\n${path}` (see intervalTracker)
 
-// Debug logging is off by default and gated on a `_debug` flag in
-// chrome.storage.local. To enable in the field without a rebuild:
-//   chrome.storage.local.set({ _debug: true })  // then reload the extension
-// Logs include full tab URLs, so keep it off unless actively debugging.
-let _debug = false;
-
-// Read the flag once at startup. Called from bootstrap before listeners run.
-export async function initDebug() {
-  const { _debug: flag = false } = await chrome.storage.local.get('_debug');
-  _debug = flag;
+function splitKey(key) {
+  const i = key.indexOf(KEY_SEP);
+  return i < 0 ? { domain: key, path: '' } : { domain: key.slice(0, i), path: key.slice(i + 1) };
 }
 
-// Whether debug logging is on. Use at call sites to skip building expensive
-// log arguments (e.g. JSON.stringify) when logging is off.
-export function isDebug() {
-  return _debug;
-}
-
-// Debug logger with a local YYYY-MM-DD HH:MM:SS.mmm timestamp prefix, so the
-// [BG-DBG] trace can be correlated against the day/hour buckets in stored data.
-export function dbg(...args) {
-  if (!_debug) return;
-  const d = new Date();
-  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.${String(d.getMilliseconds()).padStart(3, '0')}`;
-  console.log(`[BG-DBG ${date} ${time}]`, ...args);
-}
-
-// Total length covered by a set of [from, to] ranges after merging overlaps.
-// Sorts by start, walks left→right extending the current span, and sums spans.
-// Used for true wall-clock active time: parallel windows on different sites
-// overlap in real time, so summing per-site activeMs double-counts; the union
-// counts each overlapping instant once.
-function unionLength(ranges) {
-  if (ranges.length === 0) return 0;
-  ranges.sort((a, b) => a[0] - b[0]);
-  let total = 0;
-  let [curStart, curEnd] = ranges[0];
-  for (let i = 1; i < ranges.length; i++) {
-    const [s, e] = ranges[i];
-    if (s > curEnd) { total += curEnd - curStart; curStart = s; curEnd = e; }
-    else if (e > curEnd) curEnd = e;
-  }
-  return total + (curEnd - curStart);
-}
-
-export function createTrackingModule({
-  urlToKey,
-  dayStorageKey,
-  hourStorageKey,
-  snapshotStorageKey,
-  getCell,
-  recoverLegacy,
-  wallClockHourKey,
-}) {
+export function createTrackingModule({ urlToKey, snapshotStorageKey, recoverLegacy }) {
   const tracker = createRangeTracker();
   let _recovered = false;
+  // `${key}\0${kind}` → { rowId, lastTo }; sessions persist across SW restarts via snapshot.
+  const openRows = new Map();
   const parseSnapshot = recoverLegacy ?? (snap => ({
     activeKeys: snap.activeKeys ?? [],
     audioKeys: snap.audioKeys ?? [],
@@ -67,35 +21,37 @@ export function createTrackingModule({
 
   async function init() {
     const windows = await chrome.windows.getAll({ populate: true });
-    dbg('init: windows count=', windows.length);
+    dbg('iv-init: windows=', windows.length);
     for (const w of windows) {
-      if (w.state === 'minimized') { dbg('init: window', w.id, 'minimized, skip'); tracker.markMinimized(w.id); continue; }
+      if (w.state === 'minimized') { dbg('iv-init: window', w.id, 'minimized, skip'); tracker.markMinimized(w.id); continue; }
       const tab = w.tabs?.find(t => t.active);
       const key = urlToKey(tab?.url);
-      dbg('init: window', w.id, 'activeTab url=', tab?.url, '→ key=', key);
+      dbg('iv-init: window', w.id, 'url=', tab?.url, '→ key=', key);
       if (key) tracker.addWindow(w.id, key);
     }
     const tabs = await chrome.tabs.query({ audible: true });
     for (const tab of tabs) {
       if (tab.mutedInfo?.muted) continue;
       const key = urlToKey(tab.url);
+      dbg('iv-init: audible tab', tab.id, 'url=', tab.url, '→ key=', key);
       if (key) tracker.addAudibleTab(tab.id, key, false);
     }
   }
 
   async function reconcile() {
-    dbg(`reconcile[${hourStorageKey}]: start (tracked windows=`, tracker.getTrackedWindowIds().length, 'audible tabs=', tracker.getTrackedAudibleTabIds().length, ')');
+    dbg('iv-reconcile: start tracked-windows=', tracker.getTrackedWindowIds().length, 'audible-tabs=', tracker.getTrackedAudibleTabIds().length);
     const windows = await chrome.windows.getAll();
     const liveById = new Map(windows.map(w => [w.id, w]));
     for (const id of tracker.getTrackedWindowIds()) {
       const w = liveById.get(id);
-      if (!w || w.state === 'minimized') tracker.removeWindow(id, w?.state === 'minimized');
+      if (!w || w.state === 'minimized') { dbg('iv-reconcile: drop window', id, w ? 'minimized' : 'gone'); tracker.removeWindow(id, w?.state === 'minimized'); }
     }
     for (const w of windows) {
       if (w.state === 'minimized') continue;
       if (tracker.isWindowTracked(w.id)) continue;
       const [tab] = await chrome.tabs.query({ windowId: w.id, active: true });
       const key = urlToKey(tab?.url);
+      dbg('iv-reconcile: add window', w.id, 'url=', tab?.url, '→ key=', key);
       if (key) tracker.addWindow(w.id, key);
     }
     const audibleTabs = await chrome.tabs.query({ audible: true });
@@ -103,11 +59,12 @@ export function createTrackingModule({
       audibleTabs.filter(t => !t.mutedInfo?.muted).map(t => t.id)
     );
     for (const tabId of tracker.getTrackedAudibleTabIds()) {
-      if (!liveAudibleIds.has(tabId)) tracker.removeAudibleTab(tabId);
+      if (!liveAudibleIds.has(tabId)) { dbg('iv-reconcile: drop audible tab', tabId); tracker.removeAudibleTab(tabId); }
     }
     for (const tab of audibleTabs) {
       if (tab.mutedInfo?.muted) continue;
       const key = urlToKey(tab.url);
+      dbg('iv-reconcile: add audible tab', tab.id, 'url=', tab.url, '→ key=', key);
       if (key) tracker.addAudibleTab(tab.id, key, false);
     }
   }
@@ -115,8 +72,10 @@ export function createTrackingModule({
   async function saveSnapshot(now = Date.now()) {
     const activeKeys = tracker.getActiveKeys();
     const audioKeys = tracker.getAudibleKeys();
-    if (activeKeys.length > 0 || audioKeys.length > 0) {
-      await chrome.storage.local.set({ [snapshotStorageKey]: { activeKeys, audioKeys, at: now } });
+    const open = [...openRows.entries()];   // [ [`key\0kind`, {rowId,lastTo}], … ]
+    dbg('iv-save', snapshotStorageKey, 'active', activeKeys.length, 'audio', audioKeys.length, 'openRows', open.length, JSON.stringify(open));
+    if (activeKeys.length > 0 || audioKeys.length > 0 || open.length > 0) {
+      await chrome.storage.local.set({ [snapshotStorageKey]: { activeKeys, audioKeys, openRows: open, at: now } });
     } else {
       await chrome.storage.local.remove(snapshotStorageKey);
     }
@@ -127,27 +86,23 @@ export function createTrackingModule({
     _recovered = true;
     const stored = await chrome.storage.local.get(snapshotStorageKey);
     const snap = stored[snapshotStorageKey];
-    if (!snap) { dbg(`recover[${snapshotStorageKey}]: no snapshot`); return; }
+    if (!snap) { dbg('iv-recover', snapshotStorageKey, 'NO SNAPSHOT'); return; }
     const now = Date.now();
     if (now - snap.at > SNAPSHOT_MAX_GAP_MS) {
-      dbg(`recover[${snapshotStorageKey}]: snapshot too stale (${now - snap.at}ms), discarded`);
+      dbg('iv-recover', snapshotStorageKey, 'STALE', now - snap.at, 'ms — discarding');
       await chrome.storage.local.remove(snapshotStorageKey);
       return;
     }
+    dbg('iv-recover', snapshotStorageKey, 'gap', now - snap.at, 'ms', 'openRows', snap.openRows?.length ?? 0, JSON.stringify(snap.openRows));
+    // Restore open-row state so the gap credited below extends existing rows.
+    if (Array.isArray(snap.openRows)) for (const [mk, v] of snap.openRows) openRows.set(mk, v);
     const endAt = Math.min(clipAt ?? now, now);
-    // If the user is idle, split the recovery window at idleSince: the portion
-    // before counts as active, the portion after counts as idle. Audio is not
-    // clipped — same policy as applyIdleClip. This is the critical path for AFK
-    // sessions: the SW restarts on every alarm, so recovery is how elapsed time
-    // enters the tracker, and without this split it would all land in activeMs.
     const activeEndAt = idleSince !== null ? Math.min(endAt, idleSince) : endAt;
     const idleStartAt = idleSince !== null ? Math.max(snap.at, idleSince) : null;
     const { activeKeys, audioKeys } = parseSnapshot(snap);
-    dbg(`recover[${snapshotStorageKey}]: crediting ${endAt - snap.at}ms to`, activeKeys.length, 'active /', audioKeys.length, 'audio keys', idleSince !== null ? `(idle clip at ${idleSince})` : '');
     const activeKeySet = new Set(activeKeys);
     const audioKeySet = new Set(audioKeys);
     for (const key of activeKeys) {
-      // An audible key keeps full active time even past idleSince (matches applyIdleClip).
       const keyActiveEnd = audioKeySet.has(key) ? endAt : activeEndAt;
       if (keyActiveEnd > snap.at) tracker.pushRange('active', key, [snap.at, keyActiveEnd]);
       if (!audioKeySet.has(key) && idleStartAt !== null && endAt > idleStartAt) tracker.pushRange('idle', key, [idleStartAt, endAt]);
@@ -162,85 +117,56 @@ export function createTrackingModule({
 
   async function flushToStorage(now = Date.now()) {
     tracker.flushAllElapsed(now);
-    const { active, audio, overlap, idle, visits } = tracker.pending;
-    if (active.size === 0 && audio.size === 0 && overlap.size === 0 && idle.size === 0 && visits.size === 0) return;
-    const getKeys = [dayStorageKey, hourStorageKey, PREF_FIRST_BROWSE_BY_DAY];
-    if (wallClockHourKey) getKeys.push(wallClockHourKey);
-    const stored = await chrome.storage.local.get(getKeys);
-    const byDay = stored[dayStorageKey] ?? {};
-    const byHour = stored[hourStorageKey] ?? {};
-
-    function addRanges(map, field) {
-      for (const [key, ranges] of map) {
-        for (const [from, to] of ranges) {
-          for (const { hourKey, dayKey, ms } of splitByHour(from, to)) {
-            byHour[hourKey] ??= {};
-            const hourEntry = getCell(byHour[hourKey], key);
-            const before = hourEntry[field];
-            hourEntry[field] = Math.min(before + ms, 3600000);
-            const added = hourEntry[field] - before;
-            byDay[dayKey] ??= {};
-            getCell(byDay[dayKey], key)[field] += added;
-          }
-        }
-      }
-    }
-
-    addRanges(active, 'activeMs');
-    addRanges(audio, 'audioMs');
-    addRanges(overlap, 'overlapMs');
-    addRanges(idle, 'idleMs');
-
-    const day = localDayKey(now);
-    const hour = localHourKey(now);
-    for (const [key, count] of visits) {
-      byDay[day] ??= {};
-      getCell(byDay[day], key).visits += count;
-      byHour[hour] ??= {};
-      getCell(byHour[hour], key).visits += count;
-      // Per-key visit ledger: shows exactly how many visits each flush commits
-      // to storage. A large delta here for a single key in one tick is the
-      // direct fingerprint of a visit-overcount bug.
-      dbg(`flush[${hourStorageKey}]: +${count} visits → ${key} (hour total now ${getCell(byHour[hour], key).visits})`);
-    }
-
-    const firstBrowseByDay = stored[PREF_FIRST_BROWSE_BY_DAY] ?? {};
-    const toWrite = { [dayStorageKey]: byDay, [hourStorageKey]: byHour };
-
-    // Wall-clock active time: union of all keys' active+audio ranges per hour, so
-    // overlapping parallel-window time counts once. Only the site tracker passes
-    // wallClockHourKey; the subpage tracker skips this (same browsing, no second
-    // tally). Overlap ranges aren't added — the union already merges active∩audio.
-    if (wallClockHourKey) {
-      const wallByHour = stored[wallClockHourKey] ?? {};
-      const rangesByHour = {};
-      for (const map of [active, audio]) {
-        for (const ranges of map.values()) {
-          for (const [from, to] of ranges) {
-            let t = from;
-            while (t < to) {
-              const nextHour = new Date(t);
-              nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-              const end = Math.min(nextHour.getTime(), to);
-              (rangesByHour[localHourKey(t)] ??= []).push([t, end]);
-              t = end;
-            }
-          }
-        }
-      }
-      for (const [hourKey, ranges] of Object.entries(rangesByHour)) {
-        const added = unionLength(ranges);
-        wallByHour[hourKey] = Math.min((wallByHour[hourKey] ?? 0) + added, 3600000);
-        dbg(`flush[${wallClockHourKey}]: +${added}ms union → ${hourKey} (total ${wallByHour[hourKey]})`);
-      }
-      toWrite[wallClockHourKey] = wallByHour;
-    }
-    if (visits.size > 0 && !firstBrowseByDay[day]) {
-      firstBrowseByDay[day] = now;
-      toWrite[PREF_FIRST_BROWSE_BY_DAY] = firstBrowseByDay;
-    }
+    const active = new Map(tracker.pending.active);
+    const audio = new Map(tracker.pending.audio);
+    const idle = new Map(tracker.pending.idle);
     tracker.clearPending();
-    await chrome.storage.local.set(toWrite);
+    if (active.size === 0 && audio.size === 0 && idle.size === 0) return;
+
+    async function coalesce(map, kind) {
+      for (const [key, ranges] of map) {
+        const { domain, path } = splitKey(key);
+        const mk = `${key}\0${kind}`;
+        let or = openRows.get(mk);
+        // Out-of-order ranges possible (recovery pushes [snap.at,…] after flush segments); sort and extend `to` forward only.
+        const sorted = [...ranges].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+        dbg('iv-coalesce', kind, mk, 'or', or ? `row${or.rowId}@${or.lastTo}` : 'NONE', 'ranges', JSON.stringify(sorted));
+        for (const [from, to] of sorted) {
+          if (to <= from) continue;
+          let extended = false;
+          if (or && from <= or.lastTo + SESSION_GAP_MS && to > or.lastTo) {   // same session → extend
+            const updated = await touch(or.rowId, to).catch(() => 0);
+            if (updated) {                                  // row still exists → grew it
+              dbg('iv-coalesce', kind, mk, 'EXTEND row', or.rowId, 'to', to, '(gap', from - or.lastTo, 'ms)');
+              or.lastTo = to;
+              extended = true;
+            } else {
+              dbg('iv-coalesce', kind, mk, 'row', or.rowId, 'GONE — recreating');
+              or = undefined;                               // row vanished (DB cleared) → fall through to NEW
+            }
+          } else if (or && from <= or.lastTo + SESSION_GAP_MS) {
+            extended = true;                                // already covered (to <= lastTo), nothing to do
+          }
+          if (!extended) {                                  // real gap, first, or row gone → new row
+            dbg('iv-coalesce', kind, mk, 'NEW', from, to, or ? `(gap ${from - or.lastTo}ms)` : '(no or)');
+            const id = await appendInterval({ domain, path, kind, from, to }).catch(() => null);
+            or = id == null ? undefined : { rowId: id, lastTo: to };
+          }
+        }
+        // Keep the open row — a sub-SESSION_GAP_MS resume needs to extend it even if key left the active set.
+        if (or) openRows.set(mk, or);
+        else openRows.delete(mk);
+      }
+    }
+
+    await coalesce(active, 'active');
+    await coalesce(audio, 'audio');
+    await coalesce(idle, 'idle');
+
+    // Prune rows past SESSION_GAP_MS — runs after coalescing so fresh rows survive.
+    for (const [mk, v] of openRows) {
+      if (v.lastTo < now - SESSION_GAP_MS) openRows.delete(mk);
+    }
   }
 
   function applyIdleClip(idleSince, now) {
@@ -264,10 +190,6 @@ export function createRangeTracker() {
   const windowToKey = new Map();
   const minimizedWindowIds = new Set();
   const audibleTabToKey = new Map();
-  // Last key each tab was counted as an audio visit for. Unlike audibleTabToKey
-  // (cleared when a tab goes silent), this survives audible→silent→audible flaps
-  // and the countVisit=false restore path on service-worker restart, so a tab
-  // that keeps playing the same site is counted once, not on every resume.
   const audibleTabLastVisitKey = new Map();
   const pendingActive = new Map();
   const pendingAudio = new Map();
@@ -335,32 +257,24 @@ export function createRangeTracker() {
 
   function setWindow(windowId, key) {
     const oldKey = windowToKey.get(windowId);
-    dbg('setWindow: windowId=', windowId, 'oldKey=', oldKey, 'newKey=', key);
-    if (oldKey === key) { dbg('setWindow: same key, return'); return; }
-    if (!oldKey && !key) { dbg('setWindow: both null, return'); return; }
+    if (oldKey === key) return;
+    if (!oldKey && !key) return;
     if (oldKey) removeWindow(windowId);
     if (key) {
       const wasMinimized = minimizedWindowIds.delete(windowId);
       const existing = states.get(key);
       const wasTracked = wasMinimized || (!!existing && (existing.wasActive || existing.wasAudible));
-      dbg('setWindow: existing state for', key, '?', !!existing, 'wasTracked=', wasTracked, 'wasMinimized=', wasMinimized);
       addWindow(windowId, key);
       if (!wasTracked) {
         pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
-        dbg('setWindow: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
-      } else {
-        dbg('setWindow: visit NOT counted (already tracked)');
       }
-    } else {
-      dbg('setWindow: key is null/falsy, only removed old');
     }
   }
 
   function addAudibleTab(tabId, key, countVisit = true) {
     if (!key) return;
     const oldKey = audibleTabToKey.get(tabId);
-    dbg('addAudibleTab: tabId=', tabId, 'oldKey=', oldKey, 'newKey=', key, 'countVisit=', countVisit);
-    if (oldKey === key) { dbg('addAudibleTab: same key, return'); return; }
+    if (oldKey === key) return;
     if (oldKey) removeAudibleTab(tabId);
     audibleTabToKey.set(tabId, key);
     let s = states.get(key);
@@ -373,23 +287,15 @@ export function createRangeTracker() {
     s.audibleTabIds.add(tabId);
     s.wasAudible = true;
     if (!wasTracked) s.startedAt = Date.now();
-    // A visit is "this tab started playing this site", counted once — not on
-    // every audible resume. Gate on the tab's last-seen key (which survives
-    // silent gaps and is restored on SW restart via countVisit=false), so flaps
-    // and restarts don't re-count a tab still on the same site.
     const alreadyCounted = audibleTabLastVisitKey.get(tabId) === key;
     audibleTabLastVisitKey.set(tabId, key);
     if (countVisit && !alreadyCounted) {
       pendingVisits.set(key, (pendingVisits.get(key) ?? 0) + 1);
-      dbg('addAudibleTab: VISIT counted for', key, 'total pending=', pendingVisits.get(key));
-    } else {
-      dbg('addAudibleTab: visit NOT counted; alreadyCounted=', alreadyCounted, 'countVisit=', countVisit);
     }
   }
 
   function removeAudibleTab(tabId) {
     const key = audibleTabToKey.get(tabId);
-    dbg('removeAudibleTab: tabId=', tabId, 'key=', key);
     if (!key) return;
     audibleTabToKey.delete(tabId);
     const s = states.get(key);
@@ -398,7 +304,6 @@ export function createRangeTracker() {
     if (s.audibleTabIds.size === 0 && s.wasAudible) {
       recordElapsed(key);
       s.wasAudible = false;
-      dbg('removeAudibleTab: cleared wasAudible for', key);
     }
   }
 
@@ -406,12 +311,6 @@ export function createRangeTracker() {
     for (const key of states.keys()) recordElapsed(key, now);
   }
 
-  // Splits in-flight ranges at `idleSince`: the portion before counts as active,
-  // the portion after counts as idle. Audio is not clipped — a playing tab is
-  // real usage even while the user is away. An audible key also keeps its active
-  // time running full (clip = now): a tab the user is watching/listening to
-  // counts as active even while idle. Called by the flush alarm when
-  // chrome.idle reports the user idle/locked; idleSince is `now - threshold`.
   function applyIdleClip(idleSince, now) {
     for (const [key, s] of states) {
       if (!s.wasActive && !s.wasAudible) continue;

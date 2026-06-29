@@ -262,4 +262,3 @@ input[type="date"]:focus { outline: none; border-color: var(--color-accent); }
 .data-table .td-check { text-align: right; }
 .td-date { width: 20%; }
 .td-desc { width: 42%; }
-
