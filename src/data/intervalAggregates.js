@@ -73,11 +73,10 @@ function creditVisits(items, onVisit) {
   if (hasActive) onVisit(cs);
 }
 
-// idleMs is intentionally NOT emitted (scalar stores it but no reader consumes it).
 // Every cell (day AND hour, site AND subpage) carries visits — the site "today"
 // view and dashboard read per-hour visits, matching scalar's dual byDay/byHour
-// increment.
-const zeroCell = () => ({ activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0 });
+// increment. idleMs is day-level only (accumulated in the main loop, not hourly).
+const zeroCell = () => ({ activeMs: 0, audioMs: 0, overlapMs: 0, visits: 0, idleMs: 0 });
 
 async function build() {
   const intervals = await allIntervals();
@@ -85,6 +84,13 @@ async function build() {
   const hours = {};              // hourKey -> { domains: {domain:{active,audio}}, paths: {domain:{path:{active,audio}}}, wall:[] }
   const presenceByDomain = {};   // domain -> [{from,to,active}] (domain visit counting)
   const presenceByPath = {};     // domain -> path -> [{from,to,active}] (path visit counting)
+  const sitesByDay = {};
+  const sitesByHour = {};
+  const subpagesByDay = {};
+  const subpagesByHour = {};
+  const wallByHour = {};
+  const firstActiveByDay = {};
+
   for (const r of intervals) {
     if (r.kind === 'active' || r.kind === 'audio') {
       for (const seg of hourBounds(r.from, r.to)) {
@@ -93,6 +99,15 @@ async function build() {
         (((h.paths[r.domain] ??= {})[r.path] ??= { active: [], audio: [] })[r.kind]).push([seg.from, seg.to]);
         h.wall.push([seg.from, seg.to]);
       }
+    }
+    if (r.kind === 'active') {
+      const dayKey = localDayKey(r.from);
+      if (firstActiveByDay[dayKey] == null || r.from < firstActiveByDay[dayKey])
+        firstActiveByDay[dayKey] = r.from;
+    }
+    if (r.kind === 'idle') {
+      const dayKey = localDayKey(r.from);
+      ((sitesByDay[dayKey] ??= {})[r.domain] ??= zeroCell()).idleMs += r.to - r.from;
     }
     // Presence for visit counting: active/audio/idle all keep a run open (audio or
     // an AFK stretch during an active gap doesn't split it); but a run only counts
@@ -104,11 +119,6 @@ async function build() {
     }
   }
 
-  const sitesByDay = {};
-  const sitesByHour = {};
-  const subpagesByDay = {};
-  const subpagesByHour = {};
-  const wallByHour = {};
   const hourKeys = Object.keys(hours);
   for (const hourKey of hourKeys) {
     const h = hours[hourKey];
@@ -154,7 +164,7 @@ async function build() {
     }
   }
 
-  return { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour, wallByHour, hourKeys };
+  return { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour, wallByHour, hourKeys, firstActiveByDay };
 }
 
 function load() {
@@ -227,6 +237,14 @@ export async function getSitesByDay() {
 
 export async function getSitesByHour() {
   return (await load()).sitesByHour;
+}
+
+export async function getWallByHour() {
+  return (await load()).wallByHour;
+}
+
+export async function getFirstBrowseByDay() {
+  return (await load()).firstActiveByDay;
 }
 
 export async function getSubpagesByDay() {
