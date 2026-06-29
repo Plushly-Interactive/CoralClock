@@ -42,7 +42,7 @@ export function downloadDailyCsv(sitesByDay, subpagesByDay) {
       }
     }
   }
-  downloadCsv(rows, `biteguard-daily-${new Date().toISOString().slice(0, 10)}.csv`);
+  downloadCsv(rows, `reef-daily-${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
 function localDateTime(ts) {
@@ -57,7 +57,7 @@ export function downloadIntervalsCsv(rows) {
   for (const r of [...rows].sort((a, b) => a.from - b.from)) {
     out.push(`${localDateTime(r.from)},${localDateTime(r.to)},${((r.to - r.from) / 60000).toFixed(2)},${csvField(r.domain)},${csvField(r.path)},${r.kind}`);
   }
-  downloadCsv(out, `biteguard-intervals-${new Date().toISOString().slice(0, 10)}.csv`);
+  downloadCsv(out, `reef-intervals-${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
 export function downloadHourlyCsv(sitesByHour, subpagesByHour) {
@@ -74,5 +74,5 @@ export function downloadHourlyCsv(sitesByHour, subpagesByHour) {
       }
     }
   }
-  downloadCsv(rows, `biteguard-hourly-${new Date().toISOString().slice(0, 10)}.csv`);
+  downloadCsv(rows, `reef-hourly-${new Date().toISOString().slice(0, 10)}.csv`);
 }

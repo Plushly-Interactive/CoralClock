@@ -21,6 +21,7 @@
   --overlay-bg: rgba(0, 0, 0, 0.5);
   --shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.25);
   --shadow-notification: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   --color-chart-time: var(--color-accent-light);
   --color-chart-audio: var(--color-secondary-light);
@@ -28,7 +29,7 @@
   --color-chart-hourly: var(--color-secondary);
   --color-chart-idle: #c79a3a;
 
-  --color-bg: #e8e8e8;
+  --color-bg: #ffffff;
   --color-border: #d0d0d0;
   --color-text: #1a1a1a;
   --color-text-secondary: #888;
@@ -80,26 +81,31 @@ body {
 }
 
 #brand-logo {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
+}
+
+#brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 #brand-name {
   display: inline-flex;
   align-items: center;
-  height: 24px;
   line-height: 1;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.3px;
-}
-
-.brand-bite {
   color: var(--color-accent);
 }
 
-.brand-guard {
+#brand-tagline {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.6px;
   color: var(--color-secondary);
 }
 
@@ -253,6 +259,7 @@ button:disabled {
   border: 1px solid var(--color-border);
   border-radius: 6px;
   min-height: 0;
+  box-shadow: var(--shadow-card);
 }
 
 .table-footer {
@@ -562,6 +569,7 @@ header {
   padding: 0 24px 0 20px;
   height: 75px;
   border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
   font-weight: 600;
   position: sticky;
   top: 0;
@@ -569,6 +577,12 @@ header {
   z-index: 10;
   gap: 12px;
   flex-shrink: 0;
+}
+
+#back-btn img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 #back-btn {

@@ -11,6 +11,7 @@ import { clearMockModeCache } from '../../shared/tourMockData.js';
 import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import { QUERY_SITES_BY_DAY, QUERY_AVG_PER_CLOCK_HOUR } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
 const PREF_SEARCH = 'siteSearch';
@@ -404,8 +405,8 @@ const tourBtn = document.querySelector('#tour-btn');
 const dashboardTourSteps = [
   {
     selector: '#tour-btn',
-    title: 'Welcome to BiteGuard',
-    body: 'A quick walk through every surface of BiteGuard, about two minutes. Use the × in the corner to leave anytime.',
+    title: `Welcome to ${BRAND_NAME}`,
+    body: `A quick walk through every surface of ${BRAND_NAME}, about two minutes. Use the × in the corner to leave anytime.`,
   },
   {
     selector: '#range-select',
@@ -440,7 +441,7 @@ const dashboardTourSteps = [
     handoff: { nextSurface: 'timeline', mode: 'inPage' },  },
   {
     title: 'Open the popup',
-    body: 'Click the BiteGuard icon in your browser toolbar.',
+    body: `Click the ${BRAND_NAME} icon in your browser toolbar.`,
     tooltipPosition: 'top-right',
     arrow: 'up',
     handoff: { nextSurface: 'popup', mode: 'crossDocument' },
@@ -458,7 +459,7 @@ const dashboardTourSteps = [
   {
     selector: '#tour-btn',
     title: 'Tour complete',
-    body: "That's every feature of BiteGuard. Click here any time to replay the tour.",
+    body: `That's every feature of ${BRAND_NAME}. Click here any time to replay the tour.`,
   },
 ];
 

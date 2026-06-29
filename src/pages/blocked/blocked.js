@@ -2,9 +2,10 @@ import { RULE_MULTIPLIERS, matchLabel, computeRuleSpent, computeRuleVisits } fro
 import { faviconUrl, loadFaviconCache } from '../../shared/utils.js';
 import { formatMs, localDayKey } from '../../shared/timeUtils.js';
 import { weekDow } from '../../shared/weekStart.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 
 document.querySelector('#logo').src =
-  chrome.runtime.getURL('resources/icons/biteguard-icon-blue-square-128px.png');
+  chrome.runtime.getURL('resources/icons/reef-icon-square-128px.png');
 
 const params = new URLSearchParams(location.search);
 const ruleId = params.get('rule');
@@ -12,7 +13,7 @@ const site = params.get('site');
 const path = params.get('path');
 
 const target = site && path ? `${site}/${path}` : site;
-if (target) document.title = `Blocked: ${target} – BiteGuard`;
+if (target) document.title = `Blocked: ${target} – ${BRAND_NAME}`;
 
 // When the rule's period window next resets, in local time.
 function nextReset(period, now = new Date()) {

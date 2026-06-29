@@ -2,6 +2,8 @@
   grid-template-columns: repeat(3, auto);
 }
 
+header { box-shadow: none; }
+
 #path-subheader {
   position: relative;
   display: flex;
@@ -9,9 +11,12 @@
   padding: 0 24px;
   height: 32px;
   border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
   gap: 6px;
   flex-shrink: 0;
 }
+
+#path-subheader:has(#path-links.open) { box-shadow: none; }
 
 .path-crumb-link {
   display: inline-flex;
@@ -89,13 +94,14 @@
   padding: 10px 24px;
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-card);
   max-height: 50vh;
   overflow-y: auto;
 }
 
 #path-links.open {
   display: flex;
+  clip-path: inset(0 -20px -20px -20px);
 }
 
 .path-link-chip {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "BiteGuard",
-  "version": "0.1.0",
+  "name": "Reef - Screen Time & Website Blocker",
+  "version": "1.0.0",
   "description": "Block websites after a time limit.",
 
   "background": {
@@ -10,18 +10,18 @@
   },
 
   "icons": {
-    "16": "resources/icons/biteguard-icon-blue-square-16px.png",
-    "48": "resources/icons/biteguard-icon-blue-square-48px.png",
-    "128": "resources/icons/biteguard-icon-blue-square-128px.png"
+    "16": "resources/icons/reef-icon-square-16px.png",
+    "48": "resources/icons/reef-icon-square-48px.png",
+    "128": "resources/icons/reef-icon-square-128px.png"
   },
 
   "action": {
     "default_popup": "src/pages/popup/popup.html",
-    "default_title": "BiteGuard",
+    "default_title": "Reef",
     "default_icon": {
-      "16": "resources/icons/biteguard-icon-blue-square-16px.png",
-      "48": "resources/icons/biteguard-icon-blue-square-48px.png",
-      "128": "resources/icons/biteguard-icon-blue-square-128px.png"
+      "16": "resources/icons/reef-icon-square-16px.png",
+      "48": "resources/icons/reef-icon-square-48px.png",
+      "128": "resources/icons/reef-icon-square-128px.png"
     }
   },
 

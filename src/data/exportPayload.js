@@ -16,7 +16,7 @@ export async function buildBiteGuardPayload() {
   const prefs = {};
   for (const k of EXPORT_PREF_KEYS) if (stored[k] !== undefined) prefs[k] = stored[k];
   return {
-    format: 'biteguard',
+    format: 'reef',
     version: 3,
     exportedAt: new Date().toISOString(),
     rules: stored.rules ?? [],
@@ -35,7 +35,7 @@ export async function downloadBiteGuardExport() {
   const payload = await buildBiteGuardPayload();
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  const filename = `biteguard-export-${new Date().toISOString().slice(0, 10)}.json`;
+  const filename = `reef-export-${new Date().toISOString().slice(0, 10)}.json`;
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;

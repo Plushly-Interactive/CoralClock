@@ -30,7 +30,6 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
   gap: 24px;
 }
 
@@ -39,7 +38,7 @@
   border: 1px solid var(--color-border);
   border-radius: 6px;
   flex-shrink: 0;
-  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
 #add-card-toggle .chart-heading,
@@ -54,7 +53,7 @@
   user-select: none;
 }
 
-#add-card-toggle:hover { background: var(--color-hover-bg); }
+#add-card-toggle:hover { background: var(--color-hover-bg); border-radius: 6px 6px 0 0; }
 
 #add-toggle-right {
   display: flex;
@@ -150,7 +149,6 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 #list-header {
