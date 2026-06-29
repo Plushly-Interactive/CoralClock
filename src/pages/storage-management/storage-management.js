@@ -4,10 +4,12 @@ import { intervalStats, appendIntervals, allIntervals, deleteByIds, deleteByDoma
 import { invalidate, getSitesByDay, getSubpagesByDay, getSitesByHour, getSubpagesByHour } from '../../data/intervalAggregates.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
 import { downloadBiteGuardExport } from '../../data/exportPayload.js';
+import { validateBgFile, parseBgImport, bgDayConflicts, bgRuleConflicts, bgPrefsConflicts, applyBgImport } from '../../data/importBuckets.js';
+import { matchLabel, RULE_MULTIPLIERS } from '../../shared/rules.js';
 import { parseTtStats, applyTtImport, downloadTt, TT_VERSION } from '../../data/ttImport.js';
 import { downloadDailyCsv, downloadHourlyCsv, downloadIntervalsCsv } from '../../data/csvExport.js';
 import { SITES_DAY_KEY } from '../../background/siteTracking.js';
-import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
+import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../../shared/prefKeys.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervalStats } from '../../shared/tourMockData.js';
 
@@ -30,11 +32,11 @@ document.querySelector('#export-btn').addEventListener('click', exportAll);
 // see it.
 navButton(document.querySelector('#legacy-storage-btn'), '../legacy-storage-management/legacy-storage-management.html');
 
-// Import/Export modal (BiteGuard format). Export writes a complete backup. Import
-// merges the file's interval rows; a conflict is a TEMPORAL overlap between an
-// imported row and an existing one (measured between the two sources — active/audio
-// rows overlap within a source by design). On overlap the user resolves keep/replace.
-// Buckets/rules restore via the bucket storage page, not here.
+// Import/Export modal. Export writes a complete backup. A BiteGuard import is a full
+// restore: browsing days (legacy buckets), rules, settings and interval rows. Each
+// category that differs from current data prompts a keep/replace in sequence; the
+// restore is applied only after the last prompt, so Cancel writes nothing. The Time
+// Tracker path restores only the bucket tier, by day.
 const ioOverlay = document.querySelector('#io-modal-overlay');
 const ioColumns = document.querySelector('#io-columns');
 const ioError = document.querySelector('#io-error');
@@ -44,7 +46,7 @@ const conflictList = document.querySelector('#io-conflict-list');
 const conflictLabel = document.querySelector('#io-conflict-label');
 const conflictDesc = document.querySelector('#io-conflict-desc');
 const conflictCount = document.querySelector('#io-conflict-count');
-let pendingImport = null;  // interval: {kind,imported,currentRows,currentUnion,importUnion} | tt: {kind,data,sitesByDay,conflicts}
+let pendingImport = null;  // bg: {kind,parsed,intervals,intervalCtx,dayConflicts,ruleConflicts,steps,index,decisions} | tt: {kind,data,sitesByDay,conflicts}
 
 function showIoError(msg) { ioError.textContent = msg; ioError.removeAttribute('hidden'); ioError.style.display = ''; }
 function hideConflicts() { conflictView.style.display = 'none'; ioColumns.style.display = ''; pendingImport = null; }
@@ -101,14 +103,52 @@ function rowLabel(r) {
   return `${localDayKey(r.from)}  ${clock(r.from)}–${clock(r.to)}  ${where}  (${r.kind})`;
 }
 
-async function finishImport(rowsToInsert, idsToDelete) {
+// One-line summary of a rule's scope, limit and mode (e.g. "*.reddit.com 30m/day active").
+function ruleSummary(r) {
+  const ms = r.limit * (RULE_MULTIPLIERS[r.limitUnit] ?? 60000);
+  const limitStr = ms === 0 ? 'never' : `${formatMs(ms)}/${r.period}`;
+  return `${matchLabel(r)} ${limitStr} ${r.mode}${r.enabled ? '' : ' (off)'}`;
+}
+
+// A conflicting site's current vs file rules, side by side. Em-spaces (which don't
+// collapse in HTML, unlike runs of plain spaces) give the comparison room to breathe.
+function ruleDiffLabel(domain, currentRules, importRules) {
+  const onDomain = rs => rs.filter(r => r.target === domain).map(ruleSummary).join(', ');
+  const SEP = '  ';
+  return `${domain}:${SEP}yours ${onDomain(currentRules)}${SEP}→${SEP}file ${onDomain(importRules)}`;
+}
+
+// A setting's value, formatted for display (idle is stored in seconds, week start
+// as a lowercase day name).
+function prefValueLabel(key, val) {
+  if (val === undefined || val === null) return 'unset';
+  if (key === PREF_IDLE_THRESHOLD_SEC) return `${Math.round(val / 60)} min`;
+  if (key === PREF_WEEK_START) return val.charAt(0).toUpperCase() + val.slice(1);
+  return String(val);
+}
+
+// A conflicting setting's current vs file value, side by side.
+function prefDiffLabel(key, currentPrefs, importPrefs) {
+  const SEP = '  ';
+  const name = PREF_LABELS[key] ?? key;
+  return `${name}:${SEP}yours ${prefValueLabel(key, currentPrefs[key])}${SEP}→${SEP}file ${prefValueLabel(key, importPrefs[key])}`;
+}
+
+// Apply the interval-overlap choice. 'replace' drops current rows that overlap then
+// inserts all file rows; 'keep' (or no overlap) inserts only file rows clear of
+// current. Returns the number of rows inserted.
+async function applyIntervals(intervals, ctx, choice) {
+  let rowsToInsert = intervals, idsToDelete = null;
+  if (choice === 'replace') {
+    idsToDelete = splitByOverlap(ctx.currentRows, ctx.importUnion).overlapping.map(r => r.id);
+  } else if (choice === 'keep') {
+    rowsToInsert = splitByOverlap(intervals, ctx.currentUnion).free;
+  }
   if (idsToDelete?.length) await deleteByIds(idsToDelete);
   const rows = rowsToInsert.map(({ id: _id, ...r }) => r);  // strip ids; ++id reassigns
   if (rows.length) await appendIntervals(rows);
-  invalidate();
-  closeIo();
-  await loadStats();
-  showNotification(`Imported ${rows.length.toLocaleString()} rows`);
+  if (idsToDelete?.length || rows.length) invalidate();
+  return rows.length;
 }
 
 const CONFLICT_LIST_CAP = 500;
@@ -137,25 +177,104 @@ function showConflicts({ labels, unit, title, desc }) {
   conflictView.style.marginTop = '0';  // columns above are hidden here, so no separator needed
 }
 
-// BiteGuard backup -> interval log, by temporal overlap (between sources).
+const PREF_LABELS = {
+  [PREF_CLOCK_FORMAT]: 'clock format',
+  [PREF_IDLE_THRESHOLD_SEC]: 'idle threshold',
+  [PREF_WEEK_START]: 'week start',
+};
+
+// BiteGuard backup -> full restore. Each category (browsing days, rules, settings,
+// interval rows) is compared against current data; categories that differ prompt a
+// keep/replace in sequence, then everything applies at once. Cancel writes nothing.
 async function importBiteGuard(json) {
-  const imported = json.intervals.filter(r => typeof r.from === 'number' && typeof r.to === 'number');
-  if (imported.length === 0) { showIoError('The file has no browsing data to import.'); return; }
+  const err = validateBgFile(json);
+  if (err) { showIoError(err); return; }
+  let parsed;
+  try { parsed = parseBgImport(json); }
+  catch { showIoError("The file's tracking data is corrupted and could not be read."); return; }
 
-  const currentRows = await allIntervals();
-  if (currentRows.length === 0) { await finishImport(imported, null); return; }
+  const intervals = Array.isArray(json.intervals)
+    ? json.intervals.filter(r => typeof r.from === 'number' && typeof r.to === 'number')
+    : [];
 
-  const currentUnion = mergeRanges(currentRows);
-  const importUnion = mergeRanges(imported);
-  const overlapping = splitByOverlap(currentRows, importUnion).overlapping;
-  if (overlapping.length === 0) { await finishImport(imported, null); return; }  // disjoint in time
+  const hasBuckets = Object.keys(parsed.importByDay).length > 0;
+  if (!hasBuckets && !parsed.importRules?.length && !parsed.importPrefs && intervals.length === 0) {
+    showIoError('The file has no data to import.');
+    return;
+  }
 
-  pendingImport = { kind: 'interval', imported, currentRows, currentUnion, importUnion };
-  const labels = [...overlapping].sort((a, b) => a.from - b.from).map(rowLabel);
-  showConflicts({
-    labels, unit: 'row', title: 'Overlapping data',
-    desc: "These current rows overlap the file's rows in time. Keep current discards the overlapping rows from the file; Replace drops the rows listed below and takes the file's. Rows that don't overlap are always kept.",
+  const stored = await chrome.storage.local.get(['rules', PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START]);
+  const currentRules = stored.rules ?? [];
+  const dayConflicts = await bgDayConflicts(parsed.importByDay);
+  const ruleConflicts = bgRuleConflicts(currentRules, parsed.importRules);
+  const prefConflicts = bgPrefsConflicts(parsed.importPrefs, stored);
+
+  let intervalCtx = null, intervalOverlap = [];
+  if (intervals.length) {
+    const currentRows = await allIntervals();
+    intervalCtx = { currentRows, currentUnion: mergeRanges(currentRows), importUnion: mergeRanges(intervals) };
+    intervalOverlap = currentRows.length ? splitByOverlap(currentRows, intervalCtx.importUnion).overlapping : [];
+  }
+
+  const steps = [];
+  if (dayConflicts.length) steps.push({
+    cat: 'days', labels: dayConflicts, unit: 'day', title: 'Conflicting days',
+    desc: 'These days already have legacy data and also appear in the file. Keep current ignores those days from the file; Replace overwrites them. Days only in the file are always added.',
   });
+  if (ruleConflicts.length) steps.push({
+    cat: 'rules', unit: 'site', title: 'Conflicting rules',
+    labels: ruleConflicts.map(dom => ruleDiffLabel(dom, currentRules, parsed.importRules)),
+    desc: "These sites already have a rule that differs from the file (scope, limit or mode). Keep current keeps your rules for these sites; Replace takes the file's. Rules for other sites are merged in either way.",
+  });
+  if (prefConflicts.length) steps.push({
+    cat: 'prefs', labels: prefConflicts.map(k => prefDiffLabel(k, stored, parsed.importPrefs)), unit: 'setting', title: 'Different settings',
+    desc: "These settings differ between your current values and the file. Keep current keeps yours; Replace takes the file's. Settings you have not set yet are applied either way.",
+  });
+  if (intervalOverlap.length) steps.push({
+    cat: 'intervals', labels: [...intervalOverlap].sort((a, b) => a.from - b.from).map(rowLabel), unit: 'row', title: 'Overlapping data',
+    desc: "These current rows overlap the file's rows in time. Keep current discards the overlapping rows from the file; Replace drops the rows listed and takes the file's. Rows that don't overlap are always kept.",
+  });
+
+  pendingImport = { kind: 'bg', parsed, intervals, intervalCtx, dayConflicts, ruleConflicts, steps, index: 0, decisions: {} };
+  if (steps.length === 0) { await finalizeBg(); return; }
+  showBgStep();
+}
+
+function showBgStep() {
+  const p = pendingImport;
+  const step = p.steps[p.index];
+  const prefix = p.steps.length > 1 ? `Step ${p.index + 1}/${p.steps.length}: ` : '';
+  showConflicts({ labels: step.labels, unit: step.unit, title: prefix + step.title, desc: step.desc });
+}
+
+// Record the current step's choice and advance; once every conflicting category is
+// decided, apply the whole restore in one pass.
+async function bgAdvance(choice) {
+  const p = pendingImport;
+  p.decisions[p.steps[p.index].cat] = choice;
+  p.index++;
+  if (p.index < p.steps.length) { showBgStep(); return; }
+  await finalizeBg();
+}
+
+async function finalizeBg() {
+  const p = pendingImport;
+  pendingImport = null;
+  const d = p.decisions;
+  const summary = await applyBgImport(p.parsed, {
+    daysToReplace: d.days === 'replace' ? new Set(p.dayConflicts) : new Set(),
+    replaceRuleDomains: d.rules === 'replace' ? new Set(p.ruleConflicts) : new Set(),
+    overwritePrefs: d.prefs === 'replace',
+  });
+  const rowCount = p.intervals.length ? await applyIntervals(p.intervals, p.intervalCtx, d.intervals) : 0;
+  closeIo();
+  await loadStats();
+  const parts = [];
+  if (summary.days) parts.push(`${summary.days} day(s)`);
+  if (summary.rules) parts.push(`${summary.rules} rule(s)`);
+  if (summary.prefs) parts.push('settings');
+  if (rowCount) parts.push(`${rowCount.toLocaleString()} row(s)`);
+  showNotification(parts.length ? `Imported ${parts.join(', ')}` : 'Nothing new to import');
 }
 
 // Time Tracker export -> scalar bucket tier (separate from the interval log).
@@ -187,7 +306,7 @@ ioInput.addEventListener('change', async () => {
   let json;
   try { json = JSON.parse(await file.text()); }
   catch { showIoError("This file isn't valid JSON. It may be truncated or corrupted."); return; }
-  if (json.format === 'biteguard' && Array.isArray(json.intervals)) { await importBiteGuard(json); return; }
+  if (json.format === 'biteguard') { await importBiteGuard(json); return; }
   if (Array.isArray(json.__stat__)) { await importTt(json); return; }
   showIoError('Unrecognized file. Expected a BiteGuard export or a Time Tracker export.');
 });
@@ -198,27 +317,19 @@ document.querySelector('#io-conflict-cancel').addEventListener('click', () => {
 });
 document.querySelector('#io-conflict-keep').addEventListener('click', async () => {
   const p = pendingImport;
+  if (p.kind === 'bg') { await bgAdvance('keep'); return; }
   hideConflicts();
-  if (p.kind === 'tt') {
-    await applyTtImport(p.data, p.sitesByDay, new Set());  // take only non-conflicting days
-    closeIo();
-    await loadStats();
-    return;
-  }
-  const { free } = splitByOverlap(p.imported, p.currentUnion);  // add only imported rows clear of current
-  await finishImport(free, null);
+  await applyTtImport(p.data, p.sitesByDay, new Set());  // take only non-conflicting days
+  closeIo();
+  await loadStats();
 });
 document.querySelector('#io-conflict-replace').addEventListener('click', async () => {
   const p = pendingImport;
+  if (p.kind === 'bg') { await bgAdvance('replace'); return; }
   hideConflicts();
-  if (p.kind === 'tt') {
-    await applyTtImport(p.data, p.sitesByDay, new Set(p.conflicts));  // overwrite conflicting days
-    closeIo();
-    await loadStats();
-    return;
-  }
-  const { overlapping } = splitByOverlap(p.currentRows, p.importUnion);  // drop current rows that overlap
-  await finishImport(p.imported, overlapping.map(r => r.id));
+  await applyTtImport(p.data, p.sitesByDay, new Set(p.conflicts));  // overwrite conflicting days
+  closeIo();
+  await loadStats();
 });
 
 // --- Targeted deletion (UI cloned from the bucket storage page; deletes interval rows) ---
