@@ -1,12 +1,6 @@
 import { appendInterval, touch, SESSION_GAP_MS } from '../data/intervalLog.js';
 import { dbg } from './trackingDebug.js';
 
-// The live capture engine: the range state machine, snapshot/recover, and
-// per-path idle clipping. flushToStorage coalesces the pending active/audio
-// ranges into interval-DB rows (not scalar ms cells); idle is appended plainly
-// and overlap is never stored. Visits are NOT stored, they're derived from the
-// active ranges at read time.
-
 const SNAPSHOT_MAX_GAP_MS = 5 * 60 * 1000;
 const KEY_SEP = '\n';   // engine keys are `${domain}\n${path}` (see intervalTracker)
 
@@ -18,9 +12,7 @@ function splitKey(key) {
 export function createTrackingModule({ urlToKey, snapshotStorageKey, recoverLegacy }) {
   const tracker = createRangeTracker();
   let _recovered = false;
-  // Live-row state: `${key}\0${kind}` → { rowId, lastTo }. Each continuous
-  // session maps to one DB row; flush extends it. Carried in the snapshot so a
-  // session keeps its row across SW restarts (MV3 suspends ~every 30s).
+  // `${key}\0${kind}` → { rowId, lastTo }; sessions persist across SW restarts via snapshot.
   const openRows = new Map();
   const parseSnapshot = recoverLegacy ?? (snap => ({
     activeKeys: snap.activeKeys ?? [],
@@ -29,32 +21,37 @@ export function createTrackingModule({ urlToKey, snapshotStorageKey, recoverLega
 
   async function init() {
     const windows = await chrome.windows.getAll({ populate: true });
+    dbg('iv-init: windows=', windows.length);
     for (const w of windows) {
-      if (w.state === 'minimized') { tracker.markMinimized(w.id); continue; }
+      if (w.state === 'minimized') { dbg('iv-init: window', w.id, 'minimized, skip'); tracker.markMinimized(w.id); continue; }
       const tab = w.tabs?.find(t => t.active);
       const key = urlToKey(tab?.url);
+      dbg('iv-init: window', w.id, 'url=', tab?.url, '→ key=', key);
       if (key) tracker.addWindow(w.id, key);
     }
     const tabs = await chrome.tabs.query({ audible: true });
     for (const tab of tabs) {
       if (tab.mutedInfo?.muted) continue;
       const key = urlToKey(tab.url);
+      dbg('iv-init: audible tab', tab.id, 'url=', tab.url, '→ key=', key);
       if (key) tracker.addAudibleTab(tab.id, key, false);
     }
   }
 
   async function reconcile() {
+    dbg('iv-reconcile: start tracked-windows=', tracker.getTrackedWindowIds().length, 'audible-tabs=', tracker.getTrackedAudibleTabIds().length);
     const windows = await chrome.windows.getAll();
     const liveById = new Map(windows.map(w => [w.id, w]));
     for (const id of tracker.getTrackedWindowIds()) {
       const w = liveById.get(id);
-      if (!w || w.state === 'minimized') tracker.removeWindow(id, w?.state === 'minimized');
+      if (!w || w.state === 'minimized') { dbg('iv-reconcile: drop window', id, w ? 'minimized' : 'gone'); tracker.removeWindow(id, w?.state === 'minimized'); }
     }
     for (const w of windows) {
       if (w.state === 'minimized') continue;
       if (tracker.isWindowTracked(w.id)) continue;
       const [tab] = await chrome.tabs.query({ windowId: w.id, active: true });
       const key = urlToKey(tab?.url);
+      dbg('iv-reconcile: add window', w.id, 'url=', tab?.url, '→ key=', key);
       if (key) tracker.addWindow(w.id, key);
     }
     const audibleTabs = await chrome.tabs.query({ audible: true });
@@ -62,11 +59,12 @@ export function createTrackingModule({ urlToKey, snapshotStorageKey, recoverLega
       audibleTabs.filter(t => !t.mutedInfo?.muted).map(t => t.id)
     );
     for (const tabId of tracker.getTrackedAudibleTabIds()) {
-      if (!liveAudibleIds.has(tabId)) tracker.removeAudibleTab(tabId);
+      if (!liveAudibleIds.has(tabId)) { dbg('iv-reconcile: drop audible tab', tabId); tracker.removeAudibleTab(tabId); }
     }
     for (const tab of audibleTabs) {
       if (tab.mutedInfo?.muted) continue;
       const key = urlToKey(tab.url);
+      dbg('iv-reconcile: add audible tab', tab.id, 'url=', tab.url, '→ key=', key);
       if (key) tracker.addAudibleTab(tab.id, key, false);
     }
   }
@@ -96,8 +94,7 @@ export function createTrackingModule({ urlToKey, snapshotStorageKey, recoverLega
       return;
     }
     dbg('iv-recover', snapshotStorageKey, 'gap', now - snap.at, 'ms', 'openRows', snap.openRows?.length ?? 0, JSON.stringify(snap.openRows));
-    // Restore live-row continuation so the gap credited below extends the same
-    // rows instead of starting new ones.
+    // Restore open-row state so the gap credited below extends existing rows.
     if (Array.isArray(snap.openRows)) for (const [mk, v] of snap.openRows) openRows.set(mk, v);
     const endAt = Math.min(clipAt ?? now, now);
     const activeEndAt = idleSince !== null ? Math.min(endAt, idleSince) : endAt;
@@ -118,15 +115,6 @@ export function createTrackingModule({ urlToKey, snapshotStorageKey, recoverLega
     }
   }
 
-  // flushToStorage writes the pending ranges to the interval log as interval
-  // rows instead of accumulating scalar cells. Visits are NOT stored — they're
-  // derived from active ranges at read time, so the engine's visit counter is
-  // simply ignored here.
-  // Everything DB happens here. Snapshot the pending ranges, clear immediately
-  // (so events during the awaits below accumulate into the next flush), then
-  // coalesce active/audio/idle into live rows (extend the open row when a range
-  // abuts it within SESSION_GAP_MS, else start a new row). overlap is never
-  // stored (= active ∩ audio, derivable).
   async function flushToStorage(now = Date.now()) {
     tracker.flushAllElapsed(now);
     const active = new Map(tracker.pending.active);
@@ -140,10 +128,7 @@ export function createTrackingModule({ urlToKey, snapshotStorageKey, recoverLega
         const { domain, path } = splitKey(key);
         const mk = `${key}\0${kind}`;
         let or = openRows.get(mk);
-        // Ranges can arrive out of order (recover credits [snap.at, …] after
-        // init/flush push later segments), so sort, and only extend `to`
-        // FORWARD — never touch a row back to an earlier end. A sub-SESSION_GAP_MS
-        // gap (flush/SW seam) still extends the row; a larger gap starts a new one.
+        // Out-of-order ranges possible (recovery pushes [snap.at,…] after flush segments); sort and extend `to` forward only.
         const sorted = [...ranges].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
         dbg('iv-coalesce', kind, mk, 'or', or ? `row${or.rowId}@${or.lastTo}` : 'NONE', 'ranges', JSON.stringify(sorted));
         for (const [from, to] of sorted) {
@@ -168,9 +153,7 @@ export function createTrackingModule({ urlToKey, snapshotStorageKey, recoverLega
             or = id == null ? undefined : { rowId: id, lastTo: to };
           }
         }
-        // Always keep the open row (a sub-SESSION_GAP_MS resume must be able to
-        // extend it even if the key briefly left the active/audible set at this
-        // flush boundary). Stale rows are pruned below.
+        // Keep the open row — a sub-SESSION_GAP_MS resume needs to extend it even if key left the active set.
         if (or) openRows.set(mk, or);
         else openRows.delete(mk);
       }
@@ -180,9 +163,7 @@ export function createTrackingModule({ urlToKey, snapshotStorageKey, recoverLega
     await coalesce(audio, 'audio');
     await coalesce(idle, 'idle');
 
-    // Prune open rows that can no longer be extended (no presence within
-    // SESSION_GAP_MS) — finalizes ended sessions and bounds the map. Runs after
-    // coalescing, so a row extended this flush (lastTo ≈ now) survives.
+    // Prune rows past SESSION_GAP_MS — runs after coalescing so fresh rows survive.
     for (const [mk, v] of openRows) {
       if (v.lastTo < now - SESSION_GAP_MS) openRows.delete(mk);
     }

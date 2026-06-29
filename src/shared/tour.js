@@ -73,7 +73,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
   const confirm = document.createElement('div');
   confirm.id = 'tour-confirm';
   confirm.className = 'modal-dialog';
-  confirm.hidden = true;
+  confirm.style.display = 'none';
   confirm.innerHTML = `
     <div id="tour-confirm-body">Are you sure you want to interrupt the guided tour?</div>
     <div id="tour-confirm-actions">
@@ -381,8 +381,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
 
   prevBtn.addEventListener('click', () => showStep(currentIndex - 1));
   nextBtn.addEventListener('click', () => showStep(currentIndex + 1));
-  closeBtn.addEventListener('click', () => { confirm.hidden = false; });
-  confirmNo.addEventListener('click', () => { confirm.hidden = true; });
+  closeBtn.addEventListener('click', () => { confirm.style.display = ''; });
+  confirmNo.addEventListener('click', () => { confirm.style.display = 'none'; });
   confirmYes.addEventListener('click', () => finish(true));
   window.addEventListener('scroll', reposition, true);
   window.addEventListener('resize', reposition);

@@ -1,7 +1,4 @@
-// Debug logging is off by default and gated on a `_debug` flag in
-// chrome.storage.local. To enable in the field without a rebuild:
-//   chrome.storage.local.set({ _debug: true })  // then reload the extension
-// Logs include full tab URLs, so keep it off unless actively debugging.
+// Off by default (logs contain URLs). Enable: chrome.storage.local.set({ _debug: true }) then reload.
 let _debug = false;
 
 // Read the flag once at startup. Called from bootstrap before listeners run.
@@ -10,14 +7,12 @@ export async function initDebug() {
   _debug = flag;
 }
 
-// Whether debug logging is on. Use at call sites to skip building expensive
-// log arguments (e.g. JSON.stringify) when logging is off.
+// Check before building expensive log args (e.g. JSON.stringify) to skip them when off.
 export function isDebug() {
   return _debug;
 }
 
-// Debug logger with a local YYYY-MM-DD HH:MM:SS.mmm timestamp prefix, so the
-// [BG-DBG] trace can be correlated against the day/hour buckets in stored data.
+// Timestamp prefix lets [BG-DBG] traces correlate with stored day/hour data.
 export function dbg(...args) {
   if (!_debug) return;
   const d = new Date();
