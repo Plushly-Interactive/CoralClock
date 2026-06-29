@@ -217,15 +217,22 @@ round-trips both tiers natively.)
 
 ## Follow-ups (deferred, post-cutover)
 
-- **Unify the merged reader's two access paths.** ✅ Done. `mergeDataSources` now
-  calls two plain page-side functions: `intervalFetch` (IndexedDB) and `bucketFetch`
-  (`src/data/bucketProvider.js`, reading `chrome.storage.local` directly), instead of
-  message-reading buckets from the service worker. `bucketProvider` mirrors the
-  background bucket handlers minus the live today-merge branch, which was moot here
-  (nothing writes buckets in the worker post-cutover, and the merger never serves
-  today from buckets). The SW message API stays for its other consumers
-  (storage-management, CSV/TT export); only the merged reader's dependence on it is
-  removed.
+- **Unify the merged reader's two access paths.** ✅ Done, and went further: the
+  page↔SW data message API was removed entirely. `mergeDataSources` now calls two
+  plain page-side functions: `intervalFetch` (IndexedDB) and `bucketFetch`
+  (`src/data/bucketProvider.js`, reading `chrome.storage.local` directly).
+  `bucketProvider` mirrors the old background bucket handlers, which post-cutover
+  were already plain `chrome.storage.local` reads (the live scalar snapshot was
+  dropped at cutover) — so this is a relocation of identical reads, not a behavioral
+  change. With the merged reader off
+  the message API, no consumer was left using it — storage-management and CSV/TT
+  export already read interval aggregates / storage directly — so the six
+  `MSG_GET_*` handlers, the in-memory bucket caches, and `invalidateSitesCache` (plus
+  every `MSG_INVALIDATE_SITES_CACHE` sender) were deleted. `background.js` no longer
+  registers `chrome.runtime.onMessage`; the only remaining event surfaces are the
+  chrome.* lifecycle listeners that capture and enforce. The six `MSG_GET_*`
+  constants survive in `msgTypes.js` as the dispatch tags shared by the provider/merge
+  layer (no longer actual runtime messages).
 
 ## Out of scope
 

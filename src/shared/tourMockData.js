@@ -306,12 +306,15 @@ export function clearMockModeCache() {
   intervalFixtureCache = null;
 }
 
+// Used only on mergeDataSources' mock path: returns the guided-tour fixture for the
+// message shape. Real bucket reads go through bucketProvider now; there is no
+// service-worker data API to fall back to.
 export async function fetchTrackingData(msg) {
   if (await isMockMode()) {
     const answer = mockAnswer(msg);
     if (answer !== null) return answer;
   }
-  return chrome.runtime.sendMessage(msg);
+  return null;
 }
 
 export function mockScanResults(scopes, thresholdMs) {

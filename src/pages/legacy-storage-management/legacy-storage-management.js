@@ -3,7 +3,6 @@ import { applySiteHourlyRangeDeletion, applySiteDailyReductions, applySubpageHou
 import { formatMs, formatHourLabel, formatSpan, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { showNotification, formatBytes, escapeHtml, attachInputClear, navButton } from '../../shared/utils.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
-import { MSG_INVALIDATE_SITES_CACHE } from '../../shared/msgTypes.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { downloadBiteGuardExport } from '../../data/exportPayload.js';
 import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
@@ -157,7 +156,6 @@ deleteAllBtn.addEventListener('click', async () => {
   deleteSiteAllTime(subpagesByHour, siteId);
 
   await chrome.storage.local.set({ sitesByDay, sitesByHour, subpagesByDay, subpagesByHour });
-  try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
 
   const afterBytes = await chrome.storage.local.getBytesInUse(null);
   showNotification(`All data for ${siteId} deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
@@ -211,7 +209,6 @@ document.querySelector('#delete-range-btn').addEventListener('click', async () =
   applySubpageDailyReductions(subpagesByDay, subpageRed);
 
   await chrome.storage.local.set({ sitesByDay, sitesByHour, subpagesByDay, subpagesByHour });
-  try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
 
   const afterBytes = await chrome.storage.local.getBytesInUse(null);
   showNotification(`Range deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
@@ -340,7 +337,6 @@ document.querySelector('#drop-hourly-btn').addEventListener('click', async () =>
     for (const k of Object.keys(subpagesByHour)) if (k.slice(0, 10) < cutoffKey) delete subpagesByHour[k];
 
   await chrome.storage.local.set({ sitesByHour, subpagesByHour });
-  try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
 
   const afterBytes = await chrome.storage.local.getBytesInUse(null);
   showNotification(`Hourly data older than ${days} day${days !== 1 ? 's' : ''} dropped — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
@@ -468,7 +464,6 @@ document.querySelector('#repair-all-btn').addEventListener('click', async () => 
 
   applyRepairs(stores, cachedIssues);
   await chrome.storage.local.set({ sitesByDay: stores.sitesByDay, sitesByHour: stores.sitesByHour, subpagesByDay: stores.subpagesByDay, subpagesByHour: stores.subpagesByHour });
-  try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
 
   repairOverlay.style.display = 'none';
   const n = cachedIssues.length;
@@ -766,7 +761,6 @@ async function deleteSelected() {
   }
 
   await chrome.storage.local.set(updated);
-  try { chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE }); } catch (_) {}
 
   const afterBytes = await chrome.storage.local.getBytesInUse(null);
 

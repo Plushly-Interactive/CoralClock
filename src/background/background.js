@@ -3,10 +3,6 @@ import { weekDow } from '../shared/weekStart.js';
 import { ensureStorageVersion } from '../data/migrations.js';
 import { PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
 import { siteIdFromUrl } from './siteResolution.js';
-// Scalar buckets are frozen legacy: no capture functions are imported, only the
-// storage keys the read message API still serves them under.
-import { SITES_DAY_KEY, SITES_HOUR_KEY, WALLCLOCK_HOUR_KEY } from './siteTracking.js';
-import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from './subpageTracking.js';
 import { computeOverage, publishOverage } from './enforcement.js';
 import { usageSince } from '../data/intervalAggregates.js';
 import { dbg, initDebug } from './trackingUtils.js';
@@ -16,12 +12,6 @@ import { updateBadge } from './badge.js';
 // lighter per-navigation drain via flushToStorage.
 import { flushNow } from './intervalTracker.js';
 import { flushToStorage as drainIntervals } from './intervalPageTracking.js';
-import {
-  MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
-  MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
-  MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
-  MSG_INVALIDATE_SITES_CACHE,
-} from '../shared/msgTypes.js';
 
 // Logged on every service-worker (re)start. A burst of these is the signal that
 // the worker is churning (MV3 idle-suspend, crash-on-load, or dev reload), which
@@ -29,13 +19,6 @@ import {
 // on _debug): it runs at module load before initDebug() reads the flag, and it
 // carries no URL/sensitive data — just a timestamp.
 console.log(`[BG-DBG ${new Date().toISOString()}] SERVICE WORKER STARTED`);
-
-// In-memory read caches for the frozen scalar buckets, served by the message API.
-let cachedByDay = null;
-let cachedByHour = null;
-let cachedWallClock = null;
-let cachedSubpagesByDay = null;
-let cachedSubpagesByHour = null;
 
 function approachWindowKey(period, now) {
   if (period === 'hour') return localHourKey(now);
@@ -125,16 +108,6 @@ async function notifyApproaching(approaching, now) {
   if (changed) persistNotifyState(state);
 }
 
-// Drop the in-memory site caches after storage is rewritten (flush), so
-// the next query re-reads fresh data.
-function invalidateSitesCache() {
-  cachedByDay = null;
-  cachedByHour = null;
-  cachedWallClock = null;
-  cachedSubpagesByDay = null;
-  cachedSubpagesByHour = null;
-}
-
 chrome.alarms.get('flush').then(existing => {
   if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
 });
@@ -164,155 +137,6 @@ async function bootstrap() {
     dbg('bootstrap: FAILED', e?.message ?? e, e?.stack);
     throw e;
   }
-}
-
-// --- Messages ---
-
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg.type === MSG_GET_SITES_BY_DAY) {
-    getByDay().then(sendResponse);
-    return true;
-  }
-  if (msg.type === MSG_GET_SITES_BY_HOUR_TODAY) {
-    getByHourToday().then(sendResponse);
-    return true;
-  }
-  if (msg.type === MSG_GET_AVG_PER_CLOCK_HOUR) {
-    getAvgPerClockHour(msg.siteIds, msg.range, msg.dayKeys).then(sendResponse);
-    return true;
-  }
-  if (msg.type === MSG_GET_SITES_BY_HOUR_FOR_DAY) {
-    getByHourForDay(msg.dayKey).then(sendResponse);
-    return true;
-  }
-  if (msg.type === MSG_GET_SUBPAGES_BY_DAY) {
-    getSubpagesByDay().then(sendResponse);
-    return true;
-  }
-  if (msg.type === MSG_GET_SUBPAGES_BY_HOUR) {
-    getSubpagesByHour().then(sendResponse);
-    return true;
-  }
-  if (msg.type === MSG_INVALIDATE_SITES_CACHE) {
-    invalidateSitesCache();
-    sendResponse(true);
-    return true;
-  }
-});
-
-async function getByDay() {
-  if (!cachedByDay) {
-    const { [SITES_DAY_KEY]: sitesByDay = {} } = await chrome.storage.local.get(SITES_DAY_KEY);
-    cachedByDay = sitesByDay;
-  }
-  return cachedByDay;
-}
-
-async function getSubpagesByDay() {
-  if (!cachedSubpagesByDay) {
-    const { [SUBPAGES_DAY_KEY]: subpagesByDay = {} } = await chrome.storage.local.get(SUBPAGES_DAY_KEY);
-    cachedSubpagesByDay = subpagesByDay;
-  }
-  return cachedSubpagesByDay;
-}
-
-async function getSubpagesByHour() {
-  if (!cachedSubpagesByHour) {
-    const { [SUBPAGES_HOUR_KEY]: subpagesByHour = {} } = await chrome.storage.local.get(SUBPAGES_HOUR_KEY);
-    cachedSubpagesByHour = subpagesByHour;
-  }
-  return cachedSubpagesByHour;
-}
-
-async function getByHourToday() {
-  if (!cachedByHour) {
-    const { [SITES_HOUR_KEY]: sitesByHour = {} } = await chrome.storage.local.get(SITES_HOUR_KEY);
-    cachedByHour = sitesByHour;
-  }
-  const todayKey = localDayKey(Date.now());
-  const result = {};
-  for (let h = 0; h < 24; h++) {
-    const hourKey = `${todayKey}T${String(h).padStart(2, '0')}`;
-    if (cachedByHour[hourKey]) result[hourKey] = cachedByHour[hourKey];
-  }
-  return result;
-}
-
-async function getByHourForDay(dayKey) {
-  if (!cachedByHour) {
-    const { [SITES_HOUR_KEY]: sitesByHour = {} } = await chrome.storage.local.get(SITES_HOUR_KEY);
-    cachedByHour = sitesByHour;
-  }
-  const result = {};
-  for (let h = 0; h < 24; h++) {
-    const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
-    if (cachedByHour[hourKey]) result[hourKey] = cachedByHour[hourKey];
-  }
-  return result;
-}
-
-async function getAvgPerClockHour(siteIds, range, dayKeys = null) {
-  if (!cachedByHour) {
-    const { [SITES_HOUR_KEY]: sitesByHour = {} } = await chrome.storage.local.get(SITES_HOUR_KEY);
-    cachedByHour = sitesByHour;
-  }
-  if (!cachedWallClock) {
-    const { [WALLCLOCK_HOUR_KEY]: wallClockByHour = {} } = await chrome.storage.local.get(WALLCLOCK_HOUR_KEY);
-    cachedWallClock = wallClockByHour;
-  }
-
-  if (!dayKeys) {
-    const now = new Date();
-    const todayKey = localDayKey(now.getTime());
-
-    if (range === 'all') {
-      const hourKeys = Object.keys(cachedByHour);
-      if (hourKeys.length === 0) {
-        dayKeys = [];
-      } else {
-        const dates = hourKeys.map(k => k.slice(0, 10)).sort();
-        const earliestDateStr = dates[0];
-        const [y, m, d] = earliestDateStr.split('-').map(Number);
-        const earliestDate = new Date(y, m - 1, d);
-        dayKeys = [];
-        for (let date = new Date(earliestDate); ; date.setDate(date.getDate() + 1)) {
-          const k = localDayKey(date.getTime());
-          if (k === todayKey) break;
-          dayKeys.push(k);
-        }
-      }
-    } else {
-      const days = parseInt(range);
-      dayKeys = [];
-      for (let d = 1; d <= days; d++) {
-        const day = new Date(now);
-        day.setDate(day.getDate() - d);
-        dayKeys.push(localDayKey(day.getTime()));
-      }
-    }
-  }
-
-  const D = dayKeys.length;
-  if (D === 0) return new Array(24).fill(0);
-
-  const browsing = c => (c?.activeMs ?? 0) + (c?.audioMs ?? 0) - (c?.overlapMs ?? 0);
-  const sums = new Array(24).fill(0);
-  for (const dayKey of dayKeys) {
-    for (let h = 0; h < 24; h++) {
-      const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
-      const bucket = cachedByHour[hourKey];
-      if (!bucket) continue;
-      if (siteIds?.length) {
-        for (const id of siteIds) sums[h] += browsing(bucket[id]);
-      } else {
-        // Aggregate: deduplicated wall-clock browsing time (parallel windows on
-        // different sites counted once), falling back to the per-site browsing
-        // sum for hours that predate wall-clock tracking.
-        sums[h] += cachedWallClock[hourKey] ?? Object.values(bucket).reduce((s, c) => s + browsing(c), 0);
-      }
-    }
-  }
-  return sums.map(s => s / D);
 }
 
 // --- Tab / window events ---

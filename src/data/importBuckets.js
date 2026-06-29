@@ -1,6 +1,5 @@
 import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
 import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
-import { MSG_INVALIDATE_SITES_CACHE } from '../shared/msgTypes.js';
 import { blockKey, RULE_MULTIPLIERS } from '../shared/rules.js';
 import { EXPORT_PREF_KEYS } from './exportPayload.js';
 
@@ -226,7 +225,6 @@ export async function applyBgImport(parsed, { daysToReplace = new Set(), replace
   }
 
   await chrome.storage.local.set(update);
-  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE });
 
   return { days: daysToTake.size, rules: rulesApplied, prefs: prefsApplied || null };
 }

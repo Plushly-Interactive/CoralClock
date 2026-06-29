@@ -1,6 +1,5 @@
 import { SITES_DAY_KEY } from '../background/siteTracking.js';
 import { showNotification } from '../shared/utils.js';
-import { MSG_INVALIDATE_SITES_CACHE } from '../shared/msgTypes.js';
 
 // Time Tracker import logic, no modal/DOM wiring, callable from any page. TT data
 // is coarse daily aggregates, so it lands in the scalar bucket tier, not the
@@ -54,7 +53,7 @@ export function parseTtStats(json) {
 }
 
 // Merge an imported day-map into sitesByDay buckets. Days absent from current are
-// taken; days in `daysToReplace` overwrite. Writes storage, invalidates the cache.
+// taken; days in `daysToReplace` overwrite. Writes storage.
 export async function applyTtImport(importData, currentByDay, daysToReplace) {
   const daysToTake = new Set();
   for (const d of Object.keys(importData)) {
@@ -63,7 +62,6 @@ export async function applyTtImport(importData, currentByDay, daysToReplace) {
   for (const d of daysToTake) currentByDay[d] = importData[d];
 
   await chrome.storage.local.set({ [SITES_DAY_KEY]: currentByDay });
-  await chrome.runtime.sendMessage({ type: MSG_INVALIDATE_SITES_CACHE });
   showNotification(`Imported ${daysToTake.size} day(s)`);
   window.dispatchEvent(new CustomEvent(IMPORT_COMPLETE));
   return daysToTake.size;
