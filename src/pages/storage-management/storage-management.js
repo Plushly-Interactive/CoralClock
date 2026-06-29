@@ -8,7 +8,7 @@ import { validateBgFile, parseBgImport, bgDayConflicts, bgRuleConflicts, bgPrefs
 import { matchLabel, RULE_MULTIPLIERS } from '../../shared/rules.js';
 import { parseTtStats, applyTtImport, downloadTt, TT_VERSION } from '../../data/ttImport.js';
 import { downloadDailyCsv, downloadHourlyCsv, downloadIntervalsCsv } from '../../data/csvExport.js';
-import { SITES_DAY_KEY } from '../../background/siteTracking.js';
+import { SITES_DAY_KEY } from '../../data/bucketKeys.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../../shared/prefKeys.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervalStats } from '../../shared/tourMockData.js';
@@ -502,6 +502,8 @@ let _cbId = 0;
 let scanState = null;
 const scanOverlay = document.querySelector('#scan-overlay');
 const thresholdInput = document.querySelector('#threshold-input');
+const overlayDeleteBtn = document.querySelector('#overlay-delete-btn');
+const overlaySummary = document.querySelector('#overlay-summary');
 
 function syncScanBtn() {
   const num = Number(thresholdInput.value);
@@ -520,7 +522,7 @@ document.querySelector('#insig-scope-subpages').addEventListener('change', syncS
 document.querySelector('#scan-btn').addEventListener('click', runScan);
 document.querySelector('#overlay-close').addEventListener('click', () => { scanOverlay.style.display = 'none'; });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && scanOverlay.style.display !== 'none') scanOverlay.style.display = 'none'; });
-document.querySelector('#overlay-delete-btn').addEventListener('click', deleteSelectedInsignificant);
+overlayDeleteBtn.addEventListener('click', deleteSelectedInsignificant);
 
 function rowKey(r) { return `${r.isSub ? 'p' : 's'}\n${r.siteId}\n${r.path ?? ''}`; }
 
@@ -571,11 +573,11 @@ function renderScanResults() {
     msg.style.cssText = 'padding:20px;text-align:center';
     msg.textContent = 'No rows below the threshold.';
     resultsEl.appendChild(msg);
-    document.querySelector('#overlay-delete-btn').style.display = 'none';
-    document.querySelector('#overlay-summary').textContent = '';
+    overlayDeleteBtn.style.display = 'none';
+    overlaySummary.textContent = '';
     return;
   }
-  document.querySelector('#overlay-delete-btn').style.display = '';
+  overlayDeleteBtn.style.display = '';
   for (const group of groups) if (group.results.length > 0) resultsEl.appendChild(buildGroupEl(group));
   updateScanSummary();
 }
@@ -695,11 +697,9 @@ function updateScanSummary() {
   for (const group of scanState.groups)
     for (const r of group.results)
       if (group.selectedKeys.has(rowKey(r))) { identities++; records += r.recordCount; }
-  const deleteBtn = document.querySelector('#overlay-delete-btn');
-  const summaryEl = document.querySelector('#overlay-summary');
-  if (identities === 0) { summaryEl.textContent = 'Nothing selected'; deleteBtn.disabled = true; return; }
-  deleteBtn.disabled = false;
-  summaryEl.textContent = `${identities} of ${totalResults} selected (${records.toLocaleString()} rows)`;
+  if (identities === 0) { overlaySummary.textContent = 'Nothing selected'; overlayDeleteBtn.disabled = true; return; }
+  overlayDeleteBtn.disabled = false;
+  overlaySummary.textContent = `${identities} of ${totalResults} selected (${records.toLocaleString()} rows)`;
 }
 
 async function deleteSelectedInsignificant() {

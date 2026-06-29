@@ -1,15 +1,49 @@
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
-import {
-  setWindowPath, removeWindowPath, addAudibleTabPath, removeAudibleTabPath,
-  initTracking, reconcileWindows, flushToStorage,
-  saveSnapshot, recoverFromSnapshot, applyIdleClip,
-} from './intervalPageTracking.js';
+import { createTrackingModule } from './intervalTrackingUtils.js';
 import { getIdleThresholdSec, DEFAULT_IDLE_THRESHOLD_SEC } from '../shared/idleConfig.js';
 import { PREF_IDLE_THRESHOLD_SEC } from '../shared/prefKeys.js';
 
+// Domain+path capture: keys presence on `${domain}\n${path}` so capture is at
+// domain+path granularity, writing one interval row per (domain, path, kind)
+// range. Own snapshot key.
+const KEY_SEP = '\n';
+
+function makeKey(siteId, path) {
+  return `${siteId}${KEY_SEP}${path}`;
+}
+
+function urlToKey(url) {
+  const siteId = siteIdFromUrl(url);
+  const path = pathFromUrl(url);
+  return siteId && path ? makeKey(siteId, path) : null;
+}
+
+const mod = createTrackingModule({ urlToKey, snapshotStorageKey: '_intervalSnapshot' });
+
+function setWindowPath(windowId, siteId, path) {
+  mod.setWindow(windowId, siteId && path ? makeKey(siteId, path) : null);
+}
+function removeWindowPath(windowId, minimized = false) {
+  mod.removeWindow(windowId, minimized);
+}
+function addAudibleTabPath(tabId, siteId, path, countVisit = true) {
+  if (!siteId || !path) return;
+  mod.addAudibleTab(tabId, makeKey(siteId, path), countVisit);
+}
+function removeAudibleTabPath(tabId) {
+  mod.removeAudibleTab(tabId);
+}
+const initTracking = mod.init;
+const reconcileWindows = mod.reconcile;
+const saveSnapshot = mod.saveSnapshot;
+const recoverFromSnapshot = mod.recoverFromSnapshot;
+const applyIdleClip = mod.applyIdleClip;
+// Raw per-navigation drain (write the pending ranges only), exported for
+// background's pre-emptive block.
+export const flushToStorage = mod.flushToStorage;
+
 // The sole live tracker. Self-registers its capture listeners (tab/window/SPA
-// navigation), bootstrap, and idle handling on import; drives the interval module
-// keyed on domain+path. Its periodic flush is no longer a private alarm: it is
+// navigation), bootstrap, and idle handling on import. Its periodic flush is
 // exported as flushNow() and driven by background.js's single 'flush' alarm, so
 // the flush and the enforcement check that reads its output run in one sequence.
 

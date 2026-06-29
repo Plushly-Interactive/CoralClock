@@ -1,4 +1,4 @@
-import { SITES_DAY_KEY } from '../background/siteTracking.js';
+import { SITES_DAY_KEY } from './bucketKeys.js';
 import { showNotification } from '../shared/utils.js';
 
 // Time Tracker import logic, no modal/DOM wiring, callable from any page. TT data

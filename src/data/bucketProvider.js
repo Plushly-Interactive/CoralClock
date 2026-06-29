@@ -1,10 +1,9 @@
-import { SITES_DAY_KEY, SITES_HOUR_KEY, WALLCLOCK_HOUR_KEY } from '../background/siteTracking.js';
-import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
+import { SITES_DAY_KEY, SITES_HOUR_KEY, WALLCLOCK_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from './bucketKeys.js';
 import { localDayKey } from '../shared/timeUtils.js';
 import {
-  MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY, MSG_GET_SITES_BY_HOUR_FOR_DAY,
-  MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
-} from '../shared/msgTypes.js';
+  QUERY_SITES_BY_DAY, QUERY_SITES_BY_HOUR_TODAY, QUERY_SITES_BY_HOUR_FOR_DAY,
+  QUERY_SUBPAGES_BY_DAY, QUERY_SUBPAGES_BY_HOUR, QUERY_AVG_PER_CLOCK_HOUR,
+} from '../shared/queryTypes.js';
 
 // Page-side reader for the frozen legacy buckets, answering the same message shapes
 // as the background API but reading chrome.storage.local directly. The background's
@@ -12,8 +11,7 @@ import {
 // the stored buckets; post-cutover the interval tracker is the only live capturer
 // and nothing writes buckets in the worker, so there is no live tier to merge and
 // these are plain storage reads. mergeDataSources uses this for legacy days instead
-// of the SW round-trip. (The SW message API stays for other consumers:
-// storage-management, CSV/TT export.)
+// of the SW round-trip.
 
 function hoursForDay(byHour, dayKey) {
   const out = {};
@@ -81,27 +79,27 @@ async function avgPerClockHour(siteIds, range, dayKeys) {
 
 export async function bucketFetch(msg) {
   switch (msg.type) {
-    case MSG_GET_SITES_BY_DAY: {
+    case QUERY_SITES_BY_DAY: {
       const { [SITES_DAY_KEY]: v = {} } = await chrome.storage.local.get(SITES_DAY_KEY);
       return v;
     }
-    case MSG_GET_SUBPAGES_BY_DAY: {
+    case QUERY_SUBPAGES_BY_DAY: {
       const { [SUBPAGES_DAY_KEY]: v = {} } = await chrome.storage.local.get(SUBPAGES_DAY_KEY);
       return v;
     }
-    case MSG_GET_SUBPAGES_BY_HOUR: {
+    case QUERY_SUBPAGES_BY_HOUR: {
       const { [SUBPAGES_HOUR_KEY]: v = {} } = await chrome.storage.local.get(SUBPAGES_HOUR_KEY);
       return v;
     }
-    case MSG_GET_SITES_BY_HOUR_TODAY: {
+    case QUERY_SITES_BY_HOUR_TODAY: {
       const { [SITES_HOUR_KEY]: v = {} } = await chrome.storage.local.get(SITES_HOUR_KEY);
       return hoursForDay(v, localDayKey(Date.now()));
     }
-    case MSG_GET_SITES_BY_HOUR_FOR_DAY: {
+    case QUERY_SITES_BY_HOUR_FOR_DAY: {
       const { [SITES_HOUR_KEY]: v = {} } = await chrome.storage.local.get(SITES_HOUR_KEY);
       return hoursForDay(v, msg.dayKey);
     }
-    case MSG_GET_AVG_PER_CLOCK_HOUR:
+    case QUERY_AVG_PER_CLOCK_HOUR:
       return avgPerClockHour(msg.siteIds, msg.range, msg.dayKeys);
     default:
       return undefined;

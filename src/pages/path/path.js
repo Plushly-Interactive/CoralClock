@@ -9,7 +9,7 @@ import { buildOverviewData, drawOverviewCharts, subheadingText, renderBaseStats 
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { clearMockModeCache } from '../../shared/tourMockData.js';
 import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
-import { MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR } from '../../shared/msgTypes.js';
+import { QUERY_SUBPAGES_BY_DAY, QUERY_SUBPAGES_BY_HOUR } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 
 const drillParams = new URLSearchParams(location.search);
@@ -294,8 +294,8 @@ const loadAndRenderPromise = loadAndRender();
 
 async function loadAndRender() {
   [byDayCache, byHourCache] = await Promise.all([
-    fetchData({ type: MSG_GET_SUBPAGES_BY_DAY }),
-    fetchData({ type: MSG_GET_SUBPAGES_BY_HOUR }),
+    fetchData({ type: QUERY_SUBPAGES_BY_DAY }),
+    fetchData({ type: QUERY_SUBPAGES_BY_HOUR }),
   ]);
   if (isMerged) {
     const owner = resolveOwningDomain();

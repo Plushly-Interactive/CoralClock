@@ -9,7 +9,7 @@ import { createHourlyChart } from '../../shared/hourlyChart.js';
 import { runTour, readTourState, writeTourState, clearTourProgress } from '../../shared/tour.js';
 import { clearMockModeCache } from '../../shared/tourMockData.js';
 import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
-import { MSG_GET_SITES_BY_DAY, MSG_GET_AVG_PER_CLOCK_HOUR } from '../../shared/msgTypes.js';
+import { QUERY_SITES_BY_DAY, QUERY_AVG_PER_CLOCK_HOUR } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
@@ -54,7 +54,7 @@ const hourly = createHourlyChart({
   allDaysLabel: '(all days, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
   loadAvgPerHour: (range) => loadMergedTrackingData({
-    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: null, range,
+    type: QUERY_AVG_PER_CLOCK_HOUR, siteIds: null, range,
   }),
   clockFormat,
 });
@@ -292,7 +292,7 @@ async function loadAndRender() {
     history.replaceState(null, '', location.pathname);
     await seedTestData();
   }
-  byDayCache = await loadMergedTrackingData({ type: MSG_GET_SITES_BY_DAY });
+  byDayCache = await loadMergedTrackingData({ type: QUERY_SITES_BY_DAY });
   render();
 }
 

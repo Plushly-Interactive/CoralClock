@@ -5,13 +5,12 @@ import { PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
 import { siteIdFromUrl } from './siteResolution.js';
 import { computeOverage, publishOverage } from './enforcement.js';
 import { usageSince } from '../data/intervalAggregates.js';
-import { dbg, initDebug } from './trackingUtils.js';
+import { dbg, initDebug } from './trackingDebug.js';
 import { updateBadge } from './badge.js';
 // The interval tracker is the sole live capturer. It self-registers its capture
 // listeners on import; background drives its periodic flush via flushNow() and a
 // lighter per-navigation drain via flushToStorage.
-import { flushNow } from './intervalTracker.js';
-import { flushToStorage as drainIntervals } from './intervalPageTracking.js';
+import { flushNow, flushToStorage as drainIntervals } from './intervalTracker.js';
 
 // Logged on every service-worker (re)start. A burst of these is the signal that
 // the worker is churning (MV3 idle-suspend, crash-on-load, or dev reload), which

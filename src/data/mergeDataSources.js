@@ -4,9 +4,9 @@ import { earliestDayKey } from './intervalAggregates.js';
 import { fetchTrackingData, isMockMode } from '../shared/tourMockData.js';
 import { localDayKey } from '../shared/timeUtils.js';
 import {
-  MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY, MSG_GET_SITES_BY_HOUR_FOR_DAY,
-  MSG_GET_SUBPAGES_BY_DAY, MSG_GET_SUBPAGES_BY_HOUR, MSG_GET_AVG_PER_CLOCK_HOUR,
-} from '../shared/msgTypes.js';
+  QUERY_SITES_BY_DAY, QUERY_SITES_BY_HOUR_TODAY, QUERY_SITES_BY_HOUR_FOR_DAY,
+  QUERY_SUBPAGES_BY_DAY, QUERY_SUBPAGES_BY_HOUR, QUERY_AVG_PER_CLOCK_HOUR,
+} from '../shared/queryTypes.js';
 
 // The Phase B authoritative tracking-data reader for the main dashboard and
 // site/path pages. Promotes the interval log to the single source of truth, merging
@@ -59,8 +59,8 @@ async function partitionAvgDays(msg, boundary) {
     days = [];
     if (msg.range === 'all') {
       const [iByDay, bByDay] = await Promise.all([
-        intervalFetch({ type: MSG_GET_SITES_BY_DAY }),
-        bucketFetch({ type: MSG_GET_SITES_BY_DAY }),
+        intervalFetch({ type: QUERY_SITES_BY_DAY }),
+        bucketFetch({ type: QUERY_SITES_BY_DAY }),
       ]);
       days = [...new Set([...Object.keys(iByDay), ...Object.keys(bByDay)])];
     } else if (Number.isFinite(n)) {
@@ -100,16 +100,16 @@ export async function loadMergedTrackingData(msg) {
   const boundary = await earliestDayKey();
   if (boundary === null) return bucketFetch(msg);
   switch (msg.type) {
-    case MSG_GET_SITES_BY_DAY:
-    case MSG_GET_SUBPAGES_BY_DAY:
+    case QUERY_SITES_BY_DAY:
+    case QUERY_SUBPAGES_BY_DAY:
       return mergeByDay(msg, boundary);
-    case MSG_GET_SUBPAGES_BY_HOUR:
+    case QUERY_SUBPAGES_BY_HOUR:
       return mergeByHour(msg, boundary);
-    case MSG_GET_SITES_BY_HOUR_TODAY:
+    case QUERY_SITES_BY_HOUR_TODAY:
       return intervalFetch(msg);
-    case MSG_GET_SITES_BY_HOUR_FOR_DAY:
+    case QUERY_SITES_BY_HOUR_FOR_DAY:
       return msg.dayKey >= boundary ? intervalFetch(msg) : bucketFetch(msg);
-    case MSG_GET_AVG_PER_CLOCK_HOUR:
+    case QUERY_AVG_PER_CLOCK_HOUR:
       return mergeAvg(msg, boundary);
     default:
       return bucketFetch(msg);

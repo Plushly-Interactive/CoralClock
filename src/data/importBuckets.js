@@ -1,5 +1,4 @@
-import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
-import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
+import { SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from './bucketKeys.js';
 import { blockKey, RULE_MULTIPLIERS } from '../shared/rules.js';
 import { EXPORT_PREF_KEYS } from './exportPayload.js';
 

@@ -11,10 +11,10 @@ import { autoStartIfMatches } from '../../shared/tour.js';
 import { clearMockModeCache } from '../../shared/tourMockData.js';
 import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import {
-  MSG_GET_SITES_BY_DAY, MSG_GET_SITES_BY_HOUR_TODAY,
-  MSG_GET_SITES_BY_HOUR_FOR_DAY, MSG_GET_SUBPAGES_BY_DAY,
-  MSG_GET_AVG_PER_CLOCK_HOUR,
-} from '../../shared/msgTypes.js';
+  QUERY_SITES_BY_DAY, QUERY_SITES_BY_HOUR_TODAY,
+  QUERY_SITES_BY_HOUR_FOR_DAY, QUERY_SUBPAGES_BY_DAY,
+  QUERY_AVG_PER_CLOCK_HOUR,
+} from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 
 const PREF_STRIP_PARAMS = 'subpagesStripParams';
@@ -201,7 +201,7 @@ const hourly = createHourlyChart({
   allDaysLabel: '(all days from earliest data, excluding today)',
   getRangeValue: () => rangeSelect.dataset.value,
   loadAvgPerHour: (range) => fetchData({
-    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
+    type: QUERY_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
   }),
   clockFormat,
 });
@@ -226,7 +226,7 @@ initDrill({
   clockFormat,
   getDayEntry: (dayKey) => entrySum(byDayCache?.[dayKey]),
   getHourEntriesForDay: async (dayKey) => {
-    const hourData = await fetchData({ type: MSG_GET_SITES_BY_HOUR_FOR_DAY, dayKey });
+    const hourData = await fetchData({ type: QUERY_SITES_BY_HOUR_FOR_DAY, dayKey });
     const result = {};
     for (let h = 0; h < 24; h++) {
       const hourKey = `${dayKey}T${String(h).padStart(2, '0')}`;
@@ -235,7 +235,7 @@ initDrill({
     return result;
   },
   getAvgPerClockHour: (dayKeys) => fetchData({
-    type: MSG_GET_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range: null, dayKeys,
+    type: QUERY_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range: null, dayKeys,
   }),
   render,
 });
@@ -254,8 +254,8 @@ window.addEventListener('pageshow', () => {
 });
 
 async function loadAndRender() {
-  byDayCache = await fetchData({ type: MSG_GET_SITES_BY_DAY });
-  subpagesByDayCache = await fetchData({ type: MSG_GET_SUBPAGES_BY_DAY });
+  byDayCache = await fetchData({ type: QUERY_SITES_BY_DAY });
+  subpagesByDayCache = await fetchData({ type: QUERY_SUBPAGES_BY_DAY });
   resolveAggregationMode();
   if (rangeSelect.dataset.value === 'today') await loadByHour();
   render();
@@ -277,7 +277,7 @@ function resolveAggregationMode() {
 
 async function loadByHour() {
   if (byHourCache) return;
-  byHourCache = await fetchData({ type: MSG_GET_SITES_BY_HOUR_TODAY });
+  byHourCache = await fetchData({ type: QUERY_SITES_BY_HOUR_TODAY });
 }
 
 function siteDayKeysForRange(range) {

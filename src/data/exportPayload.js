@@ -1,5 +1,4 @@
-import { SITES_DAY_KEY, SITES_HOUR_KEY } from '../background/siteTracking.js';
-import { SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from '../background/subpageTracking.js';
+import { SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from './bucketKeys.js';
 import { allIntervals } from './intervalLog.js';
 import { showNotification } from '../shared/utils.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../shared/prefKeys.js';
