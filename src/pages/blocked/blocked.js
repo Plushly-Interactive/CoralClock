@@ -1,4 +1,4 @@
-import { RULE_MULTIPLIERS, matchLabel, computeRuleSpent, computeRuleVisits } from '../../shared/rules.js';
+import { RULE_MULTIPLIERS, matchLabel, computeRuleSpent, computeRuleVisits, BLOCKS_DAY_KEY } from '../../shared/rules.js';
 import { faviconUrl, loadFaviconCache } from '../../shared/utils.js';
 import { formatMs, localDayKey } from '../../shared/timeUtils.js';
 import { weekDow } from '../../shared/weekStart.js';
@@ -14,6 +14,21 @@ const path = params.get('path');
 
 const target = site && path ? `${site}/${path}` : site;
 if (target) document.title = `Blocked: ${target} – ${BRAND_NAME}`;
+
+// Count a block only when this page is actually landed on (fresh redirect or
+// tab-update), not when it's merely reloaded — so refreshing an already-shown
+// blocked page doesn't inflate the stat.
+(async () => {
+  const key = params.get('blockKey');
+  const navType = performance.getEntriesByType('navigation')[0]?.type;
+  if (!key || navType === 'reload') return;
+  const dayKey = localDayKey(Date.now());
+  const { [BLOCKS_DAY_KEY]: blocksByDay = {} } = await chrome.storage.local.get(BLOCKS_DAY_KEY);
+  const today = blocksByDay[dayKey] ?? {};
+  today[key] = (today[key] ?? 0) + 1;
+  blocksByDay[dayKey] = today;
+  await chrome.storage.local.set({ [BLOCKS_DAY_KEY]: blocksByDay });
+})();
 
 // When the rule's period window next resets, in local time.
 function nextReset(period, now = new Date()) {

@@ -1,8 +1,9 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
-import { RULE_MULTIPLIERS, describeRule, BLOCKS_DAY_KEY, blockKey } from '../shared/rules.js';
+import { RULE_MULTIPLIERS, describeRule, blockKey } from '../shared/rules.js';
 import { weekDow } from '../shared/weekStart.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import { pickQuote } from '../shared/quotes.js';
+import { dbg } from './trackingDebug.js';
 
 // Usage contributed by one site/subpage cell under the rule's mode.
 function cellUsage(cell, mode) {
@@ -137,7 +138,7 @@ export function computeOverage(rules, stores, now = Date.now()) {
 // --- DNR publisher (chrome APIs) ---
 
 function blockedUrl(ruleId, entry, originalUrl, quoteId) {
-  const params = new URLSearchParams({ rule: ruleId });
+  const params = new URLSearchParams({ rule: ruleId, blockKey: blockKey(entry) });
   if (entry.target) {
     params.set('site', entry.target);
     if (entry.path) params.set('path', entry.path);
@@ -259,22 +260,10 @@ export async function publishOverage(overage) {
   const addRules = [...desired.values()].filter(r => !existingIds.has(r.id));
   const removeRuleIds = existing.map(r => r.id).filter(id => !desired.has(id));
 
+  dbg('publishOverage: liveMap', [...liveMap.entries()], 'newRuleIds', [...newRuleIds], 'addRules', addRules, 'removeRuleIds', removeRuleIds);
+
   if (addRules.length || removeRuleIds.length) {
     await chrome.declarativeNetRequest.updateDynamicRules({ addRules, removeRuleIds });
-  }
-
-  if (addRules.length) {
-    const dayKey = localDayKey(Date.now());
-    const { [BLOCKS_DAY_KEY]: blocksByDay = {} } = await chrome.storage.local.get(BLOCKS_DAY_KEY);
-    const today = blocksByDay[dayKey] ?? {};
-    for (const [ruleId, entry] of overage) {
-      if (newRuleIds.has(ruleId)) {
-        const key = blockKey(entry);
-        today[key] = (today[key] ?? 0) + 1;
-      }
-    }
-    blocksByDay[dayKey] = today;
-    await chrome.storage.local.set({ [BLOCKS_DAY_KEY]: blocksByDay });
   }
 
   await reloadMatchingTabs(overage);

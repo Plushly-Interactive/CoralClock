@@ -149,6 +149,12 @@ async function cacheFavicon(hostname, url) {
   if (!url || !url.startsWith('http')) return;
   const { faviconCache = {} } = await chrome.storage.local.get('faviconCache');
   if (faviconCache[hostname]?.url === url) return;
+  // Cross-origin fetch needs host permission for this site, which since the
+  // <all_urls> → per-rule permission change we generally don't have unless the
+  // user set a rule for it. Skip rather than let it fail noisily with a CORS
+  // error; faviconUrl() already falls back to the permission-free _favicon/
+  // endpoint for everything not cached here.
+  if (!await chrome.permissions.contains({ origins: [`*://${hostname}/*`] })) return;
   try {
     const res = await fetch(url);
     if (!res.ok) return;
@@ -228,6 +234,8 @@ async function checkEnforcement(now) {
   const stores = await usageSince(enforcementWindowStart(now));
 
   const { overage, approaching } = computeOverage(rules, stores, now);
+  dbg('checkEnforcement: rules', rules.map(r => ({ id: r.id, enabled: r.enabled, matchType: r.matchType, target: r.target, limit: r.limit, limitUnit: r.limitUnit, period: r.period })));
+  dbg('checkEnforcement: overage', [...overage.entries()]);
   await publishOverage(overage);
   await notifyBlocked(overage);
   await notifyApproaching(approaching, now);
