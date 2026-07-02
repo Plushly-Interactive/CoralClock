@@ -136,6 +136,7 @@
 #rule-preview, #regex-preview, #keyword-preview { margin-bottom: 12px; }
 #redundant-prompt { margin-bottom: 12px; }
 #redundant-prompt #redundant-list { margin: 8px 0; }
+#reauth-prompt .form-row { margin-top: 6px; }
 #preview-pattern, #regex-preview-pattern { font-family: monospace; }
 
 .form-submit-row {

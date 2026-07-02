@@ -23,6 +23,9 @@ const redundantText         = document.querySelector('#redundant-text');
 const redundantList         = document.querySelector('#redundant-list');
 const redundantDisableBtn   = document.querySelector('#redundant-disable-btn');
 const redundantKeepBtn      = document.querySelector('#redundant-keep-btn');
+const reauthPrompt   = document.querySelector('#reauth-prompt');
+const reauthText     = document.querySelector('#reauth-text');
+const reauthBtn      = document.querySelector('#reauth-btn');
 const formLimit      = document.querySelector('#form-limit');
 const sortSiteBtn    = document.querySelector('#sort-site');
 const sortStatusBtn  = document.querySelector('#sort-status');
@@ -48,6 +51,60 @@ let scope = 'subdomain';
 let currentRules = [];
 let mockMode = false;  // tour: seeded rules shown read-only, never persisted
 let sort = { key: 'site', dir: 1 };
+
+// Origin patterns a rule needs host permission for. host/pathPrefix are exact
+// (no subdomain access); subdomain requests both forms since match-pattern
+// docs don't clearly state whether *.target already includes the bare apex.
+// regex/keyword have no fixed host, so they fall back to <all_urls>.
+function originsFor(rule) {
+  if (rule.matchType === 'regex' || rule.matchType === 'keyword') return ['<all_urls>'];
+  const exact = `*://${rule.target}/*`;
+  if (rule.matchType === 'subdomain') return [exact, `*://*.${rule.target}/*`];
+  return [exact];
+}
+
+// Request host permission for a candidate rule before it's saved. Must run
+// inside the click handler (user gesture) — chrome.permissions.request()
+// rejects outside one. Returns false (and leaves nothing saved) if declined.
+async function requestPermissionFor(rule) {
+  return chrome.permissions.request({ origins: originsFor(rule) });
+}
+
+// Drop host permission for a deleted rule's origins, but only where no other
+// remaining rule still needs them.
+async function releasePermissionFor(deletedRule, remainingRules) {
+  const stillNeeded = new Set(remainingRules.flatMap(originsFor));
+  const toRemove = originsFor(deletedRule).filter(o => !stillNeeded.has(o));
+  if (toRemove.length) await chrome.permissions.remove({ origins: toRemove });
+}
+
+// Origins currently missing permission across all rules. Catches both the
+// one-time migration (existing users whose <all_urls> just became optional)
+// and any later drift (permission manually revoked via chrome://extensions).
+let reauthOrigins = [];
+
+async function checkReauth() {
+  const needed = [...new Set(currentRules.flatMap(originsFor))];
+  const missing = [];
+  for (const origin of needed) {
+    if (!await chrome.permissions.contains({ origins: [origin] })) missing.push(origin);
+  }
+  reauthOrigins = missing;
+  if (!missing.length) {
+    reauthPrompt.style.display = 'none';
+    return;
+  }
+  const affected = currentRules.filter(r => originsFor(r).some(o => missing.includes(o))).length;
+  reauthText.textContent = `${affected} ${affected === 1 ? 'rule needs' : 'rules need'} site access re-confirmed for blocking to work.`;
+  reauthPrompt.removeAttribute('hidden');
+  reauthPrompt.style.display = '';
+}
+
+reauthBtn.addEventListener('click', async () => {
+  if (await chrome.permissions.request({ origins: reauthOrigins })) {
+    reauthPrompt.style.display = 'none';
+  }
+});
 
 // ── Add card collapse toggle ──
 
@@ -256,6 +313,7 @@ async function render() {
   renderRuleList(rulesList, sortedRules(), { readonly: mockMode });
   refreshPreview();
   renderStats();
+  if (!mockMode) checkReauth();
 }
 
 // ── Save new rule ──
@@ -275,6 +333,7 @@ saveBtn.addEventListener('click', async () => {
   if (findCoveringRule(currentRules, newRule)) return;
   const redundant = findRedundantRules(currentRules, newRule);
 
+  if (!await requestPermissionFor(newRule)) return;
   await addRule(newRule);
 
   formTarget.value = '';
@@ -364,7 +423,9 @@ regexSaveBtn.addEventListener('click', async () => {
   const fields = regexLimitFields();
   if (isNaN(fields.limit) || fields.limit < 0) return;
 
-  await addRule({ pattern: pat, matchType: 'regex', ...fields });
+  const newRule = { pattern: pat, matchType: 'regex', ...fields };
+  if (!await requestPermissionFor(newRule)) return;
+  await addRule(newRule);
   regexPatternInput.value = '';
   syncRegexClear();
   refreshRegexPreview();
@@ -413,7 +474,9 @@ kwSaveBtn.addEventListener('click', async () => {
   const fields = kwLimitFields();
   if (isNaN(fields.limit) || fields.limit < 0) return;
 
-  await addRule({ keyword: kw, matchType: 'keyword', ...fields });
+  const newRule = { keyword: kw, matchType: 'keyword', ...fields };
+  if (!await requestPermissionFor(newRule)) return;
+  await addRule(newRule);
   kwInput.value = '';
   syncKwClear();
   refreshKwPreview();
@@ -488,7 +551,11 @@ rulesList.addEventListener('click', async (e) => {
   if (!id) return;
   if (e.target.classList.contains('edit-btn'))   { await render(); openRowEditor(id); return; }
   if (e.target.classList.contains('toggle-btn')) await toggleRule(id);
-  if (e.target.classList.contains('delete-btn')) await deleteRule(id);
+  if (e.target.classList.contains('delete-btn')) {
+    const deleted = currentRules.find(r => r.id === id);
+    await deleteRule(id);
+    if (deleted) await releasePermissionFor(deleted, currentRules.filter(r => r.id !== id));
+  }
   render();
 });
 

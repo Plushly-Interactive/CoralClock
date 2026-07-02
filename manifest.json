@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Reef - Screen Time & Website Blocker",
   "version": "1.0.0",
-  "description": "Block websites after a time limit.",
+  "description": "Track time on every website and automatically block sites once your hourly, daily, or weekly limit is reached.",
 
   "background": {
     "service_worker": "src/background/background.js",
@@ -26,7 +26,7 @@
   },
 
   "permissions": ["storage", "alarms", "tabs", "webNavigation", "declarativeNetRequest", "idle", "favicon", "notifications"],
-  "host_permissions": ["<all_urls>"],
+  "optional_host_permissions": ["<all_urls>"],
 
   "options_page": "src/pages/settings/settings.html",
 
