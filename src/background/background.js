@@ -40,15 +40,19 @@ function fmtMs(ms) {
   return rem ? `${h}h ${rem}m` : `${h}h`;
 }
 
-// Notification dedup state. Loaded once from chrome.storage.session into a
+// Notification dedup state. Loaded once from chrome.storage.local into a
 // cached Promise so concurrent checkEnforcement calls (e.g. rapid navigations
 // or redirect chains) share the same in-memory object and never read stale
-// storage. Persisted back so state survives MV3 SW restarts within a session.
+// storage. Persisted back so state survives MV3 SW restarts *and* browser
+// restarts — an already-blocked rule (esp. limit-0 always-block) must not
+// re-notify on startup. The prune loop below re-arms the notification once a
+// rule leaves overage (period rollover), so this only suppresses re-notifying
+// the same still-blocked rule.
 let _notifyStateP = null;
 
 function getNotifyState() {
   if (!_notifyStateP) {
-    _notifyStateP = chrome.storage.session.get('_notifyState').then(({ _notifyState: s }) => ({
+    _notifyStateP = chrome.storage.local.get('_notifyState').then(({ _notifyState: s }) => ({
       blocked: new Set(s?.blocked ?? []),
       approaching: new Map(Object.entries(s?.approaching ?? {})),
     }));
@@ -57,7 +61,7 @@ function getNotifyState() {
 }
 
 function persistNotifyState(state) {
-  chrome.storage.session.set({
+  chrome.storage.local.set({
     _notifyState: {
       blocked: [...state.blocked],
       approaching: Object.fromEntries(state.approaching),
@@ -65,7 +69,7 @@ function persistNotifyState(state) {
   });
 }
 
-async function notifyBlocked(overage) {
+async function notifyBlocked(overage, blockedSites) {
   const state = await getNotifyState();
   for (const ruleId of state.blocked) {
     if (!overage.has(ruleId)) state.blocked.delete(ruleId);
@@ -75,7 +79,11 @@ async function notifyBlocked(overage) {
     if (state.blocked.has(ruleId)) continue;
     state.blocked.add(ruleId);
     changed = true;
-    const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
+    // Only toast when the block hit a currently-open tab. A rule crossing (or an
+    // always-block rule created) with no matching tab open is recorded for dedup
+    // but shows no toast — nothing visible was blocked.
+    if (!blockedSites.has(ruleId)) continue;
+    const label = blockedSites.get(ruleId) ?? entry.target ?? 'A site';
     chrome.notifications.create(`blocked-${ruleId}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('resources/icons/reef-icon-square-128px.png'),
@@ -236,8 +244,8 @@ async function checkEnforcement(now) {
   const { overage, approaching } = computeOverage(rules, stores, now);
   dbg('checkEnforcement: rules', rules.map(r => ({ id: r.id, enabled: r.enabled, matchType: r.matchType, target: r.target, limit: r.limit, limitUnit: r.limitUnit, period: r.period })));
   dbg('checkEnforcement: overage', [...overage.entries()]);
-  await publishOverage(overage);
-  await notifyBlocked(overage);
+  const blockedSites = await publishOverage(overage);
+  await notifyBlocked(overage, blockedSites);
   await notifyApproaching(approaching, now);
 }
 

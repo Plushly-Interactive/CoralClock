@@ -179,9 +179,14 @@ function tabMatchesEntry(url, entry) {
 // Tabs already on blocked.html (a chrome-extension URL) don't match, so there's
 // no loop. Driven by the full overage set so it also catches tabs open before
 // the rule existed (e.g. when a rule is enabled).
+// Returns Map<ruleId, hostname> of rules that blocked a currently-open tab,
+// carrying the tab's real host so the "now blocked" notification names the
+// actual site (not a keyword/regex pattern). A rule matching several tabs keeps
+// the first host seen.
 async function reloadMatchingTabs(overage) {
+  const blockedSites = new Map();
   const pairs = [...overage]; // [ruleId, entry]
-  if (!pairs.length) return;
+  if (!pairs.length) return blockedSites;
   const tabs = await chrome.tabs.query({});
   const matching = tabs.filter(tab => tab.url && pairs.find(([, e]) => tabMatchesEntry(tab.url, e)));
   const site = pairs[0][1].target ?? '';
@@ -190,12 +195,14 @@ async function reloadMatchingTabs(overage) {
   for (const tab of matching) {
     const hit = pairs.find(([, e]) => tabMatchesEntry(tab.url, e));
     const [ruleId, entry] = hit;
+    if (!blockedSites.has(ruleId)) blockedSites.set(ruleId, siteIdFromUrl(tab.url) ?? entry.target);
     // We know the exact page this tab is on, so send it to the blocked page
     // ourselves with the original URL preserved — returnUnblockedTabs uses it to
     // restore the exact page on unblock. (DNR still catches fresh navigations;
     // those carry no original URL and fall back to the rule target.)
     chrome.tabs.update(tab.id, { url: blockedUrl(ruleId, entry, tab.url, quoteId) });
   }
+  return blockedSites;
 }
 
 // Send blocked.html tabs back to their site once their rule is no longer
@@ -266,6 +273,7 @@ export async function publishOverage(overage) {
     await chrome.declarativeNetRequest.updateDynamicRules({ addRules, removeRuleIds });
   }
 
-  await reloadMatchingTabs(overage);
+  const blockedSites = await reloadMatchingTabs(overage);
   await returnUnblockedTabs(overage);
+  return blockedSites;
 }
