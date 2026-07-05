@@ -64,7 +64,7 @@
 #type-toggle .seg-btn { width: 100px; justify-content: center; }
 
 .seg-icon { flex-shrink: 0; display: flex; font-size: 12px; line-height: 1; }
-.seg-icon svg { width: 13px; height: 13px; stroke: currentColor; }
+.seg-icon .icon-mask { width: 13px; height: 13px; }
 
 #type-toggle .seg-btn:not(.active) .seg-icon { color: var(--color-accent-light); }
 

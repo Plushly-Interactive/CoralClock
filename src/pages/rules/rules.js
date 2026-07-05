@@ -510,15 +510,10 @@ function openRowEditor(id) {
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
       <button class="save-edit-btn square-btn" data-id="${id}">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+        <span class="icon-mask icon-check"></span>
       </button>
       <button class="cancel-edit-btn square-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="9 14 4 9 9 4" />
-          <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
-        </svg>
+        <span class="icon-mask icon-undo"></span>
       </button>
     </div>`);
   initCustomDropdowns(li);

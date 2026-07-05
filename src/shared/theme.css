@@ -476,10 +476,30 @@ button:disabled {
   color: var(--color-accent-light);
 }
 
-.square-btn svg {
+.square-btn .icon-mask {
   width: 16px;
   height: 16px;
 }
+
+.icon-mask {
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.icon-trash { -webkit-mask-image: url(../../resources/icons/ui/trash.svg); mask-image: url(../../resources/icons/ui/trash.svg); }
+.icon-gear { -webkit-mask-image: url(../../resources/icons/ui/gear.svg); mask-image: url(../../resources/icons/ui/gear.svg); }
+.icon-pencil { -webkit-mask-image: url(../../resources/icons/ui/pencil.svg); mask-image: url(../../resources/icons/ui/pencil.svg); }
+.icon-check { -webkit-mask-image: url(../../resources/icons/ui/check.svg); mask-image: url(../../resources/icons/ui/check.svg); }
+.icon-undo { -webkit-mask-image: url(../../resources/icons/ui/undo.svg); mask-image: url(../../resources/icons/ui/undo.svg); }
+.icon-link { -webkit-mask-image: url(../../resources/icons/ui/link.svg); mask-image: url(../../resources/icons/ui/link.svg); }
+.icon-search { -webkit-mask-image: url(../../resources/icons/ui/search.svg); mask-image: url(../../resources/icons/ui/search.svg); }
+.icon-regex { -webkit-mask-image: url(../../resources/icons/ui/regex.svg); mask-image: url(../../resources/icons/ui/regex.svg); }
 
 .data-table {
   width: 100%;
