@@ -115,17 +115,7 @@
 #threshold-row { display: flex; align-items: center; gap: 8px; }
 
 /* Targeted deletion */
-input[type="date"] {
-  padding: 5px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-size: var(--font-base);
-}
-
-input[type="date"]:focus { outline: none; border-color: var(--color-accent); }
-
+.date-dropdown .dropdown-btn,
 .hour-dropdown .dropdown-btn {
   background: var(--color-bg);
   color: var(--color-text);
@@ -135,9 +125,20 @@ input[type="date"]:focus { outline: none; border-color: var(--color-accent); }
   justify-content: space-between;
 }
 
-.hour-dropdown .dropdown-btn:hover { background: var(--color-hover-bg); border-color: var(--color-accent); }
+.date-dropdown .dropdown-btn:focus,
+.hour-dropdown .dropdown-btn:focus,
+.date-dropdown:has(.dropdown-menu.open) .dropdown-btn,
+.hour-dropdown:has(.dropdown-menu.open) .dropdown-btn { outline: none; border-color: var(--color-accent); }
 .hour-dropdown .dropdown-menu { width: 100%; max-height: 280px; overflow-y: auto; }
-.hour-dropdown .dropdown-arrow { color: var(--color-text); }
+.hour-dropdown .dropdown-arrow { color: var(--color-text-secondary); }
+.date-dropdown .dropdown-btn { min-width: 0; justify-content: flex-start; }
+
+.date-btn-icon {
+  width: var(--icon-size-inline);
+  height: var(--icon-size-inline);
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
 
 #site-filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 #site-filter-wrap { position: relative; width: 100%; flex-shrink: 0; }
@@ -151,7 +152,8 @@ input[type="date"]:focus { outline: none; border-color: var(--color-accent); }
 .dt-group { display: flex; align-items: center; gap: 6px; }
 #repeat-form { display: flex; flex-direction: column; gap: 8px; }
 .repeat-row { display: flex; align-items: center; gap: 8px; }
-#repeat-form input[type="date"] { flex: 1; min-width: 0; }
+#repeat-form .date-dropdown { flex: 1; min-width: 0; }
+#repeat-form .date-dropdown .dropdown-btn { width: 100%; justify-content: space-between; }
 .repeat-label { flex-shrink: 0; }
 
 /* Hourly data */

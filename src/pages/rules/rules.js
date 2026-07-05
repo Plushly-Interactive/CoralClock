@@ -490,7 +490,7 @@ function editDropdown(id, options, selected) {
   const items = options.map(o => `<button type="button" value="${o.value}">${o.label}</button>`).join('');
   return `
     <div class="custom-dropdown">
-      <button type="button" class="dropdown-btn ${id}-btn" data-value="${selected}">${label}<span class="dropdown-arrow">▼</span></button>
+      <button type="button" class="dropdown-btn ${id}-btn" data-value="${selected}">${label}<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
       <div class="dropdown-menu ${id}-menu">${items}</div>
     </div>`;
 }

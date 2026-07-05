@@ -45,3 +45,6 @@
 - Explain each new function, listener or code block you add.
 - Short answers. No walls of text.
 - If I push back on something, reconsider — don't just justify the original choice.
+
+## Testing
+- Never try to run the extension yourself (loading it in a browser, launching dev servers, etc). I test manually. State clearly that a change is code-complete but unverified by you, and tell me what to check.

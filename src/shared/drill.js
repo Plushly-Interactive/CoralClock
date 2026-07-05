@@ -22,10 +22,10 @@ const DRILL_INNER_HTML = `
     <button id="drill-month-link" class="link-btn" style="display:none"></button>
   </div>
   <div id="drill-controls">
-    <div id="nav-strip">
-      <button id="nav-prev" class="link-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
-      <span id="nav-label"></span>
-      <button id="nav-next" class="link-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+    <div id="nav-strip" class="nav-strip">
+      <button id="nav-prev" class="link-btn nav-arrow-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      <span id="nav-label" class="nav-period-label"></span>
+      <button id="nav-next" class="link-btn nav-arrow-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
     </div>
     <div id="drill-legend" class="time-legend text-meta" style="display: none;">${CHART_LEGEND_HTML}</div>
     <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn"> Enhance readbility (&radic;x scale)</label>

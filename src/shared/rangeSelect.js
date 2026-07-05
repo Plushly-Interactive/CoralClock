@@ -12,7 +12,7 @@ const RANGE_OPTS = {
 export function createRangeDropdown() {
   const div = document.createElement('div');
   div.className = 'custom-dropdown';
-  div.innerHTML = `<button class="dropdown-btn" id="range-select" data-value="7">Last 7 days<span class="dropdown-arrow">▼</span></button>
+  div.innerHTML = `<button class="dropdown-btn" id="range-select" data-value="7">Last 7 days<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
     <div class="dropdown-menu">
       <button value="today">Today</button>
       <button value="7">Last 7 days</button>

@@ -64,12 +64,13 @@
 #type-toggle .seg-btn { width: 100px; justify-content: center; }
 
 .seg-icon { flex-shrink: 0; display: flex; font-size: 12px; line-height: 1; }
-.seg-icon .icon-mask { width: 13px; height: 13px; }
+.seg-icon .icon-mask { width: var(--icon-size-inline); height: var(--icon-size-inline); }
 
 #type-toggle .seg-btn:not(.active) .seg-icon { color: var(--color-accent-light); }
 
 #add-toggle-arrow {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
   color: var(--color-text-secondary);
   transition: transform 0.2s;
   flex-shrink: 0;

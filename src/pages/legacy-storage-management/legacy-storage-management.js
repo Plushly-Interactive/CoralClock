@@ -6,6 +6,7 @@ import { confirmDialog } from '../../shared/confirmDialog.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { downloadBiteGuardExport } from '../../data/exportPayload.js';
 import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
+import { buildDatePicker, getDateValue } from '../../shared/datePicker.js';
 
 navButton(document.querySelector('#overview-back-btn'), '../storage-management/storage-management.html');
 
@@ -32,7 +33,7 @@ function buildHourDropdown(id, initHour, clockFormat, onChange) {
   const btn = document.createElement('button');
   btn.className = 'dropdown-btn';
   btn.dataset.value = initHour;
-  btn.innerHTML = `${hourLabel(initHour, clockFormat)}<span class="dropdown-arrow">▼</span>`;
+  btn.innerHTML = `${hourLabel(initHour, clockFormat)}<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span>`;
   const menu = document.createElement('div');
   menu.className = 'dropdown-menu';
   for (let h = 0; h <= 24; h++) {
@@ -66,6 +67,10 @@ async function initHourDropdowns() {
   buildHourDropdown('range-to-hour', 24, clockFormat, () => syncDeleteRangeBtn());
   buildHourDropdown('repeat-from-hour', 9, clockFormat, () => syncDeleteRangeBtn());
   buildHourDropdown('repeat-to-hour', 17, clockFormat, () => syncDeleteRangeBtn());
+  buildDatePicker('range-from-date', '', syncDeleteRangeBtn);
+  buildDatePicker('range-to-date', '', syncDeleteRangeBtn);
+  buildDatePicker('repeat-from-date', '', syncDeleteRangeBtn);
+  buildDatePicker('repeat-to-date', '', syncDeleteRangeBtn);
   syncDeleteRangeBtn();
 }
 
@@ -85,10 +90,6 @@ spanChip.addEventListener('mouseleave', () => { spanTooltip.style.display = 'non
 const contiguousForm = document.querySelector('#range-form-row');
 const repeatForm = document.querySelector('#repeat-form');
 const modeRepeatBtn = document.querySelector('#mode-repeat-btn');
-const rangeFromDate = document.querySelector('#range-from-date');
-const rangeToDate = document.querySelector('#range-to-date');
-const repeatFromDate = document.querySelector('#repeat-from-date');
-const repeatToDate = document.querySelector('#repeat-to-date');
 document.querySelector('#mode-contiguous-btn').addEventListener('click', () => {
   contiguousForm.style.display = '';
   repeatForm.style.display = 'none';
@@ -118,22 +119,17 @@ function syncDeleteRangeBtn() {
   const btn = document.querySelector('#delete-range-btn');
   const isRepeat = modeRepeatBtn.classList.contains('active');
   if (isRepeat) {
-    const fromDate = repeatFromDate.value;
-    const toDate   = repeatToDate.value;
+    const fromDate = getDateValue('repeat-from-date');
+    const toDate   = getDateValue('repeat-to-date');
     btn.disabled = !fromDate || !toDate || fromDate > toDate || getHourValue('repeat-from-hour') >= getHourValue('repeat-to-hour');
   } else {
-    const fromDate = rangeFromDate.value;
-    const toDate   = rangeToDate.value;
+    const fromDate = getDateValue('range-from-date');
+    const toDate   = getDateValue('range-to-date');
     const fromKey  = fromDate ? `${fromDate}T${String(getHourValue('range-from-hour')).padStart(2, '0')}` : '';
     const toKey    = toDate   ? `${toDate}T${String(getHourValue('range-to-hour')).padStart(2, '0')}`     : '';
     btn.disabled = !fromDate || !toDate || fromKey >= toKey;
   }
 }
-
-rangeFromDate.addEventListener('input', syncDeleteRangeBtn);
-rangeToDate.addEventListener('input', syncDeleteRangeBtn);
-repeatFromDate.addEventListener('input', syncDeleteRangeBtn);
-repeatToDate.addEventListener('input', syncDeleteRangeBtn);
 
 deleteAllBtn.addEventListener('click', async () => {
   const siteId = siteInput.value.trim();
@@ -170,15 +166,15 @@ document.querySelector('#delete-range-btn').addEventListener('click', async () =
   let confirmMsg, rangePairs;
 
   if (isRepeat) {
-    const fromDate = repeatFromDate.value;
-    const toDate   = repeatToDate.value;
+    const fromDate = getDateValue('repeat-from-date');
+    const toDate   = getDateValue('repeat-to-date');
     const fromHour = getHourValue('repeat-from-hour');
     const toHour   = getHourValue('repeat-to-hour');
     rangePairs = buildRepeatPairs(fromDate, toDate, fromHour, toHour);
     confirmMsg = `Delete records${scope} for hours ${String(fromHour).padStart(2, '0')}:00–${String(toHour).padStart(2, '0')}:00 daily from ${fromDate} to ${toDate}? This cannot be undone.`;
   } else {
-    const fromDate = rangeFromDate.value;
-    const toDate   = rangeToDate.value;
+    const fromDate = getDateValue('range-from-date');
+    const toDate   = getDateValue('range-to-date');
     const fromHour = getHourValue('range-from-hour');
     const toHour   = getHourValue('range-to-hour');
     const fromKey  = `${fromDate}T${String(fromHour).padStart(2, '0')}`;
