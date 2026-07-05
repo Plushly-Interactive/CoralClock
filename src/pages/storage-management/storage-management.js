@@ -404,7 +404,10 @@ modeRepeatBtn.addEventListener('click', () => {
 function syncDeleteAllBtn() { deleteAllBtn.disabled = !siteInput.value.trim(); }
 attachInputClear(siteInput, document.querySelector('#site-filter-clear'), syncDeleteAllBtn);
 const delSiteParam = new URLSearchParams(location.search).get('site');
-if (delSiteParam) siteInput.value = delSiteParam;
+if (delSiteParam) {
+  siteInput.value = delSiteParam;
+  siteInput.focus();
+}
 syncDeleteAllBtn();
 
 function getHourValue(id) {

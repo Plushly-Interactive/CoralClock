@@ -726,6 +726,7 @@ if (prefillTarget) {
   // Open the add card if pre-filled from "Limit this site"
   addCard.classList.add('open');
   addCardBody.removeAttribute('hidden');
+  formTarget.focus();
 }
 
 initCustomDropdowns();
