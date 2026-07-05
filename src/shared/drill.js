@@ -37,7 +37,7 @@ const DRILL_INNER_HTML = `
     </div>
   </div>
   <div id="drill-chart-wrapper">
-    <button id="drill-keys-btn" class="square-btn">&#215;</button>
+    <button id="drill-keys-btn" class="square-btn">&times;</button>
     <div id="drill-keys-popup" class="tooltip text-meta">
       <div id="drill-keys-title">Keyboard shortcuts</div>
       <div><kbd>&larr;</kbd><kbd>&rarr;</kbd> Navigate period</div>
@@ -102,7 +102,7 @@ export function initDrill(context) {
   ctx.drillKeysBtn.addEventListener('click', () => {
     const visible = ctx.drillKeysPopup.style.display !== 'none';
     ctx.drillKeysPopup.style.display = visible ? 'none' : 'flex';
-    ctx.drillKeysBtn.textContent = visible ? '?' : '×';
+    ctx.drillKeysBtn.innerHTML = visible ? '?' : '&times;';
   });
 
   window.addEventListener('keydown', (e) => {

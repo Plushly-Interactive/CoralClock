@@ -86,7 +86,7 @@ async function notifyBlocked(overage, blockedSites) {
     const label = blockedSites.get(ruleId) ?? entry.target ?? 'A site';
     chrome.notifications.create(`blocked-${ruleId}`, {
       type: 'basic',
-      iconUrl: chrome.runtime.getURL('resources/icons/reef-icon-square-128px.png'),
+      iconUrl: chrome.runtime.getURL('resources/icons/png/icon128.png'),
       title: 'Time limit reached',
       message: `${label} is now blocked`,
     });
@@ -107,7 +107,7 @@ async function notifyApproaching(approaching, now) {
     const left = fmtMs(entry.remainingMs);
     chrome.notifications.create(`approach-${ruleId}`, {
       type: 'basic',
-      iconUrl: chrome.runtime.getURL('resources/icons/reef-icon-square-128px.png'),
+      iconUrl: chrome.runtime.getURL('resources/icons/png/icon128.png'),
       title: 'Approaching time limit',
       message: `${label} — ${pct}% of ${entry.limit} ${entry.limitUnit} ${PERIOD_LABEL[entry.period] ?? entry.period} limit used (${left} left)`,
     });

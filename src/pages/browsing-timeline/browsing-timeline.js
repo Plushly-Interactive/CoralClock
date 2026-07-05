@@ -78,7 +78,7 @@ let keysOpen = true;   // open by default, like the drill view
 keysBtn.addEventListener('click', () => {
   keysOpen = !keysOpen;
   keysPopup.style.display = keysOpen ? 'flex' : 'none';
-  keysBtn.textContent = keysOpen ? '×' : '?';
+  keysBtn.innerHTML = keysOpen ? '&times;' : '?';
 });
 
 window.addEventListener('keydown', (e) => {

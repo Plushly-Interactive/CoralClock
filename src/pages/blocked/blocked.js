@@ -5,7 +5,7 @@ import { weekDow } from '../../shared/weekStart.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 
 document.querySelector('#logo').src =
-  chrome.runtime.getURL('resources/icons/reef-icon-square-128px.png');
+  chrome.runtime.getURL('resources/icons/logo.svg');
 
 const params = new URLSearchParams(location.search);
 const ruleId = params.get('rule');

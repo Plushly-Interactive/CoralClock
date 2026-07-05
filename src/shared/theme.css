@@ -12,10 +12,12 @@
 
   --stat-sub-size: 0.85em;
 
-  --color-accent: #74322a;
-  --color-accent-light: #9a4237;
-  --color-secondary: #97aabe;
-  --color-secondary-light: #b5cce4;
+  /* --color-accent: #9c3b33; */
+  --color-accent: #8d332c;
+  --color-secondary: #688db5;
+
+  --color-accent-light: #c2493f;
+  --color-secondary-light: #92b8e2;
   --color-button-text: var(--color-bg);
 
   --overlay-bg: rgba(0, 0, 0, 0.5);
@@ -38,6 +40,9 @@
 }
 
 html.dark {
+  --color-accent: #9c3b33;
+  --color-secondary: #7a99bc;
+
   --color-bg: #1c1c1c;
   --color-border: #383838;
   --color-text: #e8e8e8;
@@ -86,26 +91,18 @@ body {
   object-fit: contain;
 }
 
-#brand-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-#brand-name {
-  display: inline-flex;
-  align-items: center;
+.brand-word {
   line-height: 1;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.3px;
+}
+
+.brand-bite {
   color: var(--color-accent);
 }
 
-#brand-tagline {
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.6px;
+.brand-guard {
   color: var(--color-secondary);
 }
 
@@ -249,6 +246,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 36px;
 }
 
 .callout[hidden] { display: none; }
@@ -475,6 +473,12 @@ button:disabled {
 
 .square-btn:hover {
   background-color: var(--color-hover-bg);
+  color: var(--color-accent-light);
+}
+
+.square-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 .data-table {
@@ -583,6 +587,11 @@ header {
   width: 28px;
   height: 28px;
   object-fit: contain;
+  transition: transform 0.15s ease;
+}
+
+#back-btn:hover img {
+  transform: scale(1.08);
 }
 
 #back-btn {
@@ -748,7 +757,6 @@ html.dark #moon-icon {
 
 #sun-icon {
   display: none;
-  color: var(--color-accent-light);
 }
 
 html.dark #sun-icon {

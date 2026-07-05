@@ -23,6 +23,7 @@
 - Never duplicate CSS code, use existing shared classes as much as possible.
 - Always prefix unused parameters with _.
 - SVG <title> tooltips are unreliable in Chromium, never use them.
+- For a close/clear "×" glyph, always use the `&times;` HTML entity, never the literal `×` character or the numeric `&#215;` entity. This works even when set via JS, as long as it's assigned through `innerHTML` (entities parse there); `textContent` never parses entities, so if a toggle needs to swap the glyph, use `innerHTML` for that assignment too.
 - Never duplicate JS code, use existing functions as much as possible, extract functions that get new use cases in a separate shared file when relevant.
 - When reusing logic across 2+ pages, extract it to `src/shared/`. When extracting data/storage logic (migrations, import, pruning), put it in `src/data/`. When the logic requires service-worker APIs (alarms, DNR, tab/window tracking), put it in `src/background/`.
 - For dynamic JS-driven visibility toggling, use `element.style.display = 'none'` / `''` (empty string restores the CSS-declared display value). Use the `hidden` attribute only for static initial hidden states declared in HTML (e.g. `<div id="modal" hidden>`), and clear it via `element.removeAttribute('hidden')` or by setting `style.display` once before toggling further.

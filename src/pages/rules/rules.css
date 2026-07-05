@@ -63,12 +63,10 @@
 
 #type-toggle .seg-btn { width: 100px; justify-content: center; }
 
-.seg-icon { font-size: 12px; line-height: 1; flex-shrink: 0; }
-.seg-icon-regex { font-family: ui-monospace, monospace; font-size: 11px; }
+.seg-icon { flex-shrink: 0; display: flex; font-size: 12px; line-height: 1; }
+.seg-icon svg { width: 13px; height: 13px; stroke: currentColor; }
 
-#tab-url:not(.active) .seg-icon     { color: var(--color-accent); }
-#tab-regex:not(.active) .seg-icon   { color: var(--color-secondary); }
-#tab-keyword:not(.active) .seg-icon { color: var(--color-accent-light); }
+#type-toggle .seg-btn:not(.active) .seg-icon { color: var(--color-accent-light); }
 
 #add-toggle-arrow {
   font-size: 11px;
@@ -160,14 +158,7 @@
 
 #sort-bar { flex-shrink: 0; margin-top: 6px; }
 
-#sort-status { text-align: right; }
-
-#sort-bar th::after {
-  content: attr(data-arrow);
-  display: inline-block;
-  width: 1em;
-  text-align: right;
-}
+#sort-status { text-align: left; width: 142px; }
 
 #rules-list { overflow-y: auto; flex: 1; min-height: 0; }
 

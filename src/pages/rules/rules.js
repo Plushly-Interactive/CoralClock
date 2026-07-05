@@ -287,7 +287,7 @@ function sortedRules() {
 function updateSortArrows() {
   for (const [key, btn] of [['site', sortSiteBtn], ['status', sortStatusBtn]]) {
     const isSorted = sort.key === key;
-    btn.dataset.arrow = isSorted ? (sort.dir === 1 ? '↑' : '↓') : '';
+    btn.textContent = btn.dataset.label + (isSorted ? (sort.dir === 1 ? ' ↑' : ' ↓') : '');
     btn.classList.toggle('sorted', isSorted);
   }
 }
@@ -509,8 +509,17 @@ function openRowEditor(id) {
       ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
-      <button class="save-edit-btn square-btn" data-id="${id}">✓</button>
-      <button class="cancel-edit-btn square-btn">↩</button>
+      <button class="save-edit-btn square-btn" data-id="${id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </button>
+      <button class="cancel-edit-btn square-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 14 4 9 9 4" />
+          <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+        </svg>
+      </button>
     </div>`);
   initCustomDropdowns(li);
   constrainLimitForm('edit', li);
@@ -533,9 +542,12 @@ function openRowEditor(id) {
 }
 
 rulesList.addEventListener('click', async (e) => {
-  if (e.target.classList.contains('cancel-edit-btn')) { render(); return; }
-  if (e.target.classList.contains('save-edit-btn')) {
-    const id = e.target.dataset.id;
+  const btn = e.target.closest('button');
+  if (!btn) return;
+
+  if (btn.classList.contains('cancel-edit-btn')) { render(); return; }
+  if (btn.classList.contains('save-edit-btn')) {
+    const id = btn.dataset.id;
     const limit = parseInt(rulesList.querySelector('.edit-limit').value);
     if (isNaN(limit) || limit < 0) return;
     await updateRule(id, {
@@ -547,11 +559,11 @@ rulesList.addEventListener('click', async (e) => {
     return;
   }
 
-  const id = e.target.dataset.id;
+  const id = btn.dataset.id;
   if (!id) return;
-  if (e.target.classList.contains('edit-btn'))   { await render(); openRowEditor(id); return; }
-  if (e.target.classList.contains('toggle-btn')) await toggleRule(id);
-  if (e.target.classList.contains('delete-btn')) {
+  if (btn.classList.contains('edit-btn'))   { await render(); openRowEditor(id); return; }
+  if (btn.classList.contains('toggle-btn')) await toggleRule(id);
+  if (btn.classList.contains('delete-btn')) {
     const deleted = currentRules.find(r => r.id === id);
     await deleteRule(id);
     if (deleted) await releasePermissionFor(deleted, currentRules.filter(r => r.id !== id));

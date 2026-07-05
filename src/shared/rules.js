@@ -186,10 +186,23 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
   listEl.innerHTML = rules.map(rule => {
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
     const limitStr = limitMs === 0 ? 'Never' : `${formatMs(limitMs)} per ${rule.period}`;
+    const toggleHtml = readonly ? '' : `
+      <button class="toggle-btn rule-toggle${rule.enabled ? ' on' : ''}" data-id="${rule.id}" aria-label="${rule.enabled ? 'Disable rule' : 'Enable rule'}"></button>`;
     const actions = readonly ? '' : `
-      <button class="edit-btn square-btn" data-id="${rule.id}">✎</button>
-      <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
-      <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>`;
+      <button class="edit-btn square-btn rule-action-btn" data-id="${rule.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+        </svg>
+      </button>
+      <button class="delete-btn square-btn rule-action-btn" data-id="${rule.id}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 7h16" />
+          <path d="M10 11v6" />
+          <path d="M14 11v6" />
+          <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
+          <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+        </svg>
+      </button>`;
     const faviconHtml = rule.target
       ? `<img class="site-favicon" src="${faviconUrl(rule.target)}" alt="">`
       : '';
@@ -199,7 +212,8 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
       <div class="rule-info">
         <span class="site-label">${matchLabel(rule)}</span>
         <span class="text-meta">${SCOPE_LABELS[rule.matchType]} · ${limitStr} · ${MODE_LABELS[rule.mode]}</span>
-      </div>${actions}
+      </div>
+      ${toggleHtml}${actions}
     </li>`;
   }).join('');
   listEl.querySelectorAll('.site-favicon').forEach(img => {

@@ -5,7 +5,6 @@
 #settings-btn {
   background: var(--color-accent);
   color: var(--color-button-text);
-  -webkit-text-stroke: 0.5px var(--color-button-text);
 }
 
 #settings-btn:hover {

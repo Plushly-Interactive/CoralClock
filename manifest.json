@@ -10,18 +10,18 @@
   },
 
   "icons": {
-    "16": "resources/icons/reef-icon-square-16px.png",
-    "48": "resources/icons/reef-icon-square-48px.png",
-    "128": "resources/icons/reef-icon-square-128px.png"
+    "16": "resources/icons/png/icon16.png",
+    "48": "resources/icons/png/icon48.png",
+    "128": "resources/icons/png/icon128.png"
   },
 
   "action": {
     "default_popup": "src/pages/popup/popup.html",
     "default_title": "Reef",
     "default_icon": {
-      "16": "resources/icons/reef-icon-square-16px.png",
-      "48": "resources/icons/reef-icon-square-48px.png",
-      "128": "resources/icons/reef-icon-square-128px.png"
+      "16": "resources/icons/png/icon16.png",
+      "48": "resources/icons/png/icon48.png",
+      "128": "resources/icons/png/icon128.png"
     }
   },
 

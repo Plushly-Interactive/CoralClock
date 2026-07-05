@@ -147,6 +147,7 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
   const padLeft = 60, padRight = 8, padTop = 10, padBottom = 40;
   const innerW = W - padLeft - padRight;
   const innerH = H - padTop - padBottom;
+  if (innerW <= 0 || innerH <= 0) return;
   const gap = innerW / data.length;
   const is24h = data.length === 24;
   const labelEvery = labelEveryProp ?? (is24h ? 6 : Math.ceil(data.length / 10));
