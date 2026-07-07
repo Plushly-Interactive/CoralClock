@@ -239,6 +239,9 @@
   "weekday_saturday": { "message": "Saturday" },
 
   "settings_pageTitle": { "message": "Settings" },
+  "settings_language": { "message": "Language" },
+  "settings_languageDesc": { "message": "Language used across all pages. Automatic follows your browser's language." },
+  "settings_languageAuto": { "message": "Automatic" },
   "settings_idleThreshold": { "message": "Idle threshold" },
   "settings_minutes": { "message": "minutes" },
   "settings_idleThresholdDesc": { "message": "Time without keyboard or mouse input before $1 stops crediting active time on the focused tab.", "description": "$1 = brand name" },

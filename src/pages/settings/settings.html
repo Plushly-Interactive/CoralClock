@@ -24,6 +24,21 @@
     <main id="settings-main">
       <section class="setting-card">
         <div class="form-row">
+          <span class="setting-label" data-i18n="settings_language">Language</span>
+          <div class="custom-dropdown" id="language-dropdown">
+            <button class="dropdown-btn" id="language-btn" data-value="auto">
+              Automatic<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span>
+            </button>
+            <div class="dropdown-menu" id="language-menu"></div>
+          </div>
+        </div>
+        <p class="setting-desc text-meta" data-i18n="settings_languageDesc">
+          Language used across all pages. Automatic follows your browser's language.
+        </p>
+      </section>
+
+      <section class="setting-card">
+        <div class="form-row">
           <label class="setting-label" for="idle-threshold-input" data-i18n="settings_idleThreshold">Idle threshold</label>
           <input id="idle-threshold-input" class="number-input" type="number" min="1" step="1" value="1" />
           <span class="text-meta" data-i18n="settings_minutes">minutes</span>

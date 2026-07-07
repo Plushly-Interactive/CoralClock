@@ -1,4 +1,4 @@
-# BiteGuard – Project Rules
+# Project Rules
 
 ## Project context
 - Browser extension targeting Vivaldi (Chromium, Manifest V3)
@@ -18,11 +18,12 @@
 - Do not write migration code along with functional code. Suggest it after you're done with the functional code.
 
 ## JavaScript / HTML / CSS
-- Every interactive DOM element must have an `id`. Always select with `querySelector('#id')` in JavaScript, never `getElementById`.
+- Every interactive DOM element must have an `id`. Always select with `querySelector('#id')` in JavaScript, never `getElementById`. Exception: elements generated in a loop (dropdown options, table rows) never get an id — select them via closure, `dataset`, or `event.currentTarget` instead.
 - Use classes for CSS styling (shared styles across elements). Use ids for JS selection. An element can have both.
 - Never duplicate CSS code, use existing shared classes as much as possible.
 - Always prefix unused parameters with _.
 - SVG <title> tooltips are unreliable in Chromium, never use them.
+- Never use a native `<select>` or `<input type="date">` — use the custom-dropdown pattern (`shared/dropdown.js`) and `shared/datePicker.js` respectively. Native `<input type="number">` is fine but must be paired with `enhanceNumberInput()` from `shared/numberInput.js` to replace the native spinner with the custom stepper.
 - For a close/clear "×" glyph, always use the `&times;` HTML entity, never the literal `×` character or the numeric `&#215;` entity. This works even when set via JS, as long as it's assigned through `innerHTML` (entities parse there); `textContent` never parses entities, so if a toggle needs to swap the glyph, use `innerHTML` for that assignment too.
 - Never duplicate JS code, use existing functions as much as possible, extract functions that get new use cases in a separate shared file when relevant.
 - When reusing logic across 2+ pages, extract it to `src/shared/`. When extracting data/storage logic (migrations, import, pruning), put it in `src/data/`. When the logic requires service-worker APIs (alarms, DNR, tab/window tracking), put it in `src/background/`.
@@ -35,10 +36,20 @@
   - **Persistent user settings** (e.g. `idleThresholdSec`, `weekStart`) live in `chrome.storage.local`, are surfaced on the settings page, and have a `DEFAULT_*` constant colocated with the module that owns the setting's meaning. Defaults are imported, never re-declared at the call site.
   - **Per-tab view-state** (e.g. `hideBrief`, `mergeMode`, `groupMode`, `subpagesStripParams`, `timeRange`) lives in `sessionStorage`, is intentionally per-tab and ephemeral, and does NOT belong on the settings page. Defaults are encoded in the read pattern (`!== 'false'` / `=== 'true'`).
 
+## Internationalization (i18n)
+- All user-facing strings go through `src/shared/i18n.js`: `t(key, subs)` for JS, `data-i18n`/`data-i18n-title`/`data-i18n-placeholder`/`data-i18n-aria` HTML attributes hydrated by `applyI18n(root)` for markup. Use `data-i18n-firstchild` instead of `data-i18n` when the element has non-text children after the label (e.g. an SVG dropdown arrow) — it replaces only the leading text node.
+- Keys and English text live in `_locales/en/messages.json`. Messages use positional `$1`/`$2` substitution only — never named `$FOO$` placeholders — so the custom override loader and native `chrome.i18n.getMessage` behave identically.
+- Every `messages.json` entry is a single inline line: `"key": { "message": "..." },`. Never pretty-print/multi-line an entry — matches the existing file's formatting.
+- Translated locales (`_locales/<lang>/messages.json`) hold `{ "key": { "message": "..." } }` only — no `description` field, that's an English-only translator hint.
+- The active language is `PREF_LANGUAGE` in `chrome.storage.local`, set via the Settings page language picker. Changing it reloads the page — there's no live re-render.
+- Locale-culture-dependent strings (weekday/month names) use `Intl.DateTimeFormat`, never hardcoded arrays.
+- Pluralization uses `_one`/`_other` key suffixes with manual dispatch — no ICU MessageFormat.
+
 ## Page layout
 - Each full-page view lives in `src/pages/<name>/` as a `<name>.{html,css,js}` triplet.
 - Every full-page view reuses the shared header in `theme.css` (75px height, three-column grid). Don't redefine `header` per page. Exception: the popup has its own fixed-width header layout and is exempt.
-- For "back to dashboard" navigation, use the icon-back pattern: an `<a id="back-btn">` wrapping the BiteGuard logo image, placed in `#header-left`. Never add a text "Back to dashboard" button.
+- For "back to dashboard" navigation, use the icon-back pattern: an `<a id="back-btn">` wrapping the brand logo image (`BRAND_NAME` in `src/shared/brand.js`), placed in `#header-left`. Never add a text "Back to dashboard" button.
+- `legacy-storage-management` has no own `.css` file; it intentionally reuses `storage-management.css` since the two pages share layout. Only break the triplet convention this way when a page is a near-duplicate of an existing one.
 
 ## Communication
 - Explain each step as if I'm learning, not just following along.

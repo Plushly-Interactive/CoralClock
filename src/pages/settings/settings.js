@@ -1,5 +1,5 @@
 import { autoStartIfMatches } from '../../shared/tour.js';
-import { PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START, PREF_BADGE_ENABLED } from '../../shared/prefKeys.js';
+import { PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START, PREF_BADGE_ENABLED, PREF_LANGUAGE } from '../../shared/prefKeys.js';
 import { WEEK_DAYS, DEFAULT_WEEK_START } from '../../shared/weekStart.js';
 import { getIdleThresholdSec } from '../../shared/idleConfig.js';
 import { initCustomDropdowns } from '../../shared/dropdown.js';
@@ -8,13 +8,15 @@ import { DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { DEFAULT_BADGE_ENABLED } from '../../background/badge.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { enhanceNumberInput } from '../../shared/numberInput.js';
-import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { initI18n, applyI18n, t, DEFAULT_LANGUAGE } from '../../shared/i18n.js';
 
 await initI18n();
 applyI18n();
 document.querySelector('#idle-threshold-desc').textContent = t('settings_idleThresholdDesc', [BRAND_NAME]);
 
 const CLOCK_FORMATS = ['24h', '12h'];
+const LANGUAGES = ['auto', 'en', 'fr', 'es'];
+const LANGUAGE_NAMES = { en: 'English', fr: 'Français', es: 'Español' };
 
 const idleInput = document.querySelector('#idle-threshold-input');
 const weekStartBtn = document.querySelector('#week-start-btn');
@@ -22,12 +24,18 @@ const weekStartMenu = document.querySelector('#week-start-menu');
 const clockFormatBtn = document.querySelector('#clock-format-btn');
 const clockFormatMenu = document.querySelector('#clock-format-menu');
 const badgeEnabledInput = document.querySelector('#badge-enabled-input');
+const languageBtn = document.querySelector('#language-btn');
+const languageMenu = document.querySelector('#language-menu');
+
+function languageLabel(code) {
+  return code === DEFAULT_LANGUAGE ? t('settings_languageAuto') : LANGUAGE_NAMES[code];
+}
 
 function dayLabel(name) {
   return t(`weekday_${name}`);
 }
 
-const stored = await chrome.storage.local.get([PREF_WEEK_START, PREF_CLOCK_FORMAT, PREF_BADGE_ENABLED]);
+const stored = await chrome.storage.local.get([PREF_WEEK_START, PREF_CLOCK_FORMAT, PREF_BADGE_ENABLED, PREF_LANGUAGE]);
 const idleSec = await getIdleThresholdSec();
 idleInput.value = Math.round(idleSec / 60);
 
@@ -40,6 +48,32 @@ badgeEnabledInput.checked = stored[PREF_BADGE_ENABLED] ?? DEFAULT_BADGE_ENABLED;
 let currentClockFormat = CLOCK_FORMATS.includes(stored[PREF_CLOCK_FORMAT]) ? stored[PREF_CLOCK_FORMAT] : DEFAULT_CLOCK_FORMAT;
 clockFormatBtn.dataset.value = currentClockFormat;
 clockFormatBtn.firstChild.textContent = currentClockFormat;
+
+let currentLanguage = LANGUAGES.includes(stored[PREF_LANGUAGE]) ? stored[PREF_LANGUAGE] : DEFAULT_LANGUAGE;
+languageBtn.dataset.value = currentLanguage;
+languageBtn.firstChild.textContent = languageLabel(currentLanguage);
+
+function rebuildLanguageMenu() {
+  languageMenu.replaceChildren();
+  for (const code of LANGUAGES) {
+    if (code === currentLanguage) continue;
+    const opt = document.createElement('button');
+    opt.value = code;
+    opt.textContent = languageLabel(code);
+    opt.addEventListener('click', onLanguagePick, { capture: true });
+    languageMenu.append(opt);
+  }
+}
+
+async function onLanguagePick(e) {
+  e.stopPropagation();
+  currentLanguage = e.currentTarget.value;
+  languageMenu.classList.remove('open');
+  await chrome.storage.local.set({ [PREF_LANGUAGE]: currentLanguage });
+  location.reload();
+}
+
+rebuildLanguageMenu();
 
 function rebuildClockFormatMenu() {
   clockFormatMenu.replaceChildren();
