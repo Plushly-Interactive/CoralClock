@@ -1,4 +1,6 @@
-export function confirmDialog({ message, confirmLabel = 'Confirm', cancelLabel = 'Cancel' }) {
+import { t } from './i18n.js';
+
+export function confirmDialog({ message, confirmLabel = t('confirm_defaultOk'), cancelLabel = t('storage_cancelBtn') }) {
   return new Promise((resolve) => {
     const dialog = document.createElement('div');
     dialog.id = 'confirm-dialog';

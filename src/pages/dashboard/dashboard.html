@@ -16,13 +16,13 @@
           <img id="brand-logo" src="../../../resources/icons/brand/logo.svg" alt="ReefGuard" />
           <span class="brand-word brand-guard">Guard</span>
         </div>
-        <button id="tour-btn" class="square-btn" title="Take the tour">?</button>
+        <button id="tour-btn" class="square-btn" data-i18n-title="dashboard_tourBtn" title="Take the tour">?</button>
       </div>
       <div id="header-center"></div>
       <div id="header-right">
-        <button id="prune-btn" class="btn">Manage storage</button>
-        <button id="rules-btn" class="btn" type="button">Manage rules</button>
-        <button id="settings-btn" class="square-btn" title="Settings">
+        <button id="prune-btn" class="btn" data-i18n="dashboard_pruneBtn">Manage storage</button>
+        <button id="rules-btn" class="btn" type="button" data-i18n="dashboard_rulesBtn">Manage rules</button>
+        <button id="settings-btn" class="square-btn" data-i18n-title="dashboard_settingsBtn" title="Settings">
           <span class="icon-mask icon-gear"></span>
         </button>
       </div>
@@ -33,7 +33,7 @@
     <div id="dashboard-grid">
       <div id="dashboard-charts-col">
         <div class="chart-container" id="top-chart-container">
-          <h2 class="chart-heading">Top 5 sites <span id="top-subheading" class="chart-subheading text-meta"></span></h2>
+          <h2 class="chart-heading"><span data-i18n="dashboard_top5">Top 5 sites</span> <span id="top-subheading" class="chart-subheading text-meta"></span></h2>
           <svg id="top-chart" class="chart-svg"></svg>
           <div class="tooltip text-meta" id="top-tooltip"></div>
           <p id="top-not-relevant" class="text-meta" style="display:none"></p>
@@ -41,9 +41,9 @@
 
         <div class="chart-container" id="hourly-chart-container">
           <h2 class="chart-heading">
-            Average per clock hour
+            <span data-i18n="dashboard_avgPerHour">Average per clock hour</span>
             <span id="hourly-subheading" class="chart-subheading text-meta"></span>
-            <button id="timeline-link" class="link-btn" style="margin-left:auto;font-size:var(--font-base);text-transform:none">View timeline →</button>
+            <button id="timeline-link" class="link-btn" style="margin-left:auto;font-size:var(--font-base);text-transform:none" data-i18n="dashboard_viewTimeline">View timeline →</button>
           </h2>
           <svg id="hourly-chart" class="chart-svg"></svg>
           <div class="tooltip text-meta" id="hourly-tooltip"></div>
@@ -53,30 +53,30 @@
 
       <div id="dashboard-table-col" class="chart-container">
         <h2 class="chart-heading" id="dashboard-table-heading">
-          All browsed sites
-          <label id="hide-brief-label" class="table-filter text-meta"><input type="checkbox" id="hide-brief-toggle" checked> Hide brief (&lt;1m)</label>
+          <span data-i18n="dashboard_allSites">All browsed sites</span>
+          <label id="hide-brief-label" class="table-filter text-meta"><input type="checkbox" id="hide-brief-toggle" checked> <span data-i18n="dashboard_hideBrief">Hide brief (&lt;1m)</span></label>
         </h2>
         <div id="site-search-wrap" class="input-wrap">
-          <input type="search" id="site-search" class="text-input" placeholder="Search sites…" autocomplete="off">
-          <button id="site-search-clear" class="icon-btn input-clear" aria-label="Clear search" hidden>&times;</button>
+          <input type="search" id="site-search" class="text-input" data-i18n-placeholder="dashboard_searchPlaceholder" placeholder="Search sites…" autocomplete="off">
+          <button id="site-search-clear" class="icon-btn input-clear" data-i18n-aria="common_clearSearch" aria-label="Clear search" hidden>&times;</button>
         </div>
         <table id="dashboard-table" class="data-table data-table--scroll">
           <thead>
             <tr>
-              <th id="th-name">Site</th>
-              <th id="th-time">Active time</th>
-              <th id="th-audio">Audio playback</th>
-              <th id="th-visits">Visits</th>
+              <th id="th-name" data-i18n="dashboard_col_name">Site</th>
+              <th id="th-time" data-i18n="dashboard_col_time">Active time</th>
+              <th id="th-audio" data-i18n="dashboard_col_audio">Audio playback</th>
+              <th id="th-visits" data-i18n="dashboard_col_visits">Visits</th>
             </tr>
           </thead>
           <tbody id="dashboard-body"></tbody>
         </table>
-        <p id="empty-msg" class="empty-msg text-meta">No data for this period.</p>
+        <p id="empty-msg" class="empty-msg text-meta" data-i18n="dashboard_noData">No data for this period.</p>
         <div id="dashboard-footer" class="table-footer">
           <span id="entries-count" class="text-meta"></span>
           <div id="dashboard-footer-toggles">
-            <label id="group-label" class="table-filter text-meta"><input type="checkbox" id="group-toggle"> Group subdomains</label>
-            <label id="merge-label" class="table-filter text-meta"><input type="checkbox" id="merge-toggle"> Merge by name</label>
+            <label id="group-label" class="table-filter text-meta"><input type="checkbox" id="group-toggle"> <span data-i18n="dashboard_groupSubdomains">Group subdomains</span></label>
+            <label id="merge-label" class="table-filter text-meta"><input type="checkbox" id="merge-toggle"> <span data-i18n="dashboard_mergeByName">Merge by name</span></label>
           </div>
         </div>
       </div>

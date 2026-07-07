@@ -15,6 +15,10 @@ import { isMockMode, mockIntervalStats } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { buildDatePicker, getDateValue } from '../../shared/datePicker.js';
 import { enhanceNumberInput } from '../../shared/numberInput.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
 
 const spanChip = document.querySelector('#span-chip');
 const spanTooltip = document.querySelector('#span-tooltip');
@@ -106,11 +110,13 @@ function rowLabel(r) {
   return `${localDayKey(r.from)}  ${clock(r.from)}–${clock(r.to)}  ${where}  (${r.kind})`;
 }
 
+const MODE_KEYS = { active: 'mode_active', audio: 'mode_audio', 'active+audio': 'mode_activeAudio' };
+
 // One-line summary of a rule's scope, limit and mode (e.g. "*.reddit.com 30m/day active").
 function ruleSummary(r) {
   const ms = r.limit * (RULE_MULTIPLIERS[r.limitUnit] ?? 60000);
-  const limitStr = ms === 0 ? 'never' : `${formatMs(ms)}/${r.period}`;
-  return `${matchLabel(r)} ${limitStr} ${r.mode}${r.enabled ? '' : ' (off)'}`;
+  const limitStr = ms === 0 ? t('storage_never') : `${formatMs(ms)}/${t(`period_${r.period}`)}`;
+  return `${matchLabel(r)} ${limitStr} ${t(MODE_KEYS[r.mode])}${r.enabled ? '' : ` ${t('storage_off')}`}`;
 }
 
 // A conflicting site's current vs file rules, side by side. Em-spaces (which don't
@@ -118,23 +124,23 @@ function ruleSummary(r) {
 function ruleDiffLabel(domain, currentRules, importRules) {
   const onDomain = rs => rs.filter(r => r.target === domain).map(ruleSummary).join(', ');
   const SEP = '  ';
-  return `${domain}:${SEP}yours ${onDomain(currentRules)}${SEP}→${SEP}file ${onDomain(importRules)}`;
+  return `${domain}:${SEP}${t('storage_yours')} ${onDomain(currentRules)}${SEP}→${SEP}${t('storage_file')} ${onDomain(importRules)}`;
 }
 
 // A setting's value, formatted for display (idle is stored in seconds, week start
 // as a lowercase day name).
 function prefValueLabel(key, val) {
-  if (val === undefined || val === null) return 'unset';
-  if (key === PREF_IDLE_THRESHOLD_SEC) return `${Math.round(val / 60)} min`;
-  if (key === PREF_WEEK_START) return val.charAt(0).toUpperCase() + val.slice(1);
+  if (val === undefined || val === null) return t('storage_unset');
+  if (key === PREF_IDLE_THRESHOLD_SEC) return t('storage_minutesAbbrev', [Math.round(val / 60)]);
+  if (key === PREF_WEEK_START) return t(`weekday_${val}`);
   return String(val);
 }
 
 // A conflicting setting's current vs file value, side by side.
 function prefDiffLabel(key, currentPrefs, importPrefs) {
   const SEP = '  ';
-  const name = PREF_LABELS[key] ?? key;
-  return `${name}:${SEP}yours ${prefValueLabel(key, currentPrefs[key])}${SEP}→${SEP}file ${prefValueLabel(key, importPrefs[key])}`;
+  const name = t(PREF_LABELS[key] ?? key);
+  return `${name}:${SEP}${t('storage_yours')} ${prefValueLabel(key, currentPrefs[key])}${SEP}→${SEP}${t('storage_file')} ${prefValueLabel(key, importPrefs[key])}`;
 }
 
 // Apply the interval-overlap choice. 'replace' drops current rows that overlap then
@@ -156,11 +162,19 @@ async function applyIntervals(intervals, ctx, choice) {
 
 const CONFLICT_LIST_CAP = 500;
 
+const UNIT_KEYS = {
+  day: ['storage_unit_day_one', 'storage_unit_day_other'],
+  site: ['storage_unit_site_one', 'storage_unit_site_other'],
+  setting: ['storage_unit_setting_one', 'storage_unit_setting_other'],
+  row: ['storage_unit_row_one', 'storage_unit_row_other'],
+};
+
 // Generic conflict view: a list of string labels with a title/description/unit.
 function showConflicts({ labels, unit, title, desc }) {
   conflictLabel.textContent = title;
   conflictDesc.textContent = desc;
-  conflictCount.textContent = ` (${labels.length.toLocaleString()} ${unit}${labels.length === 1 ? '' : 's'})`;
+  const [oneKey, otherKey] = UNIT_KEYS[unit];
+  conflictCount.textContent = ` (${t(labels.length === 1 ? oneKey : otherKey, [labels.length.toLocaleString()])})`;
   conflictList.replaceChildren();
   for (const label of labels.slice(0, CONFLICT_LIST_CAP)) {
     const li = document.createElement('li');
@@ -171,7 +185,7 @@ function showConflicts({ labels, unit, title, desc }) {
   }
   if (labels.length > CONFLICT_LIST_CAP) {
     const li = document.createElement('li');
-    li.textContent = `…and ${(labels.length - CONFLICT_LIST_CAP).toLocaleString()} more`;
+    li.textContent = t('storage_andNMore', [(labels.length - CONFLICT_LIST_CAP).toLocaleString()]);
     conflictList.appendChild(li);
   }
   ioColumns.style.display = 'none';
@@ -181,9 +195,9 @@ function showConflicts({ labels, unit, title, desc }) {
 }
 
 const PREF_LABELS = {
-  [PREF_CLOCK_FORMAT]: 'clock format',
-  [PREF_IDLE_THRESHOLD_SEC]: 'idle threshold',
-  [PREF_WEEK_START]: 'week start',
+  [PREF_CLOCK_FORMAT]: 'storage_prefClockFormat',
+  [PREF_IDLE_THRESHOLD_SEC]: 'storage_prefIdleThreshold',
+  [PREF_WEEK_START]: 'storage_prefWeekStart',
 };
 
 // BiteGuard backup -> full restore. Each category (browsing days, rules, settings,
@@ -194,7 +208,7 @@ async function importBiteGuard(json) {
   if (err) { showIoError(err); return; }
   let parsed;
   try { parsed = parseBgImport(json); }
-  catch { showIoError("The file's tracking data is corrupted and could not be read."); return; }
+  catch { showIoError(t('storage_corruptedFile')); return; }
 
   const intervals = Array.isArray(json.intervals)
     ? json.intervals.filter(r => typeof r.from === 'number' && typeof r.to === 'number')
@@ -202,7 +216,7 @@ async function importBiteGuard(json) {
 
   const hasBuckets = Object.keys(parsed.importByDay).length > 0;
   if (!hasBuckets && !parsed.importRules?.length && !parsed.importPrefs && intervals.length === 0) {
-    showIoError('The file has no data to import.');
+    showIoError(t('storage_noDataToImport'));
     return;
   }
 
@@ -221,21 +235,21 @@ async function importBiteGuard(json) {
 
   const steps = [];
   if (dayConflicts.length) steps.push({
-    cat: 'days', labels: dayConflicts, unit: 'day', title: 'Conflicting days',
-    desc: 'These days already have legacy data and also appear in the file. Keep current ignores those days from the file; Replace overwrites them. Days only in the file are always added.',
+    cat: 'days', labels: dayConflicts, unit: 'day', title: t('storage_conflictingDays'),
+    desc: t('storage_dayConflictDesc'),
   });
   if (ruleConflicts.length) steps.push({
-    cat: 'rules', unit: 'site', title: 'Conflicting rules',
+    cat: 'rules', unit: 'site', title: t('storage_conflictingRules'),
     labels: ruleConflicts.map(dom => ruleDiffLabel(dom, currentRules, parsed.importRules)),
-    desc: "These sites already have a rule that differs from the file (scope, limit or mode). Keep current keeps your rules for these sites; Replace takes the file's. Rules for other sites are merged in either way.",
+    desc: t('storage_ruleConflictDesc'),
   });
   if (prefConflicts.length) steps.push({
-    cat: 'prefs', labels: prefConflicts.map(k => prefDiffLabel(k, stored, parsed.importPrefs)), unit: 'setting', title: 'Different settings',
-    desc: "These settings differ between your current values and the file. Keep current keeps yours; Replace takes the file's. Settings you have not set yet are applied either way.",
+    cat: 'prefs', labels: prefConflicts.map(k => prefDiffLabel(k, stored, parsed.importPrefs)), unit: 'setting', title: t('storage_differentSettings'),
+    desc: t('storage_settingsConflictDesc'),
   });
   if (intervalOverlap.length) steps.push({
-    cat: 'intervals', labels: [...intervalOverlap].sort((a, b) => a.from - b.from).map(rowLabel), unit: 'row', title: 'Overlapping data',
-    desc: "These current rows overlap the file's rows in time. Keep current discards the overlapping rows from the file; Replace drops the rows listed and takes the file's. Rows that don't overlap are always kept.",
+    cat: 'intervals', labels: [...intervalOverlap].sort((a, b) => a.from - b.from).map(rowLabel), unit: 'row', title: t('storage_overlappingData'),
+    desc: t('storage_conflictDesc'),
   });
 
   pendingImport = { kind: 'bg', parsed, intervals, intervalCtx, dayConflicts, ruleConflicts, steps, index: 0, decisions: {} };
@@ -246,7 +260,7 @@ async function importBiteGuard(json) {
 function showBgStep() {
   const p = pendingImport;
   const step = p.steps[p.index];
-  const prefix = p.steps.length > 1 ? `Step ${p.index + 1}/${p.steps.length}: ` : '';
+  const prefix = p.steps.length > 1 ? t('storage_stepPrefix', [p.index + 1, p.steps.length]) : '';
   showConflicts({ labels: step.labels, unit: step.unit, title: prefix + step.title, desc: step.desc });
 }
 
@@ -273,18 +287,18 @@ async function finalizeBg() {
   closeIo();
   await loadStats();
   const parts = [];
-  if (summary.days) parts.push(`${summary.days} day(s)`);
-  if (summary.rules) parts.push(`${summary.rules} rule(s)`);
-  if (summary.prefs) parts.push('settings');
-  if (rowCount) parts.push(`${rowCount.toLocaleString()} row(s)`);
-  showNotification(parts.length ? `Imported ${parts.join(', ')}` : 'Nothing new to import');
+  if (summary.days) parts.push(t('storage_daysParen', [summary.days]));
+  if (summary.rules) parts.push(t('storage_rulesParen', [summary.rules]));
+  if (summary.prefs) parts.push(t('storage_settingsWord'));
+  if (rowCount) parts.push(t('storage_rowsParen', [rowCount.toLocaleString()]));
+  showNotification(parts.length ? t('storage_importedParts', [parts.join(', ')]) : t('storage_nothingToImport'));
 }
 
 // Time Tracker export -> scalar bucket tier (separate from the interval log).
 async function importTt(json) {
   const data = parseTtStats(json);
   const days = Object.keys(data);
-  if (days.length === 0) { showIoError('The file has no Time Tracker data to import.'); return; }
+  if (days.length === 0) { showIoError(t('storage_noTtData')); return; }
 
   const stored = await chrome.storage.local.get(SITES_DAY_KEY);
   const sitesByDay = stored[SITES_DAY_KEY] ?? {};
@@ -297,8 +311,8 @@ async function importTt(json) {
   }
   pendingImport = { kind: 'tt', data, sitesByDay, conflicts };
   showConflicts({
-    labels: conflicts, unit: 'day', title: 'Conflicting days',
-    desc: 'These days already have data and also appear in the Time Tracker file. Keep current ignores those days from the file; Replace overwrites them. Days only in the file are always added.',
+    labels: conflicts, unit: 'day', title: t('storage_conflictingDays'),
+    desc: t('storage_ttConflictDesc'),
   });
 }
 
@@ -308,15 +322,15 @@ ioInput.addEventListener('change', async () => {
   if (!file) return;
   let json;
   try { json = JSON.parse(await file.text()); }
-  catch { showIoError("This file isn't valid JSON. It may be truncated or corrupted."); return; }
+  catch { showIoError(t('storage_invalidJson')); return; }
   if (json.format === 'reef' || json.format === 'biteguard') { await importBiteGuard(json); return; }
   if (Array.isArray(json.__stat__)) { await importTt(json); return; }
-  showIoError(`Unrecognized file. Expected a ${BRAND_NAME} export or a Time Tracker export.`);
+  showIoError(t('storage_unrecognizedFile', [BRAND_NAME]));
 });
 
 document.querySelector('#io-conflict-cancel').addEventListener('click', () => {
   hideConflicts();
-  showNotification('Import cancelled');
+  showNotification(t('storage_importCancelled'));
 });
 document.querySelector('#io-conflict-keep').addEventListener('click', async () => {
   const p = pendingImport;
@@ -337,7 +351,7 @@ document.querySelector('#io-conflict-replace').addEventListener('click', async (
 
 // --- Targeted deletion (UI cloned from the bucket storage page; deletes interval rows) ---
 function delHourLabel(h, clockFormat) {
-  if (h === 24) return clockFormat === '12h' ? '12 AM +1' : '00:00 +1';
+  if (h === 24) return clockFormat === '12h' ? t('storage_midnightPlus1_12h') : t('storage_midnightPlus1_24h');
   return formatHourLabel(h, clockFormat);
 }
 
@@ -449,39 +463,39 @@ function keyToTs(key) {
 deleteAllBtn.addEventListener('click', async () => {
   const siteId = siteInput.value.trim();
   const ok = await confirmDialog({
-    message: `Delete all rows for ${siteId}? This permanently removes every interval row for ${siteId} across all dates. This cannot be undone.`,
-    confirmLabel: 'Delete',
+    message: t('storage_confirmDeleteAllRows', [siteId]),
+    confirmLabel: t('storage_deleteBtn'),
   });
   if (!ok) return;
   const n = await deleteByDomain(siteId);
   invalidate();
   await loadStats();
-  showNotification(`Deleted ${n.toLocaleString()} row${n === 1 ? '' : 's'} for ${siteId}`);
+  showNotification(t(n === 1 ? 'storage_deletedRowsFor_one' : 'storage_deletedRowsFor_other', [n.toLocaleString(), siteId]));
 });
 
 document.querySelector('#delete-range-btn').addEventListener('click', async () => {
   const isRepeat = modeRepeatBtn.classList.contains('active');
   const siteId = siteInput.value.trim() || null;
-  const scope = siteId ? ` for ${siteId}` : '';
+  const scope = siteId ? t('storage_forSite', [siteId]) : '';
   let confirmMsg, pairs;
   if (isRepeat) {
     const fromDate = getDateValue('repeat-from-date'), toDate = getDateValue('repeat-to-date');
     const fromHour = getHourValue('repeat-from-hour'), toHour = getHourValue('repeat-to-hour');
     pairs = buildRepeatPairs(fromDate, toDate, fromHour, toHour);
-    confirmMsg = `Delete rows${scope} for hours ${String(fromHour).padStart(2, '0')}:00–${String(toHour).padStart(2, '0')}:00 daily from ${fromDate} to ${toDate}? This cannot be undone.`;
+    confirmMsg = t('storage_confirmDeleteRepeat', [scope, String(fromHour).padStart(2, '0'), String(toHour).padStart(2, '0'), fromDate, toDate]);
   } else {
     const fromDate = getDateValue('range-from-date'), toDate = getDateValue('range-to-date');
     const fromHour = getHourValue('range-from-hour'), toHour = getHourValue('range-to-hour');
     pairs = [[`${fromDate}T${String(fromHour).padStart(2, '0')}`, `${toDate}T${String(toHour).padStart(2, '0')}`]];
-    confirmMsg = `Delete all rows${scope} from ${fromDate} ${String(fromHour).padStart(2, '0')}:00 to ${toDate} ${String(toHour).padStart(2, '0')}:00? This cannot be undone.`;
+    confirmMsg = t('storage_confirmDeleteContiguous', [scope, fromDate, String(fromHour).padStart(2, '0'), toDate, String(toHour).padStart(2, '0')]);
   }
-  const ok = await confirmDialog({ message: confirmMsg, confirmLabel: 'Delete' });
+  const ok = await confirmDialog({ message: confirmMsg, confirmLabel: t('storage_deleteBtn') });
   if (!ok) return;
   let n = 0;
   for (const [fromKey, toKey] of pairs) n += await deleteRange(keyToTs(fromKey), keyToTs(toKey), siteId);
   invalidate();
   await loadStats();
-  showNotification(`Cleared the range across ${n.toLocaleString()} row${n === 1 ? '' : 's'}`);
+  showNotification(t(n === 1 ? 'storage_clearedRange_one' : 'storage_clearedRange_other', [n.toLocaleString()]));
 });
 
 async function initHourDropdowns() {
@@ -553,11 +567,11 @@ async function runScan() {
   const groups = [];
   if (scanSites) {
     const results = [...siteAgg.values()].filter(below).map(a => ({ ...a, isSub: false, lastVisit: localDayKey(a.lastTo) }));
-    groups.push({ label: 'Sites', isSub: false, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
+    groups.push({ label: t('storage_sites'), isSub: false, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
   }
   if (scanSubpages) {
     const results = [...pathAgg.values()].filter(below).map(a => ({ ...a, isSub: true, lastVisit: localDayKey(a.lastTo) }));
-    groups.push({ label: 'Subpages', isSub: true, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
+    groups.push({ label: t('storage_subpages'), isSub: true, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
   }
   scanState = { groups, thresholdMs };
   renderScanResults();
@@ -573,7 +587,7 @@ function renderScanResults() {
     const msg = document.createElement('p');
     msg.className = 'text-meta';
     msg.style.cssText = 'padding:20px;text-align:center';
-    msg.textContent = 'No rows below the threshold.';
+    msg.textContent = t('storage_noRowsBelowThreshold');
     resultsEl.appendChild(msg);
     overlayDeleteBtn.style.display = 'none';
     overlaySummary.textContent = '';
@@ -589,17 +603,17 @@ function buildGroupEl(group) {
   details.className = 'result-group';
   details.open = true;
   group.el = details;
-  const colHeader = group.isSub ? 'Page' : 'Site';
+  const colHeader = group.isSub ? t('storage_colPage') : t('rules_col_site');
   details.innerHTML = `
     <summary class="result-group-title">${group.label} (${group.results.length})</summary>
     <table class="data-table">
       <thead><tr>
-        <th class="td-site" data-col="siteId" data-label="${colHeader}">${colHeader}</th>
-        <th class="td-narrow" data-col="lastVisit" data-label="Last visit">Last visit</th>
-        <th class="td-narrow" data-col="totalActive" data-label="Active">Active</th>
-        <th class="td-narrow" data-col="totalAudio" data-label="Audio">Audio</th>
-        <th class="td-narrow" data-col="recordCount" data-label="Rows">Rows</th>
-        <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="group-all-check"> All</label></th>
+        <th class="td-site" data-col="siteId" data-label="${escapeHtml(colHeader)}">${colHeader}</th>
+        <th class="td-narrow" data-col="lastVisit" data-label="${escapeHtml(t('storage_colLastVisit'))}">${t('storage_colLastVisit')}</th>
+        <th class="td-narrow" data-col="totalActive" data-label="${escapeHtml(t('legend_active'))}">${t('legend_active')}</th>
+        <th class="td-narrow" data-col="totalAudio" data-label="${escapeHtml(t('legend_audio'))}">${t('legend_audio')}</th>
+        <th class="td-narrow" data-col="recordCount" data-label="${escapeHtml(t('storage_rows'))}">${t('storage_rows')}</th>
+        <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" class="group-all-check"> ${t('storage_allCheckbox')}</label></th>
       </tr></thead>
       <tbody></tbody>
     </table>`;
@@ -699,13 +713,13 @@ function updateScanSummary() {
   for (const group of scanState.groups)
     for (const r of group.results)
       if (group.selectedKeys.has(rowKey(r))) { identities++; records += r.recordCount; }
-  if (identities === 0) { overlaySummary.textContent = 'Nothing selected'; overlayDeleteBtn.disabled = true; return; }
+  if (identities === 0) { overlaySummary.textContent = t('storage_nothingSelected'); overlayDeleteBtn.disabled = true; return; }
   overlayDeleteBtn.disabled = false;
-  overlaySummary.textContent = `${identities} of ${totalResults} selected (${records.toLocaleString()} rows)`;
+  overlaySummary.textContent = t('storage_selectedSummary', [identities, totalResults, records.toLocaleString()]);
 }
 
 async function deleteSelectedInsignificant() {
-  const ok = await confirmDialog({ message: 'Delete all selected insignificant rows? This cannot be undone.', confirmLabel: 'Delete' });
+  const ok = await confirmDialog({ message: t('storage_confirmDeleteSelected'), confirmLabel: t('storage_deleteBtn') });
   if (!ok) return;
   const domains = new Set();                  // selected whole sites
   const paths = new Set();                     // selected pages, keyed "domain\npath"
@@ -723,7 +737,7 @@ async function deleteSelectedInsignificant() {
   scanOverlay.style.display = 'none';
   invalidate();
   await loadStats();
-  showNotification(`Deleted ${ids.length.toLocaleString()} row${ids.length === 1 ? '' : 's'}`);
+  showNotification(t(ids.length === 1 ? 'storage_deletedRows_one' : 'storage_deletedRows_other', [ids.length.toLocaleString()]));
 }
 
 (async () => {
@@ -739,21 +753,21 @@ dropDaysInput.addEventListener('input', () => {
 });
 document.querySelector('#drop-paths-btn').addEventListener('click', async () => {
   const days = parseInt(document.querySelector('#drop-days-input').value, 10);
-  if (!Number.isFinite(days) || days < 0) { showNotification('Enter a valid number of days'); return; }
+  if (!Number.isFinite(days) || days < 0) { showNotification(t('storage_enterValidDays')); return; }
   // Day-aligned: keep the last `days` calendar days detailed, collapse everything
   // before. cutoff = tomorrow 00:00 - days. days=0 collapses all; never splits a day.
   const c = new Date();
   c.setHours(0, 0, 0, 0);
   c.setDate(c.getDate() + 1 - days);
   const ok = await confirmDialog({
-    message: `Collapse rows older than ${days} day(s) to site level, dropping their page paths? Site totals stay; per-page detail is lost. This cannot be undone.`,
-    confirmLabel: 'Drop',
+    message: t('storage_confirmDropSubpage', [days]),
+    confirmLabel: t('storage_dropBtn'),
   });
   if (!ok) return;
   const n = await dropPathsBefore(c.getTime());
   invalidate();
   await loadStats();
-  showNotification(n > 0 ? `Removed ${n.toLocaleString()} row${n === 1 ? '' : 's'} by collapsing` : `No rows older than ${days} day(s)`);
+  showNotification(n > 0 ? t(n === 1 ? 'storage_removedByCollapsing_one' : 'storage_removedByCollapsing_other', [n.toLocaleString()]) : t('storage_noRowsOlderThan', [days]));
 });
 
 // --- Favicon cache ---
@@ -764,16 +778,16 @@ async function loadFaviconStats() {
     chrome.storage.local.getBytesInUse('faviconCache'),
   ]);
   const n = Object.keys(data.faviconCache ?? {}).length;
-  faviconStats.textContent = `${n.toLocaleString()} icon${n === 1 ? '' : 's'} (${formatBytes(bytes)})`;
+  faviconStats.textContent = t(n === 1 ? 'storage_iconsStats_one' : 'storage_iconsStats_other', [n.toLocaleString(), formatBytes(bytes)]);
   document.querySelector('#favicon-clear-btn').disabled = n === 0;
 }
 document.querySelector('#favicon-clear-btn').addEventListener('click', async () => {
-  const ok = await confirmDialog({ message: 'Clear all favicons? Icons reload from the browser as you visit sites.', confirmLabel: 'Clear' });
+  const ok = await confirmDialog({ message: t('storage_confirmClearFavicons'), confirmLabel: t('storage_clearBtn') });
   if (!ok) return;
   await chrome.storage.local.remove('faviconCache');
   await loadFaviconStats();
   await loadStats();  // refresh the extension-storage quota
-  showNotification('Favicon cache cleared');
+  showNotification(t('storage_faviconCacheCleared'));
 });
 
 const faviconDaysInput = document.querySelector('#favicon-days-input');
@@ -782,7 +796,7 @@ faviconDaysInput.addEventListener('input', () => {
 });
 document.querySelector('#favicon-stale-btn').addEventListener('click', async () => {
   const days = parseInt(faviconDaysInput.value, 10);
-  if (!Number.isFinite(days) || days < 1) { showNotification('Enter a valid number of days'); return; }
+  if (!Number.isFinite(days) || days < 1) { showNotification(t('storage_enterValidDays')); return; }
   const cutoff = Date.now() - days * 86400000;
   // Last activity per domain (favicon keys are the same eTLD+1 domain).
   const lastTo = new Map();
@@ -792,17 +806,17 @@ document.querySelector('#favicon-stale-btn').addEventListener('click', async () 
   }
   const { faviconCache = {} } = await chrome.storage.local.get('faviconCache');
   const stale = Object.keys(faviconCache).filter(h => (lastTo.get(h) ?? 0) < cutoff);
-  if (stale.length === 0) { showNotification(`No icons unused for ${days}+ days`); return; }
+  if (stale.length === 0) { showNotification(t('storage_noIconsUnusedFor', [days])); return; }
   const ok = await confirmDialog({
-    message: `Clear ${stale.length.toLocaleString()} icon(s) for sites not visited in the last ${days} day(s)? They reload from the browser when next visited.`,
-    confirmLabel: 'Clear',
+    message: t(stale.length === 1 ? 'storage_confirmClearStale_one' : 'storage_confirmClearStale_other', [stale.length.toLocaleString(), days]),
+    confirmLabel: t('storage_clearBtn'),
   });
   if (!ok) return;
   for (const h of stale) delete faviconCache[h];
   await chrome.storage.local.set({ faviconCache });
   await loadFaviconStats();
   await loadStats();
-  showNotification(`Cleared ${stale.length.toLocaleString()} unused icon(s)`);
+  showNotification(t(stale.length === 1 ? 'storage_clearedUnusedIcons_one' : 'storage_clearedUnusedIcons_other', [stale.length.toLocaleString()]));
 });
 
 loadFaviconStats();
@@ -840,11 +854,11 @@ async function renderInterval() {
   document.querySelector('#bar-active').style.width = pct(active);
   document.querySelector('#bar-audio').style.width  = pct(audio);
   document.querySelector('#bar-idle').style.width   = pct(idle);
-  document.querySelector('#legend-active').textContent = `Active: ${active.toLocaleString()} rows${sizeOf(active)}`;
-  document.querySelector('#legend-audio').textContent  = `Audio: ${audio.toLocaleString()} rows${sizeOf(audio)}`;
-  document.querySelector('#legend-idle').textContent   = `Idle: ${idle.toLocaleString()} rows${sizeOf(idle)}`;
+  document.querySelector('#legend-active').textContent = t('storage_legendRowsDetail', [t('legend_active'), active.toLocaleString(), sizeOf(active)]);
+  document.querySelector('#legend-audio').textContent  = t('storage_legendRowsDetail', [t('legend_audio'), audio.toLocaleString(), sizeOf(audio)]);
+  document.querySelector('#legend-idle').textContent   = t('storage_legendRowsDetail', [t('storage_legendIdle'), idle.toLocaleString(), sizeOf(idle)]);
   document.querySelector('#interval-total-text').textContent =
-    intervalBytes != null ? formatBytes(intervalBytes) : 'size unavailable';
+    intervalBytes != null ? formatBytes(intervalBytes) : t('storage_sizeUnavailable');
 }
 
 async function renderQuota() {
@@ -864,11 +878,11 @@ async function renderLastExport() {
   const lastExportAt = prefs[PREF_LAST_EXPORT_AT];
   if (lastExportAt) {
     const diffDays = Math.floor((Date.now() - lastExportAt) / 86400000);
-    document.querySelector('#export-age').textContent   = diffDays === 0 ? 'Today' : diffDays;
-    document.querySelector('#export-label').textContent = diffDays === 0 ? '' : `day${diffDays !== 1 ? 's' : ''} ago`;
+    document.querySelector('#export-age').textContent   = diffDays === 0 ? t('stat_today') : diffDays;
+    document.querySelector('#export-label').textContent = diffDays === 0 ? '' : t(diffDays !== 1 ? 'storage_daysAgoSuffix' : 'storage_dayAgo');
   } else {
-    document.querySelector('#export-age').textContent   = 'Never';
-    document.querySelector('#export-label').textContent = 'exported';
+    document.querySelector('#export-age').textContent   = t('rules_limit_never');
+    document.querySelector('#export-label').textContent = t('storage_exportedLabel');
   }
 }
 
@@ -887,20 +901,20 @@ enhanceNumberInput('favicon-days-input');
 
 await loadStats();
 
-const storageTourSteps = [
+function storageTourSteps() { return [
   {
     selector: '#overview',
-    title: 'Storage overview',
-    body: 'At a glance: how many domains, subpages and rows you have, the active/audio/idle mix of your browsing data, your 10 MB quota headroom, and when you last exported.',  },
+    title: t('tour_storage_overview_title'),
+    body: t('tour_storage_overview_body'),  },
   {
     selector: '#tools-grid',
-    title: 'Manage your data',
-    body: 'Tools to manage your data: remove insignificant rows, delete by site or date range, drop subpage detail, and clear the favicon cache.',  },
+    title: t('tour_storage_tools_title'),
+    body: t('tour_storage_tools_body'),  },
   {
     selector: '#back-btn',
-    title: 'Back to the dashboard',
-    body: `Click the ${BRAND_NAME} logo to return to the dashboard; the tour continues there.`,
+    title: t('tour_storage_back_title'),
+    body: t('tour_storage_back_body', [BRAND_NAME]),
     handoff: { nextSurface: 'dashboard', nextStepIndex: 9, mode: 'inPage' },  },
-];
+]; }
 
-autoStartIfMatches('storage-management', storageTourSteps);
+autoStartIfMatches('storage-management', storageTourSteps());

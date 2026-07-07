@@ -192,22 +192,22 @@ loadFaviconCache().then(() => {
 
 initThemeMenu();
 
-const popupTourSteps = [
+function popupTourSteps() { return [
   {
     selector: '#brand',
-    title: 'The popup',
-    body: "Open this from your browser toolbar any time. It shows today's browsing at a glance and your enabled rules.",
+    title: t('tour_popup_intro_title'),
+    body: t('tour_popup_intro_body'),
   },
   {
     selector: '#manage-btn',
-    title: 'Manage your rules',
-    body: 'Click Manage rules to open the rules page and continue the tour.',
+    title: t('tour_popup_manage_title'),
+    body: t('tour_popup_manage_body'),
     handoff: { nextSurface: 'rules', mode: 'crossDocument' },
   },
-];
+]; }
 
 (async () => {
   const state = await readTourState();
   if (state.completed || state.inProgress?.surface !== 'popup') return;
-  autoStartIfMatches('popup', popupTourSteps, { showCloseButton: false });
+  autoStartIfMatches('popup', popupTourSteps(), { showCloseButton: false });
 })();

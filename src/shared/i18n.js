@@ -30,10 +30,18 @@ export function applyI18n(root = document) {
   root.querySelectorAll('[data-i18n]').forEach((el) => {
     el.textContent = t(el.dataset.i18n);
   });
+  // For elements with non-text children after the label (e.g. a dropdown
+  // button's arrow icon) — replaces only the leading text node, not the whole subtree.
+  root.querySelectorAll('[data-i18n-firstchild]').forEach((el) => {
+    el.firstChild.textContent = t(el.dataset.i18nFirstchild);
+  });
   root.querySelectorAll('[data-i18n-title]').forEach((el) => {
     el.title = t(el.dataset.i18nTitle);
   });
   root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
     el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  root.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+    el.setAttribute('aria-label', t(el.dataset.i18nAria));
   });
 }

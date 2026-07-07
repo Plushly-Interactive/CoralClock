@@ -8,6 +8,11 @@ import { DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { DEFAULT_BADGE_ENABLED } from '../../background/badge.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { enhanceNumberInput } from '../../shared/numberInput.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
+document.querySelector('#idle-threshold-desc').textContent = t('settings_idleThresholdDesc', [BRAND_NAME]);
 
 const CLOCK_FORMATS = ['24h', '12h'];
 
@@ -19,7 +24,7 @@ const clockFormatMenu = document.querySelector('#clock-format-menu');
 const badgeEnabledInput = document.querySelector('#badge-enabled-input');
 
 function dayLabel(name) {
-  return name[0].toUpperCase() + name.slice(1);
+  return t(`weekday_${name}`);
 }
 
 const stored = await chrome.storage.local.get([PREF_WEEK_START, PREF_CLOCK_FORMAT, PREF_BADGE_ENABLED]);
@@ -75,7 +80,7 @@ function rebuildWeekStartMenu() {
 async function onWeekStartPick(e) {
   e.stopPropagation();
   const newValue = e.currentTarget.value;
-  const ok = await confirmDialog({ message: weekStartBtn.dataset.confirmMessage });
+  const ok = await confirmDialog({ message: t(weekStartBtn.dataset.i18nConfirm) });
   if (!ok) return;
   lastConfirmedDay = newValue;
   weekStartBtn.dataset.value = newValue;
@@ -103,11 +108,11 @@ enhanceNumberInput('idle-threshold-input');
 autoStartIfMatches('settings', [
   {
     selector: '#settings-main',
-    title: 'Settings',
-    body: 'Adjust idle threshold, clock format, and week start day. Changes take effect immediately.',  },
+    title: t('tour_settings_main_title'),
+    body: t('tour_settings_main_body'),  },
   {
     selector: '#back-btn',
-    title: 'Back to the dashboard',
-    body: `Click the ${BRAND_NAME} logo to return to the dashboard and finish the tour.`,
+    title: t('tour_settings_back_title'),
+    body: t('tour_settings_back_body', [BRAND_NAME]),
     handoff: { nextSurface: 'dashboard', nextStepIndex: 10, mode: 'inPage' },  },
 ]);

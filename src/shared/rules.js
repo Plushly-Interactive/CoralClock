@@ -33,28 +33,28 @@ function reEsc(s) {
 // "Matching against tracking data" section for why each shape is what it is.
 export function describeRule({ target, path, matchType, pattern, keyword }) {
   if (matchType === 'regex') {
-    return { text: `URLs matching /${pattern}/`, kind: 'regexFilter', value: pattern };
+    return { text: t('rules_desc_regex', [pattern]), kind: 'regexFilter', value: pattern };
   }
   if (matchType === 'keyword') {
-    return { text: `URLs containing "${keyword}"`, kind: 'regexFilter', value: reEsc(keyword) };
+    return { text: t('rules_desc_keyword', [keyword]), kind: 'regexFilter', value: reEsc(keyword) };
   }
   const host = target || 'google.com';
   if (matchType === 'subdomain') {
     // Subdomains are wanted here — DNR's || domain anchor is naturally inclusive.
-    return { text: `${host} and all its subdomains`, kind: 'urlFilter', value: `||${host}^` };
+    return { text: t('rules_desc_subdomain', [host]), kind: 'urlFilter', value: `||${host}^` };
   }
   if (matchType === 'pathPrefix') {
     const p = (path || '').replace(/^\//, '');
     // Boundary-anchored so /maps doesn't also catch /maps-something.
     return {
-      text: `${host}/${p} and everything under it`,
+      text: t('rules_desc_pathPrefix', [host, p]),
       kind: 'regexFilter', value: `^https?://${reEsc(host)}/${reEsc(p)}(?:[/?]|$)`,
     };
   }
   // host: exact host, excludes subdomains. || is subdomain-inclusive, so this
   // needs an anchored regex; optional www. matches how tracking collapses it.
   return {
-    text: `${host} only (not subdomains)`,
+    text: t('rules_desc_host', [host]),
     kind: 'regexFilter', value: `^https?://(?:www\\.)?${reEsc(host)}(?:/|$)`,
   };
 }

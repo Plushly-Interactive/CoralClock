@@ -8,6 +8,10 @@ import { downloadBiteGuardExport } from '../../data/exportPayload.js';
 import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
 import { buildDatePicker, getDateValue } from '../../shared/datePicker.js';
 import { enhanceNumberInput } from '../../shared/numberInput.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
 
 navButton(document.querySelector('#overview-back-btn'), '../storage-management/storage-management.html');
 
@@ -17,14 +21,14 @@ let cachedBytes  = { siteHour: 0, subHour: 0, total: 0 };
 let cachedIssues = [];
 
 const ISSUE_TYPE_LABELS = {
-  'drift':        'hourly/daily drift',
-  'orphan':       'orphaned records',
-  'future-dated': 'future-dated keys',
-  'invalid':      'invalid values',
+  'drift':        'legacy_issue_drift',
+  'orphan':       'legacy_issue_orphan',
+  'future-dated': 'legacy_issue_futureDated',
+  'invalid':      'legacy_issue_invalid',
 };
 
 function hourLabel(h, clockFormat) {
-  if (h === 24) return clockFormat === '12h' ? '12 AM +1' : '00:00 +1';
+  if (h === 24) return clockFormat === '12h' ? t('storage_midnightPlus1_12h') : t('storage_midnightPlus1_24h');
   return formatHourLabel(h, clockFormat);
 }
 
@@ -135,8 +139,8 @@ function syncDeleteRangeBtn() {
 deleteAllBtn.addEventListener('click', async () => {
   const siteId = siteInput.value.trim();
   const ok = await confirmDialog({
-    message: `Delete all data for ${siteId}? This permanently removes all tracking records for ${siteId} across all dates. This cannot be undone.`,
-    confirmLabel: 'Delete',
+    message: t('legacy_confirmDeleteAllData', [siteId]),
+    confirmLabel: t('storage_deleteBtn'),
   });
   if (!ok) return;
 
@@ -155,14 +159,14 @@ deleteAllBtn.addEventListener('click', async () => {
   await chrome.storage.local.set({ sitesByDay, sitesByHour, subpagesByDay, subpagesByHour });
 
   const afterBytes = await chrome.storage.local.getBytesInUse(null);
-  showNotification(`All data for ${siteId} deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
+  showNotification(t('legacy_allDataDeletedFreed', [siteId, formatBytes(Math.max(0, beforeBytes - afterBytes))]));
   loadStats();
 });
 
 document.querySelector('#delete-range-btn').addEventListener('click', async () => {
   const isRepeat = modeRepeatBtn.classList.contains('active');
   const siteId   = siteInput.value.trim() || null;
-  const scope    = siteId ? ` for ${siteId}` : '';
+  const scope    = siteId ? t('storage_forSite', [siteId]) : '';
 
   let confirmMsg, rangePairs;
 
@@ -172,7 +176,7 @@ document.querySelector('#delete-range-btn').addEventListener('click', async () =
     const fromHour = getHourValue('repeat-from-hour');
     const toHour   = getHourValue('repeat-to-hour');
     rangePairs = buildRepeatPairs(fromDate, toDate, fromHour, toHour);
-    confirmMsg = `Delete records${scope} for hours ${String(fromHour).padStart(2, '0')}:00–${String(toHour).padStart(2, '0')}:00 daily from ${fromDate} to ${toDate}? This cannot be undone.`;
+    confirmMsg = t('legacy_confirmDeleteRepeat', [scope, String(fromHour).padStart(2, '0'), String(toHour).padStart(2, '0'), fromDate, toDate]);
   } else {
     const fromDate = getDateValue('range-from-date');
     const toDate   = getDateValue('range-to-date');
@@ -181,10 +185,10 @@ document.querySelector('#delete-range-btn').addEventListener('click', async () =
     const fromKey  = `${fromDate}T${String(fromHour).padStart(2, '0')}`;
     const toKey    = `${toDate}T${String(toHour).padStart(2, '0')}`;
     rangePairs = [[fromKey, toKey]];
-    confirmMsg = `Delete all records${scope} from ${fromDate} ${String(fromHour).padStart(2, '0')}:00 to ${toDate} ${String(toHour).padStart(2, '0')}:00? This cannot be undone.`;
+    confirmMsg = t('legacy_confirmDeleteContiguous', [scope, fromDate, String(fromHour).padStart(2, '0'), toDate, String(toHour).padStart(2, '0')]);
   }
 
-  const ok = await confirmDialog({ message: confirmMsg, confirmLabel: 'Delete' });
+  const ok = await confirmDialog({ message: confirmMsg, confirmLabel: t('storage_deleteBtn') });
   if (!ok) return;
 
   const beforeBytes = await chrome.storage.local.getBytesInUse(null);
@@ -208,7 +212,7 @@ document.querySelector('#delete-range-btn').addEventListener('click', async () =
   await chrome.storage.local.set({ sitesByDay, sitesByHour, subpagesByDay, subpagesByHour });
 
   const afterBytes = await chrome.storage.local.getBytesInUse(null);
-  showNotification(`Range deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
+  showNotification(t('legacy_rangeDeletedFreed', [formatBytes(Math.max(0, beforeBytes - afterBytes))]));
   loadStats();
 });
 
@@ -263,11 +267,11 @@ function updateHourlyCallout() {
   const hourlyTotal = siteHour + subHour;
 
   document.querySelector('#callout-sites-hour').innerHTML =
-    `Sites — <strong>${formatBytes(siteHour)}${pct(siteHour)}</strong> · ${siteIds.size} site${siteIds.size !== 1 ? 's' : ''}`;
+    t('legacy_calloutSites', [formatBytes(siteHour) + pct(siteHour), t(siteIds.size === 1 ? 'storage_unit_site_one' : 'storage_unit_site_other', [siteIds.size])]);
   document.querySelector('#callout-sub-hour').innerHTML =
-    `Subpages — <strong>${formatBytes(subHour)}${pct(subHour)}</strong> · ${subPages.size} page${subPages.size !== 1 ? 's' : ''}`;
+    t('legacy_calloutSubpages', [formatBytes(subHour) + pct(subHour), t(subPages.size === 1 ? 'site_pages_one' : 'site_pages_other', [subPages.size])]);
   document.querySelector('#callout-hourly-total').textContent =
-    `Total hourly: ${formatBytes(hourlyTotal)} of ${formatBytes(total)} (${total > 0 ? (hourlyTotal / total * 100).toFixed(0) : 0}%)`;
+    t('legacy_totalHourly', [formatBytes(hourlyTotal), formatBytes(total), total > 0 ? (hourlyTotal / total * 100).toFixed(0) : 0]);
 }
 
 function updateDropEstimate() {
@@ -311,11 +315,11 @@ document.querySelector('#drop-hourly-btn').addEventListener('click', async () =>
   const days = parseInt(document.querySelector('#drop-days-input').value, 10);
   const scopeSites = document.querySelector('#drop-scope-sites').checked;
   const scopeSub   = document.querySelector('#drop-scope-subpages').checked;
-  const scope = [scopeSites && 'Sites', scopeSub && 'Subpages'].filter(Boolean).join(' + ');
+  const scope = [scopeSites && t('storage_sites'), scopeSub && t('storage_subpages')].filter(Boolean).join(' + ');
 
   const ok = await confirmDialog({
-    message: `Drop ${scope} hourly data older than ${days} day${days !== 1 ? 's' : ''}? Daily aggregates are preserved. This cannot be undone.`,
-    confirmLabel: 'Drop hourly',
+    message: t(days === 1 ? 'legacy_confirmDropHourly_one' : 'legacy_confirmDropHourly_other', [scope, days]),
+    confirmLabel: t('legacy_dropHourlyBtn'),
   });
   if (!ok) return;
 
@@ -336,7 +340,7 @@ document.querySelector('#drop-hourly-btn').addEventListener('click', async () =>
   await chrome.storage.local.set({ sitesByHour, subpagesByHour });
 
   const afterBytes = await chrome.storage.local.getBytesInUse(null);
-  showNotification(`Hourly data older than ${days} day${days !== 1 ? 's' : ''} dropped — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
+  showNotification(t(days === 1 ? 'legacy_hourlyDroppedFreed_one' : 'legacy_hourlyDroppedFreed_other', [days, formatBytes(Math.max(0, beforeBytes - afterBytes))]));
   loadStats();
 });
 
@@ -348,20 +352,20 @@ function loadHealthCard() {
 
   if (cachedIssues.length === 0) {
     dot.className = 'health-dot ok';
-    statusText.innerHTML = '<strong>All checks passed</strong>';
+    statusText.innerHTML = `<strong>${t('legacy_allChecksPassed')}</strong>`;
     repairBtn.style.display = 'none';
   } else {
     dot.className = 'health-dot';
-    const types = [...new Set(cachedIssues.map(i => ISSUE_TYPE_LABELS[i.type]))].join(', ');
-    statusText.innerHTML = `<strong>${cachedIssues.length} issue${cachedIssues.length !== 1 ? 's' : ''} found</strong> — ${types}`;
+    const types = [...new Set(cachedIssues.map(i => t(ISSUE_TYPE_LABELS[i.type])))].join(', ');
+    statusText.innerHTML = `<strong>${t(cachedIssues.length === 1 ? 'legacy_issuesFound_one' : 'legacy_issuesFound_other', [cachedIssues.length])}</strong> — ${types}`;
     repairBtn.style.display = '';
   }
 }
 
 function buildRepairOverlay(issues) {
   const n = issues.length;
-  document.querySelector('#repair-count').textContent = `${n} issue${n !== 1 ? 's' : ''} detected — review before repairing`;
-  document.querySelector('#repair-footer-count').textContent = `${n} issue${n !== 1 ? 's' : ''} will be reconciled`;
+  document.querySelector('#repair-count').textContent = t(n === 1 ? 'legacy_issuesDetected_one' : 'legacy_issuesDetected_other', [n]);
+  document.querySelector('#repair-footer-count').textContent = t(n === 1 ? 'legacy_issuesReconciled_one' : 'legacy_issuesReconciled_other', [n]);
 
   const resultsEl = document.querySelector('#repair-results');
   resultsEl.innerHTML = '';
@@ -371,20 +375,20 @@ function buildRepairOverlay(issues) {
 
   for (const [type, typeIssues] of Object.entries(grouped)) {
     const isFuture = type === 'future-dated';
-    const siteLabel = isFuture ? 'Store' : 'Site';
-    const dateLabel = isFuture ? 'Key' : 'Date';
+    const siteLabel = isFuture ? t('legacy_colStore') : t('rules_col_site');
+    const dateLabel = isFuture ? t('legacy_colKey') : t('legacy_colDate');
     const sortState = { col: 'date', dir: 'asc' };
 
     const details = document.createElement('details');
     details.className = 'result-group';
     details.open = true;
     details.innerHTML = `
-      <summary class="result-group-title">${ISSUE_TYPE_LABELS[type]} (${typeIssues.length})</summary>
+      <summary class="result-group-title">${t(ISSUE_TYPE_LABELS[type])} (${typeIssues.length})</summary>
       <table class="data-table">
         <thead><tr>
-          <th class="td-site" data-col="site" data-label="${siteLabel}">${siteLabel}</th>
-          <th class="td-date" data-col="date" data-label="${dateLabel}">${dateLabel}</th>
-          <th class="td-desc" data-col="detail" data-label="Detail">Detail</th>
+          <th class="td-site" data-col="site" data-label="${escapeHtml(siteLabel)}">${siteLabel}</th>
+          <th class="td-date" data-col="date" data-label="${escapeHtml(dateLabel)}">${dateLabel}</th>
+          <th class="td-desc" data-col="detail" data-label="${escapeHtml(t('legacy_colDetail'))}">${t('legacy_colDetail')}</th>
         </tr></thead>
         <tbody></tbody>
       </table>`;
@@ -464,7 +468,7 @@ document.querySelector('#repair-all-btn').addEventListener('click', async () => 
 
   repairOverlay.style.display = 'none';
   const n = cachedIssues.length;
-  showNotification(`${n} issue${n !== 1 ? 's' : ''} repaired — tracking data is now consistent.`);
+  showNotification(t(n === 1 ? 'legacy_issuesRepaired_one' : 'legacy_issuesRepaired_other', [n]));
   loadStats();
 });
 
@@ -530,7 +534,7 @@ async function runScan() {
       ...scanSiteBucket(sitesByDay, thresholdMs, 'sitesByDay'),
       ...scanSiteBucket(sitesByHour, thresholdMs, 'sitesByHour'),
     ];
-    groups.push({ label: 'Sites', isSubpage: false, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
+    groups.push({ label: t('storage_sites'), isSubpage: false, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
   }
 
   if (scanSubpages) {
@@ -538,7 +542,7 @@ async function runScan() {
       ...scanSubpageBucket(subpagesByDay, thresholdMs, 'subpagesByDay'),
       ...scanSubpageBucket(subpagesByHour, thresholdMs, 'subpagesByHour'),
     ];
-    groups.push({ label: 'Subpages', isSubpage: true, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
+    groups.push({ label: t('storage_subpages'), isSubpage: true, results, sortCol: 'lastVisit', sortDir: 'desc', selectedKeys: new Set(results.map(rowKey)) });
   }
 
   pruneState = { groups, stores: { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, storeKeys: keys, thresholdMs };
@@ -561,8 +565,8 @@ function renderScanResults() {
   const scanSubpages = document.querySelector('#insig-scope-subpages').checked;
 
   const types = [];
-  if (scanSites) types.push('Sites');
-  if (scanSubpages) types.push('Subpages');
+  if (scanSites) types.push(t('storage_sites'));
+  if (scanSubpages) types.push(t('storage_subpages'));
   document.querySelector('#overlay-params').textContent = `${thresholdMs / 1000}s · ${types.join(' + ')}`;
 
   const resultsEl = document.querySelector('#overlay-results');
@@ -574,7 +578,7 @@ function renderScanResults() {
     const msg = document.createElement('p');
     msg.className = 'text-meta';
     msg.style.cssText = 'padding: 20px; text-align: center;';
-    msg.textContent = 'No records below the threshold in the selected stores.';
+    msg.textContent = t('legacy_noRecordsBelowThreshold');
     resultsEl.appendChild(msg);
     document.querySelector('#overlay-delete-btn').style.display = 'none';
     document.querySelector('#overlay-summary').textContent = '';
@@ -595,17 +599,17 @@ function buildGroupEl(group) {
   details.className = 'result-group';
   details.open = true;
 
-  const colHeader = group.isSubpage ? 'Page' : 'Site';
+  const colHeader = group.isSubpage ? t('storage_colPage') : t('rules_col_site');
   details.innerHTML = `
     <summary class="result-group-title">${group.label} (${group.results.length})</summary>
     <table class="data-table">
       <thead><tr>
-        <th class="td-site" data-col="siteId" data-label="${colHeader}">${colHeader}</th>
-        <th class="td-narrow" data-col="lastVisit" data-label="Last visit">Last visit</th>
-        <th class="td-narrow" data-col="totalActive" data-label="Active">Active</th>
-        <th class="td-narrow" data-col="totalAudio" data-label="Audio">Audio</th>
-        <th class="td-narrow" data-col="recordCount" data-label="Records">Records</th>
-        <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="scan-all-${group.label.toLowerCase()}" class="group-all-check"> All</label></th>
+        <th class="td-site" data-col="siteId" data-label="${escapeHtml(colHeader)}">${colHeader}</th>
+        <th class="td-narrow" data-col="lastVisit" data-label="${escapeHtml(t('storage_colLastVisit'))}">${t('storage_colLastVisit')}</th>
+        <th class="td-narrow" data-col="totalActive" data-label="${escapeHtml(t('legend_active'))}">${t('legend_active')}</th>
+        <th class="td-narrow" data-col="totalAudio" data-label="${escapeHtml(t('legend_audio'))}">${t('legend_audio')}</th>
+        <th class="td-narrow" data-col="recordCount" data-label="${escapeHtml(t('legacy_records'))}">${t('legacy_records')}</th>
+        <th class="td-check"><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="scan-all-${group.label.toLowerCase()}" class="group-all-check"> ${t('storage_allCheckbox')}</label></th>
       </tr></thead>
       <tbody></tbody>
     </table>`;
@@ -706,15 +710,15 @@ function updateScanSummary() {
   const summaryEl = document.querySelector('#overlay-summary');
 
   if (totalIdentities === 0) {
-    summaryEl.textContent = 'Nothing selected';
+    summaryEl.textContent = t('storage_nothingSelected');
     deleteBtn.disabled = true;
     return;
   }
 
   deleteBtn.disabled = false;
   const estimated = estimateSavedBytes();
-  const bytesStr = estimated > 0 ? `, approx ${formatBytes(estimated)}` : '';
-  summaryEl.textContent = `${totalIdentities} of ${totalResults} selected (${totalRecords} records${bytesStr})`;
+  const bytesStr = estimated > 0 ? t('legacy_approxBytes', [formatBytes(estimated)]) : '';
+  summaryEl.textContent = t('legacy_selectedSummary', [totalIdentities, totalResults, totalRecords, bytesStr]);
 }
 
 function estimateSavedBytes() {
@@ -737,8 +741,8 @@ function estimateSavedBytes() {
 
 async function deleteSelected() {
   const ok = await confirmDialog({
-    message: 'Delete all selected insignificant records? This cannot be undone.',
-    confirmLabel: 'Delete',
+    message: t('legacy_confirmDeleteSelectedRecords'),
+    confirmLabel: t('storage_deleteBtn'),
   });
   if (!ok) return;
 
@@ -762,7 +766,7 @@ async function deleteSelected() {
   const afterBytes = await chrome.storage.local.getBytesInUse(null);
 
   scanOverlay.style.display = 'none';
-  showNotification(`Insignificant records deleted — freed ${formatBytes(Math.max(0, beforeBytes - afterBytes))}.`);
+  showNotification(t('legacy_insigDeletedFreed', [formatBytes(Math.max(0, beforeBytes - afterBytes))]));
   loadStats();
 }
 
@@ -827,15 +831,15 @@ async function loadStats() {
   document.querySelector('#bar-sub-day').style.width   = pct(subDayBytes);
   document.querySelector('#bar-sub-hour').style.width  = pct(subHourBytes);
   document.querySelector('#store-total-text').textContent = `${formatBytes(storeTotal)} / ${formatBytes(totalBytes)}`;
-  document.querySelector('#legend-site-day').textContent  = `Sites daily — ${formatBytes(siteDayBytes)}`;
-  document.querySelector('#legend-site-hour').textContent = `Sites hourly — ${formatBytes(siteHourBytes)}`;
-  document.querySelector('#legend-sub-day').textContent   = `Subpages daily — ${formatBytes(subDayBytes)}`;
-  document.querySelector('#legend-sub-hour').textContent  = `Subpages hourly — ${formatBytes(subHourBytes)}`;
+  document.querySelector('#legend-site-day').textContent  = t('legacy_legendWithBytes', [t('legacy_sitesDaily'), formatBytes(siteDayBytes)]);
+  document.querySelector('#legend-site-hour').textContent = t('legacy_legendWithBytes', [t('legacy_sitesHourly'), formatBytes(siteHourBytes)]);
+  document.querySelector('#legend-sub-day').textContent   = t('legacy_legendWithBytes', [t('legacy_subpagesDaily'), formatBytes(subDayBytes)]);
+  document.querySelector('#legend-sub-hour').textContent  = t('legacy_legendWithBytes', [t('legacy_subpagesHourly'), formatBytes(subHourBytes)]);
   const otherBytes = totalBytes - storeTotal;
   if (otherBytes > 0) {
     document.querySelector('#bar-other').style.width = pct(otherBytes);
     document.querySelector('#legend-other').removeAttribute('hidden');
-    document.querySelector('#legend-other-text').textContent = `Cache, Rules & Other — ${formatBytes(otherBytes)}`;
+    document.querySelector('#legend-other-text').textContent = t('legacy_legendWithBytes', [t('legacy_cacheRulesOther'), formatBytes(otherBytes)]);
   }
 
   const quota = chrome.storage.local.QUOTA_BYTES ?? 10485760;
@@ -847,7 +851,7 @@ async function loadStats() {
     const daySpan = Math.max(1, Math.round((new Date(latest) - new Date(earliest)) / 86400000));
     const daysLeft = Math.round((quota - totalBytes) / (totalBytes / daySpan));
     if (daysLeft > 0) {
-      quotaWarn.textContent = `At current rate: ~${daysLeft} day${daysLeft !== 1 ? 's' : ''} to cap`;
+      quotaWarn.textContent = t(daysLeft === 1 ? 'legacy_atCurrentRate_one' : 'legacy_atCurrentRate_other', [daysLeft]);
       quotaWarn.removeAttribute('hidden');
     }
   }
@@ -855,11 +859,11 @@ async function loadStats() {
   const lastExportAt = data[PREF_LAST_EXPORT_AT];
   if (lastExportAt) {
     const diffDays = Math.floor((Date.now() - lastExportAt) / 86400000);
-    document.querySelector('#export-age').textContent   = diffDays === 0 ? 'Today' : diffDays;
-    document.querySelector('#export-label').textContent = diffDays === 0 ? '' : `day${diffDays !== 1 ? 's' : ''} ago`;
+    document.querySelector('#export-age').textContent   = diffDays === 0 ? t('stat_today') : diffDays;
+    document.querySelector('#export-label').textContent = diffDays === 0 ? '' : t(diffDays !== 1 ? 'storage_daysAgoSuffix' : 'storage_dayAgo');
   } else {
-    document.querySelector('#export-age').textContent   = 'Never';
-    document.querySelector('#export-label').textContent = 'exported';
+    document.querySelector('#export-age').textContent   = t('rules_limit_never');
+    document.querySelector('#export-label').textContent = t('storage_exportedLabel');
   }
 
   cachedStores = { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour };

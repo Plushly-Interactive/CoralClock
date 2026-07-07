@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 const TOUR_KEY = 'tour';
 
 const DEFAULT_STATE = { completed: false, completedAt: null, inProgress: null, useMockData: false };
@@ -52,8 +54,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
   const closeBtn = document.createElement('button');
   closeBtn.id = 'tour-close-btn';
   closeBtn.className = 'icon-btn';
-  closeBtn.title = 'Close the tour';
-  closeBtn.setAttribute('aria-label', 'Close the tour');
+  closeBtn.title = t('tour_closeTour');
+  closeBtn.setAttribute('aria-label', t('tour_closeTour'));
   closeBtn.innerHTML = '&times;';
   if (!showCloseButton) closeBtn.style.display = 'none';
 
@@ -65,8 +67,8 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     <div id="tour-tooltip-body"></div>
     <div id="tour-tooltip-footer">
       <span id="tour-step-counter"></span>
-      <button id="tour-prev-btn" class="btn">Previous</button>
-      <button id="tour-next-btn" class="btn">Next</button>
+      <button id="tour-prev-btn" class="btn">${t('tour_previous')}</button>
+      <button id="tour-next-btn" class="btn">${t('tour_next')}</button>
     </div>
   `;
 
@@ -75,10 +77,10 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
   confirm.className = 'modal-dialog';
   confirm.style.display = 'none';
   confirm.innerHTML = `
-    <div id="tour-confirm-body">Are you sure you want to interrupt the guided tour?</div>
+    <div id="tour-confirm-body">${t('tour_confirmInterrupt')}</div>
     <div id="tour-confirm-actions">
-      <button id="tour-confirm-no" class="btn">No, keep going</button>
-      <button id="tour-confirm-yes" class="btn">Yes, interrupt</button>
+      <button id="tour-confirm-no" class="btn">${t('tour_keepGoing')}</button>
+      <button id="tour-confirm-yes" class="btn">${t('tour_interrupt')}</button>
     </div>
   `;
 
@@ -236,7 +238,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     const isHandoff = !!step.handoff;
     const advanceOnClick = step.advanceOn === 'click';
     nextBtn.style.display = isHandoff || advanceOnClick ? 'none' : '';
-    nextBtn.textContent = index === steps.length - 1 ? 'Finish' : 'Next';
+    nextBtn.textContent = index === steps.length - 1 ? t('tour_finish') : t('tour_next');
 
     tooltip.classList.toggle('has-arrow-up', step.arrow === 'up');
     const wasModalStep = document.body.classList.contains('tour-modal-step');
