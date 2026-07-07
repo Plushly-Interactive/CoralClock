@@ -1,5 +1,6 @@
 import { formatMs } from './timeUtils.js';
 import { faviconUrl } from './utils.js';
+import { t } from './i18n.js';
 
 export const RULE_MULTIPLIERS = { minutes: 60000, hours: 3600000, days: 86400000 };
 export const BLOCKS_DAY_KEY = 'blocksByDay';
@@ -10,8 +11,8 @@ export function blockKey(rule) {
   return `${rule.target}|${rule.matchType}|${rule.path ?? ''}`;
 }
 
-const MODE_LABELS = { active: 'active', audio: 'audio', 'active+audio': 'active + audio' };
-const SCOPE_LABELS = { host: 'This host only', subdomain: 'Whole site', pathPrefix: 'A specific page', regex: 'Regex pattern', keyword: 'Keyword match' };
+const MODE_KEYS = { active: 'mode_active', audio: 'mode_audio', 'active+audio': 'mode_activeAudio' };
+const SCOPE_KEYS = { host: 'scope_host', subdomain: 'scope_subdomain', pathPrefix: 'scope_pathPrefix', regex: 'scope_regex', keyword: 'scope_keyword' };
 
 export function matchLabel(rule) {
   if (rule.matchType === 'regex') return rule.pattern;
@@ -185,7 +186,7 @@ export async function disableRules(ids) {
 export function renderRuleList(listEl, rules, { readonly = false } = {}) {
   listEl.innerHTML = rules.map(rule => {
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
-    const limitStr = limitMs === 0 ? 'Never' : `${formatMs(limitMs)} per ${rule.period}`;
+    const limitStr = limitMs === 0 ? t('rules_limit_never') : t('rules_limit_str', [formatMs(limitMs), t(`period_${rule.period}`)]);
     const toggleHtml = readonly ? '' : `
       <button class="toggle-btn rule-toggle${rule.enabled ? ' on' : ''}" data-id="${rule.id}" aria-label="${rule.enabled ? 'Disable rule' : 'Enable rule'}"></button>`;
     const actions = readonly ? '' : `
@@ -203,7 +204,7 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
       ${faviconHtml}
       <div class="rule-info">
         <span class="site-label">${matchLabel(rule)}</span>
-        <span class="text-meta">${SCOPE_LABELS[rule.matchType]} · ${limitStr} · ${MODE_LABELS[rule.mode]}</span>
+        <span class="text-meta">${t(SCOPE_KEYS[rule.matchType])} · ${limitStr} · ${t(MODE_KEYS[rule.mode])}</span>
       </div>
       ${toggleHtml}${actions}
     </li>`;

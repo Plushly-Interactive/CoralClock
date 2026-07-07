@@ -1,0 +1,48 @@
+{
+  "extName": {
+    "message": "Reef - Screen Time & Website Blocker",
+    "description": "Extension name shown in Chrome Web Store and browser UI"
+  },
+  "extDescription": {
+    "message": "Track time on every website and automatically block sites once your hourly, daily, or weekly limit is reached.",
+    "description": "Extension description shown in Chrome Web Store"
+  },
+
+  "theme_system": { "message": "System" },
+  "theme_light": { "message": "Light" },
+  "theme_dark": { "message": "Dark" },
+
+  "popup_dashboardBtn": { "message": "Dashboard" },
+  "popup_statsToday": { "message": "Today's overview" },
+  "popup_statsSites": { "message": "Sites" },
+  "popup_statsVsAvg": { "message": "vs 7d avg" },
+  "popup_statsPeakHour": { "message": "Peak hour" },
+  "popup_statsFirstBrowse": { "message": "First browse" },
+  "popup_statsTabVisits": { "message": "Tab visits" },
+  "popup_statsIdle": { "message": "Idle" },
+  "popup_activeRules": { "message": "Active rules" },
+  "popup_manageRulesBtn": { "message": "Manage rules" },
+  "popup_noRules": { "message": "No active rules. Click Manage rules to add one." },
+  "popup_tooltip_notYet": { "message": "not yet" },
+  "popup_tooltip_noActivity": { "message": "no activity" },
+
+  "rules_limit_never": { "message": "Never" },
+  "rules_limit_str": {
+    "message": "$1 per $2",
+    "description": "$1 = formatted duration (e.g. '1h 30m'), $2 = period label (hour/day/week)"
+  },
+
+  "period_hour": { "message": "hour" },
+  "period_day": { "message": "day" },
+  "period_week": { "message": "week" },
+
+  "scope_host": { "message": "This host only" },
+  "scope_subdomain": { "message": "Whole site" },
+  "scope_pathPrefix": { "message": "A specific page" },
+  "scope_regex": { "message": "Regex pattern" },
+  "scope_keyword": { "message": "Keyword match" },
+
+  "mode_active": { "message": "active" },
+  "mode_audio": { "message": "audio" },
+  "mode_activeAudio": { "message": "active + audio" }
+}
