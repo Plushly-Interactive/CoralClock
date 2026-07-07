@@ -232,9 +232,12 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
       let faviconEl = '', labelEl = '';
       if (showLabel) {
         if (d.faviconDataUrl) {
-          const groupX = cx - (16 + 4 + d.label.length * 7) / 2;
+          const maxChars = Math.max(3, Math.floor((gap - 4 - 16 - 4) / 7));
+          const truncated = d.label.length > maxChars;
+          const label = truncated ? d.label.slice(0, maxChars - 1) + '…' : d.label;
+          const groupX = cx - (16 + 4 + label.length * 7) / 2;
           faviconEl = `<image href="${d.faviconDataUrl}" x="${groupX}" y="${H - 21}" width="16" height="16"/>`;
-          labelEl = `<text x="${groupX + 20}" y="${H - 8}" text-anchor="start" class="chart-axis-label" fill="var(--color-text-secondary)">${d.label}</text>`;
+          labelEl = `<text x="${groupX + 20}" y="${H - 8}" text-anchor="start" class="chart-axis-label" fill="var(--color-text-secondary)">${truncated ? `<title>${d.label}</title>` : ''}${label}</text>`;
         } else {
           const lx = is24h ? padLeft + i * gap - (i > 0 ? 1 : 0) : cx;
           const anchor = is24h ? (i === 0 ? 'start' : 'middle') : 'middle';
