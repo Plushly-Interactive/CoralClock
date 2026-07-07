@@ -7,6 +7,7 @@ import { confirmDialog } from '../../shared/confirmDialog.js';
 import { DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { DEFAULT_BADGE_ENABLED } from '../../background/badge.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { enhanceNumberInput } from '../../shared/numberInput.js';
 
 const CLOCK_FORMATS = ['24h', '12h'];
 
@@ -96,6 +97,8 @@ idleInput.addEventListener('change', async () => {
   idleInput.value = minutes;
   await chrome.storage.local.set({ [PREF_IDLE_THRESHOLD_SEC]: minutes * 60 });
 });
+
+enhanceNumberInput('idle-threshold-input');
 
 autoStartIfMatches('settings', [
   {

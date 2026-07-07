@@ -7,6 +7,7 @@ import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear } from '..
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockRules, mockBlocksByDay } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { enhanceNumberInput, enhanceNumberInputEl } from '../../shared/numberInput.js';
 
 const formTarget          = document.querySelector('#form-target');
 const formTargetClearBtn  = document.querySelector('#form-target-clear');
@@ -517,6 +518,7 @@ function openRowEditor(id) {
       </button>
     </div>`);
   initCustomDropdowns(li);
+  enhanceNumberInputEl(li.querySelector('.edit-limit'));
   constrainLimitForm('edit', li);
   if (rule.limit === 0) {
     li.querySelector('.edit-unit-btn').disabled = true;
@@ -768,5 +770,9 @@ const rulesTourSteps = [
     handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'crossDocument' },
   },
 ];
+
+enhanceNumberInput('form-limit');
+enhanceNumberInput('keyword-limit');
+enhanceNumberInput('regex-limit');
 
 autoStartIfMatches('rules', rulesTourSteps);

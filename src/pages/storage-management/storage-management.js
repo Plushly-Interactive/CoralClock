@@ -14,6 +14,7 @@ import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervalStats } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { buildDatePicker, getDateValue } from '../../shared/datePicker.js';
+import { enhanceNumberInput } from '../../shared/numberInput.js';
 
 const spanChip = document.querySelector('#span-chip');
 const spanTooltip = document.querySelector('#span-tooltip');
@@ -879,6 +880,10 @@ async function loadStats() {
     try { await fn(); } catch (e) { console.error(`interval-storage ${name}:`, e); }
   }
 }
+
+enhanceNumberInput('threshold-input');
+enhanceNumberInput('drop-days-input');
+enhanceNumberInput('favicon-days-input');
 
 await loadStats();
 

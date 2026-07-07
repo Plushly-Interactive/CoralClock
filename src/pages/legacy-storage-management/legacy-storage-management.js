@@ -7,6 +7,7 @@ import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js
 import { downloadBiteGuardExport } from '../../data/exportPayload.js';
 import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
 import { buildDatePicker, getDateValue } from '../../shared/datePicker.js';
+import { enhanceNumberInput } from '../../shared/numberInput.js';
 
 navButton(document.querySelector('#overview-back-btn'), '../storage-management/storage-management.html');
 
@@ -880,3 +881,5 @@ syncDropBtn();
 initHourDropdowns();
 loadStats();
 loadPruneSettings();
+enhanceNumberInput('threshold-input');
+enhanceNumberInput('drop-days-input');

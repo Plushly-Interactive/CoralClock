@@ -217,17 +217,65 @@ button:disabled {
 
 .number-input {
   width: 60px;
-  padding: 6px 8px;
+  padding: 6px 28px 6px 8px;
   font-size: var(--font-base);
   background: var(--color-bg);
   color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: 4px;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.number-input::-webkit-inner-spin-button,
+.number-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .number-input:focus {
   outline: none;
   border-color: var(--color-accent);
+}
+
+.number-input-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.number-input-btns {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 28px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0 3px 3px 0;
+  overflow: hidden;
+}
+
+.number-input-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+
+.number-input-up svg {
+  display: block;
+  transform: rotate(180deg);
+  margin-bottom: -5px;
+}
+
+.number-input-down svg {
+  display: block;
+  margin-top: -5px;
 }
 
 .input-wrap {
