@@ -8,6 +8,11 @@ import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockRules, mockBlocksByDay } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { enhanceNumberInput, enhanceNumberInputEl } from '../../shared/numberInput.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
+document.title = `${BRAND_NAME} — ${t('rules_pageTitle')}`;
 
 const formTarget          = document.querySelector('#form-target');
 const formTargetClearBtn  = document.querySelector('#form-target-clear');
@@ -96,7 +101,7 @@ async function checkReauth() {
     return;
   }
   const affected = currentRules.filter(r => originsFor(r).some(o => missing.includes(o))).length;
-  reauthText.textContent = `${affected} ${affected === 1 ? 'rule needs' : 'rules need'} site access re-confirmed for blocking to work.`;
+  reauthText.textContent = affected === 1 ? t('rules_reauth_one', [affected]) : t('rules_reauth_other', [affected]);
   reauthPrompt.removeAttribute('hidden');
   reauthPrompt.style.display = '';
 }
@@ -222,19 +227,19 @@ function refreshPreview() {
   refreshExamples(host, path);
 
   if (!host) {
-    previewText.textContent = 'Enter a site address above.';
+    previewText.textContent = t('rules_preview_enterSite');
     previewPattern.textContent = '';
     saveBtn.disabled = true;
     return;
   }
   if (!isValidHost(host)) {
-    previewText.textContent = `"${host}" doesn't look like a valid site (e.g. reddit.com).`;
+    previewText.textContent = t('rules_preview_invalidHost', [host]);
     previewPattern.textContent = '';
     saveBtn.disabled = true;
     return;
   }
   if (scope === 'pathPrefix' && !path) {
-    previewText.textContent = 'Add a /path to limit a specific page.';
+    previewText.textContent = t('rules_preview_addPath');
     previewPattern.textContent = '';
     saveBtn.disabled = true;
     return;
@@ -242,8 +247,10 @@ function refreshPreview() {
   const candidate = { target: host, path, matchType: scope, ...formLimitFields() };
   const covering = findCoveringRule(currentRules, candidate);
   if (covering) {
-    previewText.innerHTML =
-      `An existing ${candidate.period} rule (<a href="#rule-${covering.id}" id="covering-link" class="link-btn">${matchLabel(covering)}</a>) already covers this.`;
+    previewText.innerHTML = t('rules_preview_covering', [
+      t(`period_${candidate.period}`),
+      `<a href="#rule-${covering.id}" id="covering-link" class="link-btn">${matchLabel(covering)}</a>`,
+    ]);
     previewPattern.textContent = '';
     saveBtn.disabled = true;
     return;
@@ -251,7 +258,7 @@ function refreshPreview() {
 
   const { text, value } = describeRule({ target: host, path, matchType: scope });
   const always = parseInt(formLimit.value) === 0;
-  previewText.textContent = always ? `Will always block ${text}.` : `Will block ${text}.`;
+  previewText.textContent = always ? t('rules_preview_alwaysBlock', [text]) : t('rules_preview_willBlock', [text]);
   previewPattern.textContent = value;
   saveBtn.disabled = false;
 }
@@ -288,7 +295,7 @@ function sortedRules() {
 function updateSortArrows() {
   for (const [key, btn] of [['site', sortSiteBtn], ['status', sortStatusBtn]]) {
     const isSorted = sort.key === key;
-    btn.textContent = btn.dataset.label + (isSorted ? (sort.dir === 1 ? ' ↑' : ' ↓') : '');
+    btn.textContent = t(btn.dataset.label) + (isSorted ? (sort.dir === 1 ? ' ↑' : ' ↓') : '');
     btn.classList.toggle('sorted', isSorted);
   }
 }
@@ -352,8 +359,7 @@ function showRedundantPrompt(redundant) {
     return;
   }
   const n = redundant.length;
-  redundantText.textContent =
-    `The rule you just added is stricter than ${n} existing ${n === 1 ? 'rule' : 'rules'} and would always block first. Disable ${n === 1 ? 'it' : 'them'}?`;
+  redundantText.textContent = n === 1 ? t('rules_redundant_one', [n]) : t('rules_redundant_other', [n]);
   redundantList.innerHTML = redundant.map(r => `<li>${matchLabel(r)}</li>`).join('');
   redundantDisableBtn.dataset.ids = redundant.map(r => r.id).join(',');
   redundantPrompt.removeAttribute('hidden');
@@ -385,7 +391,7 @@ function regexLimitFields() {
 function refreshRegexPreview() {
   const pat = regexPatternInput.value.trim();
   if (!pat) {
-    regexPreviewText.textContent = 'Enter a regex pattern above.';
+    regexPreviewText.textContent = t('rules_regex_enterPattern');
     regexPreviewPat.textContent = '';
     regexSaveBtn.disabled = true;
     return;
@@ -393,13 +399,13 @@ function refreshRegexPreview() {
   try {
     new RegExp(pat);
   } catch (e) {
-    regexPreviewText.textContent = `Invalid pattern: ${e.message}`;
+    regexPreviewText.textContent = t('rules_regex_invalid', [e.message]);
     regexPreviewPat.textContent = '';
     regexSaveBtn.disabled = true;
     return;
   }
   const always = parseInt(document.querySelector('#regex-limit').value) === 0;
-  regexPreviewText.textContent = always ? 'Will always block URLs matching this pattern.' : 'Will block URLs matching this pattern.';
+  regexPreviewText.textContent = always ? t('rules_regex_alwaysBlock') : t('rules_regex_willBlock');
   regexPreviewPat.textContent = pat;
   regexSaveBtn.disabled = false;
 }
@@ -447,12 +453,12 @@ function kwLimitFields() {
 function refreshKwPreview() {
   const kw = kwInput.value.trim();
   if (!kw) {
-    kwPreviewText.textContent = 'Enter a keyword above.';
+    kwPreviewText.textContent = t('rules_kw_enterKeyword');
     kwSaveBtn.disabled = true;
     return;
   }
   const always = parseInt(document.querySelector('#keyword-limit').value) === 0;
-  kwPreviewText.textContent = always ? `Will always block URLs containing "${kw}".` : `Will block URLs containing "${kw}".`;
+  kwPreviewText.textContent = always ? t('rules_kw_alwaysBlock', [kw]) : t('rules_kw_willBlock', [kw]);
   kwSaveBtn.disabled = false;
 }
 
@@ -496,8 +502,8 @@ function editDropdown(id, options, selected) {
     </div>`;
 }
 
-const UNIT_OPTIONS   = [{ value: 'minutes', label: 'min' }, { value: 'hours', label: 'hours' }, { value: 'days', label: 'days' }];
-const PERIOD_OPTIONS = [{ value: 'hour', label: 'hour' }, { value: 'day', label: 'day' }, { value: 'week', label: 'week' }];
+const UNIT_OPTIONS   = [{ value: 'minutes', label: t('unit_minutes') }, { value: 'hours', label: t('unit_hours') }, { value: 'days', label: t('unit_days') }];
+const PERIOD_OPTIONS = [{ value: 'hour', label: t('period_hour') }, { value: 'day', label: t('period_day') }, { value: 'week', label: t('period_week') }];
 
 function openRowEditor(id) {
   const rule = currentRules.find(r => r.id === id);
@@ -641,7 +647,7 @@ async function renderStats() {
   }
   const activeEl = document.querySelector('#stat-active');
   activeEl.innerHTML = rules.length
-    ? `${activeCount}<span class="stat-sub"> out of ${rules.length}</span>`
+    ? `${activeCount}<span class="stat-sub"> ${t('rules_outOf', [rules.length])}</span>`
     : activeCount;
   document.querySelector('#stat-avg').textContent = avgPerDay;
 
@@ -752,27 +758,27 @@ render();
 
 // ── Tour ──
 
-const rulesTourSteps = [
+function rulesTourSteps() { return [
   {
     selector: '#rules-grid',
-    title: 'Your rules',
-    body: 'This page shows your existing rules and general stats about how often they block.',
+    title: t('tour_rules_yourRules_title'),
+    body: t('tour_rules_yourRules_body'),
   },
   {
     selector: '#add-card',
-    title: 'Add a rule',
-    body: 'Use this form to set a time limit for any site. Choose the scope, set a limit, and click Add rule.',
+    title: t('tour_rules_addRule_title'),
+    body: t('tour_rules_addRule_body'),
   },
   {
     selector: '#back-btn',
-    title: 'Back to the dashboard',
-    body: `Click the ${BRAND_NAME} logo to return to the dashboard and continue the tour.`,
+    title: t('tour_rules_back_title'),
+    body: t('tour_rules_back_body', [BRAND_NAME]),
     handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'crossDocument' },
   },
-];
+]; }
 
 enhanceNumberInput('form-limit');
 enhanceNumberInput('keyword-limit');
 enhanceNumberInput('regex-limit');
 
-autoStartIfMatches('rules', rulesTourSteps);
+autoStartIfMatches('rules', rulesTourSteps());

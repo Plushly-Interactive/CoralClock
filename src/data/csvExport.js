@@ -1,4 +1,5 @@
 import { showNotification } from '../shared/utils.js';
+import { t } from '../shared/i18n.js';
 
 // CSV export logic, no modal/DOM wiring — callable from any page. Operates on the
 // site/subpage day & hour shapes, which the scalar buckets and the interval
@@ -17,7 +18,7 @@ function subpageRow(prefix, host, path, cell) {
 
 function downloadCsv(rows, filename) {
   if (rows.length === 1) {
-    showNotification('No data to export');
+    showNotification(t('data_noDataToExport'));
     return;
   }
   const blob = new Blob([rows.join('\r\n')], { type: 'text/csv' });
@@ -27,7 +28,7 @@ function downloadCsv(rows, filename) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-  showNotification(`Exported to "${filename}"`);
+  showNotification(t('data_exportedTo', [filename]));
 }
 
 export function downloadDailyCsv(sitesByDay, subpagesByDay) {

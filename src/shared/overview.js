@@ -1,17 +1,18 @@
 import { localDayKey, formatMs, formatHourLabel, formatHourRange } from './timeUtils.js';
 import { drawBarChart, formatWithSmallSub } from './utils.js';
+import { t } from './i18n.js';
 
-const SUBHEADINGS = {
-  today: '(today)',
-  '7': '(last 7 days)',
-  '30': '(last 30 days)',
-  '180': '(last 6 months)',
-  '365': '(last year)',
-  all: '(all time, from earliest data)',
+const SUBHEADING_KEYS = {
+  today: 'overview_sub_today',
+  '7': 'overview_sub_7',
+  '30': 'overview_sub_30',
+  '180': 'overview_sub_180',
+  '365': 'overview_sub_365',
+  all: 'overview_sub_all',
 };
 
 export function subheadingText(range) {
-  return SUBHEADINGS[range] ?? '';
+  return SUBHEADING_KEYS[range] ? t(SUBHEADING_KEYS[range]) : '';
 }
 
 export function activeDaysFromRange(range, byDayCache) {
@@ -73,8 +74,8 @@ export function drawTimeChart({ svgEl, tooltipEl, legendEl, data, maxVal, format
 
   const series = hasAudio
     ? [
-        { label: 'Active', getValue: d => d.activeMs, color: rootStyle.getPropertyValue('--color-chart-time'), formatVal: formatMs },
-        { label: 'Audio', getValue: d => d.audioMs, color: rootStyle.getPropertyValue('--color-chart-audio'), formatVal: formatMs },
+        { label: t('legend_active'), getValue: d => d.activeMs, color: rootStyle.getPropertyValue('--color-chart-time'), formatVal: formatMs },
+        { label: t('legend_audio'), getValue: d => d.audioMs, color: rootStyle.getPropertyValue('--color-chart-audio'), formatVal: formatMs },
       ]
     : undefined;
 
@@ -127,7 +128,7 @@ export function drawVisitsChart({ svgEl, tooltipEl, data, maxVal, onBarClick, sc
     maxVal: maxVal ?? Math.max(...data.map(d => d.visits), 1),
     getValue: d => d.visits,
     formatVal: v => `${Math.round(v)}`,
-    formatTooltip: v => { const n = Math.round(v); return `${n} visit${n === 1 ? '' : 's'}`; },
+    formatTooltip: v => { const n = Math.round(v); return n === 1 ? t('visits_one', [n]) : t('visits_other', [n]); },
     hideMidTicks: maxV => maxV < 3,
     color: rootStyle.getPropertyValue('--color-chart-visits'),
     onBarClick,

@@ -7,6 +7,10 @@ import { PREF_CLOCK_FORMAT, PREF_FIRST_BROWSE_BY_DAY } from '../../shared/prefKe
 import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import { getWallByHour, getFirstBrowseByDay } from '../../data/intervalAggregates.js';
 import { QUERY_SITES_BY_DAY, QUERY_SITES_BY_HOUR_TODAY, QUERY_AVG_PER_CLOCK_HOUR } from '../../shared/queryTypes.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
 
 document.querySelector('#dashboard-btn').addEventListener('click', async () => {
   const state = await readTourState();
@@ -155,7 +159,7 @@ function renderHourChart(hourMs, clockFormat) {
       const ms = hourMs[h]?.ms ?? 0;
       const from = `${String(h).padStart(2, '0')}:00`;
       const to = `${String(h + 1).padStart(2, '0')}:00`;
-      const val = h > currentHour ? 'not yet' : (ms > 0 ? formatMs(ms) : 'no activity');
+      const val = h > currentHour ? t('popup_tooltip_notYet') : (ms > 0 ? formatMs(ms) : t('popup_tooltip_noActivity'));
       tooltip.textContent = `${from}–${to} · ${val}`;
       tooltip.removeAttribute('hidden');
     });
@@ -172,7 +176,7 @@ async function renderRules() {
   const noRulesMsg = document.querySelector('#no-rules-message');
 
   if (rules.length === 0) {
-    noRulesMsg.textContent = 'No active rules. Click Manage rules to add one.';
+    noRulesMsg.textContent = t('popup_noRules');
     noRulesMsg.classList.add('visible', 'text-meta');
   } else {
     noRulesMsg.classList.remove('visible', 'text-meta');
@@ -188,22 +192,22 @@ loadFaviconCache().then(() => {
 
 initThemeMenu();
 
-const popupTourSteps = [
+function popupTourSteps() { return [
   {
     selector: '#brand',
-    title: 'The popup',
-    body: "Open this from your browser toolbar any time. It shows today's browsing at a glance and your enabled rules.",
+    title: t('tour_popup_intro_title'),
+    body: t('tour_popup_intro_body'),
   },
   {
     selector: '#manage-btn',
-    title: 'Manage your rules',
-    body: 'Click Manage rules to open the rules page and continue the tour.',
+    title: t('tour_popup_manage_title'),
+    body: t('tour_popup_manage_body'),
     handoff: { nextSurface: 'rules', mode: 'crossDocument' },
   },
-];
+]; }
 
 (async () => {
   const state = await readTourState();
   if (state.completed || state.inProgress?.surface !== 'popup') return;
-  autoStartIfMatches('popup', popupTourSteps, { showCloseButton: false });
+  autoStartIfMatches('popup', popupTourSteps(), { showCloseButton: false });
 })();

@@ -3,6 +3,10 @@ import { faviconUrl, loadFaviconCache } from '../../shared/utils.js';
 import { formatMs, localDayKey } from '../../shared/timeUtils.js';
 import { weekDow } from '../../shared/weekStart.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
 
 document.querySelector('#logo').src =
   chrome.runtime.getURL('resources/icons/brand/logo.svg');
@@ -13,7 +17,7 @@ const site = params.get('site');
 const path = params.get('path');
 
 const target = site && path ? `${site}/${path}` : site;
-if (target) document.title = `Blocked: ${target} – ${BRAND_NAME}`;
+if (target) document.title = t('blocked_titlePrefix', [target, BRAND_NAME]);
 
 // Count a block only when this page is actually landed on (fresh redirect or
 // tab-update), not when it's merely reloaded — so refreshing an already-shown
@@ -49,7 +53,7 @@ function nextReset(period, now = new Date()) {
 }
 
 function formatCountdown(ms) {
-  if (ms <= 0) return 'now';
+  if (ms <= 0) return t('blocked_now');
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -85,7 +89,7 @@ function formatCountdown(ms) {
   targetEl.append(matchLabel(rule));
 
   const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
-  document.querySelector('#stat-limit').textContent = limitMs === 0 ? 'Never' : `${formatMs(limitMs)} / ${rule.period}`;
+  document.querySelector('#stat-limit').textContent = limitMs === 0 ? t('rules_limit_never') : t('blocked_limitPerPeriod', [formatMs(limitMs), t(`period_${rule.period}`)]);
 
   const dayKey = localDayKey(Date.now());
   const activeMs = computeRuleSpent(rule, dayKey, stores);
@@ -138,7 +142,7 @@ import { PREF_FAVORITE_QUOTE_IDS, PREF_QUOTES_ENABLED } from '../../shared/prefK
     if (q.philosophySource) {
       const discoverLink = document.createElement('a');
       discoverLink.className = 'link-btn';
-      discoverLink.textContent = ' (discover ↗)';
+      discoverLink.textContent = ' ' + t('blocked_discoverLink');
       discoverLink.href = q.philosophySource;
       discoverLink.target = '_blank';
       discoverLink.rel = 'noopener noreferrer';

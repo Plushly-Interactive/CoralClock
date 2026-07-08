@@ -1,5 +1,5 @@
 import { localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { STAT_LABELS, CHART_LEGEND_HTML, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache, navButton } from '../../shared/utils.js';
+import { statLabels, chartLegendHtml, timeChartHtml, visitsChartHtml, hourlyChartHtml, faviconUrl, loadFaviconCache, navButton } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
@@ -12,6 +12,10 @@ import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import { QUERY_SUBPAGES_BY_DAY, QUERY_SUBPAGES_BY_HOUR } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
 
 const drillParams = new URLSearchParams(location.search);
 if (!drillParams.has('ids') || !drillParams.has('path')) {
@@ -38,9 +42,9 @@ function wireLimit(host) {
 if (isMerged) limitBtn.style.display = 'none';
 else wireLimit(siteId);
 const chartsGrid = document.querySelector('#charts-grid');
-chartsGrid.insertAdjacentHTML('afterbegin', TIME_CHART_HTML);
-chartsGrid.insertAdjacentHTML('beforeend', VISITS_CHART_HTML);
-chartsGrid.insertAdjacentHTML('beforeend', HOURLY_CHART_HTML);
+chartsGrid.insertAdjacentHTML('afterbegin', timeChartHtml());
+chartsGrid.insertAdjacentHTML('beforeend', visitsChartHtml());
+chartsGrid.insertAdjacentHTML('beforeend', hourlyChartHtml());
 const rangeSelect = document.querySelector('#range-select');
 const timeChart = document.querySelector('#time-chart');
 const timeTooltip = document.querySelector('#time-tooltip');
@@ -165,7 +169,7 @@ function renderPathLinks(entries) {
     return;
   }
   pathLinksToggle.style.display = '';
-  pathLinksToggleLabel.textContent = entries.length === 1 ? '(click to open link)' : '(click to see links)';
+  pathLinksToggleLabel.textContent = entries.length === 1 ? t('path_clickToOpen') : t('path_clickToSeeLinks');
   if (entries.length === 1) {
     const { domain, fullPath } = entries[0];
     singleLinkUrl = `https://${domain}${fullPath}`;
@@ -195,10 +199,11 @@ const siteHref = isMerged
 backBtn.href = DASH;
 crumbSite.href = siteHref;
 
+const labels = statLabels();
 const stats = [
-  { label: STAT_LABELS.totalTime, id: 'stat-total-time' },
-  { label: 'Daily avg', id: 'stat-daily-avg' },
-  { label: STAT_LABELS.visits, id: 'stat-visits' },
+  { label: labels.totalTime, id: 'stat-total-time' },
+  { label: labels.dailyAvg, id: 'stat-daily-avg' },
+  { label: labels.visits, id: 'stat-visits' },
 ];
 stats.forEach(s => {
   const item = document.createElement('div');
@@ -207,7 +212,7 @@ stats.forEach(s => {
   statsList.appendChild(item);
 });
 
-timeLegend.innerHTML = CHART_LEGEND_HTML;
+timeLegend.innerHTML = chartLegendHtml();
 
 const drillView = document.querySelector('#drill-view');
 
@@ -261,7 +266,7 @@ const hourly = createHourlyChart({
   container: document.querySelector('#hourly-chart-container'),
   subheading: document.querySelector('#hourly-subheading'),
   notRelevant: document.querySelector('#hourly-not-relevant'),
-  allDaysLabel: '(all days from earliest data, excluding today)',
+  allDaysLabel: t('site_hourly_allDays'),
   getRangeValue: () => rangeSelect.dataset.value,
   loadAvgPerHour: (range) => {
     const todayKey = localDayKey(Date.now());
@@ -327,21 +332,21 @@ function renderStats(data, range) {
   document.querySelector('#overview-subheading').textContent = subheadingText(range);
 }
 
-const pathTourSteps = [
+function pathTourSteps() { return [
   {
     selector: '#path-subheader',
-    title: 'Path details',
-    body: 'The same view as the site page, for a single subpage: the charts, day drill-down and stats all work the same way.',
+    title: t('tour_path_details_title'),
+    body: t('tour_path_details_body'),
   },
   {
     selector: '#back-btn',
-    title: 'Back to the dashboard',
-    body: 'Go back to the site, then back to the dashboard, where the tour continues.',
+    title: t('tour_path_back_title'),
+    body: t('tour_path_back_body'),
     handoff: { nextSurface: 'dashboard', nextStepIndex: 6, mode: 'inPage' },
   },
-];
+]; }
 
-loadAndRenderPromise.then(() => autoStartIfMatches('path', pathTourSteps, {
+loadAndRenderPromise.then(() => autoStartIfMatches('path', pathTourSteps(), {
   onClose: ({ skipped }) => {
     if (skipped) {
       clearMockModeCache();

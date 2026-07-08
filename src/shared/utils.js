@@ -1,37 +1,51 @@
-export const STAT_LABELS = {
-  today: 'Today',
-  dailyAvg: 'Daily avg',
-  peakDay: 'Peak day',
-  totalTime: 'Total time',
-  visits: 'Visits',
-  avgSession: 'Avg session',
-};
+import { t } from './i18n.js';
 
-export const CHART_LEGEND_HTML = `<span><span class="chart-legend-time"></span> Active browsing</span><span><span class="chart-legend-audio"></span> Audio playback</span>`;
+// Functions, not consts: t() must resolve after initI18n() has loaded any
+// language override, which happens after this module is evaluated.
+export function statLabels() {
+  return {
+    today: t('stat_today'),
+    dailyAvg: t('stat_dailyAvg'),
+    peakDay: t('stat_peakDay'),
+    totalTime: t('stat_totalTime'),
+    visits: t('stat_visits'),
+    avgSession: t('stat_avgSession'),
+  };
+}
 
-export const TIME_CHART_HTML = `<div id="time-chart-container" class="chart-container">
+export function chartLegendHtml() {
+  return `<span><span class="chart-legend-time"></span> ${t('chart_activeBrowsing')}</span><span><span class="chart-legend-audio"></span> ${t('chart_audioPlayback')}</span>`;
+}
+
+export function timeChartHtml() {
+  return `<div id="time-chart-container" class="chart-container">
   <div class="chart-header">
-    <h2 class="chart-heading">Time spent</h2>
+    <h2 class="chart-heading">${t('chart_timeSpent')}</h2>
     <div id="time-legend" class="time-legend text-meta" style="display: none"></div>
   </div>
   <svg id="time-chart" class="chart-svg"></svg>
   <div id="time-tooltip" class="tooltip text-meta"></div>
-  <p id="time-no-data" class="text-meta" style="display:none">No data for this period.</p>
+  <p id="time-no-data" class="text-meta" style="display:none">${t('dashboard_noData')}</p>
 </div>`;
+}
 
-export const VISITS_CHART_HTML = `<div id="visits-chart-container" class="chart-container">
-  <h2 class="chart-heading">Visits</h2>
+export function visitsChartHtml() {
+  return `<div id="visits-chart-container" class="chart-container">
+  <h2 class="chart-heading">${t('stat_visits')}</h2>
   <svg id="visits-chart" class="chart-svg"></svg>
   <div id="visits-tooltip" class="tooltip text-meta"></div>
-  <p id="visits-no-data" class="text-meta" style="display:none">No data for this period.</p>
+  <p id="visits-no-data" class="text-meta" style="display:none">${t('dashboard_noData')}</p>
 </div>`;
+}
 
-export const HOURLY_CHART_HTML = `<div id="hourly-chart-container" class="chart-container">
-  <h2 class="chart-heading">Average per clock hour <span id="hourly-subheading" class="chart-subheading text-meta"></span></h2>
+export function hourlyChartHtml() {
+  return `<div id="hourly-chart-container" class="chart-container">
+  <h2 class="chart-heading">${t('dashboard_avgPerHour')} <span id="hourly-subheading" class="chart-subheading text-meta"></span></h2>
   <svg id="hourly-chart" class="chart-svg"></svg>
   <div id="hourly-tooltip" class="tooltip text-meta"></div>
   <p id="hourly-not-relevant" class="text-meta" style="display:none"></p>
 </div>`;
+}
 
 export function attachInputClear(input, clearBtn, onChange, { escStopPropagation = false } = {}) {
   function sync() {
@@ -272,19 +286,19 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
         const seriesLines = rect.dataset.seriesList.split('\n');
         const seriesHtml = seriesLines.map(line => formatWithSmallSub(line)).join('<br>');
         html = `${seriesHtml}<br>${rect.dataset.range}`;
-        if (onBarClick) html += '<br><span class="text-hint">(click to open detailed chart)</span>';
+        if (onBarClick) html += `<br><span class="text-hint">${t('chart_clickToOpen')}</span>`;
         tooltipEl.innerHTML = html;
       } else if (rect.dataset.series) {
         const text = `${rect.dataset.series}: ${rect.dataset.format} / ${rect.dataset.range}`;
         if (onBarClick) {
-          tooltipEl.innerHTML = `${text}<br><span class="text-hint">(click to open detailed chart)</span>`;
+          tooltipEl.innerHTML = `${text}<br><span class="text-hint">${t('chart_clickToOpen')}</span>`;
         } else {
           tooltipEl.textContent = text;
         }
       } else {
         const val = Number(rect.dataset.val);
         let text = val === 0 ? rect.dataset.range : formatWithSmallSub(formatTooltip(val)) + '<br>' + rect.dataset.range;
-        if (onBarClick) text += '<br><span class="text-hint">(click to open detailed chart)</span>';
+        if (onBarClick) text += `<br><span class="text-hint">${t('chart_clickToOpen')}</span>`;
         if (onBarClick || val > 0) {
           tooltipEl.innerHTML = text;
         } else {

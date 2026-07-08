@@ -1,4 +1,5 @@
 import { buildHourlyBuckets, drawHourlyChart } from './overview.js';
+import { t } from './i18n.js';
 
 export function createHourlyChart({ chart, tooltip, container, subheading, notRelevant, allDaysLabel, getRangeValue, loadAvgPerHour, clockFormat = '24h' }) {
   const cache = {};
@@ -10,7 +11,7 @@ export function createHourlyChart({ chart, tooltip, container, subheading, notRe
 
   function subheadingText(range) {
     if (range === 'all') return allDaysLabel;
-    return `(past ${parseInt(range)} days, excluding today)`;
+    return t('hourly_pastDays', [parseInt(range)]);
   }
 
   function render(range) {
@@ -19,7 +20,7 @@ export function createHourlyChart({ chart, tooltip, container, subheading, notRe
     if (range === 'today') {
       chart.style.display = 'none';
       subheading.textContent = '';
-      notRelevant.textContent = 'Not relevant for "Today".';
+      notRelevant.textContent = t('hourly_notTodayRelevant');
       notRelevant.style.display = 'block';
       return;
     }
@@ -35,7 +36,7 @@ export function createHourlyChart({ chart, tooltip, container, subheading, notRe
     const hasData = data.some(d => d.activeMs > 0);
     if (!hasData) {
       chart.style.display = 'none';
-      notRelevant.textContent = 'No data for past days yet.';
+      notRelevant.textContent = t('hourly_noPastData');
       notRelevant.style.display = 'block';
       return;
     }

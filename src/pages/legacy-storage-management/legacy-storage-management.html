@@ -16,7 +16,7 @@
         <img src="../../../resources/icons/brand/logo.svg" alt="Reef">
       </a>
     </div>
-    <div id="header-center"><h1 class="page-title">Legacy storage management</h1></div>
+    <div id="header-center"><h1 class="page-title" data-i18n="legacy_pageTitle">Legacy storage management</h1></div>
     <div id="header-right"></div>
   </header>
 
@@ -27,27 +27,27 @@
       <div id="overview-top" style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center">
         <button id="overview-back-btn" class="link-btn" style="justify-self:start;display:flex;align-items:center;gap:4px;height:36px;padding:0 20px 0 0">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-          Storage
+          <span data-i18n="legacy_storageLink">Storage</span>
         </button>
       <div id="counts-row" style="grid-column:2">
         <div class="count-chip">
           <span id="count-domains" class="stat-value">—</span>
-          <span class="stat-label">Domains</span>
+          <span class="stat-label" data-i18n="storage_domains">Domains</span>
         </div>
         <div class="count-chip">
           <span id="count-subpages" class="stat-value">—</span>
-          <span class="stat-label">Subpages</span>
+          <span class="stat-label" data-i18n="storage_subpages">Subpages</span>
         </div>
         <div class="count-chip">
           <span id="count-records" class="stat-value">—</span>
-          <span class="stat-label">Records</span>
+          <span class="stat-label" data-i18n="legacy_records">Records</span>
         </div>
         <div class="count-chip" id="span-chip">
           <span class="stat-value-row">
             <span id="span-value" class="stat-value">—</span>
             <span id="span-info" class="stat-info">ⓘ</span>
           </span>
-          <span class="stat-label">Of data</span>
+          <span class="stat-label" data-i18n="storage_ofData">Of data</span>
           <div class="tooltip text-meta" id="span-tooltip"></div>
         </div>
       </div>
@@ -55,7 +55,7 @@
 
       <div id="stats-row">
         <div class="chart-container">
-          <span class="chart-heading">Storage by store</span>
+          <span class="chart-heading" data-i18n="legacy_storageByStore">Storage by store</span>
           <div class="quota-row">
             <div class="store-bar">
               <div id="bar-site-day" style="width:0%;background:var(--color-accent)"></div>
@@ -68,33 +68,33 @@
           </div>
           <div class="store-bar-legend">
             <div class="legend-stores">
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent)"></span><span id="legend-site-day">Sites daily</span></div>
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent-light)"></span><span id="legend-site-hour">Sites hourly</span></div>
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary)"></span><span id="legend-sub-day">Subpages daily</span></div>
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary-light)"></span><span id="legend-sub-hour">Subpages hourly</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent)"></span><span id="legend-site-day" data-i18n="legacy_sitesDaily">Sites daily</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent-light)"></span><span id="legend-site-hour" data-i18n="legacy_sitesHourly">Sites hourly</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary)"></span><span id="legend-sub-day" data-i18n="legacy_subpagesDaily">Subpages daily</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary-light)"></span><span id="legend-sub-hour" data-i18n="legacy_subpagesHourly">Subpages hourly</span></div>
             </div>
-            <div id="legend-other" class="legend-row" hidden><span class="legend-dot" style="background:var(--color-border)"></span><span id="legend-other-text">Other</span></div>
+            <div id="legend-other" class="legend-row" hidden><span class="legend-dot" style="background:var(--color-border)"></span><span id="legend-other-text" data-i18n="legacy_other">Other</span></div>
           </div>
         </div>
 
         <div class="chart-container">
-          <span class="chart-heading">Quota</span>
+          <span class="chart-heading" data-i18n="legacy_quota">Quota</span>
           <div class="quota-row">
             <div class="quota-bar-track"><div id="quota-bar-fill" class="quota-bar-fill" style="width:0%"></div></div>
             <span id="quota-text" class="text-meta"></span>
           </div>
           <span id="quota-warn" class="quota-warn" hidden></span>
-          <span class="text-meta">Chrome caps extension storage at 10 MB by default.</span>
+          <span class="text-meta" data-i18n="legacy_quotaCapDesc">Chrome caps extension storage at 10 MB by default.</span>
         </div>
 
         <div class="chart-container">
-          <span class="chart-heading">Last export</span>
+          <span class="chart-heading" data-i18n="storage_lastExport">Last export</span>
           <div>
             <div id="export-age" class="export-age">—</div>
             <div id="export-label" class="export-label"></div>
           </div>
-          <span class="text-meta">Back up before running a large prune or delete.</span>
-          <button id="export-btn" class="btn" style="align-self:flex-start">Quick export</button>
+          <span class="text-meta" data-i18n="storage_backupDesc">Back up before running a large prune or delete.</span>
+          <button id="export-btn" class="btn" style="align-self:flex-start" data-i18n="storage_quickExportBtn">Quick export</button>
         </div>
       </div>
     </div>
@@ -103,56 +103,56 @@
     <div id="tools-grid">
 
       <div class="chart-container" id="insig-card">
-        <h2 class="chart-heading">Remove insignificant records</h2>
-        <p class="card-desc">Over time, brief visits and accidental clicks accumulate noise. Scan and remove entries whose total tracked time falls below a threshold.</p>
+        <h2 class="chart-heading" data-i18n="legacy_removeInsigRecords">Remove insignificant records</h2>
+        <p class="card-desc" data-i18n="legacy_removeInsigDesc">Over time, brief visits and accidental clicks accumulate noise. Scan and remove entries whose total tracked time falls below a threshold.</p>
         <div class="field-group">
-          <div class="setting-label">Threshold</div>
+          <div class="setting-label" data-i18n="storage_threshold">Threshold</div>
           <div id="threshold-row">
             <input id="threshold-input" class="number-input" type="number" value="30" />
-            <span>seconds</span>
+            <span data-i18n="storage_seconds">seconds</span>
           </div>
         </div>
         <div class="field-group">
-          <div class="setting-label">Scan</div>
+          <div class="setting-label" data-i18n="storage_scan">Scan</div>
           <div id="insig-stores">
-            <label class="scope-check"><input type="checkbox" id="insig-scope-sites" checked> Sites</label>
-            <label class="scope-check"><input type="checkbox" id="insig-scope-subpages" checked> Subpages</label>
+            <label class="scope-check"><input type="checkbox" id="insig-scope-sites" checked> <span data-i18n="storage_sites">Sites</span></label>
+            <label class="scope-check"><input type="checkbox" id="insig-scope-subpages" checked> <span data-i18n="storage_subpages">Subpages</span></label>
           </div>
         </div>
-        <div class="right-row"><button id="scan-btn" class="btn">Scan</button></div>
+        <div class="right-row"><button id="scan-btn" class="btn" data-i18n="storage_scanBtn">Scan</button></div>
       </div>
 
       <div class="chart-container" id="range-delete">
-        <h2 class="chart-heading">Targeted deletion</h2>
-        <p class="card-desc">Delete all data for a specific site, or remove records within an exact date and time window.</p>
+        <h2 class="chart-heading" data-i18n="storage_targetedDeletion">Targeted deletion</h2>
+        <p class="card-desc" data-i18n="storage_targetedDeletionDesc">Delete all data for a specific site, or remove records within an exact date and time window.</p>
         <div id="site-filter-row">
-          <span class="setting-label">Site (optional)</span>
+          <span class="setting-label" data-i18n="storage_siteOptional">Site (optional)</span>
           <div id="site-filter-wrap" class="input-wrap">
             <input type="text" id="site-filter-input" class="text-input" placeholder="e.g. google.com" />
             <button id="site-filter-clear" class="icon-btn input-clear" hidden>&times;</button>
           </div>
         </div>
         <div id="delete-all-site-row">
-          <button id="delete-all-site-btn" class="btn">Delete all data</button>
+          <button id="delete-all-site-btn" class="btn" data-i18n="storage_deleteAllData">Delete all data</button>
         </div>
         <hr class="card-divider" />
         <div id="range-mode-row">
           <div id="range-mode-toggle" class="seg-control">
-            <button id="mode-contiguous-btn" class="seg-btn active">Contiguous</button>
-            <button id="mode-repeat-btn" class="seg-btn">Repeat daily</button>
+            <button id="mode-contiguous-btn" class="seg-btn active" data-i18n="storage_contiguous">Contiguous</button>
+            <button id="mode-repeat-btn" class="seg-btn" data-i18n="storage_repeatDaily">Repeat daily</button>
           </div>
         </div>
         <div id="range-form-row">
           <div id="range-form-col">
             <div class="range-line">
-              <span class="setting-label">From</span>
+              <span class="setting-label" data-i18n="storage_from">From</span>
               <div class="dt-group">
                 <div class="custom-dropdown date-dropdown" id="range-from-date"></div>
                 <div class="custom-dropdown hour-dropdown" id="range-from-hour"></div>
               </div>
             </div>
             <div class="range-line">
-              <span class="setting-label">To</span>
+              <span class="setting-label" data-i18n="storage_to">To</span>
               <div class="dt-group">
                 <div class="custom-dropdown date-dropdown" id="range-to-date"></div>
                 <div class="custom-dropdown hour-dropdown" id="range-to-hour"></div>
@@ -162,56 +162,56 @@
         </div>
         <div id="repeat-form" style="display:none">
           <div class="repeat-row">
-            <span class="repeat-label setting-label">Dates</span>
+            <span class="repeat-label setting-label" data-i18n="storage_dates">Dates</span>
             <div class="custom-dropdown date-dropdown" id="repeat-from-date"></div>
             <span class="text-meta">–</span>
             <div class="custom-dropdown date-dropdown" id="repeat-to-date"></div>
           </div>
           <div class="repeat-row">
-            <span class="repeat-label setting-label">Hours</span>
+            <span class="repeat-label setting-label" data-i18n="storage_hours">Hours</span>
             <div class="custom-dropdown hour-dropdown" id="repeat-from-hour"></div>
             <span class="text-meta">–</span>
             <div class="custom-dropdown hour-dropdown" id="repeat-to-hour"></div>
           </div>
         </div>
         <div class="right-row">
-          <button id="delete-range-btn" class="btn">Delete range</button>
+          <button id="delete-range-btn" class="btn" data-i18n="storage_deleteRangeBtn">Delete range</button>
         </div>
       </div>
 
       <div class="chart-container" id="hourly-card">
-        <h2 class="chart-heading">Hourly data</h2>
-        <p class="card-desc">Hourly stores track the same time as daily, at finer granularity. Old hourly data can be dropped once daily aggregates are accurate.</p>
+        <h2 class="chart-heading" data-i18n="legacy_hourlyData">Hourly data</h2>
+        <p class="card-desc" data-i18n="legacy_hourlyDataDesc">Hourly stores track the same time as daily, at finer granularity. Old hourly data can be dropped once daily aggregates are accurate.</p>
         <div class="callout">
           <div id="callout-sites-hour"></div>
           <div id="callout-sub-hour"></div>
           <div id="callout-hourly-total" class="text-meta" style="margin-top:4px"></div>
         </div>
         <div class="field-group">
-          <div class="setting-label">Scope</div>
+          <div class="setting-label" data-i18n="legacy_scope">Scope</div>
           <div id="drop-stores">
-            <label class="scope-check"><input type="checkbox" id="drop-scope-sites" checked> Sites</label>
-            <label class="scope-check"><input type="checkbox" id="drop-scope-subpages" checked> Subpages</label>
+            <label class="scope-check"><input type="checkbox" id="drop-scope-sites" checked> <span data-i18n="storage_sites">Sites</span></label>
+            <label class="scope-check"><input type="checkbox" id="drop-scope-subpages" checked> <span data-i18n="storage_subpages">Subpages</span></label>
           </div>
         </div>
         <div id="drop-row">
-          <span class="setting-label">Drop data older than</span>
+          <span class="setting-label" data-i18n="legacy_dropDataOlderThan">Drop data older than</span>
           <input id="drop-days-input" class="number-input" type="number" value="30" />
-          <span>days</span>
+          <span data-i18n="storage_days">days</span>
           <span id="drop-estimate" class="text-meta">~280 KB</span>
         </div>
-        <div class="right-row"><button id="drop-hourly-btn" class="btn">Drop data</button></div>
+        <div class="right-row"><button id="drop-hourly-btn" class="btn" data-i18n="legacy_dropDataBtn">Drop data</button></div>
       </div>
 
       <div class="chart-container" id="health-card">
-        <h2 class="chart-heading">Data health</h2>
-        <p class="card-desc">Verifies hourly and daily aggregates are consistent. Targeted deletion reduces daily values from hourly data, small drifts accumulate over time.</p>
+        <h2 class="chart-heading" data-i18n="legacy_dataHealth">Data health</h2>
+        <p class="card-desc" data-i18n="legacy_dataHealthDesc">Verifies hourly and daily aggregates are consistent. Targeted deletion reduces daily values from hourly data, small drifts accumulate over time.</p>
         <div class="health-status">
           <span id="health-dot" class="health-dot"></span>
           <span id="health-status-text"></span>
         </div>
         <div class="right-row">
-          <button id="repair-btn" class="btn">Repair</button>
+          <button id="repair-btn" class="btn" data-i18n="legacy_repairBtn">Repair</button>
         </div>
       </div>
 
@@ -221,21 +221,21 @@
   <!-- Scan overlay -->
   <div id="scan-overlay" style="display:none">
     <div class="overlay-header">
-      <span class="overlay-title">Scan results</span>
+      <span class="overlay-title" data-i18n="storage_scanResults">Scan results</span>
       <span id="overlay-params" class="text-meta">30s · Sites + Subpages</span>
       <button id="overlay-close" class="overlay-close">&times;</button>
     </div>
     <div id="overlay-results" class="overlay-results"></div>
     <div class="overlay-footer">
       <span id="overlay-summary" class="text-meta"></span>
-      <button id="overlay-delete-btn" class="btn">Delete selected</button>
+      <button id="overlay-delete-btn" class="btn" data-i18n="storage_deleteSelectedBtn">Delete selected</button>
     </div>
   </div>
 
   <!-- Repair overlay -->
   <div id="repair-overlay" style="display:none">
     <div class="overlay-header">
-      <span class="overlay-title">Health issues</span>
+      <span class="overlay-title" data-i18n="legacy_healthIssues">Health issues</span>
       <span id="repair-count" class="text-meta"></span>
       <button id="repair-overlay-close" class="overlay-close">&times;</button>
     </div>
@@ -243,8 +243,8 @@
     <div class="overlay-footer">
       <span id="repair-footer-count" class="text-meta"></span>
       <div style="display:flex;gap:8px">
-        <button id="repair-overlay-cancel-btn" class="btn">Cancel</button>
-        <button id="repair-all-btn" class="btn">Repair all</button>
+        <button id="repair-overlay-cancel-btn" class="btn" data-i18n="storage_cancelBtn">Cancel</button>
+        <button id="repair-all-btn" class="btn" data-i18n="legacy_repairAllBtn">Repair all</button>
       </div>
     </div>
   </div>

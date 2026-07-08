@@ -1,7 +1,9 @@
 import { rotatedDayLabels, weekDow } from './weekStart.js';
 import { localDayKey } from './timeUtils.js';
+import { t } from './i18n.js';
 
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTH_FMT = new Intl.DateTimeFormat(undefined, { month: 'long' });
+function monthName(m) { return MONTH_FMT.format(new Date(2023, m, 1)); }
 const PREV_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg>';
 const NEXT_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg>';
 const YEAR_SPAN = 15;
@@ -18,7 +20,8 @@ export function buildDatePicker(id, initDateStr, onChange) {
   btn.type = 'button';
   btn.className = 'dropdown-btn';
   btn.dataset.value = initDateStr || '';
-  btn.innerHTML = `<span class="date-btn-label">${initDateStr || 'Select date'}</span><span class="icon-mask icon-calendar date-btn-icon"></span>`;
+  btn.innerHTML = `<span class="date-btn-label">${initDateStr || t('datePicker_selectDate')}</span><span class="icon-mask icon-calendar date-btn-icon"></span>`;
+  btn.querySelector('.date-btn-label').title = initDateStr || t('datePicker_selectDate');
 
   const popup = document.createElement('div');
   popup.className = 'dropdown-menu calendar-popup';
@@ -59,7 +62,7 @@ export function buildDatePicker(id, initDateStr, onChange) {
   const todayBtn = document.createElement('button');
   todayBtn.type = 'button';
   todayBtn.className = 'link-btn cal-today-btn';
-  todayBtn.textContent = 'Today';
+  todayBtn.textContent = t('stat_today');
   daysWrap.append(daysGrid, todayBtn);
 
   popup.append(yearRow, navStrip, weekdaysRow, daysWrap);
@@ -92,7 +95,7 @@ export function buildDatePicker(id, initDateStr, onChange) {
 
   function renderMonth() {
     yearBtn.textContent = viewYear;
-    monthLabel.textContent = MONTH_NAMES[viewMonth];
+    monthLabel.textContent = monthName(viewMonth);
 
     weekdaysRow.innerHTML = '';
     for (const label of rotatedDayLabels()) {
@@ -123,7 +126,9 @@ export function buildDatePicker(id, initDateStr, onChange) {
       dayBtn.textContent = d;
       dayBtn.addEventListener('click', () => {
         btn.dataset.value = key;
-        btn.querySelector('.date-btn-label').textContent = key;
+        const label = btn.querySelector('.date-btn-label');
+        label.textContent = key;
+        label.title = key;
         popup.classList.remove('open');
         if (onChange) onChange();
       });
@@ -161,7 +166,9 @@ export function buildDatePicker(id, initDateStr, onChange) {
     viewMonth = now.getMonth();
     const key = localDayKey(now.getTime());
     btn.dataset.value = key;
-    btn.querySelector('.date-btn-label').textContent = key;
+    const label = btn.querySelector('.date-btn-label');
+    label.textContent = key;
+    label.title = key;
     popup.classList.remove('open');
     if (onChange) onChange();
   });

@@ -16,7 +16,7 @@
           <img src="../../../resources/icons/brand/logo.svg" alt="Reef">
         </a>
       </div>
-      <div id="header-center"><h1 class="page-title">Rules</h1></div>
+      <div id="header-center"><h1 class="page-title" data-i18n="rules_pageTitle">Rules</h1></div>
       <div id="header-right"></div>
     </header>
 
@@ -26,14 +26,14 @@
       <div id="left-col">
 
         <div class="chart-container" id="overview-card">
-          <h2 class="chart-heading">Overview</h2>
+          <h2 class="chart-heading" data-i18n="rules_overview">Overview</h2>
           <div id="stats-grid" class="stats-list">
             <div class="stat-item">
-              <span class="stat-label">Blocks this week</span>
+              <span class="stat-label" data-i18n="rules_blocksThisWeek">Blocks this week</span>
               <span class="stat-value" id="stat-blocks">—</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">Most blocked</span>
+              <span class="stat-label" data-i18n="rules_mostBlocked">Most blocked</span>
               <span class="stat-value" id="stat-most-blocked-wrap">
                 <img id="most-blocked-favicon" class="site-favicon" alt="" hidden>
                 <span id="stat-most-blocked">—</span>
@@ -41,21 +41,21 @@
             </div>
             <hr id="stats-divider">
             <div class="stat-item">
-              <span class="stat-label">Active rules</span>
+              <span class="stat-label" data-i18n="popup_activeRules">Active rules</span>
               <span class="stat-value" id="stat-active">—</span>
             </div>
             <div class="stat-item">
-              <span class="stat-label">Avg blocks / day</span>
+              <span class="stat-label" data-i18n="rules_avgBlocksPerDay">Avg blocks / day</span>
               <span class="stat-value" id="stat-avg">—</span>
             </div>
           </div>
         </div>
 
         <div class="chart-container" id="sparkline-card">
-          <h2 class="chart-heading">Blocks per day</h2>
+          <h2 class="chart-heading" data-i18n="rules_blocksPerDay">Blocks per day</h2>
           <svg id="spark-chart" class="chart-svg"></svg>
           <div class="tooltip text-meta" id="spark-tooltip"></div>
-          <p id="spark-no-data" class="text-meta" style="display:none">No data for this period.</p>
+          <p id="spark-no-data" class="text-meta" style="display:none" data-i18n="dashboard_noData">No data for this period.</p>
         </div>
 
       </div><!-- /left-col -->
@@ -66,7 +66,7 @@
         <div id="reauth-prompt" class="callout" hidden>
           <p id="reauth-text"></p>
           <div class="form-row">
-            <button id="reauth-btn" type="button" class="btn">Re-authorize</button>
+            <button id="reauth-btn" type="button" class="btn" data-i18n="rules_reauthorize">Re-authorize</button>
           </div>
         </div>
 
@@ -74,18 +74,18 @@
         <div id="add-card">
           <div id="add-card-toggle">
             <div id="add-toggle-left">
-              <h2 class="chart-heading">Add a rule</h2>
+              <h2 class="chart-heading" data-i18n="rules_addRule">Add a rule</h2>
             </div>
             <div id="add-toggle-right">
               <div id="type-toggle" class="seg-control">
                 <button id="tab-url" class="seg-btn active">
-                  <span class="seg-icon"><span class="icon-mask icon-link"></span></span> URL / host
+                  <span class="seg-icon"><span class="icon-mask icon-link"></span></span> <span data-i18n="rules_tabUrl">URL / host</span>
                 </button>
                 <button id="tab-keyword" class="seg-btn">
-                  <span class="seg-icon"><span class="icon-mask icon-search"></span></span> Keyword
+                  <span class="seg-icon"><span class="icon-mask icon-search"></span></span> <span data-i18n="rules_tabKeyword">Keyword</span>
                 </button>
                 <button id="tab-regex" class="seg-btn">
-                  <span class="seg-icon"><span class="icon-mask icon-regex"></span></span> Regex
+                  <span class="seg-icon"><span class="icon-mask icon-regex"></span></span> <span data-i18n="rules_tabRegex">Regex</span>
                 </button>
               </div>
               <span id="add-toggle-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span>
@@ -98,55 +98,55 @@
             <div id="url-form">
               <div id="form-target-wrap" class="input-wrap">
                 <input id="form-target" class="text-input" type="text" placeholder="reddit.com" />
-                <button id="form-target-clear" class="icon-btn input-clear" aria-label="Clear" hidden>&times;</button>
+                <button id="form-target-clear" class="icon-btn input-clear" data-i18n-aria="rules_clear" aria-label="Clear" hidden>&times;</button>
               </div>
               <div class="scope-cards">
                 <div class="scope-card" id="scope-host" data-scope="host">
-                  <h3>Host only</h3>
+                  <h3 data-i18n="rules_scopeHostOnly">Host only</h3>
                   <span class="ex" id="ex-host">reddit.com</span>
-                  <span class="text-meta">No subdomains</span>
+                  <span class="text-meta" data-i18n="rules_scopeNoSubdomains">No subdomains</span>
                 </div>
                 <div class="scope-card active" id="scope-subdomain" data-scope="subdomain">
-                  <h3>Whole site</h3>
+                  <h3 data-i18n="rules_scopeWholeSite">Whole site</h3>
                   <span class="ex" id="ex-subdomain">*.reddit.com</span>
-                  <span class="text-meta">Incl. subdomains</span>
+                  <span class="text-meta" data-i18n="rules_scopeInclSubdomains">Incl. subdomains</span>
                 </div>
                 <div class="scope-card" id="scope-page" data-scope="pathPrefix">
-                  <h3>Path prefix</h3>
+                  <h3 data-i18n="rules_scopePathPrefix">Path prefix</h3>
                   <span class="ex" id="ex-page">reddit.com/r/…</span>
-                  <span class="text-meta">Path + children</span>
+                  <span class="text-meta" data-i18n="rules_scopePathChildren">Path + children</span>
                 </div>
               </div>
               <div class="form-row" id="limit-row">
-                <span>Limit to</span>
+                <span data-i18n="rules_limitTo">Limit to</span>
                 <input id="form-limit" class="form-limit number-input" type="number" value="10" min="0" />
                 <div class="custom-dropdown">
-                  <button type="button" class="dropdown-btn form-unit-btn" id="form-unit-btn" data-value="minutes">min<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
+                  <button type="button" class="dropdown-btn form-unit-btn" id="form-unit-btn" data-value="minutes" data-i18n-firstchild="unit_minutes">min<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
                   <div class="dropdown-menu form-unit-menu" id="form-unit-menu">
-                    <button type="button" value="minutes">min</button>
-                    <button type="button" value="hours">hours</button>
-                    <button type="button" value="days">days</button>
+                    <button type="button" value="minutes" data-i18n="unit_minutes">min</button>
+                    <button type="button" value="hours" data-i18n="unit_hours">hours</button>
+                    <button type="button" value="days" data-i18n="unit_days">days</button>
                   </div>
                 </div>
-                <span>per</span>
+                <span data-i18n="rules_per">per</span>
                 <div class="custom-dropdown">
-                  <button type="button" class="dropdown-btn form-period-btn" id="form-period-btn" data-value="hour">hour<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
+                  <button type="button" class="dropdown-btn form-period-btn" id="form-period-btn" data-value="hour" data-i18n-firstchild="period_hour">hour<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
                   <div class="dropdown-menu form-period-menu" id="form-period-menu">
-                    <button type="button" value="hour">hour</button>
-                    <button type="button" value="day">day</button>
-                    <button type="button" value="week">week</button>
+                    <button type="button" value="hour" data-i18n="period_hour">hour</button>
+                    <button type="button" value="day" data-i18n="period_day">day</button>
+                    <button type="button" value="week" data-i18n="period_week">week</button>
                   </div>
                 </div>
-                <span>counting</span>
+                <span data-i18n="rules_counting">counting</span>
                 <div class="custom-dropdown">
-                  <button type="button" class="dropdown-btn" id="form-mode-btn" data-value="active+audio">active + audio<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
+                  <button type="button" class="dropdown-btn" id="form-mode-btn" data-value="active+audio" data-i18n-firstchild="mode_activeAudio">active + audio<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
                   <div class="dropdown-menu" id="form-mode-menu">
-                    <button type="button" value="active">active</button>
-                    <button type="button" value="audio">audio</button>
-                    <button type="button" value="active+audio">active + audio</button>
+                    <button type="button" value="active" data-i18n="mode_active">active</button>
+                    <button type="button" value="audio" data-i18n="mode_audio">audio</button>
+                    <button type="button" value="active+audio" data-i18n="mode_activeAudio">active + audio</button>
                   </div>
                 </div>
-                <label class="always-block-label"><input type="checkbox" id="cb-always-url" /> Always block</label>
+                <label class="always-block-label"><input type="checkbox" id="cb-always-url" /> <span data-i18n="rules_alwaysBlock">Always block</span></label>
               </div>
               <div id="rule-preview" class="callout">
                 <span id="preview-text"></span>
@@ -156,12 +156,12 @@
                 <p id="redundant-text"></p>
                 <ul id="redundant-list" class="rules-list"></ul>
                 <div class="form-row">
-                  <button id="redundant-disable-btn" type="button" class="btn">Disable them</button>
-                  <button id="redundant-keep-btn" type="button" class="link-btn">Keep all</button>
+                  <button id="redundant-disable-btn" type="button" class="btn" data-i18n="rules_disableThem">Disable them</button>
+                  <button id="redundant-keep-btn" type="button" class="link-btn" data-i18n="rules_keepAll">Keep all</button>
                 </div>
               </div>
               <div class="form-submit-row">
-                <button id="save-btn" type="button" class="btn">Add rule</button>
+                <button id="save-btn" type="button" class="btn" data-i18n="rules_addRuleBtn">Add rule</button>
               </div>
             </div>
 
@@ -169,45 +169,45 @@
             <div id="regex-form" hidden>
               <div id="regex-target-wrap" class="input-wrap">
                 <input id="regex-pattern" class="text-input" type="text" placeholder="news[./]|[./]news([./?]|$)" />
-                <button id="regex-pattern-clear" class="icon-btn input-clear" aria-label="Clear" hidden>&times;</button>
+                <button id="regex-pattern-clear" class="icon-btn input-clear" data-i18n-aria="rules_clear" aria-label="Clear" hidden>&times;</button>
               </div>
               <div class="form-row" id="regex-limit-row">
-                <span>Limit to</span>
+                <span data-i18n="rules_limitTo">Limit to</span>
                 <input id="regex-limit" class="regex-limit number-input" type="number" value="10" min="0" />
                 <div class="custom-dropdown">
-                  <button type="button" class="dropdown-btn regex-unit-btn" id="regex-unit-btn" data-value="minutes">min<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
+                  <button type="button" class="dropdown-btn regex-unit-btn" id="regex-unit-btn" data-value="minutes" data-i18n-firstchild="unit_minutes">min<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
                   <div class="dropdown-menu regex-unit-menu" id="regex-unit-menu">
-                    <button type="button" value="minutes">min</button>
-                    <button type="button" value="hours">hours</button>
-                    <button type="button" value="days">days</button>
+                    <button type="button" value="minutes" data-i18n="unit_minutes">min</button>
+                    <button type="button" value="hours" data-i18n="unit_hours">hours</button>
+                    <button type="button" value="days" data-i18n="unit_days">days</button>
                   </div>
                 </div>
-                <span>per</span>
+                <span data-i18n="rules_per">per</span>
                 <div class="custom-dropdown">
-                  <button type="button" class="dropdown-btn regex-period-btn" id="regex-period-btn" data-value="hour">hour<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
+                  <button type="button" class="dropdown-btn regex-period-btn" id="regex-period-btn" data-value="hour" data-i18n-firstchild="period_hour">hour<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
                   <div class="dropdown-menu regex-period-menu" id="regex-period-menu">
-                    <button type="button" value="hour">hour</button>
-                    <button type="button" value="day">day</button>
-                    <button type="button" value="week">week</button>
+                    <button type="button" value="hour" data-i18n="period_hour">hour</button>
+                    <button type="button" value="day" data-i18n="period_day">day</button>
+                    <button type="button" value="week" data-i18n="period_week">week</button>
                   </div>
                 </div>
-                <span>counting</span>
+                <span data-i18n="rules_counting">counting</span>
                 <div class="custom-dropdown">
-                  <button type="button" class="dropdown-btn" id="regex-mode-btn" data-value="active+audio">active + audio<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
+                  <button type="button" class="dropdown-btn" id="regex-mode-btn" data-value="active+audio" data-i18n-firstchild="mode_activeAudio">active + audio<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
                   <div class="dropdown-menu" id="regex-mode-menu">
-                    <button type="button" value="active">active</button>
-                    <button type="button" value="audio">audio</button>
-                    <button type="button" value="active+audio">active + audio</button>
+                    <button type="button" value="active" data-i18n="mode_active">active</button>
+                    <button type="button" value="audio" data-i18n="mode_audio">audio</button>
+                    <button type="button" value="active+audio" data-i18n="mode_activeAudio">active + audio</button>
                   </div>
                 </div>
-                <label class="always-block-label"><input type="checkbox" id="cb-always-regex" /> Always block</label>
+                <label class="always-block-label"><input type="checkbox" id="cb-always-regex" /> <span data-i18n="rules_alwaysBlock">Always block</span></label>
               </div>
               <div id="regex-preview" class="callout">
                 <span id="regex-preview-text"></span>
                 <code id="regex-preview-pattern" class="text-meta"></code>
               </div>
               <div class="form-submit-row">
-                <button id="regex-save-btn" type="button" class="btn">Add rule</button>
+                <button id="regex-save-btn" type="button" class="btn" data-i18n="rules_addRuleBtn">Add rule</button>
               </div>
             </div>
 
@@ -215,44 +215,44 @@
             <div id="keyword-form" hidden>
               <div id="keyword-target-wrap" class="input-wrap">
                 <input id="keyword-input" class="text-input" type="text" placeholder="news" />
-                <button id="keyword-input-clear" class="icon-btn input-clear" aria-label="Clear" hidden>&times;</button>
+                <button id="keyword-input-clear" class="icon-btn input-clear" data-i18n-aria="rules_clear" aria-label="Clear" hidden>&times;</button>
               </div>
               <div class="form-row" id="keyword-limit-row">
-                <span>Limit to</span>
+                <span data-i18n="rules_limitTo">Limit to</span>
                 <input id="keyword-limit" class="kw-limit number-input" type="number" value="10" min="0" />
                 <div class="custom-dropdown">
-                  <button type="button" class="dropdown-btn kw-unit-btn" id="kw-unit-btn" data-value="minutes">min<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
+                  <button type="button" class="dropdown-btn kw-unit-btn" id="kw-unit-btn" data-value="minutes" data-i18n-firstchild="unit_minutes">min<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
                   <div class="dropdown-menu kw-unit-menu" id="kw-unit-menu">
-                    <button type="button" value="minutes">min</button>
-                    <button type="button" value="hours">hours</button>
-                    <button type="button" value="days">days</button>
+                    <button type="button" value="minutes" data-i18n="unit_minutes">min</button>
+                    <button type="button" value="hours" data-i18n="unit_hours">hours</button>
+                    <button type="button" value="days" data-i18n="unit_days">days</button>
                   </div>
                 </div>
-                <span>per</span>
+                <span data-i18n="rules_per">per</span>
                 <div class="custom-dropdown">
-                  <button type="button" class="dropdown-btn kw-period-btn" id="kw-period-btn" data-value="hour">hour<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
+                  <button type="button" class="dropdown-btn kw-period-btn" id="kw-period-btn" data-value="hour" data-i18n-firstchild="period_hour">hour<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
                   <div class="dropdown-menu kw-period-menu" id="kw-period-menu">
-                    <button type="button" value="hour">hour</button>
-                    <button type="button" value="day">day</button>
-                    <button type="button" value="week">week</button>
+                    <button type="button" value="hour" data-i18n="period_hour">hour</button>
+                    <button type="button" value="day" data-i18n="period_day">day</button>
+                    <button type="button" value="week" data-i18n="period_week">week</button>
                   </div>
                 </div>
-                <span>counting</span>
+                <span data-i18n="rules_counting">counting</span>
                 <div class="custom-dropdown">
-                  <button type="button" class="dropdown-btn" id="kw-mode-btn" data-value="active+audio">active + audio<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
+                  <button type="button" class="dropdown-btn" id="kw-mode-btn" data-value="active+audio" data-i18n-firstchild="mode_activeAudio">active + audio<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
                   <div class="dropdown-menu" id="kw-mode-menu">
-                    <button type="button" value="active">active</button>
-                    <button type="button" value="audio">audio</button>
-                    <button type="button" value="active+audio">active + audio</button>
+                    <button type="button" value="active" data-i18n="mode_active">active</button>
+                    <button type="button" value="audio" data-i18n="mode_audio">audio</button>
+                    <button type="button" value="active+audio" data-i18n="mode_activeAudio">active + audio</button>
                   </div>
                 </div>
-                <label class="always-block-label"><input type="checkbox" id="cb-always-kw" /> Always block</label>
+                <label class="always-block-label"><input type="checkbox" id="cb-always-kw" /> <span data-i18n="rules_alwaysBlock">Always block</span></label>
               </div>
               <div id="keyword-preview" class="callout">
                 <span id="kw-preview-text"></span>
               </div>
               <div class="form-submit-row">
-                <button id="kw-save-btn" type="button" class="btn">Add rule</button>
+                <button id="kw-save-btn" type="button" class="btn" data-i18n="rules_addRuleBtn">Add rule</button>
               </div>
             </div>
 
@@ -262,17 +262,17 @@
         <!-- Rules list -->
         <div id="list-area" class="chart-container">
           <div id="list-header">
-            <h2 class="chart-heading">All rules</h2>
+            <h2 class="chart-heading" data-i18n="rules_allRules">All rules</h2>
           </div>
           <table id="sort-bar" class="data-table">
             <thead>
               <tr>
-                <th id="sort-site" data-label="Site">Site</th>
-                <th id="sort-status" data-label="Status">Status</th>
+                <th id="sort-site" data-label="rules_col_site">Site</th>
+                <th id="sort-status" data-label="rules_col_status">Status</th>
               </tr>
             </thead>
           </table>
-          <p id="no-rules-message" class="empty-msg text-meta" hidden>No rules yet. Add one above to get started.</p>
+          <p id="no-rules-message" class="empty-msg text-meta" hidden data-i18n="rules_noRulesYet">No rules yet. Add one above to get started.</p>
           <ul id="rules-list" class="rules-list"></ul>
         </div>
 

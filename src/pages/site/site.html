@@ -23,8 +23,8 @@
         </div>
       </div>
       <div id="header-right">
-        <button id="limit-btn" class="btn">Limit this site</button>
-        <button id="delete-site-btn" class="square-btn" title="Delete all data for this site">
+        <button id="limit-btn" class="btn" data-i18n="site_limitThisSite">Limit this site</button>
+        <button id="delete-site-btn" class="square-btn" data-i18n-title="site_deleteAllData" title="Delete all data for this site">
           <span class="icon-mask icon-trash"></span>
         </button>
       </div>
@@ -32,35 +32,35 @@
 
     <div id="charts-grid">
       <div id="stats-container" class="chart-container">
-        <h2 class="chart-heading">Overview <span id="overview-subheading" class="chart-subheading text-meta"></span></h2>
+        <h2 class="chart-heading"><span data-i18n="rules_overview">Overview</span> <span id="overview-subheading" class="chart-subheading text-meta"></span></h2>
         <div id="stats-list" class="stats-list"></div>
         <div class="tooltip text-meta" id="peak-tooltip"></div>
       </div>
 
       <div id="subpages-container" class="chart-container">
-        <h2 class="chart-heading" id="subpages-heading">Page activity
+        <h2 class="chart-heading" id="subpages-heading"><span data-i18n="site_pageActivity">Page activity</span>
           <label id="hide-brief-subpages-label" class="table-filter text-meta">
-            <input type="checkbox" id="hide-brief-subpages-toggle" checked> Hide brief (&lt;1m)
+            <input type="checkbox" id="hide-brief-subpages-toggle" checked> <span data-i18n="dashboard_hideBrief">Hide brief (&lt;1m)</span>
           </label>
         </h2>
         <div id="subpage-search-wrap" class="input-wrap">
-          <input type="search" id="subpage-search" class="text-input" placeholder="Search pages…" autocomplete="off">
-          <button id="subpage-search-clear" class="icon-btn input-clear" aria-label="Clear search" hidden>&times;</button>
+          <input type="search" id="subpage-search" class="text-input" data-i18n-placeholder="site_searchPagesPlaceholder" placeholder="Search pages…" autocomplete="off">
+          <button id="subpage-search-clear" class="icon-btn input-clear" data-i18n-aria="common_clearSearch" aria-label="Clear search" hidden>&times;</button>
         </div>
         <div id="subpages-controls">
-          <span class="text-meta">Depth</span>
+          <span class="text-meta" data-i18n="site_depth">Depth</span>
           <div id="depth-toggle" class="seg-control"></div>
           <div id="sort-toggle" class="seg-control">
-            <button id="sort-time-btn" class="seg-btn active">Time</button>
-            <button id="sort-visits-btn" class="seg-btn">Visits</button>
+            <button id="sort-time-btn" class="seg-btn active" data-i18n="site_sortTime">Time</button>
+            <button id="sort-visits-btn" class="seg-btn" data-i18n="site_sortVisits">Visits</button>
           </div>
         </div>
         <ol id="subpages-list"></ol>
-        <p id="subpages-empty" class="text-meta" style="display:none">No pages match your search.</p>
+        <p id="subpages-empty" class="text-meta" style="display:none" data-i18n="site_noPagesMatch">No pages match your search.</p>
         <div id="subpages-footer" class="table-footer">
           <span id="subpages-count" class="text-meta"></span>
           <label id="strip-params-label" class="table-filter text-meta">
-            <input type="checkbox" id="strip-params-toggle" checked> Ignore URL params
+            <input type="checkbox" id="strip-params-toggle" checked> <span data-i18n="site_ignoreUrlParams">Ignore URL params</span>
           </label>
         </div>
       </div>
