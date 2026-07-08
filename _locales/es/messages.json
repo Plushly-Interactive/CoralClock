@@ -1,6 +1,6 @@
 {
   "extName": { "message": "Coral Clock - Control de tiempo y bloqueador de sitios" },
-  "extDescription": { "message": "Limita tu tiempo de pantalla. Conserva tu día. Controla el tiempo que pasas en cada sitio web y bloquea automáticamente los sitios al alcanzar tu límite horario, diario o semanal." },
+  "extDescription": { "message": "Limita tu tiempo de pantalla. Controla el tiempo por sitio y bloquéalo al alcanzar tu límite por hora, día o semana." },
   "tour_closeTour": { "message": "Cerrar el recorrido" },
   "tour_previous": { "message": "Anterior" },
   "tour_next": { "message": "Siguiente" },
