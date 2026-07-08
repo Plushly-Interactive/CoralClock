@@ -14,10 +14,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build ZIP
-        run: zip -r coral-clock.zip manifest.json src/ resources/ _locales/
+        run: zip -r coralclock.zip manifest.json src/ resources/ _locales/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: coral-clock.zip
+          files: coralclock.zip
           generate_release_notes: true
