@@ -1,4 +1,4 @@
-import { formatBytes, showNotification, attachInputClear, escapeHtml, navButton } from '../../shared/utils.js';
+import { formatBytes, showNotification, attachInputClear, escapeHtml, navButton, getQuotaUsage, QUOTA_WARN_PCT } from '../../shared/utils.js';
 import { localDayKey, formatSpan, formatMs, formatHourLabel, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { intervalStats, appendIntervals, allIntervals, deleteByIds, deleteByDomain, deleteRange, dropPathsBefore } from '../../data/intervalLog.js';
 import { invalidate, getSitesByDay, getSubpagesByDay, getSitesByHour, getSubpagesByHour } from '../../data/intervalAggregates.js';
@@ -864,10 +864,18 @@ async function renderInterval() {
 
 async function renderQuota() {
   // chrome.storage.local 10 MB (settings, cache, rules, legacy buckets).
-  const totalBytes = await chrome.storage.local.getBytesInUse(null);
-  const quota = chrome.storage.local.QUOTA_BYTES ?? 10485760;
-  document.querySelector('#quota-bar-fill').style.width = `${Math.min(100, totalBytes / quota * 100).toFixed(1)}%`;
+  const { totalBytes, quota, pct } = await getQuotaUsage();
+  document.querySelector('#quota-bar-fill').style.width = `${Math.min(100, pct).toFixed(1)}%`;
   document.querySelector('#quota-text').textContent = `${formatBytes(totalBytes)} / ${formatBytes(quota)}`;
+
+  const quotaWarn = document.querySelector('#quota-warn');
+  if (pct >= QUOTA_WARN_PCT) {
+    quotaWarn.textContent = t('storage_quotaWarn', [Math.floor(pct)]);
+    quotaWarn.removeAttribute('hidden');
+    quotaWarn.style.display = '';
+  } else {
+    quotaWarn.style.display = 'none';
+  }
 
   const { [SITES_DAY_KEY]: sitesByDay = {} } = await chrome.storage.local.get(SITES_DAY_KEY);
   const hasLegacy = Object.values(sitesByDay).some(day => day && Object.keys(day).length > 0);

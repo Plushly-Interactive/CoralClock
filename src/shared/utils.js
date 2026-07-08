@@ -129,6 +129,14 @@ export async function renderStorageBar() {
   document.querySelector('#storage-bar-label').textContent = `${formatBytes(used)} / ${formatBytes(quota)}`;
 }
 
+export const QUOTA_WARN_PCT = 80;
+
+export async function getQuotaUsage() {
+  const totalBytes = await chrome.storage.local.getBytesInUse(null);
+  const quota = chrome.storage.local.QUOTA_BYTES ?? 10485760;
+  return { totalBytes, quota, pct: totalBytes / quota * 100 };
+}
+
 export function formatWithSmallSub(text) {
   const match = text.match(/^(.+?)(\s*\(.+\))?$/);
   return match[2] ? `${match[1]}<span class="stat-sub">${match[2]}</span>` : text;

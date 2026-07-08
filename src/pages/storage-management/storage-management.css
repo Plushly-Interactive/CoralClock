@@ -82,7 +82,6 @@
 .quota-row .store-bar { flex: 1; }
 .quota-bar-fill { height: 100%; border-radius: 3px; background: var(--color-accent); }
 .quota-row { display: flex; align-items: center; gap: 10px; }
-.quota-warn { font-size: var(--font-sm); color: var(--color-accent); }
 
 .export-age { font-size: var(--font-lg); font-weight: 600; line-height: 1; }
 .export-label { font-size: var(--font-sm); color: var(--color-text-secondary); }

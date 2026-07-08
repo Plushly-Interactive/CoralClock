@@ -8,6 +8,7 @@ import { usageSince } from '../data/intervalAggregates.js';
 import { dbg, initDebug } from './trackingDebug.js';
 import { updateBadge } from './badge.js';
 import { initI18n, t } from '../shared/i18n.js';
+import { getQuotaUsage, QUOTA_WARN_PCT } from '../shared/utils.js';
 // The interval tracker is the sole live capturer. It self-registers its capture
 // listeners on import; background drives its periodic flush via flushNow() and a
 // lighter per-navigation drain via flushToStorage.
@@ -61,6 +62,7 @@ function getNotifyState() {
     _notifyStateP = chrome.storage.local.get('_notifyState').then(({ _notifyState: s }) => ({
       blocked: new Set(s?.blocked ?? []),
       approaching: new Map(Object.entries(s?.approaching ?? {})),
+      quotaWarnedDay: s?.quotaWarnedDay ?? null,
     }));
   }
   return _notifyStateP;
@@ -71,6 +73,7 @@ function persistNotifyState(state) {
     _notifyState: {
       blocked: [...state.blocked],
       approaching: Object.fromEntries(state.approaching),
+      quotaWarnedDay: state.quotaWarnedDay,
     },
   });
 }
@@ -125,6 +128,34 @@ async function notifyApproaching(approaching, now) {
   if (changed) persistNotifyState(state);
 }
 
+// Re-notify once per calendar day while usage stays at/above the threshold;
+// clears once it drops back below so a same-day dip and re-cross still notifies.
+async function notifyQuotaWarn(pct, now) {
+  await i18nReady;
+  const state = await getNotifyState();
+  if (pct < QUOTA_WARN_PCT) {
+    if (state.quotaWarnedDay === null) return;
+    state.quotaWarnedDay = null;
+    persistNotifyState(state);
+    return;
+  }
+  const today = localDayKey(now);
+  if (state.quotaWarnedDay === today) return;
+  state.quotaWarnedDay = today;
+  persistNotifyState(state);
+  chrome.notifications.create('quota-warn', {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('resources/icons/brand/icon128.png'),
+    title: t('bg_notifyQuotaTitle'),
+    message: t('bg_notifyQuotaMessage', [Math.floor(pct)]),
+  });
+}
+
+async function checkQuota(now) {
+  const { pct } = await getQuotaUsage();
+  await notifyQuotaWarn(pct, now);
+}
+
 chrome.alarms.get('flush').then(existing => {
   if (!existing) chrome.alarms.create('flush', { periodInMinutes: 1 });
 });
@@ -132,7 +163,7 @@ chrome.alarms.get('flush').then(existing => {
 // instances; clear it once so only the single 'flush' alarm fires.
 chrome.alarms.clear('intervalFlush');
 const bootstrapDone = bootstrap();
-bootstrapDone.then(() => updateBadge());
+bootstrapDone.then(() => { updateBadge(); checkQuota(Date.now()); });
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason !== 'install') return;
@@ -215,6 +246,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   const now = Date.now();
   await flushNow();
   await checkEnforcement(now);
+  await checkQuota(now);
   updateBadge();
 });
 

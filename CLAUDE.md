@@ -37,6 +37,7 @@
   - **Per-tab view-state** (e.g. `hideBrief`, `mergeMode`, `groupMode`, `subpagesStripParams`, `timeRange`) lives in `sessionStorage`, is intentionally per-tab and ephemeral, and does NOT belong on the settings page. Defaults are encoded in the read pattern (`!== 'false'` / `=== 'true'`).
 
 ## Internationalization (i18n)
+- Any new user-facing string: add key to `_locales/en/messages.json` AND translate + add to every other `_locales/<lang>/messages.json` in same step. Never leave a key en-only.
 - All user-facing strings go through `src/shared/i18n.js`: `t(key, subs)` for JS, `data-i18n`/`data-i18n-title`/`data-i18n-placeholder`/`data-i18n-aria` HTML attributes hydrated by `applyI18n(root)` for markup. Use `data-i18n-firstchild` instead of `data-i18n` when the element has non-text children after the label (e.g. an SVG dropdown arrow) — it replaces only the leading text node.
 - Keys and English text live in `_locales/en/messages.json`. Messages use positional `$1`/`$2` substitution only — never named `$FOO$` placeholders — so the custom override loader and native `chrome.i18n.getMessage` behave identically.
 - Every `messages.json` entry is a single inline line: `"key": { "message": "..." },`. Never pretty-print/multi-line an entry — matches the existing file's formatting.
