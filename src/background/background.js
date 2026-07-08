@@ -1,6 +1,5 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
 import { weekDow } from '../shared/weekStart.js';
-import { ensureStorageVersion } from '../data/migrations.js';
 import { PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
 import { siteIdFromUrl } from './siteResolution.js';
 import { computeOverage, publishOverage } from './enforcement.js';
@@ -173,18 +172,10 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 
 // Capture init lives in the interval tracker now; background's bootstrap only
-// readies debug logging and the storage schema before its listeners run.
+// readies debug logging before its listeners run.
 async function bootstrap() {
   await initDebug();
-  dbg('bootstrap: start');
-  try {
-    await ensureStorageVersion();
-    dbg('bootstrap: done');
-    return;
-  } catch (e) {
-    dbg('bootstrap: FAILED', e?.message ?? e, e?.stack);
-    throw e;
-  }
+  dbg('bootstrap: done');
 }
 
 // --- Tab / window events ---
