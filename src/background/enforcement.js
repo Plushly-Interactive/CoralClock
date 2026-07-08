@@ -1,8 +1,9 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
-import { RULE_MULTIPLIERS, describeRule, BLOCKS_DAY_KEY, blockKey } from '../shared/rules.js';
+import { RULE_MULTIPLIERS, describeRule, blockKey } from '../shared/rules.js';
 import { weekDow } from '../shared/weekStart.js';
 import { siteIdFromUrl, pathFromUrl } from './siteResolution.js';
 import { pickQuote } from '../shared/quotes.js';
+import { dbg } from './trackingDebug.js';
 
 // Usage contributed by one site/subpage cell under the rule's mode.
 function cellUsage(cell, mode) {
@@ -137,7 +138,7 @@ export function computeOverage(rules, stores, now = Date.now()) {
 // --- DNR publisher (chrome APIs) ---
 
 function blockedUrl(ruleId, entry, originalUrl, quoteId) {
-  const params = new URLSearchParams({ rule: ruleId });
+  const params = new URLSearchParams({ rule: ruleId, blockKey: blockKey(entry) });
   if (entry.target) {
     params.set('site', entry.target);
     if (entry.path) params.set('path', entry.path);
@@ -178,9 +179,14 @@ function tabMatchesEntry(url, entry) {
 // Tabs already on blocked.html (a chrome-extension URL) don't match, so there's
 // no loop. Driven by the full overage set so it also catches tabs open before
 // the rule existed (e.g. when a rule is enabled).
+// Returns Map<ruleId, hostname> of rules that blocked a currently-open tab,
+// carrying the tab's real host so the "now blocked" notification names the
+// actual site (not a keyword/regex pattern). A rule matching several tabs keeps
+// the first host seen.
 async function reloadMatchingTabs(overage) {
+  const blockedSites = new Map();
   const pairs = [...overage]; // [ruleId, entry]
-  if (!pairs.length) return;
+  if (!pairs.length) return blockedSites;
   const tabs = await chrome.tabs.query({});
   const matching = tabs.filter(tab => tab.url && pairs.find(([, e]) => tabMatchesEntry(tab.url, e)));
   const site = pairs[0][1].target ?? '';
@@ -189,12 +195,14 @@ async function reloadMatchingTabs(overage) {
   for (const tab of matching) {
     const hit = pairs.find(([, e]) => tabMatchesEntry(tab.url, e));
     const [ruleId, entry] = hit;
+    if (!blockedSites.has(ruleId)) blockedSites.set(ruleId, siteIdFromUrl(tab.url) ?? entry.target);
     // We know the exact page this tab is on, so send it to the blocked page
     // ourselves with the original URL preserved — returnUnblockedTabs uses it to
     // restore the exact page on unblock. (DNR still catches fresh navigations;
     // those carry no original URL and fall back to the rule target.)
     chrome.tabs.update(tab.id, { url: blockedUrl(ruleId, entry, tab.url, quoteId) });
   }
+  return blockedSites;
 }
 
 // Send blocked.html tabs back to their site once their rule is no longer
@@ -259,24 +267,13 @@ export async function publishOverage(overage) {
   const addRules = [...desired.values()].filter(r => !existingIds.has(r.id));
   const removeRuleIds = existing.map(r => r.id).filter(id => !desired.has(id));
 
+  dbg('publishOverage: liveMap', [...liveMap.entries()], 'newRuleIds', [...newRuleIds], 'addRules', addRules, 'removeRuleIds', removeRuleIds);
+
   if (addRules.length || removeRuleIds.length) {
     await chrome.declarativeNetRequest.updateDynamicRules({ addRules, removeRuleIds });
   }
 
-  if (addRules.length) {
-    const dayKey = localDayKey(Date.now());
-    const { [BLOCKS_DAY_KEY]: blocksByDay = {} } = await chrome.storage.local.get(BLOCKS_DAY_KEY);
-    const today = blocksByDay[dayKey] ?? {};
-    for (const [ruleId, entry] of overage) {
-      if (newRuleIds.has(ruleId)) {
-        const key = blockKey(entry);
-        today[key] = (today[key] ?? 0) + 1;
-      }
-    }
-    blocksByDay[dayKey] = today;
-    await chrome.storage.local.set({ [BLOCKS_DAY_KEY]: blocksByDay });
-  }
-
-  await reloadMatchingTabs(overage);
+  const blockedSites = await reloadMatchingTabs(overage);
   await returnUnblockedTabs(overage);
+  return blockedSites;
 }

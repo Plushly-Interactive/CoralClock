@@ -1,5 +1,6 @@
 import { formatMs } from './timeUtils.js';
 import { faviconUrl } from './utils.js';
+import { t } from './i18n.js';
 
 export const RULE_MULTIPLIERS = { minutes: 60000, hours: 3600000, days: 86400000 };
 export const BLOCKS_DAY_KEY = 'blocksByDay';
@@ -10,8 +11,8 @@ export function blockKey(rule) {
   return `${rule.target}|${rule.matchType}|${rule.path ?? ''}`;
 }
 
-const MODE_LABELS = { active: 'active', audio: 'audio', 'active+audio': 'active + audio' };
-const SCOPE_LABELS = { host: 'This host only', subdomain: 'Whole site', pathPrefix: 'A specific page', regex: 'Regex pattern', keyword: 'Keyword match' };
+const MODE_KEYS = { active: 'mode_active', audio: 'mode_audio', 'active+audio': 'mode_activeAudio' };
+const SCOPE_KEYS = { host: 'scope_host', subdomain: 'scope_subdomain', pathPrefix: 'scope_pathPrefix', regex: 'scope_regex', keyword: 'scope_keyword' };
 
 export function matchLabel(rule) {
   if (rule.matchType === 'regex') return rule.pattern;
@@ -32,28 +33,28 @@ function reEsc(s) {
 // "Matching against tracking data" section for why each shape is what it is.
 export function describeRule({ target, path, matchType, pattern, keyword }) {
   if (matchType === 'regex') {
-    return { text: `URLs matching /${pattern}/`, kind: 'regexFilter', value: pattern };
+    return { text: t('rules_desc_regex', [pattern]), kind: 'regexFilter', value: pattern };
   }
   if (matchType === 'keyword') {
-    return { text: `URLs containing "${keyword}"`, kind: 'regexFilter', value: reEsc(keyword) };
+    return { text: t('rules_desc_keyword', [keyword]), kind: 'regexFilter', value: reEsc(keyword) };
   }
   const host = target || 'google.com';
   if (matchType === 'subdomain') {
     // Subdomains are wanted here — DNR's || domain anchor is naturally inclusive.
-    return { text: `${host} and all its subdomains`, kind: 'urlFilter', value: `||${host}^` };
+    return { text: t('rules_desc_subdomain', [host]), kind: 'urlFilter', value: `||${host}^` };
   }
   if (matchType === 'pathPrefix') {
     const p = (path || '').replace(/^\//, '');
     // Boundary-anchored so /maps doesn't also catch /maps-something.
     return {
-      text: `${host}/${p} and everything under it`,
+      text: t('rules_desc_pathPrefix', [host, p]),
       kind: 'regexFilter', value: `^https?://${reEsc(host)}/${reEsc(p)}(?:[/?]|$)`,
     };
   }
   // host: exact host, excludes subdomains. || is subdomain-inclusive, so this
   // needs an anchored regex; optional www. matches how tracking collapses it.
   return {
-    text: `${host} only (not subdomains)`,
+    text: t('rules_desc_host', [host]),
     kind: 'regexFilter', value: `^https?://(?:www\\.)?${reEsc(host)}(?:/|$)`,
   };
 }
@@ -185,11 +186,16 @@ export async function disableRules(ids) {
 export function renderRuleList(listEl, rules, { readonly = false } = {}) {
   listEl.innerHTML = rules.map(rule => {
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
-    const limitStr = limitMs === 0 ? 'Never' : `${formatMs(limitMs)} per ${rule.period}`;
+    const limitStr = limitMs === 0 ? t('rules_limit_never') : t('rules_limit_str', [formatMs(limitMs), t(`period_${rule.period}`)]);
+    const toggleHtml = readonly ? '' : `
+      <button class="toggle-btn rule-toggle${rule.enabled ? ' on' : ''}" data-id="${rule.id}" aria-label="${rule.enabled ? 'Disable rule' : 'Enable rule'}"></button>`;
     const actions = readonly ? '' : `
-      <button class="edit-btn square-btn" data-id="${rule.id}">✎</button>
-      <button class="toggle-btn square-btn" data-id="${rule.id}">${rule.enabled ? '●' : '○'}</button>
-      <button class="delete-btn square-btn" data-id="${rule.id}">✕</button>`;
+      <button class="edit-btn square-btn rule-action-btn" data-id="${rule.id}">
+        <span class="icon-mask icon-pencil"></span>
+      </button>
+      <button class="delete-btn square-btn rule-action-btn" data-id="${rule.id}">
+        <span class="icon-mask icon-trash"></span>
+      </button>`;
     const faviconHtml = rule.target
       ? `<img class="site-favicon" src="${faviconUrl(rule.target)}" alt="">`
       : '';
@@ -198,8 +204,9 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
       ${faviconHtml}
       <div class="rule-info">
         <span class="site-label">${matchLabel(rule)}</span>
-        <span class="text-meta">${SCOPE_LABELS[rule.matchType]} · ${limitStr} · ${MODE_LABELS[rule.mode]}</span>
-      </div>${actions}
+        <span class="text-meta">${t(SCOPE_KEYS[rule.matchType])} · ${limitStr} · ${t(MODE_KEYS[rule.mode])}</span>
+      </div>
+      ${toggleHtml}${actions}
     </li>`;
   }).join('');
   listEl.querySelectorAll('.site-favicon').forEach(img => {

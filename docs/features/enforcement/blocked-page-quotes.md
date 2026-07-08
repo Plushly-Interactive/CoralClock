@@ -84,7 +84,7 @@ Given the current bucket `B` and blocked site target `T`:
 
 ### Signature quotes
 
-Signature quotes are mascot character quotes written by the BiteGuard team, added in the `// SIGNATURE` section of `quotes.data.js`. Current mascots: PwetPwet 🦈 (playful tiny shark) and Toot 🦊 (philosophical tiny fox). They participate in the same `timeOfDay` and seen-tracking system as built-in quotes. See the curation doc for authorship rules and character tone guidelines.
+Signature quotes are mascot character quotes written by the team, added in the `// SIGNATURE` section of `quotes.data.js`. Current mascots: PwetPwet 🦈 (playful tiny shark) and Toot 🦊 (philosophical tiny fox). They participate in the same `timeOfDay` and seen-tracking system as built-in quotes. See the curation doc for authorship rules and character tone guidelines.
 
 ## Edge cases
 

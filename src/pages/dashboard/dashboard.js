@@ -12,9 +12,14 @@ import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import { QUERY_SITES_BY_DAY, QUERY_AVG_PER_CLOCK_HOUR } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
 const PREF_SEARCH = 'siteSearch';
+
+await initI18n();
+applyI18n();
+document.title = `${t('popup_dashboardBtn')} - ${BRAND_NAME}`;
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 navButton(document.querySelector('#timeline-link'), '../browsing-timeline/browsing-timeline.html');
@@ -52,7 +57,7 @@ const hourly = createHourlyChart({
   container: hourlyChartContainer,
   subheading: hourlySubheading,
   notRelevant: hourlyNotRelevant,
-  allDaysLabel: '(all days, excluding today)',
+  allDaysLabel: t('dashboard_hourly_allDays'),
   getRangeValue: () => rangeSelect.dataset.value,
   loadAvgPerHour: (range) => loadMergedTrackingData({
     type: QUERY_AVG_PER_CLOCK_HOUR, siteIds: null, range,
@@ -77,7 +82,7 @@ const thTime = document.querySelector('#th-time');
 const thAudio = document.querySelector('#th-audio');
 const thVisits = document.querySelector('#th-visits');
 
-const TH_LABELS = { name: 'Site', time: 'Active time', audio: 'Audio playback', visits: 'Visits' };
+const TH_LABEL_KEYS = { name: 'dashboard_col_name', time: 'dashboard_col_time', audio: 'dashboard_col_audio', visits: 'dashboard_col_visits' };
 
 const rootStyle = getComputedStyle(document.documentElement);
 
@@ -85,7 +90,7 @@ function updateHeaders() {
   for (const [col, th] of [['name', thName], ['time', thTime], ['audio', thAudio], ['visits', thVisits]]) {
     const isSorted = sortCol === col;
     const arrow = isSorted ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
-    th.textContent = TH_LABELS[col] + arrow;
+    th.textContent = t(TH_LABEL_KEYS[col]) + arrow;
     th.classList.toggle('sorted', isSorted);
   }
 }
@@ -178,7 +183,7 @@ function renderTable(rows) {
   if (rows.length === 0) {
     tbody.innerHTML = '';
     entriesCount.textContent = '';
-    emptyMsg.textContent = searchQuery.trim() ? 'No sites match your search.' : 'No data for this period.';
+    emptyMsg.textContent = searchQuery.trim() ? t('dashboard_noMatch') : t('dashboard_noData');
     dashboardTable.style.display = 'none';
     emptyMsg.style.display = 'flex';
     return;
@@ -201,13 +206,13 @@ function renderTable(rows) {
     } else if (etld1Count === 1) {
       const onlyEtld1 = [...row.etld1s][0];
       href = `../site/site.html?id=${encodeURIComponent(onlyEtld1)}`;
-      subtitle = `${hostCount} subdomains`;
+      subtitle = t('dashboard_subdomainsCount', [hostCount]);
     } else if (hostCount === etld1Count) {
       href = `../site/site.html?ids=${encodeURIComponent([...row.hostnames].join(','))}`;
-      subtitle = `${etld1Count} sites`;
+      subtitle = t('dashboard_sitesCount', [etld1Count]);
     } else {
       href = `../site/site.html?ids=${encodeURIComponent([...row.hostnames].join(','))}`;
-      subtitle = `${etld1Count} sites · ${hostCount} subdomains`;
+      subtitle = `${t('dashboard_sitesCount', [etld1Count])} · ${t('dashboard_subdomainsCount', [hostCount])}`;
     }
     return `<tr class="clickable" data-href="${href}">
       <td><div class="site-cell-content"><img class="site-favicon" src="${faviconUrl(faviconHost)}" alt=""><div class="site-text"><span class="site-label">${escapeHtml(siteLabel)}</span><span class="site-id text-meta">${escapeHtml(subtitle)}</span></div></div></td>
@@ -222,7 +227,7 @@ function renderTable(rows) {
   tbody.querySelectorAll('tr.clickable').forEach(row => {
     navButton(row, row.dataset.href);
   });
-  entriesCount.textContent = `${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}`;
+  entriesCount.textContent = rows.length === 1 ? t('dashboard_entry_one', [rows.length]) : t('dashboard_entry_other', [rows.length]);
   updateHeaders();
 }
 
@@ -319,7 +324,7 @@ function dayKeys(range) {
   return keys;
 }
 
-const TOP_SUBHEADING = { time: '(active time)', audio: '(audio playback)', visits: '(visits)' };
+const TOP_SUBHEADING_KEYS = { time: 'dashboard_topSub_time', audio: 'dashboard_topSub_audio', visits: 'dashboard_topSub_visits' };
 const TOP_COLOR = { 
   time: rootStyle.getPropertyValue('--color-chart-time'), 
   audio: rootStyle.getPropertyValue('--color-chart-audio'), 
@@ -327,7 +332,7 @@ const TOP_COLOR = {
 
 function renderTopChart() {
   const col = sortCol === 'name' ? 'time' : sortCol;
-  topSubheading.textContent = TOP_SUBHEADING[col];
+  topSubheading.textContent = t(TOP_SUBHEADING_KEYS[col]);
   const getVal = col === 'audio' ? r => r.audioMs : col === 'visits' ? r => r.visits : r => r.activeMs;
   const fmt = col === 'visits' ? v => String(Math.round(v)) : formatMs;
 
@@ -379,12 +384,12 @@ function render() {
     tbody.innerHTML = '';
     entriesCount.textContent = '';
     dashboardTable.style.display = 'none';
-    emptyMsg.textContent = 'No data for this period.';
+    emptyMsg.textContent = t('dashboard_noData');
     emptyMsg.style.display = 'flex';
     topChartContainer.style.display = 'block';
     topChart.style.display = 'none';
     topSubheading.textContent = '';
-    topNotRelevant.textContent = 'No data for this period.';
+    topNotRelevant.textContent = t('dashboard_noData');
     topNotRelevant.style.display = 'block';
     hourly.render(range);
     return;
@@ -402,66 +407,66 @@ function render() {
 
 const tourBtn = document.querySelector('#tour-btn');
 
-const dashboardTourSteps = [
+function dashboardTourSteps() { return [
   {
     selector: '#tour-btn',
-    title: `Welcome to ${BRAND_NAME}`,
-    body: `A quick walk through every surface of ${BRAND_NAME}, about two minutes. Use the × in the corner to leave anytime.`,
+    title: t('tour_dash_welcome_title', [BRAND_NAME]),
+    body: t('tour_dash_welcome_body', [BRAND_NAME]),
   },
   {
     selector: '#range-select',
-    title: 'Time range',
-    body: 'Choose a time range here. All charts and the table update to match.',
+    title: t('tour_dash_range_title'),
+    body: t('tour_dash_range_body'),
   },
   {
     selector: '#top-chart-container',
-    title: 'Top sites',
-    body: 'Your five most-active sites for the selected range.',
+    title: t('tour_dash_topSites_title'),
+    body: t('tour_dash_topSites_body'),
   },
   {
     selector: '#hourly-chart-container',
-    title: 'Average per clock hour',
-    body: 'Your typical browsing pattern across the 24 hours of the day, averaged over the range.',
+    title: t('tour_dash_hourly_title'),
+    body: t('tour_dash_hourly_body'),
   },
   {
     selector: '#dashboard-table-col',
-    title: 'All browsed sites',
-    body: 'Every site you visited in this range, with active time, audio playback and visit counts.',
+    title: t('tour_dash_table_title'),
+    body: t('tour_dash_table_body'),
   },
   {
     selector: '#dashboard-table-col',
-    title: 'See site details',
-    body: 'Click any row in the table to drill into a site and see per-day detail.',
+    title: t('tour_dash_drill_title'),
+    body: t('tour_dash_drill_body'),
     handoff: { nextSurface: 'site', mode: 'inPage' },
   },
   {
     selector: '#timeline-link',
-    title: 'Browsing timeline',
-    body: 'Click View timeline to see exactly when you were on each site, plotted across the day, week or month.',
+    title: t('tour_dash_timeline_title'),
+    body: t('tour_dash_timeline_body'),
     handoff: { nextSurface: 'timeline', mode: 'inPage' },  },
   {
-    title: 'Open the popup',
-    body: `Click the ${BRAND_NAME} icon in your browser toolbar.`,
+    title: t('tour_dash_popup_title'),
+    body: t('tour_dash_popup_body', [BRAND_NAME]),
     tooltipPosition: 'top-right',
     arrow: 'up',
     handoff: { nextSurface: 'popup', mode: 'crossDocument' },
   },
   {
     selector: '#prune-btn',
-    title: 'Manage storage',
-    body: 'Open Manage storage to review usage, prune insignificant rows, and delete data by range.',
+    title: t('tour_dash_storage_title'),
+    body: t('tour_dash_storage_body'),
     handoff: { nextSurface: 'storage-management', mode: 'inPage' },  },
   {
     selector: '#settings-btn',
-    title: 'Settings',
-    body: 'Open Settings to set idle threshold, clock format and week start.',
+    title: t('tour_dash_settings_title'),
+    body: t('tour_dash_settings_body'),
     handoff: { nextSurface: 'settings', mode: 'inPage' },  },
   {
     selector: '#tour-btn',
-    title: 'Tour complete',
-    body: `That's every feature of ${BRAND_NAME}. Click here any time to replay the tour.`,
+    title: t('tour_dash_complete_title'),
+    body: t('tour_dash_complete_body', [BRAND_NAME]),
   },
-];
+]; }
 
 async function maybeEnableMockMode() {
   // Mock fixtures are shown during the tour only for a user with no real data.
@@ -478,7 +483,7 @@ async function maybeEnableMockMode() {
 let isTourRunning = false;
 let currentTourHandle = null;
 
-async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps, knownState = null) {
+async function startDashboardTour(startIndex = 0, steps = dashboardTourSteps(), knownState = null) {
   if (isTourRunning) return;
   const tourState = knownState ?? await readTourState();
   if (tourState.completed && !tourState.inProgress) return;
@@ -540,13 +545,13 @@ chrome.storage.onChanged.addListener((changes, area) => {
   }
   const state = await readTourState();
   if (state.inProgress?.surface === 'dashboard') {
-    startDashboardTour(state.inProgress.stepIndex || 0, dashboardTourSteps, state);
+    startDashboardTour(state.inProgress.stepIndex || 0, dashboardTourSteps(), state);
     return;
   }
   if (state.completed) return;
   const pendingSurface = state.inProgress?.surface;
   if (pendingSurface) {
-    const handoffIdx = dashboardTourSteps.findIndex(s => s.handoff?.nextSurface === pendingSurface);
-    if (handoffIdx >= 0) startDashboardTour(handoffIdx, dashboardTourSteps, state);
+    const handoffIdx = dashboardTourSteps().findIndex(s => s.handoff?.nextSurface === pendingSurface);
+    if (handoffIdx >= 0) startDashboardTour(handoffIdx, dashboardTourSteps(), state);
   }
 })();

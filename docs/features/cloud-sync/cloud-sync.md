@@ -1,6 +1,6 @@
 # Cloud sync — accounts + cross-device interval data
 
-Turn BiteGuard into an account-backed service whose **interval data** follows the
+Turn this app into an account-backed service whose **interval data** follows the
 user across devices. The server is a **dumb, end-to-end-encrypted store**: it
 holds ciphertext rows, hands them between a user's devices, and **never reads
 browsing history**. Every device keeps a full local copy of the intervals in
@@ -95,7 +95,7 @@ put a network round-trip on the navigation hot path.
 
 ### Client storage changes
 
-**IndexedDB (`biteguard-intervals`)** — additive, engine untouched:
+**IndexedDB (`browsing-intervals`)** — additive, engine untouched:
 
 | Field | On which rows | Purpose |
 |---|---|---|

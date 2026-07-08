@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Reef - Screen Time & Website Blocker",
+  "name": "__MSG_extName__",
   "version": "1.0.0",
-  "description": "Block websites after a time limit.",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
 
   "background": {
     "service_worker": "src/background/background.js",
@@ -10,28 +11,28 @@
   },
 
   "icons": {
-    "16": "resources/icons/reef-icon-square-16px.png",
-    "48": "resources/icons/reef-icon-square-48px.png",
-    "128": "resources/icons/reef-icon-square-128px.png"
+    "16": "resources/icons/brand/icon16.png",
+    "48": "resources/icons/brand/icon48.png",
+    "128": "resources/icons/brand/icon128.png"
   },
 
   "action": {
     "default_popup": "src/pages/popup/popup.html",
-    "default_title": "Reef",
+    "default_title": "Coral Clock",
     "default_icon": {
-      "16": "resources/icons/reef-icon-square-16px.png",
-      "48": "resources/icons/reef-icon-square-48px.png",
-      "128": "resources/icons/reef-icon-square-128px.png"
+      "16": "resources/icons/brand/icon16.png",
+      "48": "resources/icons/brand/icon48.png",
+      "128": "resources/icons/brand/icon128.png"
     }
   },
 
-  "permissions": ["storage", "alarms", "tabs", "webNavigation", "declarativeNetRequest", "idle", "favicon", "notifications"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["storage", "alarms", "tabs", "webNavigation", "declarativeNetRequestWithHostAccess", "idle", "favicon", "notifications"],
+  "optional_host_permissions": ["<all_urls>"],
 
   "options_page": "src/pages/settings/settings.html",
 
   "web_accessible_resources": [{
-    "resources": ["src/pages/blocked/blocked.html"],
+    "resources": ["src/pages/blocked/blocked.html", "_locales/*/messages.json"],
     "matches": ["<all_urls>"]
   }]
 }

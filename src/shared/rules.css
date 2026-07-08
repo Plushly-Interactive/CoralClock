@@ -28,6 +28,44 @@
   gap: 2px;
 }
 
+.rule-toggle {
+  width: 30px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--color-border);
+  border: none;
+  padding: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.15s ease;
+}
+
+.rule-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  transition: transform 0.15s ease;
+}
+
+.rule-toggle.on {
+  background: var(--color-accent);
+}
+
+.rule-toggle.on::after {
+  transform: translateX(14px);
+}
+
+.rule-action-btn {
+  border: none;
+  background: none;
+}
+
 /* Briefly highlight a rule the user was linked to (e.g. from the dedupe hint). */
 .rules-list li.flash {
   animation: rule-flash 1.2s ease-out;

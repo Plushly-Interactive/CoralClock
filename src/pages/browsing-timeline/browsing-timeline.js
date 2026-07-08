@@ -8,6 +8,11 @@ import { allIntervals, SESSION_GAP_MS } from '../../data/intervalLog.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervals } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { initI18n, applyI18n, t as i18nT } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
+document.title = `${i18nT('tl_pageTitle')} - ${BRAND_NAME}`;
 
 // Visualization only (not in the spec): a horizontal browsing timeline of the top
 // sites, navigated period-by-period (day / week / month) like the drill views. Each
@@ -22,6 +27,8 @@ const tooltip = document.querySelector('#timeline-tooltip');
 const empty = document.querySelector('#timeline-empty');
 const labelEl = document.querySelector('#tl-label');
 
+const KIND_LABEL_KEYS = { active: 'legend_active_lc', audio: 'legend_audio_lc', idle: 'legend_idle' };
+
 const LABEL_W = 180;
 const PAD_R = 0;
 const BAND_H = 20;        // overlapped band height (active = full band)
@@ -29,7 +36,7 @@ const ROW_H = 30;         // one site row
 const AXIS_H = 22;
 const TOP_PAD = 8;
 
-const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SHORT_DAY_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 
 let rows = [];                       // all interval rows
 const daysWithData = new Set();      // day-keys that have any row (for level-down seeking)
@@ -78,7 +85,7 @@ let keysOpen = true;   // open by default, like the drill view
 keysBtn.addEventListener('click', () => {
   keysOpen = !keysOpen;
   keysPopup.style.display = keysOpen ? 'flex' : 'none';
-  keysBtn.textContent = keysOpen ? '×' : '?';
+  keysBtn.innerHTML = keysOpen ? '&times;' : '?';
 });
 
 window.addEventListener('keydown', (e) => {
@@ -143,7 +150,7 @@ function buildTicks(level, winStart, winEnd) {
       const dd = new Date(t);
       if (t >= winStart) {
         const label = level === 'week'
-          ? `${SHORT_DAYS[dd.getDay()]} ${dd.getDate()}`
+          ? `${SHORT_DAY_FMT.format(dd)} ${dd.getDate()}`
           : (i % 3 === 0 ? String(dd.getDate()) : '');   // thin month labels, keep every separator
         // Gridline on the day boundary, label centered in the day's column (+12h).
         ticks.push({ t, labelT: t + 12 * 3600000, label });
@@ -339,12 +346,13 @@ function showCursorTip(t, e) {
     const name = escapeHtml(formatHostnameLabel(site.domain));
     const path = escapeHtml(displayPath(d.row.path));
     const range = `${formatTimeOfDay(d.row.from, clockFormat)}–${formatTimeOfDay(d.row.to, clockFormat)}`;
-    lines.push(`<div class="tl-tip-path"><span class="tl-tip-name">${name}</span> <span class="text-meta">${range} (${[...d.kinds].join('/')}) ${path}</span></div>`);
+    const kindLabels = [...d.kinds].map(k => i18nT(KIND_LABEL_KEYS[k])).join('/');
+    lines.push(`<div class="tl-tip-path"><span class="tl-tip-name">${name}</span> <span class="text-meta">${range} (${kindLabels}) ${path}</span></div>`);
   }
   if (lines.length === 0) { tooltip.style.display = 'none'; return; }
   const time = formatTimeOfDay(t, clockFormat);
-  const date = new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-  const hint = periodLevel(currentPeriod) === 'day' ? '' : '<div class="tl-tip-hint text-meta">(click to open this day)</div>';
+  const date = new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  const hint = periodLevel(currentPeriod) === 'day' ? '' : `<div class="tl-tip-hint text-meta">${i18nT('tl_clickToOpenDay')}</div>`;
   tooltip.innerHTML = `<div class="tl-tip-head">${date} ${time}</div>${lines.join('')}${hint}`;
   tooltip.style.display = 'block';
   // Flip to the other side of the cursor and clamp so it never spills off-screen.
@@ -389,20 +397,20 @@ labelEl.textContent = formatPeriodLabel(currentPeriod);
 updateParentLink();
 render();
 
-const timelineTourSteps = [
+function timelineTourSteps() { return [
   {
     selector: '#tl-chart-wrapper',
-    title: 'Your browsing, plotted',
-    body: 'Each row is a site; the bars show active, audio and idle time laid along a real clock.',  },
+    title: i18nT('tour_tl_plotted_title'),
+    body: i18nT('tour_tl_plotted_body'),  },
   {
     selector: '#tl-nav',
-    title: 'Move through time',
-    body: 'Step between periods with the arrows. Press up or down to switch between day, week and month; Escape jumps back to today.',  },
+    title: i18nT('tour_tl_move_title'),
+    body: i18nT('tour_tl_move_body'),  },
   {
     selector: '#back-btn',
-    title: 'Back to the dashboard',
-    body: `Click the ${BRAND_NAME} logo to return to the dashboard; the tour continues there.`,
+    title: i18nT('tour_tl_back_title'),
+    body: i18nT('tour_tl_back_body', [BRAND_NAME]),
     handoff: { nextSurface: 'dashboard', nextStepIndex: 7, mode: 'inPage' },  },
-];
+]; }
 
-autoStartIfMatches('timeline', timelineTourSteps);
+autoStartIfMatches('timeline', timelineTourSteps());

@@ -71,7 +71,7 @@ separate database alongside them.
 | `src/background/intervalTrackingUtils.js` | `trackingUtils.js` | `createRangeTracker` is **verbatim**. `flushToStorage` is rewritten: instead of accumulating scalar ms cells it coalesces the pending `active`/`audio` ranges into **live rows** (extend the open row when a range abuts it, else start a new one), appends `idle` plainly, and never stores `overlap`. The open-row map is carried in the snapshot. Visits are **not** stored. |
 | `src/background/intervalPageTracking.js` | `subpageTracking.js` | Wiring keyed on `${domain}\n${path}` (so capture is at domain+path granularity); own `_intervalSnapshot` key. |
 | `src/background/intervalTracker.js` | background.js's subpage wiring | Listeners (`onActivated`/`onUpdated`/`onRemoved`/`windows.*`/`webNavigation`/`idle`), bootstrap, `intervalFlush` alarm, coldStart handling — driving the duplicate module. |
-| `src/data/intervalLog.js` | — | Owns the `biteguard-intervals` IndexedDB (one `intervals` store, **no secondary index** — the only reader scans all rows). `appendInterval` (insert → id, for live rows), `touch` (extend a row's `to`, returns the update count), `appendIntervals` (bulk, for idle), `allIntervals`, `clearAll`, and the shared `SESSION_GAP_MS` constant. No retention. |
+| `src/data/intervalLog.js` | — | Owns the `browsing-intervals` IndexedDB (one `intervals` store, **no secondary index** — the only reader scans all rows). `appendInterval` (insert → id, for live rows), `touch` (extend a row's `to`, returns the update count), `appendIntervals` (bulk, for idle), `allIntervals`, `clearAll`, and the shared `SESSION_GAP_MS` constant. No retention. |
 | `src/data/intervalAggregates.js` | — | Derives the dashboard shapes from the ranges (no stored aggregates, no stored visits): `getSitesByDay` and `getAvgPerClockHour`. |
 | `src/pages/interval-dashboard/interval-dashboard.{html,css,js}` | dashboard | Dashboard clone. Reuses `dashboard.css` + shared chart/range modules; the `.js` duplicates the render logic and swaps its two data sources to `intervalAggregates`. |
 | `src/vendor/dexie.min.mjs` | vendored | Dexie 4.4.3 (audited), the interval DB's only dependency. |
@@ -128,7 +128,7 @@ tracker's time (a grown row sums the same as the chunks it replaces).
 
 | Store | Shape | Read by | Written by |
 |---|---|---|---|
-| `intervals` (IndexedDB **`biteguard-intervals`**, key `++id`, no secondary index) | `{ id, domain, path, kind, from, to }` (epoch ms) | `intervalAggregates` | `intervalTrackingUtils.flushToStorage` |
+| `intervals` (IndexedDB **`browsing-intervals`**, key `++id`, no secondary index) | `{ id, domain, path, kind, from, to }` (epoch ms) | `intervalAggregates` | `intervalTrackingUtils.flushToStorage` |
 
 One row per **session** (a continuous active/audio presence), grown in place by
 the live-row flush — not one row per flush tick. The URL is split into `domain`
@@ -175,7 +175,7 @@ ranges** — nothing (not even visits) is pre-stored:
 2. Delete the `import './intervalTracker.js';` line in `background.js`.
 3. Revert the `#interval-dashboard-btn` button + `navButton` line in
    `dashboard.{html,js}`.
-4. (Optional) drop the `biteguard-intervals` IndexedDB, clear the `intervalFlush`
+4. (Optional) drop the `browsing-intervals` IndexedDB, clear the `intervalFlush`
    alarm and `_intervalSnapshot` key — or leave them orphaned (inert once the
    import is gone).
 

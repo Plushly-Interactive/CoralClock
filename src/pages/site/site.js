@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { STAT_LABELS, escapeHtml, CHART_LEGEND_HTML, navButton, TIME_CHART_HTML, VISITS_CHART_HTML, HOURLY_CHART_HTML, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
+import { statLabels, escapeHtml, chartLegendHtml, navButton, timeChartHtml, visitsChartHtml, hourlyChartHtml, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
@@ -17,6 +17,10 @@ import {
 } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
 
 const PREF_STRIP_PARAMS = 'subpagesStripParams';
 const PREF_SUBPAGE_SEARCH = 'subpageSearch';
@@ -33,9 +37,9 @@ let effectiveSiteIds = isMerged ? siteIds : [siteId];
 let isAggregatedEtld1 = false;
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 const chartsGrid = document.querySelector('#charts-grid');
-chartsGrid.insertAdjacentHTML('afterbegin', TIME_CHART_HTML);
-chartsGrid.insertAdjacentHTML('beforeend', VISITS_CHART_HTML);
-chartsGrid.insertAdjacentHTML('beforeend', HOURLY_CHART_HTML);
+chartsGrid.insertAdjacentHTML('afterbegin', timeChartHtml());
+chartsGrid.insertAdjacentHTML('beforeend', visitsChartHtml());
+chartsGrid.insertAdjacentHTML('beforeend', hourlyChartHtml());
 const limitBtn = document.querySelector('#limit-btn');
 const deleteSiteBtn = document.querySelector('#delete-site-btn');
 if (isMerged) {
@@ -58,16 +62,18 @@ const statsContainer = document.querySelector('#stats-container');
 
 const statsList = document.querySelector('#stats-list');
 
+const labels = statLabels();
+
 const topStats = [
-  { label: STAT_LABELS.today, id: 'stat-today' },
-  { label: STAT_LABELS.dailyAvg, id: 'stat-daily-avg' },
-  { label: STAT_LABELS.peakDay, id: 'stat-peak' },
+  { label: labels.today, id: 'stat-today' },
+  { label: labels.dailyAvg, id: 'stat-daily-avg' },
+  { label: labels.peakDay, id: 'stat-peak' },
 ];
 
 const bottomStats = [
-  { label: STAT_LABELS.totalTime, id: 'stat-total-time' },
-  { label: STAT_LABELS.visits, id: 'stat-visits' },
-  { label: STAT_LABELS.avgSession, id: 'stat-avg-session' },
+  { label: labels.totalTime, id: 'stat-total-time' },
+  { label: labels.visits, id: 'stat-visits' },
+  { label: labels.avgSession, id: 'stat-avg-session' },
 ];
 
 topStats.forEach((stat, i) => {
@@ -136,7 +142,7 @@ function applyHeader() {
   else if (isAggregatedEtld1) secondary = effectiveSiteIds.join(', ');
   else secondary = siteId;
   document.querySelector('#site-id').textContent = secondary;
-  document.title = `${BRAND_NAME} — ${label}`;
+  document.title = `${label} - ${BRAND_NAME}`;
   const faviconEl = document.querySelector('#site-favicon');
   faviconEl.src = faviconUrl(primary);
   faviconEl.removeAttribute('hidden');
@@ -188,7 +194,7 @@ const hourlyChartContainer = document.querySelector('#hourly-chart-container');
 const hourlyNotRelevant = document.querySelector('#hourly-not-relevant');
 const hourlySubheading = document.querySelector('#hourly-subheading');
 
-timeLegend.innerHTML = CHART_LEGEND_HTML;
+timeLegend.innerHTML = chartLegendHtml();
 
 const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
 const clockFormat = clockFormatStored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
@@ -199,7 +205,7 @@ const hourly = createHourlyChart({
   container: hourlyChartContainer,
   subheading: hourlySubheading,
   notRelevant: hourlyNotRelevant,
-  allDaysLabel: '(all days from earliest data, excluding today)',
+  allDaysLabel: t('site_hourly_allDays'),
   getRangeValue: () => rangeSelect.dataset.value,
   loadAvgPerHour: (range) => fetchData({
     type: QUERY_AVG_PER_CLOCK_HOUR, siteIds: effectiveSiteIds, range,
@@ -396,7 +402,7 @@ function buildDepthToggle(paths) {
   }
   const full = document.createElement('button');
   full.className = 'seg-btn';
-  full.textContent = 'Full';
+  full.textContent = t('site_depthFull');
   full.onclick = () => setDepth(null, full);
   if (currentDepth === null) full.classList.add('active');
   toggle.appendChild(full);
@@ -480,7 +486,7 @@ function renderSubpages(range) {
     const star = row.truncated ? '<span class="subpage-truncated">*</span>' : '';
     const num = currentSort === 'time'
       ? formatMs(row.activeMs + row.audioMs - (row.overlapMs ?? 0))
-      : `${row.visits} visit${row.visits === 1 ? '' : 's'}`;
+      : (row.visits === 1 ? t('visits_one', [row.visits]) : t('visits_other', [row.visits]));
     li.title = decoded + (row.truncated ? '*' : '');
     const drill = document.createElement('div');
     drill.className = 'subpage-drill';
@@ -508,7 +514,7 @@ function renderSubpages(range) {
     openBtn.href = `https://${domainForPath(openPath)}${openPath}`;
     openBtn.target = '_blank';
     openBtn.rel = 'noopener noreferrer';
-    openBtn.textContent = '↗ Open';
+    openBtn.textContent = t('site_openLink');
     li.appendChild(drill);
     li.appendChild(openBtn);
     list.appendChild(li);
@@ -517,7 +523,7 @@ function renderSubpages(range) {
   list.style.display = noMatch ? 'none' : '';
   document.querySelector('#subpages-controls').style.display = noMatch ? 'none' : '';
   document.querySelector('#subpages-empty').style.display = noMatch ? 'flex' : 'none';
-  document.querySelector('#subpages-count').textContent = `${merged.length} page${merged.length !== 1 ? 's' : ''}`;
+  document.querySelector('#subpages-count').textContent = merged.length === 1 ? t('site_pages_one', [merged.length]) : t('site_pages_other', [merged.length]);
 }
 
 function ensureDrillOpen() {
@@ -527,27 +533,27 @@ function ensureDrillOpen() {
   if (pick) enterDrill(pick, null, 'time');
 }
 
-const siteTourSteps = [
+function siteTourSteps() { return [
   {
     selector: '#site-title',
-    title: 'Site details',
-    body: `This page shows everything ${BRAND_NAME} tracks for a single site. The site name and ID are shown here.`,
+    title: t('tour_site_details_title'),
+    body: t('tour_site_details_body', [BRAND_NAME]),
   },
   {
     selector: '#charts-grid',
-    title: 'The charts',
-    body: 'Four views of this site: active and audio time per day, an overview of totals and peaks, daily visit counts, and your typical pattern across the 24 clock hours.',
+    title: t('tour_site_charts_title'),
+    body: t('tour_site_charts_body'),
   },
   {
     selector: '#time-chart-container',
-    title: 'Drill into a day',
-    body: 'Click any day in the time chart to see hourly detail for that single day.',
+    title: t('tour_site_drillDay_title'),
+    body: t('tour_site_drillDay_body'),
     advanceOn: 'click',
   },
   {
     selector: '#drill-controls',
-    title: 'Daily detail',
-    body: 'The chosen day in finer detail. Move to neighboring days with the arrows, or switch between Time, Visits and Hourly average.',
+    title: t('tour_site_dailyDetail_title'),
+    body: t('tour_site_dailyDetail_body'),
     drillStep: true,
     onEnter: ensureDrillOpen,
     onExit: ({ direction }) => {
@@ -556,21 +562,21 @@ const siteTourSteps = [
   },
   {
     selector: '#nav-close',
-    title: 'Back to overview',
-    body: 'Click Overview to leave drill mode and return to the full range.',
+    title: t('tour_site_backOverview_title'),
+    body: t('tour_site_backOverview_body'),
     advanceOn: 'click',
     drillStep: true,
     onEnter: ensureDrillOpen,
   },
   {
     selector: '#subpages-container',
-    title: 'Page activity',
-    body: 'Every subpage under this site. Click a row to drill into a subpage.',
+    title: t('tour_site_pageActivity_title'),
+    body: t('tour_site_pageActivity_body'),
     handoff: { nextSurface: 'path', mode: 'inPage' },
   },
-];
+]; }
 
-loadAndRenderPromise.then(() => autoStartIfMatches('site', siteTourSteps, {
+loadAndRenderPromise.then(() => autoStartIfMatches('site', siteTourSteps(), {
   onClose: ({ skipped }) => {
     if (skipped) {
       clearMockModeCache();

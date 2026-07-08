@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Reef — Storage management</title>
+  <link rel="icon" href="../../../resources/icons/brand/icon16.png" />
+  <title>Storage management - Coral Clock</title>
   <script src="../../shared/theme.js"></script>
   <link rel="stylesheet" href="../../shared/theme.css" />
   <link rel="stylesheet" href="../../shared/ioModal.css" />
@@ -14,12 +15,12 @@
   <header>
     <div id="header-left">
       <a id="back-btn" href="../dashboard/dashboard.html">
-        <img src="../../../resources/icons/reef-icon-square-48px.png" alt="Reef">
+        <img src="../../../resources/icons/brand/logo.svg" alt="Coral Clock">
       </a>
     </div>
-    <div id="header-center"><h1 class="page-title">Storage management</h1></div>
+    <div id="header-center"><h1 class="page-title" data-i18n="storage_pageTitle">Storage management</h1></div>
     <div id="header-right">
-      <button id="io-open-btn" class="btn">Import/Export data</button>
+      <button id="io-open-btn" class="btn" data-i18n="storage_importExportBtn">Import/Export data</button>
     </div>
   </header>
 
@@ -30,69 +31,69 @@
       <div id="counts-row">
         <div class="count-chip">
           <span id="count-domains" class="stat-value">—</span>
-          <span class="stat-label">Domains</span>
+          <span class="stat-label" data-i18n="storage_domains">Domains</span>
         </div>
         <div class="count-chip">
           <span id="count-subpages" class="stat-value">—</span>
-          <span class="stat-label">Subpages</span>
+          <span class="stat-label" data-i18n="storage_subpages">Subpages</span>
         </div>
         <div class="count-chip">
           <span id="count-records" class="stat-value">—</span>
-          <span class="stat-label">Rows</span>
+          <span class="stat-label" data-i18n="storage_rows">Rows</span>
         </div>
         <div class="count-chip" id="span-chip">
           <span class="stat-value-row">
             <span id="span-value" class="stat-value">—</span>
             <span id="span-info" class="stat-info">ⓘ</span>
           </span>
-          <span class="stat-label">Of data</span>
+          <span class="stat-label" data-i18n="storage_ofData">Of data</span>
           <div class="tooltip text-meta" id="span-tooltip"></div>
         </div>
       </div>
 
       <div id="stats-row">
         <div class="chart-container">
-          <span class="chart-heading">Browsing data</span>
+          <span class="chart-heading" data-i18n="storage_browsingData">Browsing data</span>
           <div class="quota-row">
             <div class="store-bar">
-              <div id="bar-active" style="width:0%;background:var(--color-accent)"></div>
-              <div id="bar-audio" style="width:0%;background:var(--color-secondary)"></div>
-              <div id="bar-idle" style="width:0%;background:var(--color-border)"></div>
+              <div id="bar-active" style="width:0%;background:var(--color-chart-time)"></div>
+              <div id="bar-audio" style="width:0%;background:var(--color-chart-audio)"></div>
+              <div id="bar-idle" style="width:0%;background:var(--color-chart-idle)"></div>
             </div>
             <span id="interval-total-text" class="text-meta"></span>
           </div>
           <div class="store-bar-legend">
             <div class="legend-stores" style="flex:2;min-width:max-content">
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent)"></span><span id="legend-active">Active</span></div>
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary)"></span><span id="legend-audio">Audio</span></div>
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-border)"></span><span id="legend-idle">Idle</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-chart-time)"></span><span id="legend-active" data-i18n="legend_active">Active</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-chart-audio)"></span><span id="legend-audio" data-i18n="legend_audio">Audio</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-chart-idle)"></span><span id="legend-idle" data-i18n="storage_legendIdle">Idle</span></div>
             </div>
             <div style="flex:3">
-              <div class="text-meta">Stored in IndexedDB, outside the 10 MB cap. The bar shows the kind mix.</div>
-              <div class="text-meta" style="margin-top:6px">Row = one uninterrupted page visit.</div>
+              <div class="text-meta" data-i18n="storage_indexedDbDesc">Stored in IndexedDB, outside the 10 MB cap. The bar shows the kind mix.</div>
+              <div class="text-meta" style="margin-top:6px" data-i18n="storage_rowDesc">Row = one uninterrupted page visit.</div>
             </div>
           </div>
         </div>
 
         <div class="chart-container">
-          <span class="chart-heading">Extension storage</span>
+          <span class="chart-heading" data-i18n="storage_extensionStorage">Extension storage</span>
           <div class="quota-row">
             <div class="quota-bar-track"><div id="quota-bar-fill" class="quota-bar-fill" style="width:0%"></div></div>
             <span id="quota-text" class="text-meta"></span>
           </div>
-          <span id="quota-warn" class="quota-warn" hidden></span>
-          <span class="text-meta">The 10 MB cap covers settings, favicon cache, rules and data imported from other apps, not the browsing data.</span>
-          <button id="legacy-storage-btn" class="btn" style="align-self:flex-start;display:none">Legacy storage</button>
+          <div id="quota-warn" class="callout" hidden></div>
+          <span class="text-meta" data-i18n="storage_quotaCapDesc">The 10 MB cap covers settings, favicon cache, rules and data imported from other apps, not the browsing data.</span>
+          <button id="legacy-storage-btn" class="btn" style="align-self:flex-start;display:none" data-i18n="storage_legacyStorageBtn">Legacy storage</button>
         </div>
 
         <div class="chart-container">
-          <span class="chart-heading">Last export</span>
+          <span class="chart-heading" data-i18n="storage_lastExport">Last export</span>
           <div>
             <div id="export-age" class="export-age">—</div>
             <div id="export-label" class="export-label"></div>
           </div>
-          <span class="text-meta">Back up before running a large prune or delete.</span>
-          <button id="export-btn" class="btn" style="align-self:flex-start">Quick export</button>
+          <span class="text-meta" data-i18n="storage_backupDesc">Back up before running a large prune or delete.</span>
+          <button id="export-btn" class="btn" style="align-self:flex-start" data-i18n="storage_quickExportBtn">Quick export</button>
         </div>
       </div>
     </div>
@@ -101,58 +102,58 @@
     <div id="tools-grid">
 
       <div class="chart-container" id="insig-card">
-        <h2 class="chart-heading">Remove insignificant rows</h2>
-        <p class="card-desc">Brief visits and accidental clicks accumulate. Scan and remove sites or pages whose total tracked time falls below a threshold.</p>
+        <h2 class="chart-heading" data-i18n="storage_removeInsigRows">Remove insignificant rows</h2>
+        <p class="card-desc" data-i18n="storage_removeInsigDesc">Brief visits and accidental clicks accumulate. Scan and remove sites or pages whose total tracked time falls below a threshold.</p>
         <div class="field-group">
-          <div class="setting-label">Threshold</div>
+          <div class="setting-label" data-i18n="storage_threshold">Threshold</div>
           <div id="threshold-row">
             <input id="threshold-input" class="number-input" type="number" min="1" value="30" />
-            <span>seconds</span>
+            <span data-i18n="storage_seconds">seconds</span>
           </div>
         </div>
         <div class="field-group">
-          <div class="setting-label">Scan</div>
+          <div class="setting-label" data-i18n="storage_scan">Scan</div>
           <div id="insig-stores">
-            <label class="scope-check"><input type="checkbox" id="insig-scope-sites" checked> Sites</label>
-            <label class="scope-check"><input type="checkbox" id="insig-scope-subpages" checked> Subpages</label>
+            <label class="scope-check"><input type="checkbox" id="insig-scope-sites" checked> <span data-i18n="storage_sites">Sites</span></label>
+            <label class="scope-check"><input type="checkbox" id="insig-scope-subpages" checked> <span data-i18n="storage_subpages">Subpages</span></label>
           </div>
         </div>
-        <div class="right-row"><button id="scan-btn" class="btn">Scan</button></div>
+        <div class="right-row"><button id="scan-btn" class="btn" data-i18n="storage_scanBtn">Scan</button></div>
       </div>
 
       <div class="chart-container" id="range-delete">
-        <h2 class="chart-heading">Targeted deletion</h2>
-        <p class="card-desc">Delete all data for a specific site, or remove records within an exact date and time window.</p>
+        <h2 class="chart-heading" data-i18n="storage_targetedDeletion">Targeted deletion</h2>
+        <p class="card-desc" data-i18n="storage_targetedDeletionDesc">Delete all data for a specific site, or remove records within an exact date and time window.</p>
         <div id="site-filter-row">
-          <span class="setting-label">Site (optional)</span>
+          <span class="setting-label" data-i18n="storage_siteOptional">Site (optional)</span>
           <div id="site-filter-wrap" class="input-wrap">
             <input type="text" id="site-filter-input" class="text-input" placeholder="e.g. google.com" />
             <button id="site-filter-clear" class="icon-btn input-clear" hidden>&times;</button>
           </div>
         </div>
         <div id="delete-all-site-row">
-          <button id="delete-all-site-btn" class="btn">Delete all data</button>
+          <button id="delete-all-site-btn" class="btn" data-i18n="storage_deleteAllData">Delete all data</button>
         </div>
         <hr class="card-divider" />
         <div id="range-mode-row">
           <div id="range-mode-toggle" class="seg-control">
-            <button id="mode-contiguous-btn" class="seg-btn active">Contiguous</button>
-            <button id="mode-repeat-btn" class="seg-btn">Repeat daily</button>
+            <button id="mode-contiguous-btn" class="seg-btn active" data-i18n="storage_contiguous">Contiguous</button>
+            <button id="mode-repeat-btn" class="seg-btn" data-i18n="storage_repeatDaily">Repeat daily</button>
           </div>
         </div>
         <div id="range-form-row">
           <div id="range-form-col">
             <div class="range-line">
-              <span class="setting-label">From</span>
+              <span class="setting-label" data-i18n="storage_from">From</span>
               <div class="dt-group">
-                <input type="date" id="range-from-date" />
+                <div class="custom-dropdown date-dropdown" id="range-from-date"></div>
                 <div class="custom-dropdown hour-dropdown" id="range-from-hour"></div>
               </div>
             </div>
             <div class="range-line">
-              <span class="setting-label">To</span>
+              <span class="setting-label" data-i18n="storage_to">To</span>
               <div class="dt-group">
-                <input type="date" id="range-to-date" />
+                <div class="custom-dropdown date-dropdown" id="range-to-date"></div>
                 <div class="custom-dropdown hour-dropdown" id="range-to-hour"></div>
               </div>
             </div>
@@ -160,134 +161,134 @@
         </div>
         <div id="repeat-form" style="display:none">
           <div class="repeat-row">
-            <span class="repeat-label setting-label">Dates</span>
-            <input type="date" id="repeat-from-date" />
+            <span class="repeat-label setting-label" data-i18n="storage_dates">Dates</span>
+            <div class="custom-dropdown date-dropdown" id="repeat-from-date"></div>
             <span class="text-meta">–</span>
-            <input type="date" id="repeat-to-date" />
+            <div class="custom-dropdown date-dropdown" id="repeat-to-date"></div>
           </div>
           <div class="repeat-row">
-            <span class="repeat-label setting-label">Hours</span>
+            <span class="repeat-label setting-label" data-i18n="storage_hours">Hours</span>
             <div class="custom-dropdown hour-dropdown" id="repeat-from-hour"></div>
             <span class="text-meta">–</span>
             <div class="custom-dropdown hour-dropdown" id="repeat-to-hour"></div>
           </div>
         </div>
         <div class="right-row">
-          <button id="delete-range-btn" class="btn">Delete range</button>
+          <button id="delete-range-btn" class="btn" data-i18n="storage_deleteRangeBtn">Delete range</button>
         </div>
       </div>
 
       <div class="chart-container" id="drop-card">
-        <h2 class="chart-heading">Drop subpage detail</h2>
-        <p class="card-desc">Collapse old rows to site level by dropping their page path. Keeps site totals, sheds per-page detail to shrink the log.</p>
+        <h2 class="chart-heading" data-i18n="storage_dropSubpageDetail">Drop subpage detail</h2>
+        <p class="card-desc" data-i18n="storage_dropSubpageDesc">Collapse old rows to site level by dropping their page path. Keeps site totals, sheds per-page detail to shrink the log.</p>
         <div id="drop-row">
-          <span class="setting-label">Collapse rows older than</span>
+          <span class="setting-label" data-i18n="storage_collapseRowsOlderThan">Collapse rows older than</span>
           <input id="drop-days-input" class="number-input" type="number" min="0" value="30" />
-          <span>days</span>
+          <span data-i18n="storage_days">days</span>
         </div>
-        <div class="right-row"><button id="drop-paths-btn" class="btn">Drop subpage detail</button></div>
+        <div class="right-row"><button id="drop-paths-btn" class="btn" data-i18n="storage_dropSubpageDetail">Drop subpage detail</button></div>
       </div>
 
       <div class="chart-container" id="favicon-card">
-        <h2 class="chart-heading">Favicon cache</h2>
-        <p class="card-desc">Cached site icons, stored in the 10 MB extension storage. Clearing frees space; icons reload from the browser as you visit sites.</p>
+        <h2 class="chart-heading" data-i18n="storage_faviconCache">Favicon cache</h2>
+        <p class="card-desc" data-i18n="storage_faviconCacheDesc">Cached site icons, stored in the 10 MB extension storage. Clearing frees space; icons reload from the browser as you visit sites.</p>
         <div class="health-status">
           <span id="favicon-stats">—</span>
         </div>
         <div class="right-row">
-          <button id="favicon-clear-btn" class="btn">Clear all</button>
+          <button id="favicon-clear-btn" class="btn" data-i18n="storage_clearAll">Clear all</button>
         </div>
         <hr class="card-divider" />
         <div id="favicon-stale-row" style="display:flex;align-items:center;gap:8px">
-          <span class="setting-label">Clear icons not visited in</span>
+          <span class="setting-label" data-i18n="storage_clearIconsNotVisitedIn">Clear icons not visited in</span>
           <input id="favicon-days-input" class="number-input" type="number" min="1" value="30" />
-          <span>days</span>
+          <span data-i18n="storage_days">days</span>
         </div>
         <div class="right-row">
-          <button id="favicon-stale-btn" class="btn">Clear unused</button>
+          <button id="favicon-stale-btn" class="btn" data-i18n="storage_clearUnused">Clear unused</button>
         </div>
       </div>
 
     </div>
   </main>
 
-  <!-- Import/Export modal (BiteGuard format only; TT + CSV land in a later step) -->
+  <!-- Import/Export modal (backup format only; TT + CSV land in a later step) -->
   <div id="io-modal-overlay" hidden>
     <div id="io-modal" role="dialog" aria-labelledby="io-modal-title" aria-modal="true">
       <div id="io-modal-header">
-        <h2 id="io-modal-title" class="dialog-title">Import / Export data</h2>
-        <button id="io-modal-close" class="icon-btn" aria-label="Close">&times;</button>
+        <h2 id="io-modal-title" class="dialog-title" data-i18n="storage_importExportTitle">Import / Export data</h2>
+        <button id="io-modal-close" class="icon-btn" data-i18n-aria="storage_close" aria-label="Close">&times;</button>
       </div>
       <div id="io-modal-body">
         <input type="file" id="io-import-input" accept=".json" style="display:none">
         <div id="io-error" class="callout" hidden></div>
         <div id="io-columns">
           <section class="io-section" id="io-section-bg">
-            <h3 class="io-section-title">Reef format</h3>
-            <p class="io-section-desc">Back up everything, or restore from a Reef export: browsing data, rules and settings. New data merges in; wherever the file differs from your current data, you choose per category to keep yours or take the file's.</p>
+            <h3 class="io-section-title" data-i18n="storage_backupFormat">Backup format</h3>
+            <p class="io-section-desc" data-i18n="storage_backupFormatDesc">Back up everything, or restore from a backup file: browsing data, rules and settings. New data merges in; wherever the file differs from your current data, you choose per category to keep yours or take the file's.</p>
             <ul class="io-bullets">
-              <li class="io-yes">All browsing rows (active, audio, idle)</li>
-              <li class="io-yes">Site rules &amp; limits</li>
-              <li class="io-yes">Settings</li>
+              <li class="io-yes" data-i18n="storage_bulletAllRows">All browsing rows (active, audio, idle)</li>
+              <li class="io-yes" data-i18n="storage_bulletRulesLimits">Site rules &amp; limits</li>
+              <li class="io-yes" data-i18n="storage_bulletSettings">Settings</li>
             </ul>
             <div class="io-actions">
-              <button id="io-bg-export-btn" class="btn io-btn">Export</button>
-              <button id="io-bg-import-btn" class="btn io-btn">Import</button>
+              <button id="io-bg-export-btn" class="btn io-btn" data-i18n="storage_exportBtn">Export</button>
+              <button id="io-bg-import-btn" class="btn io-btn" data-i18n="storage_importBtn">Import</button>
             </div>
           </section>
           <section class="io-section" id="io-section-tt">
-            <h3 class="io-section-title">Time Tracker compatibility</h3>
-            <p class="io-section-desc">Exchange data with the "Time Tracker - Web Habit Builder" extension (v<span id="io-tt-version"></span>). Not all data is compatible. Imports land in a separate legacy store, kept apart from your tracked browsing: on any day that also has native tracking, the imported data stays hidden behind it.</p>
+            <h3 class="io-section-title" data-i18n="storage_ttCompat">Time Tracker compatibility</h3>
+            <p class="io-section-desc"><span data-i18n="storage_ttCompatDesc1">Exchange data with the "Time Tracker - Web Habit Builder" extension (v</span><span id="io-tt-version"></span><span data-i18n="storage_ttCompatDesc2">). Not all data is compatible. Imports land in a separate legacy store, kept apart from your tracked browsing: on any day that also has native tracking, the imported data stays hidden behind it.</span></p>
             <ul class="io-bullets">
-              <li class="io-yes">Active time per site (daily only)</li>
-              <li class="io-yes">Visit counts per site (daily only)</li>
-              <li class="io-no">Audio time</li>
-              <li class="io-no">Site rules</li>
-              <li class="io-no">Settings</li>
+              <li class="io-yes" data-i18n="storage_bulletActiveTimeDaily">Active time per site (daily only)</li>
+              <li class="io-yes" data-i18n="storage_bulletVisitCountsDaily">Visit counts per site (daily only)</li>
+              <li class="io-no" data-i18n="storage_bulletAudioTime">Audio time</li>
+              <li class="io-no" data-i18n="storage_bulletSiteRules">Site rules</li>
+              <li class="io-no" data-i18n="storage_bulletSettings">Settings</li>
             </ul>
             <div class="io-actions">
-              <button id="io-tt-export-btn" class="btn io-btn">Export</button>
-              <button id="io-tt-import-btn" class="btn io-btn">Import</button>
+              <button id="io-tt-export-btn" class="btn io-btn" data-i18n="storage_exportBtn">Export</button>
+              <button id="io-tt-import-btn" class="btn io-btn" data-i18n="storage_importBtn">Import</button>
             </div>
           </section>
           <section class="io-section" id="io-section-csv">
-            <h3 class="io-section-title">CSV / Spreadsheet</h3>
-            <p class="io-section-desc">Export your browsing data as a CSV file, openable in any spreadsheet app. Times are in decimal minutes.</p>
+            <h3 class="io-section-title" data-i18n="storage_csvSpreadsheet">CSV / Spreadsheet</h3>
+            <p class="io-section-desc" data-i18n="storage_csvSpreadsheetDesc">Export your browsing data as a CSV file, openable in any spreadsheet app. Times are in decimal minutes.</p>
             <div style="display:flex;gap:16px">
               <div style="flex:1;display:flex;flex-direction:column">
                 <ul class="io-bullets">
-                  <li class="io-yes">One row per site/subpage, per day</li>
-                  <li class="io-yes">Active + audio minutes, visits</li>
+                  <li class="io-yes" data-i18n="storage_bulletOneRowPerSiteDay">One row per site/subpage, per day</li>
+                  <li class="io-yes" data-i18n="storage_bulletActiveAudioVisits">Active + audio minutes, visits</li>
                 </ul>
-                <button id="io-csv-daily-btn" class="btn io-btn" style="margin-top:auto">Export daily</button>
+                <button id="io-csv-daily-btn" class="btn io-btn" style="margin-top:auto" data-i18n="storage_exportDailyBtn">Export daily</button>
               </div>
               <div style="flex:1;display:flex;flex-direction:column">
                 <ul class="io-bullets">
-                  <li class="io-yes">Same, broken down per hour</li>
-                  <li class="io-yes">Active + audio minutes, visits</li>
+                  <li class="io-yes" data-i18n="storage_bulletSameByHour">Same, broken down per hour</li>
+                  <li class="io-yes" data-i18n="storage_bulletActiveAudioVisits">Active + audio minutes, visits</li>
                 </ul>
-                <button id="io-csv-hourly-btn" class="btn io-btn" style="margin-top:auto">Export hourly</button>
+                <button id="io-csv-hourly-btn" class="btn io-btn" style="margin-top:auto" data-i18n="storage_exportHourlyBtn">Export hourly</button>
               </div>
               <div style="flex:1;display:flex;flex-direction:column">
                 <ul class="io-bullets">
-                  <li class="io-yes">Raw rows, exact start/end times</li>
-                  <li class="io-yes">Kind: active, audio, idle</li>
+                  <li class="io-yes" data-i18n="storage_bulletRawRows">Raw rows, exact start/end times</li>
+                  <li class="io-yes" data-i18n="storage_bulletKind">Kind: active, audio, idle</li>
                 </ul>
-                <button id="io-csv-rows-btn" class="btn io-btn" style="margin-top:auto">Export rows</button>
+                <button id="io-csv-rows-btn" class="btn io-btn" style="margin-top:auto" data-i18n="storage_exportRowsBtn">Export rows</button>
               </div>
             </div>
           </section>
         </div>
         <div id="io-conflict-view" hidden>
           <h3 id="io-conflict-title" class="dialog-title">
-            <span id="io-conflict-warning-symbol" aria-hidden="true">⚠</span><span id="io-conflict-label">Overlapping data</span><span id="io-conflict-count"></span>
+            <span id="io-conflict-warning-symbol" aria-hidden="true">⚠</span><span id="io-conflict-label" data-i18n="storage_overlappingData">Overlapping data</span><span id="io-conflict-count"></span>
           </h3>
-          <p id="io-conflict-desc" class="io-section-desc">These current rows overlap the file's rows in time. Keep current discards the overlapping rows from the file; Replace drops the rows listed below and takes the file's. Rows that don't overlap are always kept.</p>
+          <p id="io-conflict-desc" class="io-section-desc" data-i18n="storage_conflictDesc">These current rows overlap the file's rows in time. Keep current discards the overlapping rows from the file; Replace drops the rows listed below and takes the file's. Rows that don't overlap are always kept.</p>
           <ul id="io-conflict-list"></ul>
           <div class="io-actions" id="io-conflict-actions">
-            <button id="io-conflict-cancel" class="btn io-btn">Cancel</button>
-            <button id="io-conflict-keep" class="btn io-btn">Keep current</button>
-            <button id="io-conflict-replace" class="btn io-btn">Replace with file</button>
+            <button id="io-conflict-cancel" class="btn io-btn" data-i18n="storage_cancelBtn">Cancel</button>
+            <button id="io-conflict-keep" class="btn io-btn" data-i18n="storage_keepCurrentBtn">Keep current</button>
+            <button id="io-conflict-replace" class="btn io-btn" data-i18n="storage_replaceWithFileBtn">Replace with file</button>
           </div>
         </div>
       </div>
@@ -297,14 +298,14 @@
   <!-- Scan overlay (remove insignificant rows) -->
   <div id="scan-overlay" style="display:none">
     <div class="overlay-header">
-      <span class="overlay-title">Scan results</span>
+      <span class="overlay-title" data-i18n="storage_scanResults">Scan results</span>
       <span id="overlay-params" class="text-meta"></span>
-      <button id="overlay-close" class="overlay-close">×</button>
+      <button id="overlay-close" class="overlay-close">&times;</button>
     </div>
     <div id="overlay-results" class="overlay-results"></div>
     <div class="overlay-footer">
       <span id="overlay-summary" class="text-meta"></span>
-      <button id="overlay-delete-btn" class="btn">Delete selected</button>
+      <button id="overlay-delete-btn" class="btn" data-i18n="storage_deleteSelectedBtn">Delete selected</button>
     </div>
   </div>
 

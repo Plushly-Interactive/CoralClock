@@ -1,8 +1,9 @@
 import { formatMs, formatMsAsDays, formatHourLabel, formatHourRange } from './timeUtils.js';
 import { weekKeyForDate, daysInWeek } from './weekStart.js';
 import { formatPeriodLabel, stepPeriod } from './period.js';
-import { formatWithSmallSub, STAT_LABELS, CHART_LEGEND_HTML } from './utils.js';
+import { formatWithSmallSub, statLabels, chartLegendHtml } from './utils.js';
 import { drawTimeChart, drawVisitsChart, drawHourlyChart, buildHourlyBuckets } from './overview.js';
+import { t } from './i18n.js';
 
 let drillPeriod = null;
 let drillPrevPeriod = null;
@@ -13,48 +14,50 @@ let exitingDrill = false;
 
 let ctx = null;
 
-const DRILL_INNER_HTML = `
+function drillInnerHtml() {
+  return `
   <div id="drill-top">
     <button id="nav-close" class="link-btn">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-      Overview
+      ${t('rules_overview')}
     </button>
     <button id="drill-month-link" class="link-btn" style="display:none"></button>
   </div>
   <div id="drill-controls">
-    <div id="nav-strip">
-      <button id="nav-prev" class="link-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
-      <span id="nav-label"></span>
-      <button id="nav-next" class="link-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+    <div id="nav-strip" class="nav-strip">
+      <button id="nav-prev" class="link-btn nav-arrow-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      <span id="nav-label" class="nav-period-label"></span>
+      <button id="nav-next" class="link-btn nav-arrow-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
     </div>
-    <div id="drill-legend" class="time-legend text-meta" style="display: none;">${CHART_LEGEND_HTML}</div>
-    <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn"> Enhance readbility (&radic;x scale)</label>
+    <div id="drill-legend" class="time-legend text-meta" style="display: none;">${chartLegendHtml()}</div>
+    <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn"> ${t('drill_enhanceReadability')}</label>
     <div id="drill-stats" class="text-meta"></div>
     <div id="drill-toggle" class="seg-control">
-      <button id="drill-time-btn" class="drill-toggle-btn seg-btn active">Time</button>
-      <button id="drill-visits-btn" class="drill-toggle-btn seg-btn">Visits</button>
-      <button id="drill-hour-btn" class="drill-toggle-btn seg-btn">Hourly avg.</button>
+      <button id="drill-time-btn" class="drill-toggle-btn seg-btn active">${t('site_sortTime')}</button>
+      <button id="drill-visits-btn" class="drill-toggle-btn seg-btn">${t('site_sortVisits')}</button>
+      <button id="drill-hour-btn" class="drill-toggle-btn seg-btn">${t('drill_hourlyAvg')}</button>
     </div>
   </div>
   <div id="drill-chart-wrapper">
-    <button id="drill-keys-btn" class="square-btn">&#215;</button>
+    <button id="drill-keys-btn" class="square-btn">&times;</button>
     <div id="drill-keys-popup" class="tooltip text-meta">
-      <div id="drill-keys-title">Keyboard shortcuts</div>
-      <div><kbd>&larr;</kbd><kbd>&rarr;</kbd> Navigate period</div>
-      <div><kbd>&uarr;</kbd> Go up one level (day &rarr; week &rarr; month)</div>
-      <div><kbd>&darr;</kbd> Go to first day / week with data</div>
-      <div><kbd>Space</kbd> Toggle mode (time &rarr; visits &rarr; avg.)</div>
-      <div><kbd>Esc</kbd> Exit to overview</div>
+      <div id="drill-keys-title">${t('drill_keyboardShortcuts')}</div>
+      <div><kbd>&larr;</kbd><kbd>&rarr;</kbd> ${t('drill_navigatePeriod')}</div>
+      <div><kbd>&uarr;</kbd> ${t('drill_goUpLevel')}</div>
+      <div><kbd>&darr;</kbd> ${t('drill_goToFirst')}</div>
+      <div><kbd>Space</kbd> ${t('drill_toggleMode')}</div>
+      <div><kbd>Esc</kbd> ${t('drill_exitToOverview')}</div>
     </div>
     <svg id="drill-chart"></svg>
     <div id="drill-tooltip" class="tooltip text-meta"></div>
-    <p id="drill-no-data" class="text-meta" style="display:none">No data for this period.</p>
+    <p id="drill-no-data" class="text-meta" style="display:none">${t('dashboard_noData')}</p>
   </div>
 `;
+}
 
 export function initDrill(context) {
   ctx = context;
-  ctx.drillView.innerHTML = DRILL_INNER_HTML;
+  ctx.drillView.innerHTML = drillInnerHtml();
   ctx.navPrev = ctx.drillView.querySelector('#nav-prev');
   ctx.navNext = ctx.drillView.querySelector('#nav-next');
   ctx.navClose = ctx.drillView.querySelector('#nav-close');
@@ -102,7 +105,7 @@ export function initDrill(context) {
   ctx.drillKeysBtn.addEventListener('click', () => {
     const visible = ctx.drillKeysPopup.style.display !== 'none';
     ctx.drillKeysPopup.style.display = visible ? 'none' : 'flex';
-    ctx.drillKeysBtn.textContent = visible ? '?' : '×';
+    ctx.drillKeysBtn.innerHTML = visible ? '?' : '&times;';
   });
 
   window.addEventListener('keydown', (e) => {
@@ -229,7 +232,7 @@ function navigatePeriod(dir) {
   renderDrillChart();
 }
 
-const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const SHORT_DAY_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 
 async function renderDrillChart() {
   const isMonthDrill = drillPeriod.length === 7;
@@ -252,7 +255,7 @@ async function renderDrillChart() {
   } else if (isWeekDrill) {
     data = daysInWeek(drillPeriod).map(dayKey => {
       const [y, m, d] = dayKey.split('-').map(Number);
-      return { label: `${SHORT_DAYS[new Date(y, m - 1, d).getDay()]} ${d}`, range: dayKey, ...ctx.getDayEntry(dayKey) };
+      return { label: `${SHORT_DAY_FMT.format(new Date(y, m - 1, d))} ${d}`, range: dayKey, ...ctx.getDayEntry(dayKey) };
     });
   } else {
     const hourData = await ctx.getHourEntriesForDay(drillPeriod);
@@ -284,12 +287,13 @@ async function renderDrillChart() {
 
   const totalMs = data.reduce((s, d) => s + d.activeMs + (d.audioMs ?? 0) - (d.overlapMs ?? 0), 0);
   const totalVisits = data.reduce((s, d) => s + d.visits, 0);
+  const labels = statLabels();
   const stats = [];
-  if (totalMs > 0) stats.push({ label: STAT_LABELS.totalTime, value: formatMs(totalMs) });
-  if (totalVisits > 0) stats.push({ label: STAT_LABELS.visits, value: totalVisits });
-  if (totalMs > 0 && totalVisits > 0) stats.push({ label: STAT_LABELS.avgSession, value: formatMs(totalMs / totalVisits) });
+  if (totalMs > 0) stats.push({ label: labels.totalTime, value: formatMs(totalMs) });
+  if (totalVisits > 0) stats.push({ label: labels.visits, value: totalVisits });
+  if (totalMs > 0 && totalVisits > 0) stats.push({ label: labels.avgSession, value: formatMs(totalMs / totalVisits) });
   ctx.drillStats.innerHTML = stats.map(s => {
-    const isTimeValue = s.label === STAT_LABELS.totalTime || s.label === STAT_LABELS.avgSession;
+    const isTimeValue = s.label === labels.totalTime || s.label === labels.avgSession;
     const displayValue = isTimeValue ? formatWithSmallSub(s.value) : s.value;
     return `<div><span class="stat-label">${s.label}</span> <span class="stat-value">${displayValue}</span></div>`;
   }).join('');

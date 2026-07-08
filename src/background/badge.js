@@ -29,5 +29,9 @@ export async function updateBadge() {
   const { sitesByDay } = await usageSince(startOfDay.getTime());
   const cell = sitesByDay[localDayKey(Date.now())]?.[siteId];
   const ms = cell ? (cell.activeMs ?? 0) + (cell.audioMs ?? 0) - (cell.overlapMs ?? 0) : 0;
+  // Badge background: use theme's --color-secondary (#688db5)
+  try {
+    chrome.action.setBadgeBackgroundColor({ color: '#8d332c' });
+  } catch {}
   chrome.action.setBadgeText({ text: ms > 0 ? formatMs(ms) : '' });
 }

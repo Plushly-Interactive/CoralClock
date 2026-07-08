@@ -1,6 +1,6 @@
 # Targeted deletion
 
-BiteGuard's pruning today is global — it removes records by insignificance across
+This app's pruning today is global — it removes records by insignificance across
 all sites at once. This feature adds a date-range deletion section on the
 storage-pruning page that removes every record within an arbitrary datetime window,
 optionally scoped to a single site. A navigation button on `site.html` links there

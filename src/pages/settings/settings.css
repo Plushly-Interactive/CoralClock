@@ -28,6 +28,7 @@
 
 .setting-card .form-row > input,
 .setting-card .form-row > select,
+.setting-card .form-row > .number-input-wrap,
 .setting-card .form-row > .custom-dropdown {
   margin-left: auto;
 }
@@ -36,3 +37,14 @@
 .setting-card .form-row > .text-meta {
   align-self: center;
 }
+
+.setting-card .dropdown-btn {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  min-width: 60px;
+  justify-content: space-between;
+  padding: 6px 8px;
+}
+
+.setting-card .dropdown-arrow { color: var(--color-text-secondary); }

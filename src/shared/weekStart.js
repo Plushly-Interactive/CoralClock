@@ -22,7 +22,10 @@ export function weekDow(date) {
   return (date.getDay() - cachedDow + 7) % 7;
 }
 
-const LABELS_SUN_FIRST = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+// 2023-01-01 is a known Sunday — used as a reference date to read locale-narrow
+// weekday labels ('S','M',... in en, but correct for any locale) from Intl.
+const NARROW_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'narrow' });
+const LABELS_SUN_FIRST = Array.from({ length: 7 }, (_, i) => NARROW_FMT.format(new Date(2023, 0, 1 + i)));
 
 export function rotatedDayLabels() {
   return [...LABELS_SUN_FIRST.slice(cachedDow), ...LABELS_SUN_FIRST.slice(0, cachedDow)];

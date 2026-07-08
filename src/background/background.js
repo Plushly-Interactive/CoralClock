@@ -1,12 +1,13 @@
 import { localDayKey, localHourKey } from '../shared/timeUtils.js';
 import { weekDow } from '../shared/weekStart.js';
-import { ensureStorageVersion } from '../data/migrations.js';
 import { PREF_BADGE_ENABLED } from '../shared/prefKeys.js';
 import { siteIdFromUrl } from './siteResolution.js';
 import { computeOverage, publishOverage } from './enforcement.js';
 import { usageSince } from '../data/intervalAggregates.js';
 import { dbg, initDebug } from './trackingDebug.js';
 import { updateBadge } from './badge.js';
+import { initI18n, t } from '../shared/i18n.js';
+import { getQuotaUsage, QUOTA_WARN_PCT } from '../shared/utils.js';
 // The interval tracker is the sole live capturer. It self-registers its capture
 // listeners on import; background drives its periodic flush via flushNow() and a
 // lighter per-navigation drain via flushToStorage.
@@ -19,6 +20,10 @@ import { flushNow, flushToStorage as drainIntervals } from './intervalTracker.js
 // carries no URL/sensitive data — just a timestamp.
 console.log(`[BG-DBG ${new Date().toISOString()}] SERVICE WORKER STARTED`);
 
+// Service workers disallow top-level await, so kick this off and await it inside
+// the notification functions instead, right before they call t().
+const i18nReady = initI18n();
+
 function approachWindowKey(period, now) {
   if (period === 'hour') return localHourKey(now);
   if (period === 'week') {
@@ -30,7 +35,8 @@ function approachWindowKey(period, now) {
   return localDayKey(now);
 }
 
-const PERIOD_LABEL = { hour: 'hourly', day: 'daily', week: 'weekly' };
+const PERIOD_ADJ_KEY = { hour: 'bg_periodHourly', day: 'bg_periodDaily', week: 'bg_periodWeekly' };
+const UNIT_KEY = { minutes: 'unit_minutes', hours: 'unit_hours', days: 'unit_days' };
 
 function fmtMs(ms) {
   const m = Math.round(ms / 60000);
@@ -40,32 +46,39 @@ function fmtMs(ms) {
   return rem ? `${h}h ${rem}m` : `${h}h`;
 }
 
-// Notification dedup state. Loaded once from chrome.storage.session into a
+// Notification dedup state. Loaded once from chrome.storage.local into a
 // cached Promise so concurrent checkEnforcement calls (e.g. rapid navigations
 // or redirect chains) share the same in-memory object and never read stale
-// storage. Persisted back so state survives MV3 SW restarts within a session.
+// storage. Persisted back so state survives MV3 SW restarts *and* browser
+// restarts — an already-blocked rule (esp. limit-0 always-block) must not
+// re-notify on startup. The prune loop below re-arms the notification once a
+// rule leaves overage (period rollover), so this only suppresses re-notifying
+// the same still-blocked rule.
 let _notifyStateP = null;
 
 function getNotifyState() {
   if (!_notifyStateP) {
-    _notifyStateP = chrome.storage.session.get('_notifyState').then(({ _notifyState: s }) => ({
+    _notifyStateP = chrome.storage.local.get('_notifyState').then(({ _notifyState: s }) => ({
       blocked: new Set(s?.blocked ?? []),
       approaching: new Map(Object.entries(s?.approaching ?? {})),
+      quotaWarnedDay: s?.quotaWarnedDay ?? null,
     }));
   }
   return _notifyStateP;
 }
 
 function persistNotifyState(state) {
-  chrome.storage.session.set({
+  chrome.storage.local.set({
     _notifyState: {
       blocked: [...state.blocked],
       approaching: Object.fromEntries(state.approaching),
+      quotaWarnedDay: state.quotaWarnedDay,
     },
   });
 }
 
-async function notifyBlocked(overage) {
+async function notifyBlocked(overage, blockedSites) {
+  await i18nReady;
   const state = await getNotifyState();
   for (const ruleId of state.blocked) {
     if (!overage.has(ruleId)) state.blocked.delete(ruleId);
@@ -75,18 +88,23 @@ async function notifyBlocked(overage) {
     if (state.blocked.has(ruleId)) continue;
     state.blocked.add(ruleId);
     changed = true;
-    const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
+    // Only toast when the block hit a currently-open tab. A rule crossing (or an
+    // always-block rule created) with no matching tab open is recorded for dedup
+    // but shows no toast — nothing visible was blocked.
+    if (!blockedSites.has(ruleId)) continue;
+    const label = blockedSites.get(ruleId) ?? entry.target ?? t('bg_aSite');
     chrome.notifications.create(`blocked-${ruleId}`, {
       type: 'basic',
-      iconUrl: chrome.runtime.getURL('resources/icons/reef-icon-square-128px.png'),
-      title: 'Time limit reached',
-      message: `${label} is now blocked`,
+      iconUrl: chrome.runtime.getURL('resources/icons/brand/icon128.png'),
+      title: t('bg_notifyBlockedTitle'),
+      message: t('bg_notifyBlockedMessage', [label]),
     });
   }
   if (changed) persistNotifyState(state);
 }
 
 async function notifyApproaching(approaching, now) {
+  await i18nReady;
   const state = await getNotifyState();
   let changed = false;
   for (const [ruleId, entry] of approaching) {
@@ -94,17 +112,47 @@ async function notifyApproaching(approaching, now) {
     if (state.approaching.get(ruleId) === windowKey) continue;
     state.approaching.set(ruleId, windowKey);
     changed = true;
-    const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
+    const label = entry.target ?? entry.keyword ?? entry.pattern ?? t('bg_aSite');
     const pct = Math.round(entry.pct * 100);
     const left = fmtMs(entry.remainingMs);
+    const unit = t(UNIT_KEY[entry.limitUnit] ?? entry.limitUnit);
+    const periodAdj = t(PERIOD_ADJ_KEY[entry.period] ?? entry.period);
     chrome.notifications.create(`approach-${ruleId}`, {
       type: 'basic',
-      iconUrl: chrome.runtime.getURL('resources/icons/reef-icon-square-128px.png'),
-      title: 'Approaching time limit',
-      message: `${label} — ${pct}% of ${entry.limit} ${entry.limitUnit} ${PERIOD_LABEL[entry.period] ?? entry.period} limit used (${left} left)`,
+      iconUrl: chrome.runtime.getURL('resources/icons/brand/icon128.png'),
+      title: t('bg_notifyApproachingTitle'),
+      message: t('bg_notifyApproachingMessage', [label, pct, entry.limit, unit, periodAdj, left]),
     });
   }
   if (changed) persistNotifyState(state);
+}
+
+// Re-notify once per calendar day while usage stays at/above the threshold;
+// clears once it drops back below so a same-day dip and re-cross still notifies.
+async function notifyQuotaWarn(pct, now) {
+  await i18nReady;
+  const state = await getNotifyState();
+  if (pct < QUOTA_WARN_PCT) {
+    if (state.quotaWarnedDay === null) return;
+    state.quotaWarnedDay = null;
+    persistNotifyState(state);
+    return;
+  }
+  const today = localDayKey(now);
+  if (state.quotaWarnedDay === today) return;
+  state.quotaWarnedDay = today;
+  persistNotifyState(state);
+  chrome.notifications.create('quota-warn', {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('resources/icons/brand/icon128.png'),
+    title: t('bg_notifyQuotaTitle'),
+    message: t('bg_notifyQuotaMessage', [Math.floor(pct)]),
+  });
+}
+
+async function checkQuota(now) {
+  const { pct } = await getQuotaUsage();
+  await notifyQuotaWarn(pct, now);
 }
 
 chrome.alarms.get('flush').then(existing => {
@@ -114,7 +162,7 @@ chrome.alarms.get('flush').then(existing => {
 // instances; clear it once so only the single 'flush' alarm fires.
 chrome.alarms.clear('intervalFlush');
 const bootstrapDone = bootstrap();
-bootstrapDone.then(() => updateBadge());
+bootstrapDone.then(() => { updateBadge(); checkQuota(Date.now()); });
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason !== 'install') return;
@@ -124,18 +172,10 @@ chrome.runtime.onInstalled.addListener((details) => {
 });
 
 // Capture init lives in the interval tracker now; background's bootstrap only
-// readies debug logging and the storage schema before its listeners run.
+// readies debug logging before its listeners run.
 async function bootstrap() {
   await initDebug();
-  dbg('bootstrap: start');
-  try {
-    await ensureStorageVersion();
-    dbg('bootstrap: done');
-    return;
-  } catch (e) {
-    dbg('bootstrap: FAILED', e?.message ?? e, e?.stack);
-    throw e;
-  }
+  dbg('bootstrap: done');
 }
 
 // --- Tab / window events ---
@@ -149,6 +189,12 @@ async function cacheFavicon(hostname, url) {
   if (!url || !url.startsWith('http')) return;
   const { faviconCache = {} } = await chrome.storage.local.get('faviconCache');
   if (faviconCache[hostname]?.url === url) return;
+  // Cross-origin fetch needs host permission for this site, which since the
+  // <all_urls> → per-rule permission change we generally don't have unless the
+  // user set a rule for it. Skip rather than let it fail noisily with a CORS
+  // error; faviconUrl() already falls back to the permission-free _favicon/
+  // endpoint for everything not cached here.
+  if (!await chrome.permissions.contains({ origins: [`*://${hostname}/*`] })) return;
   try {
     const res = await fetch(url);
     if (!res.ok) return;
@@ -191,6 +237,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   const now = Date.now();
   await flushNow();
   await checkEnforcement(now);
+  await checkQuota(now);
   updateBadge();
 });
 
@@ -228,8 +275,10 @@ async function checkEnforcement(now) {
   const stores = await usageSince(enforcementWindowStart(now));
 
   const { overage, approaching } = computeOverage(rules, stores, now);
-  await publishOverage(overage);
-  await notifyBlocked(overage);
+  dbg('checkEnforcement: rules', rules.map(r => ({ id: r.id, enabled: r.enabled, matchType: r.matchType, target: r.target, limit: r.limit, limitUnit: r.limitUnit, period: r.period })));
+  dbg('checkEnforcement: overage', [...overage.entries()]);
+  const blockedSites = await publishOverage(overage);
+  await notifyBlocked(overage, blockedSites);
   await notifyApproaching(approaching, now);
 }
 

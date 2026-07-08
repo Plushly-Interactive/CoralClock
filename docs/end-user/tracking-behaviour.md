@@ -1,6 +1,6 @@
 # Tracking behaviour
 
-How BiteGuard counts time and visits across browser windows and tabs.
+How this app counts time and visits across browser windows and tabs.
 
 ## What gets tracked
 
@@ -57,7 +57,7 @@ The stream stays at 1 visit. Opening a *different* audible site in another tab w
 
 ### Multiple windows on the same site
 
-If reddit is the active tab in two or three windows at the same time, BiteGuard counts that as **one** stream of active time, not two or three. The metric is "is at least one window showing this site as active", not "how many windows are showing it".
+If reddit is the active tab in two or three windows at the same time, the app counts that as **one** stream of active time, not two or three. The metric is "is at least one window showing this site as active", not "how many windows are showing it".
 
 ### Multiple tabs playing audio on the same site
 
@@ -67,7 +67,7 @@ Same logic: audio time tracks "is at least one tab playing", not how many.
 
 Each site accrues time independently. If you have reddit active in window A and facebook active in window B at the same time, both will accrue active time for that period — even though you can only really look at one of them.
 
-This is a deliberate design choice. BiteGuard does not track which window has OS-level focus. The reasoning:
+This is a deliberate design choice. The app does not track which window has OS-level focus. The reasoning:
 
 - People working across multiple monitors often have several windows visible at once and genuinely use them in parallel.
 - Treating only the OS-focused window as "active" would miss legitimate usage across monitors and would break whenever you focus another application (browser loses focus → no site is tracked at all).
@@ -77,7 +77,7 @@ If you want a site to stop counting, navigate that window away from it, close th
 
 ### Minimized windows
 
-Minimized windows don't count as active. There is up to roughly a one-minute lag between minimizing a window and the time stopping (BiteGuard reconciles state at approximately one-minute intervals).
+Minimized windows don't count as active. There is up to roughly a one-minute lag between minimizing a window and the time stopping (the app reconciles state at approximately one-minute intervals).
 
 ## What stops time counting
 

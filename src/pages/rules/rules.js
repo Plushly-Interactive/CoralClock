@@ -7,6 +7,12 @@ import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear } from '..
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockRules, mockBlocksByDay } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { enhanceNumberInput, enhanceNumberInputEl } from '../../shared/numberInput.js';
+import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+
+await initI18n();
+applyI18n();
+document.title = `${t('rules_pageTitle')} - ${BRAND_NAME}`;
 
 const formTarget          = document.querySelector('#form-target');
 const formTargetClearBtn  = document.querySelector('#form-target-clear');
@@ -23,6 +29,9 @@ const redundantText         = document.querySelector('#redundant-text');
 const redundantList         = document.querySelector('#redundant-list');
 const redundantDisableBtn   = document.querySelector('#redundant-disable-btn');
 const redundantKeepBtn      = document.querySelector('#redundant-keep-btn');
+const reauthPrompt   = document.querySelector('#reauth-prompt');
+const reauthText     = document.querySelector('#reauth-text');
+const reauthBtn      = document.querySelector('#reauth-btn');
 const formLimit      = document.querySelector('#form-limit');
 const sortSiteBtn    = document.querySelector('#sort-site');
 const sortStatusBtn  = document.querySelector('#sort-status');
@@ -48,6 +57,60 @@ let scope = 'subdomain';
 let currentRules = [];
 let mockMode = false;  // tour: seeded rules shown read-only, never persisted
 let sort = { key: 'site', dir: 1 };
+
+// Origin patterns a rule needs host permission for. host/pathPrefix are exact
+// (no subdomain access); subdomain requests both forms since match-pattern
+// docs don't clearly state whether *.target already includes the bare apex.
+// regex/keyword have no fixed host, so they fall back to <all_urls>.
+function originsFor(rule) {
+  if (rule.matchType === 'regex' || rule.matchType === 'keyword') return ['<all_urls>'];
+  const exact = `*://${rule.target}/*`;
+  if (rule.matchType === 'subdomain') return [exact, `*://*.${rule.target}/*`];
+  return [exact];
+}
+
+// Request host permission for a candidate rule before it's saved. Must run
+// inside the click handler (user gesture) — chrome.permissions.request()
+// rejects outside one. Returns false (and leaves nothing saved) if declined.
+async function requestPermissionFor(rule) {
+  return chrome.permissions.request({ origins: originsFor(rule) });
+}
+
+// Drop host permission for a deleted rule's origins, but only where no other
+// remaining rule still needs them.
+async function releasePermissionFor(deletedRule, remainingRules) {
+  const stillNeeded = new Set(remainingRules.flatMap(originsFor));
+  const toRemove = originsFor(deletedRule).filter(o => !stillNeeded.has(o));
+  if (toRemove.length) await chrome.permissions.remove({ origins: toRemove });
+}
+
+// Origins currently missing permission across all rules. Catches both the
+// one-time migration (existing users whose <all_urls> just became optional)
+// and any later drift (permission manually revoked via chrome://extensions).
+let reauthOrigins = [];
+
+async function checkReauth() {
+  const needed = [...new Set(currentRules.flatMap(originsFor))];
+  const missing = [];
+  for (const origin of needed) {
+    if (!await chrome.permissions.contains({ origins: [origin] })) missing.push(origin);
+  }
+  reauthOrigins = missing;
+  if (!missing.length) {
+    reauthPrompt.style.display = 'none';
+    return;
+  }
+  const affected = currentRules.filter(r => originsFor(r).some(o => missing.includes(o))).length;
+  reauthText.textContent = affected === 1 ? t('rules_reauth_one', [affected]) : t('rules_reauth_other', [affected]);
+  reauthPrompt.removeAttribute('hidden');
+  reauthPrompt.style.display = '';
+}
+
+reauthBtn.addEventListener('click', async () => {
+  if (await chrome.permissions.request({ origins: reauthOrigins })) {
+    reauthPrompt.style.display = 'none';
+  }
+});
 
 // ── Add card collapse toggle ──
 
@@ -164,19 +227,19 @@ function refreshPreview() {
   refreshExamples(host, path);
 
   if (!host) {
-    previewText.textContent = 'Enter a site address above.';
+    previewText.textContent = t('rules_preview_enterSite');
     previewPattern.textContent = '';
     saveBtn.disabled = true;
     return;
   }
   if (!isValidHost(host)) {
-    previewText.textContent = `"${host}" doesn't look like a valid site (e.g. reddit.com).`;
+    previewText.textContent = t('rules_preview_invalidHost', [host]);
     previewPattern.textContent = '';
     saveBtn.disabled = true;
     return;
   }
   if (scope === 'pathPrefix' && !path) {
-    previewText.textContent = 'Add a /path to limit a specific page.';
+    previewText.textContent = t('rules_preview_addPath');
     previewPattern.textContent = '';
     saveBtn.disabled = true;
     return;
@@ -184,8 +247,10 @@ function refreshPreview() {
   const candidate = { target: host, path, matchType: scope, ...formLimitFields() };
   const covering = findCoveringRule(currentRules, candidate);
   if (covering) {
-    previewText.innerHTML =
-      `An existing ${candidate.period} rule (<a href="#rule-${covering.id}" id="covering-link" class="link-btn">${matchLabel(covering)}</a>) already covers this.`;
+    previewText.innerHTML = t('rules_preview_covering', [
+      t(`period_${candidate.period}`),
+      `<a href="#rule-${covering.id}" id="covering-link" class="link-btn">${matchLabel(covering)}</a>`,
+    ]);
     previewPattern.textContent = '';
     saveBtn.disabled = true;
     return;
@@ -193,7 +258,7 @@ function refreshPreview() {
 
   const { text, value } = describeRule({ target: host, path, matchType: scope });
   const always = parseInt(formLimit.value) === 0;
-  previewText.textContent = always ? `Will always block ${text}.` : `Will block ${text}.`;
+  previewText.textContent = always ? t('rules_preview_alwaysBlock', [text]) : t('rules_preview_willBlock', [text]);
   previewPattern.textContent = value;
   saveBtn.disabled = false;
 }
@@ -230,7 +295,7 @@ function sortedRules() {
 function updateSortArrows() {
   for (const [key, btn] of [['site', sortSiteBtn], ['status', sortStatusBtn]]) {
     const isSorted = sort.key === key;
-    btn.dataset.arrow = isSorted ? (sort.dir === 1 ? '↑' : '↓') : '';
+    btn.textContent = t(btn.dataset.label) + (isSorted ? (sort.dir === 1 ? ' ↑' : ' ↓') : '');
     btn.classList.toggle('sorted', isSorted);
   }
 }
@@ -256,6 +321,7 @@ async function render() {
   renderRuleList(rulesList, sortedRules(), { readonly: mockMode });
   refreshPreview();
   renderStats();
+  if (!mockMode) checkReauth();
 }
 
 // ── Save new rule ──
@@ -275,6 +341,7 @@ saveBtn.addEventListener('click', async () => {
   if (findCoveringRule(currentRules, newRule)) return;
   const redundant = findRedundantRules(currentRules, newRule);
 
+  if (!await requestPermissionFor(newRule)) return;
   await addRule(newRule);
 
   formTarget.value = '';
@@ -292,8 +359,7 @@ function showRedundantPrompt(redundant) {
     return;
   }
   const n = redundant.length;
-  redundantText.textContent =
-    `The rule you just added is stricter than ${n} existing ${n === 1 ? 'rule' : 'rules'} and would always block first. Disable ${n === 1 ? 'it' : 'them'}?`;
+  redundantText.textContent = n === 1 ? t('rules_redundant_one', [n]) : t('rules_redundant_other', [n]);
   redundantList.innerHTML = redundant.map(r => `<li>${matchLabel(r)}</li>`).join('');
   redundantDisableBtn.dataset.ids = redundant.map(r => r.id).join(',');
   redundantPrompt.removeAttribute('hidden');
@@ -325,7 +391,7 @@ function regexLimitFields() {
 function refreshRegexPreview() {
   const pat = regexPatternInput.value.trim();
   if (!pat) {
-    regexPreviewText.textContent = 'Enter a regex pattern above.';
+    regexPreviewText.textContent = t('rules_regex_enterPattern');
     regexPreviewPat.textContent = '';
     regexSaveBtn.disabled = true;
     return;
@@ -333,13 +399,13 @@ function refreshRegexPreview() {
   try {
     new RegExp(pat);
   } catch (e) {
-    regexPreviewText.textContent = `Invalid pattern: ${e.message}`;
+    regexPreviewText.textContent = t('rules_regex_invalid', [e.message]);
     regexPreviewPat.textContent = '';
     regexSaveBtn.disabled = true;
     return;
   }
   const always = parseInt(document.querySelector('#regex-limit').value) === 0;
-  regexPreviewText.textContent = always ? 'Will always block URLs matching this pattern.' : 'Will block URLs matching this pattern.';
+  regexPreviewText.textContent = always ? t('rules_regex_alwaysBlock') : t('rules_regex_willBlock');
   regexPreviewPat.textContent = pat;
   regexSaveBtn.disabled = false;
 }
@@ -364,7 +430,9 @@ regexSaveBtn.addEventListener('click', async () => {
   const fields = regexLimitFields();
   if (isNaN(fields.limit) || fields.limit < 0) return;
 
-  await addRule({ pattern: pat, matchType: 'regex', ...fields });
+  const newRule = { pattern: pat, matchType: 'regex', ...fields };
+  if (!await requestPermissionFor(newRule)) return;
+  await addRule(newRule);
   regexPatternInput.value = '';
   syncRegexClear();
   refreshRegexPreview();
@@ -385,12 +453,12 @@ function kwLimitFields() {
 function refreshKwPreview() {
   const kw = kwInput.value.trim();
   if (!kw) {
-    kwPreviewText.textContent = 'Enter a keyword above.';
+    kwPreviewText.textContent = t('rules_kw_enterKeyword');
     kwSaveBtn.disabled = true;
     return;
   }
   const always = parseInt(document.querySelector('#keyword-limit').value) === 0;
-  kwPreviewText.textContent = always ? `Will always block URLs containing "${kw}".` : `Will block URLs containing "${kw}".`;
+  kwPreviewText.textContent = always ? t('rules_kw_alwaysBlock', [kw]) : t('rules_kw_willBlock', [kw]);
   kwSaveBtn.disabled = false;
 }
 
@@ -413,7 +481,9 @@ kwSaveBtn.addEventListener('click', async () => {
   const fields = kwLimitFields();
   if (isNaN(fields.limit) || fields.limit < 0) return;
 
-  await addRule({ keyword: kw, matchType: 'keyword', ...fields });
+  const newRule = { keyword: kw, matchType: 'keyword', ...fields };
+  if (!await requestPermissionFor(newRule)) return;
+  await addRule(newRule);
   kwInput.value = '';
   syncKwClear();
   refreshKwPreview();
@@ -427,13 +497,13 @@ function editDropdown(id, options, selected) {
   const items = options.map(o => `<button type="button" value="${o.value}">${o.label}</button>`).join('');
   return `
     <div class="custom-dropdown">
-      <button type="button" class="dropdown-btn ${id}-btn" data-value="${selected}">${label}<span class="dropdown-arrow">▼</span></button>
+      <button type="button" class="dropdown-btn ${id}-btn" data-value="${selected}">${label}<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
       <div class="dropdown-menu ${id}-menu">${items}</div>
     </div>`;
 }
 
-const UNIT_OPTIONS   = [{ value: 'minutes', label: 'min' }, { value: 'hours', label: 'hours' }, { value: 'days', label: 'days' }];
-const PERIOD_OPTIONS = [{ value: 'hour', label: 'hour' }, { value: 'day', label: 'day' }, { value: 'week', label: 'week' }];
+const UNIT_OPTIONS   = [{ value: 'minutes', label: t('unit_minutes') }, { value: 'hours', label: t('unit_hours') }, { value: 'days', label: t('unit_days') }];
+const PERIOD_OPTIONS = [{ value: 'hour', label: t('period_hour') }, { value: 'day', label: t('period_day') }, { value: 'week', label: t('period_week') }];
 
 function openRowEditor(id) {
   const rule = currentRules.find(r => r.id === id);
@@ -446,10 +516,15 @@ function openRowEditor(id) {
       ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
-      <button class="save-edit-btn square-btn" data-id="${id}">✓</button>
-      <button class="cancel-edit-btn square-btn">↩</button>
+      <button class="save-edit-btn square-btn" data-id="${id}">
+        <span class="icon-mask icon-check"></span>
+      </button>
+      <button class="cancel-edit-btn square-btn">
+        <span class="icon-mask icon-undo"></span>
+      </button>
     </div>`);
   initCustomDropdowns(li);
+  enhanceNumberInputEl(li.querySelector('.edit-limit'));
   constrainLimitForm('edit', li);
   if (rule.limit === 0) {
     li.querySelector('.edit-unit-btn').disabled = true;
@@ -470,9 +545,12 @@ function openRowEditor(id) {
 }
 
 rulesList.addEventListener('click', async (e) => {
-  if (e.target.classList.contains('cancel-edit-btn')) { render(); return; }
-  if (e.target.classList.contains('save-edit-btn')) {
-    const id = e.target.dataset.id;
+  const btn = e.target.closest('button');
+  if (!btn) return;
+
+  if (btn.classList.contains('cancel-edit-btn')) { render(); return; }
+  if (btn.classList.contains('save-edit-btn')) {
+    const id = btn.dataset.id;
     const limit = parseInt(rulesList.querySelector('.edit-limit').value);
     if (isNaN(limit) || limit < 0) return;
     await updateRule(id, {
@@ -484,11 +562,15 @@ rulesList.addEventListener('click', async (e) => {
     return;
   }
 
-  const id = e.target.dataset.id;
+  const id = btn.dataset.id;
   if (!id) return;
-  if (e.target.classList.contains('edit-btn'))   { await render(); openRowEditor(id); return; }
-  if (e.target.classList.contains('toggle-btn')) await toggleRule(id);
-  if (e.target.classList.contains('delete-btn')) await deleteRule(id);
+  if (btn.classList.contains('edit-btn'))   { await render(); openRowEditor(id); return; }
+  if (btn.classList.contains('toggle-btn')) await toggleRule(id);
+  if (btn.classList.contains('delete-btn')) {
+    const deleted = currentRules.find(r => r.id === id);
+    await deleteRule(id);
+    if (deleted) await releasePermissionFor(deleted, currentRules.filter(r => r.id !== id));
+  }
   render();
 });
 
@@ -565,7 +647,7 @@ async function renderStats() {
   }
   const activeEl = document.querySelector('#stat-active');
   activeEl.innerHTML = rules.length
-    ? `${activeCount}<span class="stat-sub"> out of ${rules.length}</span>`
+    ? `${activeCount}<span class="stat-sub"> ${t('rules_outOf', [rules.length])}</span>`
     : activeCount;
   document.querySelector('#stat-avg').textContent = avgPerDay;
 
@@ -647,6 +729,7 @@ if (prefillTarget) {
   // Open the add card if pre-filled from "Limit this site"
   addCard.classList.add('open');
   addCardBody.removeAttribute('hidden');
+  formTarget.focus();
 }
 
 initCustomDropdowns();
@@ -675,23 +758,27 @@ render();
 
 // ── Tour ──
 
-const rulesTourSteps = [
+function rulesTourSteps() { return [
   {
     selector: '#rules-grid',
-    title: 'Your rules',
-    body: 'This page shows your existing rules and general stats about how often they block.',
+    title: t('tour_rules_yourRules_title'),
+    body: t('tour_rules_yourRules_body'),
   },
   {
     selector: '#add-card',
-    title: 'Add a rule',
-    body: 'Use this form to set a time limit for any site. Choose the scope, set a limit, and click Add rule.',
+    title: t('tour_rules_addRule_title'),
+    body: t('tour_rules_addRule_body'),
   },
   {
     selector: '#back-btn',
-    title: 'Back to the dashboard',
-    body: `Click the ${BRAND_NAME} logo to return to the dashboard and continue the tour.`,
+    title: t('tour_rules_back_title'),
+    body: t('tour_rules_back_body', [BRAND_NAME]),
     handoff: { nextSurface: 'dashboard', nextStepIndex: 8, mode: 'crossDocument' },
   },
-];
+]; }
 
-autoStartIfMatches('rules', rulesTourSteps);
+enhanceNumberInput('form-limit');
+enhanceNumberInput('keyword-limit');
+enhanceNumberInput('regex-limit');
+
+autoStartIfMatches('rules', rulesTourSteps());

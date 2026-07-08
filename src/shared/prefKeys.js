@@ -6,3 +6,8 @@ export const PREF_LAST_EXPORT_AT = 'lastExportAt';
 export const PREF_BADGE_ENABLED = 'badgeEnabled';
 export const PREF_FIRST_BROWSE_BY_DAY = 'firstBrowseByDay';
 export const PREF_FAVORITE_QUOTE_IDS = 'favoriteQuoteIds';
+export const PREF_LANGUAGE = 'language';
+
+// Hidden dev toggle, not exposed on settings page. Off by default before
+// release; enable manually via console: chrome.storage.local.set({quotesEnabled: true})
+export const PREF_QUOTES_ENABLED = 'quotesEnabled';

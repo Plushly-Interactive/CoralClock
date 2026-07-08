@@ -1,0 +1,23 @@
+name: Package Extension
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ZIP
+        run: zip -r coral-clock.zip manifest.json src/ resources/ _locales/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: coral-clock.zip
+          generate_release_notes: true

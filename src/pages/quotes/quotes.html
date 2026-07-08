@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Reef – Saved Quotes</title>
+    <link rel="icon" href="../../../resources/icons/brand/icon16.png" />
+    <title>Saved Quotes - Coral Clock</title>
     <script src="../../shared/theme.js"></script>
     <link rel="stylesheet" href="../../shared/theme.css" />
     <link rel="stylesheet" href="./quotes.css" />
@@ -11,14 +12,14 @@
     <header>
       <div id="header-left">
         <a id="back-btn" href="../dashboard/dashboard.html">
-          <img src="../../../resources/icons/reef-icon-square-48px.png" alt="Reef">
+          <img src="../../../resources/icons/brand/logo.svg" alt="Coral Clock">
         </a>
       </div>
-      <div id="header-center"><h1 class="page-title">Saved quotes</h1></div>
+      <div id="header-center"><h1 class="page-title" data-i18n="quotes_pageTitle">Saved quotes</h1></div>
       <div id="header-right"></div>
     </header>
     <main id="quotes-main">
-      <p id="empty-state" class="text-meta" hidden>No saved quotes yet. Tap &#9825; on the blocked page to save one.</p>
+      <p id="empty-state" class="text-meta" hidden data-i18n="quotes_empty">No saved quotes yet. Tap &#9825; on the blocked page to save one.</p>
       <div id="quotes-list"></div>
     </main>
     <script type="module" src="./quotes.js"></script>

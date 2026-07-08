@@ -1,8 +1,8 @@
 # Architecture
 
-BiteGuard has two halves: **tracking** (track per-site and per-subpage time) and **enforcement** (block sites after a limit). Both are implemented. Tracking is an event-sourced aggregator; enforcement is a pure limit-checker (`computeOverage` in `enforcement.js`) that publishes `declarativeNetRequest` redirect rules to `blocked.html` (`publishOverage`).
+This app has two halves: **tracking** (track per-site and per-subpage time) and **enforcement** (block sites after a limit). Both are implemented. Tracking is an event-sourced aggregator; enforcement is a pure limit-checker (`computeOverage` in `enforcement.js`) that publishes `declarativeNetRequest` redirect rules to `blocked.html` (`publishOverage`).
 
-Tracking is an *event-sourced aggregator* running in the background service worker. Chrome events mutate in-memory presence ranges, a 1-minute alarm flushes those ranges as rows to an IndexedDB log (`biteguard-intervals`), and UI pages derive their aggregates from the rows at read time. The UI is strictly read-only over tracking data; it never writes them. Time totals and visit counts are **not stored** — everything is derived from the interval rows.
+Tracking is an *event-sourced aggregator* running in the background service worker. Chrome events mutate in-memory presence ranges, a 1-minute alarm flushes those ranges as rows to an IndexedDB log (`browsing-intervals`), and UI pages derive their aggregates from the rows at read time. The UI is strictly read-only over tracking data; it never writes them. Time totals and visit counts are **not stored** — everything is derived from the interval rows.
 
 ## Tracking flow
 
@@ -11,7 +11,7 @@ flowchart TD
   chrome[1. Chrome events]
   mem[2. In-memory ranges]
   flush[3. Flush alarm, 1 min]
-  store[4. biteguard-intervals IndexedDB]
+  store[4. browsing-intervals IndexedDB]
   snap[_intervalSnapshot]
   agg[5. Derived aggregates, page-side]
   ui[6. UI pages, read-only]
@@ -30,7 +30,7 @@ flowchart TD
 1. **Chrome events** - `chrome.tabs`, `chrome.windows`, `chrome.webNavigation`, `chrome.idle`.
 2. **In-memory ranges** - the live tracker (`intervalTracker.js`) keeps per-window/per-tab presence state keyed on `domain+path`; the range engine turns transitions into closed `[from, to)` ranges per `kind`.
 3. **Flush alarm** - every 1 min `background.js` calls the tracker's `flushNow()`, which recovers from the snapshot, reconciles window/tab state, applies idle clipping, and writes the pending ranges as interval rows.
-4. **`biteguard-intervals` IndexedDB** - one store, one row per closed range `{ domain, path, kind, from, to }`, `kind ∈ active|audio|idle`. `overlap` (= active ∩ audio) is **not** stored; nor are time totals or visit counts.
+4. **`browsing-intervals` IndexedDB** - one store, one row per closed range `{ domain, path, kind, from, to }`, `kind ∈ active|audio|idle`. `overlap` (= active ∩ audio) is **not** stored; nor are time totals or visit counts.
 5. **Derived aggregates (page-side)** - `intervalAggregates.js` scans the rows and reconstructs the day/hour site and subpage shapes, visit counts, and the avg-per-clock-hour series. Nothing is pre-aggregated in storage.
 6. **UI pages (read-only)** - `dashboard`, `site`, `path` read through `loadMergedTrackingData` (interval rows, stitched over frozen legacy buckets for pre-interval days). They never write tracking data.
 
@@ -93,7 +93,7 @@ erDiagram
   }
 ```
 
-`intervals` lives in the `biteguard-intervals` IndexedDB (via Dexie). The four bucket maps, `rules`, `_intervalSnapshot` and `storageVersion` live in `chrome.storage.local`. The bucket maps are **frozen**: read-only legacy, no live writer.
+`intervals` lives in the `browsing-intervals` IndexedDB (via Dexie). The four bucket maps, `rules`, `_intervalSnapshot` and `storageVersion` live in `chrome.storage.local`. The bucket maps are **frozen**: read-only legacy, no live writer.
 
 ### Ownership
 
@@ -136,7 +136,7 @@ Implemented in `enforcement.js`, driven from `background.js`. `computeOverage(ru
 | Background wiring | `src/background/background.js` | favicon cache, badge, the single 1-min `flush` alarm, enforcement check, pre-emptive block |
 | Live tracker | `src/background/intervalTracker.js` | self-registers tab/window/SPA/idle listeners; configures the engine with a composite `domain+path` key and `_intervalSnapshot`; exports `flushNow()` and the raw `flushToStorage` drain |
 | Range engine | `src/background/intervalTrackingUtils.js` | generic presence-range state machine (`createTrackingModule` + `createRangeTracker`); snapshot/recover, idle clip; `flushToStorage` writes interval rows |
-| Interval store | `src/data/intervalLog.js` | the `biteguard-intervals` IndexedDB; row CRUD, `allIntervals`, `intervalsSince`, `intervalStats` |
+| Interval store | `src/data/intervalLog.js` | the `browsing-intervals` IndexedDB; row CRUD, `allIntervals`, `intervalsSince`, `intervalStats` |
 | Derived aggregates | `src/data/intervalAggregates.js` | reconstructs day/hour site & subpage shapes, visits, avg-per-hour from rows; `usageSince`, `earliestDayKey` |
 | Merged reader | `src/data/mergeDataSources.js`, `intervalProvider.js`, `bucketProvider.js` | page-side read; stitches interval days over frozen buckets |
 | URL resolution | `src/background/siteResolution.js` | `siteIdFromUrl`, `pathFromUrl` |

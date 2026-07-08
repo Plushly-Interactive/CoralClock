@@ -1,6 +1,6 @@
 # Guided feature tour
 
-A user-triggered walkthrough that introduces BiteGuard's main
+A user-triggered walkthrough that introduces the app's main
 surfaces — dashboard, popup, site detail, path detail, storage
 pruning — using a spotlight overlay and stepped tooltips. The tour
 runs automatically the first time the extension is opened after
@@ -10,7 +10,7 @@ dashboard header.
 ## User stories
 
 - As a new user, I want a guided tour to start automatically the
-first time I open BiteGuard so I understand what each surface does
+first time I open the app so I understand what each surface does
 without reading documentation.
 - As a returning user, I want to replay the tour from a visible
 button so I can refresh my memory or show someone else.

@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 export function dayKeysForRange(range, allDaysSource) {
   if (range === 'today') return [localDayKey(Date.now())];
   if (range === 'all') return Object.keys(allDaysSource ?? {}).sort();
@@ -43,24 +45,24 @@ export function formatMs(ms) {
   const hStr = Math.floor(hours);
   const dRounded = Math.round(days * 10) / 10;
   const dStr = dRounded >= 10 || dRounded % 1 === 0 ? Math.round(dRounded) : dRounded.toFixed(1);
-  return `${hStr}h (${dStr}d)`;
+  return `${hStr}h (${dStr}${t('unit_daysShort')})`;
 }
 
 export function formatMsAsDays(ms) {
   const days = ms / 86400000;
-  if (days === Math.floor(days)) return `${Math.floor(days)}d`;
-  return `${days.toFixed(1)}d`;
+  const dStr = days === Math.floor(days) ? Math.floor(days) : days.toFixed(1);
+  return `${dStr}${t('unit_daysShort')}`;
 }
 
 // Human span between two dates (Date-parseable: 'YYYY-MM-DD' strings or ms).
 export function formatSpan(earliest, latest) {
   const days = Math.round((new Date(latest) - new Date(earliest)) / 86400000);
-  if (days < 1)   return '1 day';
-  if (days < 14)  return `${days} day${days !== 1 ? 's' : ''}`;
-  if (days < 60)  { const w = Math.round(days / 7);  return `${w} week${w !== 1 ? 's' : ''}`; }
-  if (days < 730) { const m = Math.round(days / 30.44); return `${m} month${m !== 1 ? 's' : ''}`; }
+  if (days < 1)   return t('span_day_one', [1]);
+  if (days < 14)  return t(days !== 1 ? 'span_day_other' : 'span_day_one', [days]);
+  if (days < 60)  { const w = Math.round(days / 7);  return t(w !== 1 ? 'span_week_other' : 'span_week_one', [w]); }
+  if (days < 730) { const m = Math.round(days / 30.44); return t(m !== 1 ? 'span_month_other' : 'span_month_one', [m]); }
   const y = (days / 365.25).toFixed(1);
-  return `${y} year${y !== '1.0' ? 's' : ''}`;
+  return t(y !== '1.0' ? 'span_year_other' : 'span_year_one', [y]);
 }
 
 export const DEFAULT_CLOCK_FORMAT = '24h';

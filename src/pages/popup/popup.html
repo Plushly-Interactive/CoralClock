@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8" />
-  <title>Reef</title>
+  <link rel="icon" href="../../../resources/icons/brand/icon16.png" />
+  <title>Coral Clock</title>
   <script src="../../shared/theme.js"></script>
   <link rel="stylesheet" href="../../shared/theme.css" />
   <link rel="stylesheet" href="../../shared/tour.css" />
@@ -14,16 +15,11 @@
 <body>
   <header>
     <div id="brand">
-      <img id="brand-logo" src="../../../resources/icons/reef-icon-square-48px.png" alt="Reef" />
-      <div id="brand-text">
-        <span id="brand-name">Reef</span>
-        <span id="brand-tagline">Surf Mindfully</span>
-      </div>
+      <span class="brand-word brand-coral">Coral</span>
+      <img id="brand-logo" src="../../../resources/icons/brand/logo.svg" alt="Coral Clock" />
+      <span class="brand-word brand-clock">Clock</span>
     </div>
     <div id="popup-header-btns">
-      <button id="dashboard-btn" class="btn">
-        Dashboard
-      </button>
       <div id="theme-menu">
         <button id="theme-btn" class="square-btn">
           <svg id="moon-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -44,45 +40,48 @@
           </svg>
         </button>
         <div id="theme-dropdown" class="dropdown-menu">
-          <button value="system">System</button>
-          <button value="light">Light</button>
-          <button value="dark">Dark</button>
+          <button value="system" data-i18n="theme_system">System</button>
+          <button value="light" data-i18n="theme_light">Light</button>
+          <button value="dark" data-i18n="theme_dark">Dark</button>
         </div>
       </div>
+      <button id="dashboard-btn" class="btn" data-i18n="popup_dashboardBtn">
+        Dashboard
+      </button>
     </div>
   </header>
 
   <div id="popup-body">
     <div id="stats-panel">
       <div id="stats-header">
-        <h2 class="panel-title">Today's overview</h2>
+        <h2 class="panel-title" data-i18n="popup_statsToday">Today's overview</h2>
         <span class="stat-value" id="stats-total-time">—</span>
       </div>
       <div id="stats-content">
       <svg id="stats-hour-chart"></svg>
       <div id="stats-grid">
         <div class="stat-cell">
-          <span class="stat-label">Sites</span>
+          <span class="stat-label" data-i18n="popup_statsSites">Sites</span>
           <span class="stat-value" id="stats-sites-count">—</span>
         </div>
         <div class="stat-cell">
-          <span class="stat-label">vs 7d avg</span>
+          <span class="stat-label" data-i18n="popup_statsVsAvg">vs 7d avg</span>
           <span class="stat-value" id="stats-vs-avg">—</span>
         </div>
         <div class="stat-cell">
-          <span class="stat-label">Peak hour</span>
+          <span class="stat-label" data-i18n="popup_statsPeakHour">Peak hour</span>
           <span class="stat-value" id="stats-peak-hour">—</span>
         </div>
         <div class="stat-cell">
-          <span class="stat-label">First browse</span>
+          <span class="stat-label" data-i18n="popup_statsFirstBrowse">First browse</span>
           <span class="stat-value" id="stats-first-browse">—</span>
         </div>
         <div class="stat-cell">
-          <span class="stat-label">Tab visits</span>
+          <span class="stat-label" data-i18n="popup_statsTabVisits">Tab visits</span>
           <span class="stat-value" id="stats-sessions">—</span>
         </div>
         <div class="stat-cell">
-          <span class="stat-label">Idle</span>
+          <span class="stat-label" data-i18n="popup_statsIdle">Idle</span>
           <span class="stat-value" id="stats-idle">—</span>
         </div>
       </div>
@@ -90,8 +89,8 @@
     </div>
     <div id="rules-panel">
       <div id="rules-header">
-        <h2 id="rules-title" class="panel-title">Active rules</h2>
-        <button id="manage-btn" class="btn">Manage rules</button>
+        <h2 id="rules-title" class="panel-title" data-i18n="popup_activeRules">Active rules</h2>
+        <button id="manage-btn" class="btn" data-i18n="popup_manageRulesBtn">Manage rules</button>
       </div>
       <div id="no-rules-message"></div>
       <ul id="rules-list" class="rules-list"></ul>

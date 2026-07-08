@@ -41,20 +41,7 @@
 #tl-nav {
   grid-column: 2;
   grid-row: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 4px;
 }
-
-#tl-nav #tl-label {
-  font-size: var(--font-md);
-  font-weight: 500;
-  min-width: 150px;
-  text-align: center;
-}
-
-#tl-prev, #tl-next { padding: 4px 6px; }
 
 #timeline-legend {
   grid-column: 3;
