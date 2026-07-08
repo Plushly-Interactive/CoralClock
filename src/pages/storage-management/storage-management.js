@@ -287,10 +287,10 @@ async function finalizeBg() {
   closeIo();
   await loadStats();
   const parts = [];
-  if (summary.days) parts.push(t('storage_daysParen', [summary.days]));
-  if (summary.rules) parts.push(t('storage_rulesParen', [summary.rules]));
+  if (summary.days) parts.push(t(summary.days === 1 ? 'storage_daysParen_one' : 'storage_daysParen_other', [summary.days]));
+  if (summary.rules) parts.push(t(summary.rules === 1 ? 'storage_rulesParen_one' : 'storage_rulesParen_other', [summary.rules]));
   if (summary.prefs) parts.push(t('storage_settingsWord'));
-  if (rowCount) parts.push(t('storage_rowsParen', [rowCount.toLocaleString()]));
+  if (rowCount) parts.push(t(rowCount === 1 ? 'storage_rowsParen_one' : 'storage_rowsParen_other', [rowCount.toLocaleString()]));
   showNotification(parts.length ? t('storage_importedParts', [parts.join(', ')]) : t('storage_nothingToImport'));
 }
 
@@ -760,14 +760,14 @@ document.querySelector('#drop-paths-btn').addEventListener('click', async () => 
   c.setHours(0, 0, 0, 0);
   c.setDate(c.getDate() + 1 - days);
   const ok = await confirmDialog({
-    message: t('storage_confirmDropSubpage', [days]),
+    message: t(days === 1 ? 'storage_confirmDropSubpage_one' : 'storage_confirmDropSubpage_other', [days]),
     confirmLabel: t('storage_dropBtn'),
   });
   if (!ok) return;
   const n = await dropPathsBefore(c.getTime());
   invalidate();
   await loadStats();
-  showNotification(n > 0 ? t(n === 1 ? 'storage_removedByCollapsing_one' : 'storage_removedByCollapsing_other', [n.toLocaleString()]) : t('storage_noRowsOlderThan', [days]));
+  showNotification(n > 0 ? t(n === 1 ? 'storage_removedByCollapsing_one' : 'storage_removedByCollapsing_other', [n.toLocaleString()]) : t(days === 1 ? 'storage_noRowsOlderThan_one' : 'storage_noRowsOlderThan_other', [days]));
 });
 
 // --- Favicon cache ---

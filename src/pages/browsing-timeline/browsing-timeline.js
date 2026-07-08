@@ -26,6 +26,8 @@ const tooltip = document.querySelector('#timeline-tooltip');
 const empty = document.querySelector('#timeline-empty');
 const labelEl = document.querySelector('#tl-label');
 
+const KIND_LABEL_KEYS = { active: 'legend_active_lc', audio: 'legend_audio_lc', idle: 'legend_idle' };
+
 const LABEL_W = 180;
 const PAD_R = 0;
 const BAND_H = 20;        // overlapped band height (active = full band)
@@ -343,7 +345,8 @@ function showCursorTip(t, e) {
     const name = escapeHtml(formatHostnameLabel(site.domain));
     const path = escapeHtml(displayPath(d.row.path));
     const range = `${formatTimeOfDay(d.row.from, clockFormat)}–${formatTimeOfDay(d.row.to, clockFormat)}`;
-    lines.push(`<div class="tl-tip-path"><span class="tl-tip-name">${name}</span> <span class="text-meta">${range} (${[...d.kinds].join('/')}) ${path}</span></div>`);
+    const kindLabels = [...d.kinds].map(k => i18nT(KIND_LABEL_KEYS[k])).join('/');
+    lines.push(`<div class="tl-tip-path"><span class="tl-tip-name">${name}</span> <span class="text-meta">${range} (${kindLabels}) ${path}</span></div>`);
   }
   if (lines.length === 0) { tooltip.style.display = 'none'; return; }
   const time = formatTimeOfDay(t, clockFormat);
