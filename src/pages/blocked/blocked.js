@@ -102,9 +102,12 @@ function formatCountdown(ms) {
 
 import { pickQuote } from '../../shared/quotes.js';
 import { QUOTES } from '../../shared/quotes.data.js';
-import { PREF_FAVORITE_QUOTE_IDS } from '../../shared/prefKeys.js';
+import { PREF_FAVORITE_QUOTE_IDS, PREF_QUOTES_ENABLED } from '../../shared/prefKeys.js';
 
 (async () => {
+  const { [PREF_QUOTES_ENABLED]: quotesEnabled = false } = await chrome.storage.local.get(PREF_QUOTES_ENABLED);
+  if (!quotesEnabled) return;
+
   const quoteId = params.get('quoteId');
   const q = quoteId
     ? (QUOTES.find(q => q.id === quoteId) ?? await pickQuote(site ?? ''))

@@ -49,6 +49,10 @@ body {
   margin-bottom: 28px;
 }
 
+#card:has(#quote[hidden]) #stats-grid {
+  margin-bottom: 0;
+}
+
 #quote {
   font-size: var(--font-sm);
   font-style: italic;
@@ -85,6 +89,10 @@ body {
   justify-content: center;
   gap: 10px;
   margin-top: 10px;
+}
+
+#quote-actions[hidden] {
+  display: none;
 }
 
 #fav-btn {
