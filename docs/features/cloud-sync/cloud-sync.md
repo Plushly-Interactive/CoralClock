@@ -95,7 +95,7 @@ put a network round-trip on the navigation hot path.
 
 ### Client storage changes
 
-**IndexedDB (`biteguard-intervals`)** — additive, engine untouched:
+**IndexedDB (`browsing-intervals`)** — additive, engine untouched:
 
 | Field | On which rows | Purpose |
 |---|---|---|

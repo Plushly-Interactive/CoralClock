@@ -74,7 +74,7 @@ beside the real one.
 | Stack | Files | Store | Read by |
 |---|---|---|---|
 | Scalar (live) | `siteTracking.js`, `subpageTracking.js`, `trackingUtils.js`, driven by `background.js` listeners | `sitesByDay/Hour`, `subpagesByDay/Hour` in `chrome.storage.local` | main dashboard, site, path (via background message API) |
-| Interval (live, experiment) | `intervalTracker.js`, `intervalTrackingUtils.js`, `intervalPageTracking.js`, `intervalLog.js`, `intervalAggregates.js` | `biteguard-intervals` IndexedDB | interval-dashboard only (page-side) |
+| Interval (live, experiment) | `intervalTracker.js`, `intervalTrackingUtils.js`, `intervalPageTracking.js`, `intervalLog.js`, `intervalAggregates.js` | `browsing-intervals` IndexedDB | interval-dashboard only (page-side) |
 
 ### Target state (one stack)
 

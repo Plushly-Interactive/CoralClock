@@ -6,7 +6,7 @@ import Dexie from '../vendor/dexie.min.mjs';
 // time aggregates AND visit counts are derived from these ranges at read time.
 // No secondary index — the only reader (intervalAggregates) scans the whole
 // store, so an index would be dead weight.
-const db = new Dexie('biteguard-intervals');
+const db = new Dexie('browsing-intervals');
 db.version(1).stores({
   intervals: '++id',
 });
