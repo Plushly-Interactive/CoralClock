@@ -176,6 +176,17 @@
   "unit_minutes": { "message": "min" },
   "unit_hours": { "message": "hours" },
   "unit_days": { "message": "days" },
+  "unit_daysShort": { "message": "d" },
+  "chart_clickToOpen": { "message": "(click to open detailed chart)" },
+
+  "span_day_one": { "message": "$1 day" },
+  "span_day_other": { "message": "$1 days" },
+  "span_week_one": { "message": "$1 week" },
+  "span_week_other": { "message": "$1 weeks" },
+  "span_month_one": { "message": "$1 month" },
+  "span_month_other": { "message": "$1 months" },
+  "span_year_one": { "message": "$1 year" },
+  "span_year_other": { "message": "$1 years" },
 
   "rules_pageTitle": { "message": "Rules" },
   "rules_overview": { "message": "Overview" },

@@ -133,6 +133,13 @@
 .hour-dropdown .dropdown-arrow { color: var(--color-text-secondary); }
 .date-dropdown .dropdown-btn { min-width: 120px; }
 
+.date-btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 .date-btn-icon {
   width: var(--icon-size-inline);
   height: var(--icon-size-inline);
@@ -158,7 +165,7 @@
 
 /* Hourly data */
 #drop-stores { display: flex; gap: 12px; }
-#drop-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#drop-row { display: flex; align-items: center; gap: 10px; }
 
 /* Data health */
 .health-status { display: flex; align-items: center; gap: 8px; }

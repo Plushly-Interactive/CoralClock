@@ -126,6 +126,10 @@
   grid-column: span 2;
 }
 
+#io-section-csv .io-btn {
+  flex: none;
+}
+
 #io-conflict-view {
   margin-top: 20px;
 }

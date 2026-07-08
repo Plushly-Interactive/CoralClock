@@ -7,16 +7,26 @@ import { PREF_LANGUAGE } from './prefKeys.js';
 export const DEFAULT_LANGUAGE = 'auto';
 
 let overrideMessages = null;
+let currentLocale;
 
 export async function initI18n() {
   const stored = (await chrome.storage.local.get(PREF_LANGUAGE))[PREF_LANGUAGE];
   const lang = stored || DEFAULT_LANGUAGE;
   if (lang === DEFAULT_LANGUAGE) {
     overrideMessages = null;
+    currentLocale = undefined;
     return;
   }
   const res = await fetch(chrome.runtime.getURL(`_locales/${lang}/messages.json`));
   overrideMessages = res.ok ? await res.json() : null;
+  // 'en-GB' (not bare 'en') keeps day-before-month order, matching fr/es.
+  currentLocale = !overrideMessages ? undefined : lang === 'en' ? 'en-GB' : lang;
+}
+
+// BCP47 locale for Intl.DateTimeFormat (weekday/month names), matching the
+// user's language pick. undefined falls back to the browser's own locale.
+export function getLocale() {
+  return currentLocale;
 }
 
 export function t(key, subs) {

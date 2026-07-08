@@ -286,19 +286,19 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
         const seriesLines = rect.dataset.seriesList.split('\n');
         const seriesHtml = seriesLines.map(line => formatWithSmallSub(line)).join('<br>');
         html = `${seriesHtml}<br>${rect.dataset.range}`;
-        if (onBarClick) html += '<br><span class="text-hint">(click to open detailed chart)</span>';
+        if (onBarClick) html += `<br><span class="text-hint">${t('chart_clickToOpen')}</span>`;
         tooltipEl.innerHTML = html;
       } else if (rect.dataset.series) {
         const text = `${rect.dataset.series}: ${rect.dataset.format} / ${rect.dataset.range}`;
         if (onBarClick) {
-          tooltipEl.innerHTML = `${text}<br><span class="text-hint">(click to open detailed chart)</span>`;
+          tooltipEl.innerHTML = `${text}<br><span class="text-hint">${t('chart_clickToOpen')}</span>`;
         } else {
           tooltipEl.textContent = text;
         }
       } else {
         const val = Number(rect.dataset.val);
         let text = val === 0 ? rect.dataset.range : formatWithSmallSub(formatTooltip(val)) + '<br>' + rect.dataset.range;
-        if (onBarClick) text += '<br><span class="text-hint">(click to open detailed chart)</span>';
+        if (onBarClick) text += `<br><span class="text-hint">${t('chart_clickToOpen')}</span>`;
         if (onBarClick || val > 0) {
           tooltipEl.innerHTML = text;
         } else {

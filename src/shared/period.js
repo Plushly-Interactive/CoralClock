@@ -1,5 +1,6 @@
 import { localDayKey } from './timeUtils.js';
 import { weekKeyForDate, daysInWeek, navigateWeek } from './weekStart.js';
+import { getLocale } from './i18n.js';
 
 // Period-string helpers shared by the drill views and the timeline. A period is one
 // of three string shapes, told apart by length:
@@ -14,20 +15,21 @@ export function periodLevel(period) {
 
 // Human label for the nav strip.
 export function formatPeriodLabel(period) {
+  const locale = getLocale();
   if (period.length === 7) {
     const [y, m] = period.split('-');
-    return new Date(+y, +m - 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    return new Date(+y, +m - 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
   }
   if (period.length === 11) {
     const [y, m, d] = period.slice(0, 10).split('-').map(Number);
     const start = new Date(y, m - 1, d);
     const end = new Date(y, m - 1, d + 6);
-    const startStr = start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    const endStr = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const startStr = start.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+    const endStr = end.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
     return `${startStr} – ${endStr}`;
   }
   const [y, m, d] = period.split('-');
-  return new Date(+y, +m - 1, +d).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(+y, +m - 1, +d).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 // Previous/next period at the same level. Returns the new string (no side effects).

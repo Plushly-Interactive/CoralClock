@@ -21,6 +21,7 @@ export function buildDatePicker(id, initDateStr, onChange) {
   btn.className = 'dropdown-btn';
   btn.dataset.value = initDateStr || '';
   btn.innerHTML = `<span class="date-btn-label">${initDateStr || t('datePicker_selectDate')}</span><span class="icon-mask icon-calendar date-btn-icon"></span>`;
+  btn.querySelector('.date-btn-label').title = initDateStr || t('datePicker_selectDate');
 
   const popup = document.createElement('div');
   popup.className = 'dropdown-menu calendar-popup';
@@ -125,7 +126,9 @@ export function buildDatePicker(id, initDateStr, onChange) {
       dayBtn.textContent = d;
       dayBtn.addEventListener('click', () => {
         btn.dataset.value = key;
-        btn.querySelector('.date-btn-label').textContent = key;
+        const label = btn.querySelector('.date-btn-label');
+        label.textContent = key;
+        label.title = key;
         popup.classList.remove('open');
         if (onChange) onChange();
       });
@@ -163,7 +166,9 @@ export function buildDatePicker(id, initDateStr, onChange) {
     viewMonth = now.getMonth();
     const key = localDayKey(now.getTime());
     btn.dataset.value = key;
-    btn.querySelector('.date-btn-label').textContent = key;
+    const label = btn.querySelector('.date-btn-label');
+    label.textContent = key;
+    label.title = key;
     popup.classList.remove('open');
     if (onChange) onChange();
   });

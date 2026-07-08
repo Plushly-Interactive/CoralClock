@@ -461,6 +461,7 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 16px;
+  white-space: nowrap;
 }
 
 .dropdown-arrow {
