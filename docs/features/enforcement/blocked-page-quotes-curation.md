@@ -2,7 +2,7 @@
 
 ## Overview
 
-The blocked page quotes system displays time-of-day specific quotes to users when they hit a time limit. Quote curation follows a rigorous vetting process to ensure quality, authenticity, and alignment with BiteGuard's wellbeing-first philosophy.
+The blocked page quotes system displays time-of-day specific quotes to users when they hit a time limit. Quote curation follows a rigorous vetting process to ensure quality, authenticity, and alignment with the app's wellbeing-first philosophy.
 
 **Quality assurance:** While initial quote suggestions may come from AI assistance, every single quote in the system has been manually reviewed for accuracy, tone, ethics, and fit. No quote is added without human verification across all criteria below.
 
@@ -22,7 +22,7 @@ Every quote must have a verified author. If the quote exists but the author is u
 
 **Apocryphal attribution:** Many quotes widely attributed online have no traceable primary source. If Quote Investigator, academic Rumi scholarship, or similar authoritative debunking sources flag a quote as apocryphal, remove it regardless of how widely it circulates. Internet popularity is not evidence of authenticity.
 
-**Why:** Unattributed or misattributed quotes undermine BiteGuard's credibility. If a user clicks the source link and finds no match, the extension loses trust.
+**Why:** Unattributed or misattributed quotes undermine the app's credibility. If a user clicks the source link and finds no match, the extension loses trust.
 
 ### 2. Ethical Vetting
 
@@ -43,7 +43,7 @@ Authors must be ethically sound. Exclude authors with documented:
 - Public controversies or scandals
 - Documented harm to vulnerable populations
 
-**Why:** BiteGuard is a wellness tool. Attributing wisdom to ethically compromised figures undermines the message and contradicts our values of care and integrity.
+**Why:** This app is a wellness tool. Attributing wisdom to ethically compromised figures undermines the message and contradicts our values of care and integrity.
 
 ### 3. Tone & Philosophy
 
@@ -62,7 +62,7 @@ Avoid explicit religious language or theology:
 - ❌ "holy ground," "blessed," explicit deity references, sectarian doctrine
 - ✓ Spiritual or philosophical quotes without explicit religious framing
 
-**Why:** BiteGuard serves a global, multi-faith user base. Explicit religious messaging alienates users outside that tradition.
+**Why:** This app serves a global, multi-faith user base. Explicit religious messaging alienates users outside that tradition.
 
 ### 5. Author Diversity
 
@@ -74,7 +74,7 @@ Balance across author types and demographics:
 - **Gender diversity in named authors:** Aim for balanced representation across genders
 - **Political & philosophical alignment:** Prioritize authors whose work centers human wellbeing, equity, and collective care over individual wealth accumulation or competitive advantage. Authors should demonstrate values aligned with rest, sustainable living, and systemic care rather than extraction or hustle narratives.
 
-**Why:** Proverbs provide cultural depth without individual bias. Scientists ground the message in evidence. Named authors add relatability. Gender diversity ensures diverse voices are equally represented. Political/philosophical alignment ensures the quotes reinforce BiteGuard's core mission: rest and wellbeing are not luxuries but human rights.
+**Why:** Proverbs provide cultural depth without individual bias. Scientists ground the message in evidence. Named authors add relatability. Gender diversity ensures diverse voices are equally represented. Political/philosophical alignment ensures the quotes reinforce the app's core mission: rest and wellbeing are not luxuries but human rights.
 
 ### 6. Quote Verification
 
@@ -121,11 +121,11 @@ Quotes are grouped by local time to match user context:
 
 ## Site-Specific Quotes
 
-Site-specific quotes (e.g., YouTube, Reddit) are original content crafted by the BiteGuard team. They do not require author attribution or sourcing because they are contextual nudges written in BiteGuard's voice, addressing friction points specific to each platform (algorithms, comment sections, autoplay, scrolling patterns). They reinforce the app's wellbeing-first philosophy without leveraging external authority — the message comes from BiteGuard's understanding of these platforms' behavioral design.
+Site-specific quotes (e.g., YouTube, Reddit) are original content crafted by the team. They do not require author attribution or sourcing because they are contextual nudges written in the app's voice, addressing friction points specific to each platform (algorithms, comment sections, autoplay, scrolling patterns). They reinforce the app's wellbeing-first philosophy without leveraging external authority — the message comes from the app's understanding of these platforms' behavioral design.
 
 ## Signature Quotes
 
-Signature quotes are mascot character quotes written by the BiteGuard team, marked with `signature: true`. They have a 10% draw chance across all time slots and are filtered by `timeOfDay` like regular quotes.
+Signature quotes are mascot character quotes written by the team, marked with `signature: true`. They have a 10% draw chance across all time slots and are filtered by `timeOfDay` like regular quotes.
 
 **Current mascots:**
 
@@ -135,7 +135,7 @@ Signature quotes are mascot character quotes written by the BiteGuard team, mark
 **Authorship rules for signature quotes:**
 
 - `author` is required and must be the character's name with emoji (e.g., `"PwetPwet 🦈"`, `"Toot 🦊"`)
-- `source` and `philosophySource` are omitted — these are original BiteGuard content
+- `source` and `philosophySource` are omitted — these are original content
 - IDs follow the pattern `sig-[character]-[timeOfDay]-[n]` (e.g., `sig-toot-n-1`, `sig-m-3` for PwetPwet)
 - Tone must stay in character — do not mix PwetPwet's playfulness with Toot's gravity
 
@@ -157,7 +157,7 @@ Before finalizing any new quote batch:
 - Gender diversity in named authors is balanced
 - Political/philosophical alignment centers human wellbeing and equity
 - Proverb sources are institutional or academic — not blogs or articles written by authors outside the culture
-- Signature quotes (`signature: true`) are exempt from source/philosophySource requirements — they are original BiteGuard content attributed to mascot characters with emoji (e.g., `"PwetPwet 🦈"`, `"Toot 🦊"`)
+- Signature quotes (`signature: true`) are exempt from source/philosophySource requirements — they are original content attributed to mascot characters with emoji (e.g., `"PwetPwet 🦈"`, `"Toot 🦊"`)
 
 ## Examples of Rejected Quotes & Why
 

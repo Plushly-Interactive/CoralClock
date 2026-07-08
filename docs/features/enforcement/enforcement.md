@@ -1,6 +1,6 @@
 # Enforcement
 
-Blocking sites once they cross a configured limit. BiteGuard already tracks time per site; enforcement reads the existing `rules` and tracking data, computes which sites are over their limit, and redirects further requests to a `blocked.html` page until the period rolls over. The enforcement half was implemented in an earlier iteration and deliberately removed during the tracking redesign (see [docs/archive/REDESIGN_ISSUES.md](../archive/REDESIGN_ISSUES.md)); tracking data has since stabilized and this rebuilds enforcement on top of it.
+Blocking sites once they cross a configured limit. The app already tracks time per site; enforcement reads the existing `rules` and tracking data, computes which sites are over their limit, and redirects further requests to a `blocked.html` page until the period rolls over. The enforcement half was implemented in an earlier iteration and deliberately removed during the tracking redesign (see [docs/archive/REDESIGN_ISSUES.md](../archive/REDESIGN_ISSUES.md)); tracking data has since stabilized and this rebuilds enforcement on top of it.
 
 ## User stories
 

@@ -1,6 +1,6 @@
 # Architecture
 
-BiteGuard has two halves: **tracking** (track per-site and per-subpage time) and **enforcement** (block sites after a limit). Both are implemented. Tracking is an event-sourced aggregator; enforcement is a pure limit-checker (`computeOverage` in `enforcement.js`) that publishes `declarativeNetRequest` redirect rules to `blocked.html` (`publishOverage`).
+This app has two halves: **tracking** (track per-site and per-subpage time) and **enforcement** (block sites after a limit). Both are implemented. Tracking is an event-sourced aggregator; enforcement is a pure limit-checker (`computeOverage` in `enforcement.js`) that publishes `declarativeNetRequest` redirect rules to `blocked.html` (`publishOverage`).
 
 Tracking is an *event-sourced aggregator* running in the background service worker. Chrome events mutate in-memory presence ranges, a 1-minute alarm flushes those ranges as rows to an IndexedDB log (`browsing-intervals`), and UI pages derive their aggregates from the rows at read time. The UI is strictly read-only over tracking data; it never writes them. Time totals and visit counts are **not stored** — everything is derived from the interval rows.
 

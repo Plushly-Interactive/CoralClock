@@ -56,7 +56,7 @@ beside the real one.
 - [ ] Only one tracking stack runs in the service worker (one set of listeners,
       one snapshot, one flush alarm).
 - [ ] No data loss: pre-interval days still display; interval days are unchanged.
-- [ ] **Every user data action operates on the interval log:** BiteGuard
+- [ ] **Every user data action operates on the interval log:** the app's
       export/import carries interval rows; CSV export is interval-derived; prune,
       "forget this site" / targeted delete, and storage-health all cover intervals.
 - [ ] **External (Time Tracker) import lands in a separate bucket tier**, and the
@@ -110,7 +110,7 @@ days.
 | `src/background/background.js` | Remove `siteTracking`/`subpageTracking` imports + their listeners. Keep the message API serving buckets read-only for legacy days. |
 | `src/background/siteTracking.js`, `subpageTracking.js`, `trackingUtils.js` | Capture path removed/retired (legacy read helpers may remain if needed). |
 | `src/pages/interval-dashboard/*` | Folded into the main dashboard, then removed. |
-| `src/data/importData.js` | BiteGuard export/import carries interval rows; CSV export interval-derived; external (TT) import routed to the separate bucket tier with a UI notice. |
+| `src/data/importData.js` | Export/import carries interval rows; CSV export interval-derived; external (TT) import routed to the separate bucket tier with a UI notice. |
 | `src/data/prune.js` | Prune the interval log (today buckets only). |
 | `src/data/targetedDelete.js` | "Forget this site" deletes that site's interval rows (today buckets only). |
 | `src/data/healthCheck.js` | Report interval-DB size/health alongside bucket health. |
@@ -178,8 +178,8 @@ span both.
 
 | Action | Today (buckets) | After migration |
 |---|---|---|
-| BiteGuard export | dumps bucket maps + rules + prefs | **also exports the interval log** (raw rows) |
-| BiteGuard import | restores buckets | **also restores interval rows** |
+| Native export | dumps bucket maps + rules + prefs | **also exports the interval log** (raw rows) |
+| Native import | restores buckets | **also restores interval rows** |
 | CSV export | from buckets | **interval-derived** (via `intervalAggregates`), with legacy bucket days stitched |
 | TT (external) export | from `sitesByDay` | interval-derived daily site aggregates |
 | **TT (external) import** | writes `sitesByDay` | **lands in the separate bucket tier** — see below |
@@ -197,7 +197,7 @@ tier**, kept separate from native interval tracking. Where an imported day overl
 a day that also has interval data, the stitch rule (prefer intervals) would shadow
 the import. So the import UI must **explicitly tell the user** this creates a
 **separate dataset** that may not appear alongside — or merge with — native
-tracking for overlapping days. (BiteGuard's own export/import is unaffected: it
+tracking for overlapping days. (The app's own export/import is unaffected: it
 round-trips both tiers natively.)
 
 ## Edge cases

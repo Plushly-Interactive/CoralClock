@@ -1,10 +1,10 @@
 {
   "extName": {
-    "message": "Reef - Screen Time & Website Blocker",
+    "message": "Coral Clock - Screen Time & Website Blocker",
     "description": "Extension name shown in Chrome Web Store and browser UI"
   },
   "extDescription": {
-    "message": "Track time on every website and automatically block sites once your hourly, daily, or weekly limit is reached.",
+    "message": "Cap your screen time. Keep your day. Track time on every website and automatically block sites once your hourly, daily, or weekly limit is reached.",
     "description": "Extension description shown in Chrome Web Store"
   },
 
@@ -378,8 +378,8 @@
   "storage_clearUnused": { "message": "Clear unused" },
   "storage_importExportTitle": { "message": "Import / Export data" },
   "storage_close": { "message": "Close" },
-  "storage_reefFormat": { "message": "Reef format" },
-  "storage_reefFormatDesc": { "message": "Back up everything, or restore from a Reef export: browsing data, rules and settings. New data merges in; wherever the file differs from your current data, you choose per category to keep yours or take the file's." },
+  "storage_backupFormat": { "message": "Backup format" },
+  "storage_backupFormatDesc": { "message": "Back up everything, or restore from a backup file: browsing data, rules and settings. New data merges in; wherever the file differs from your current data, you choose per category to keep yours or take the file's." },
   "storage_bulletAllRows": { "message": "All browsing rows (active, audio, idle)" },
   "storage_bulletRulesLimits": { "message": "Site rules & limits" },
   "storage_bulletSettings": { "message": "Settings" },

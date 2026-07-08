@@ -12,7 +12,7 @@ The four large tracking aggregates (`sitesByDay`, `sitesByHour`, `subpagesByDay`
 - [ ] All tracking views (dashboard, site, path, popup, blocked) show the same data after the migration as before — no visible change.
 - [ ] A fresh flush writes only the current day/hour buckets; untouched historical buckets are not rewritten.
 - [ ] Existing users' `chrome.storage.local` aggregates are moved into IndexedDB on update, and the old `chrome.storage.local` keys are removed afterward.
-- [ ] Export (`biteguard` JSON, CSV daily/hourly) and import produce identical results to before.
+- [ ] Export (JSON, CSV daily/hourly) and import produce identical results to before.
 - [ ] Storage-management actions (prune insignificant, targeted delete, data-health) operate on the IndexedDB-backed data.
 - [ ] Seeding test data and the Time Tracker import write into IndexedDB.
 - [ ] After migration, IndexedDB is marked persistent via `navigator.storage.persist()`.
@@ -30,7 +30,7 @@ The four large tracking aggregates (`sitesByDay`, `sitesByHour`, `subpagesByDay`
 
 | File | Role |
 |---|---|
-| `src/data/aggregatesDb.js` | Opens the `biteguard` IndexedDB; CRUD helpers for the 4 object stores (`get(store, bucketKey)`, `put`, bucket-range read/delete). Imported by both background and pages. |
+| `src/data/aggregatesDb.js` | Opens the IndexedDB; CRUD helpers for the 4 object stores (`get(store, bucketKey)`, `put`, bucket-range read/delete). Imported by both background and pages. |
 
 ### Files likely to change
 

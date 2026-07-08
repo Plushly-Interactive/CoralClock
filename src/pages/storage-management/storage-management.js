@@ -3,8 +3,8 @@ import { localDayKey, formatSpan, formatMs, formatHourLabel, DEFAULT_CLOCK_FORMA
 import { intervalStats, appendIntervals, allIntervals, deleteByIds, deleteByDomain, deleteRange, dropPathsBefore } from '../../data/intervalLog.js';
 import { invalidate, getSitesByDay, getSubpagesByDay, getSitesByHour, getSubpagesByHour } from '../../data/intervalAggregates.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
-import { downloadBiteGuardExport } from '../../data/exportPayload.js';
-import { validateBgFile, parseBgImport, bgDayConflicts, bgRuleConflicts, bgPrefsConflicts, applyBgImport } from '../../data/importBuckets.js';
+import { downloadBackupExport } from '../../data/exportPayload.js';
+import { validateBackupFile, parseBackupImport, backupDayConflicts, backupRuleConflicts, backupPrefsConflicts, applyBackupImport } from '../../data/importBuckets.js';
 import { matchLabel, RULE_MULTIPLIERS } from '../../shared/rules.js';
 import { parseTtStats, applyTtImport, downloadTt, TT_VERSION } from '../../data/ttImport.js';
 import { downloadDailyCsv, downloadHourlyCsv, downloadIntervalsCsv } from '../../data/csvExport.js';
@@ -31,7 +31,7 @@ spanChip.addEventListener('mousemove', e => {
 spanChip.addEventListener('mouseleave', () => { spanTooltip.style.display = 'none'; });
 
 async function exportAll() {
-  await downloadBiteGuardExport();
+  await downloadBackupExport();
   await loadStats();
 }
 document.querySelector('#export-btn').addEventListener('click', exportAll);
@@ -40,7 +40,7 @@ document.querySelector('#export-btn').addEventListener('click', exportAll);
 // see it.
 navButton(document.querySelector('#legacy-storage-btn'), '../legacy-storage-management/legacy-storage-management.html');
 
-// Import/Export modal. Export writes a complete backup. A BiteGuard import is a full
+// Import/Export modal. Export writes a complete backup. A backup import is a full
 // restore: browsing days (legacy buckets), rules, settings and interval rows. Each
 // category that differs from current data prompts a keep/replace in sequence; the
 // restore is applied only after the last prompt, so Cancel writes nothing. The Time
@@ -201,14 +201,14 @@ const PREF_LABELS = {
   [PREF_WEEK_START]: 'storage_prefWeekStart',
 };
 
-// BiteGuard backup -> full restore. Each category (browsing days, rules, settings,
+// Backup file -> full restore. Each category (browsing days, rules, settings,
 // interval rows) is compared against current data; categories that differ prompt a
 // keep/replace in sequence, then everything applies at once. Cancel writes nothing.
-async function importBiteGuard(json) {
-  const err = validateBgFile(json);
+async function importBackup(json) {
+  const err = validateBackupFile(json);
   if (err) { showIoError(err); return; }
   let parsed;
-  try { parsed = parseBgImport(json); }
+  try { parsed = parseBackupImport(json); }
   catch { showIoError(t('storage_corruptedFile')); return; }
 
   const intervals = Array.isArray(json.intervals)
@@ -223,9 +223,9 @@ async function importBiteGuard(json) {
 
   const stored = await chrome.storage.local.get(['rules', PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START]);
   const currentRules = stored.rules ?? [];
-  const dayConflicts = await bgDayConflicts(parsed.importByDay);
-  const ruleConflicts = bgRuleConflicts(currentRules, parsed.importRules);
-  const prefConflicts = bgPrefsConflicts(parsed.importPrefs, stored);
+  const dayConflicts = await backupDayConflicts(parsed.importByDay);
+  const ruleConflicts = backupRuleConflicts(currentRules, parsed.importRules);
+  const prefConflicts = backupPrefsConflicts(parsed.importPrefs, stored);
 
   let intervalCtx = null, intervalOverlap = [];
   if (intervals.length) {
@@ -253,12 +253,12 @@ async function importBiteGuard(json) {
     desc: t('storage_conflictDesc'),
   });
 
-  pendingImport = { kind: 'bg', parsed, intervals, intervalCtx, dayConflicts, ruleConflicts, steps, index: 0, decisions: {} };
-  if (steps.length === 0) { await finalizeBg(); return; }
-  showBgStep();
+  pendingImport = { kind: 'backup', parsed, intervals, intervalCtx, dayConflicts, ruleConflicts, steps, index: 0, decisions: {} };
+  if (steps.length === 0) { await finalizeBackup(); return; }
+  showBackupStep();
 }
 
-function showBgStep() {
+function showBackupStep() {
   const p = pendingImport;
   const step = p.steps[p.index];
   const prefix = p.steps.length > 1 ? t('storage_stepPrefix', [p.index + 1, p.steps.length]) : '';
@@ -267,19 +267,19 @@ function showBgStep() {
 
 // Record the current step's choice and advance; once every conflicting category is
 // decided, apply the whole restore in one pass.
-async function bgAdvance(choice) {
+async function backupAdvance(choice) {
   const p = pendingImport;
   p.decisions[p.steps[p.index].cat] = choice;
   p.index++;
-  if (p.index < p.steps.length) { showBgStep(); return; }
-  await finalizeBg();
+  if (p.index < p.steps.length) { showBackupStep(); return; }
+  await finalizeBackup();
 }
 
-async function finalizeBg() {
+async function finalizeBackup() {
   const p = pendingImport;
   pendingImport = null;
   const d = p.decisions;
-  const summary = await applyBgImport(p.parsed, {
+  const summary = await applyBackupImport(p.parsed, {
     daysToReplace: d.days === 'replace' ? new Set(p.dayConflicts) : new Set(),
     replaceRuleDomains: d.rules === 'replace' ? new Set(p.ruleConflicts) : new Set(),
     overwritePrefs: d.prefs === 'replace',
@@ -324,7 +324,7 @@ ioInput.addEventListener('change', async () => {
   let json;
   try { json = JSON.parse(await file.text()); }
   catch { showIoError(t('storage_invalidJson')); return; }
-  if (json.format === 'reef' || json.format === 'biteguard') { await importBiteGuard(json); return; }
+  if (json.format === 'browsing-data-backup' || json.format === 'reef' || json.format === 'biteguard') { await importBackup(json); return; }
   if (Array.isArray(json.__stat__)) { await importTt(json); return; }
   showIoError(t('storage_unrecognizedFile', [BRAND_NAME]));
 });
@@ -335,7 +335,7 @@ document.querySelector('#io-conflict-cancel').addEventListener('click', () => {
 });
 document.querySelector('#io-conflict-keep').addEventListener('click', async () => {
   const p = pendingImport;
-  if (p.kind === 'bg') { await bgAdvance('keep'); return; }
+  if (p.kind === 'backup') { await backupAdvance('keep'); return; }
   hideConflicts();
   await applyTtImport(p.data, p.sitesByDay, new Set());  // take only non-conflicting days
   closeIo();
@@ -343,7 +343,7 @@ document.querySelector('#io-conflict-keep').addEventListener('click', async () =
 });
 document.querySelector('#io-conflict-replace').addEventListener('click', async () => {
   const p = pendingImport;
-  if (p.kind === 'bg') { await bgAdvance('replace'); return; }
+  if (p.kind === 'backup') { await backupAdvance('replace'); return; }
   hideConflicts();
   await applyTtImport(p.data, p.sitesByDay, new Set(p.conflicts));  // overwrite conflicting days
   closeIo();

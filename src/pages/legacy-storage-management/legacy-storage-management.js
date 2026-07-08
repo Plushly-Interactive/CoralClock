@@ -4,7 +4,7 @@ import { formatMs, formatHourLabel, formatSpan, DEFAULT_CLOCK_FORMAT } from '../
 import { showNotification, formatBytes, escapeHtml, attachInputClear, navButton } from '../../shared/utils.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
-import { downloadBiteGuardExport } from '../../data/exportPayload.js';
+import { downloadBackupExport } from '../../data/exportPayload.js';
 import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
 import { buildDatePicker, getDateValue } from '../../shared/datePicker.js';
 import { enhanceNumberInput } from '../../shared/numberInput.js';
@@ -475,7 +475,7 @@ document.querySelector('#repair-all-btn').addEventListener('click', async () => 
 });
 
 document.querySelector('#export-btn').addEventListener('click', async () => {
-  await downloadBiteGuardExport();
+  await downloadBackupExport();
   await loadStats();
 });
 

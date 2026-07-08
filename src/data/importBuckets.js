@@ -3,7 +3,7 @@ import { blockKey, RULE_MULTIPLIERS } from '../shared/rules.js';
 import { EXPORT_PREF_KEYS } from './exportPayload.js';
 import { BRAND_NAME } from '../shared/brand.js';
 
-// Restore the bucket tier, rules and prefs from a BiteGuard backup. Buckets are
+// Restore the bucket tier, rules and prefs from a backup file. Buckets are
 // frozen legacy data post-cutover, so they land in the same store the legacy page
 // reads; rules and prefs are live. The interval rows in a backup are restored
 // separately (temporal-overlap flow on the storage page) — this module owns only
@@ -47,7 +47,7 @@ function normalizeSubpageBuckets(buckets) {
   }
 }
 
-export function validateBgFile(json) {
+export function validateBackupFile(json) {
   if (typeof json.version === 'number' && json.version > 3) {
     return `This file was exported by a newer version of ${BRAND_NAME} (version ${json.version}). Update the extension to import it.`;
   }
@@ -72,7 +72,7 @@ export function validateBgFile(json) {
 // Pull the bucket/rules/prefs payload out of a validated backup, normalizing
 // www-prefixed hosts so they merge with the canonical host. Throws on corrupt
 // bucket shapes; the caller surfaces a friendly error.
-export function parseBgImport(json) {
+export function parseBackupImport(json) {
   // Older files use the legacy analyticsBy* key for the site buckets.
   const importByDay = json.data[SITES_DAY_KEY] || json.data.analyticsByDay || {};
   const importByHour = json.data[SITES_HOUR_KEY] || json.data.analyticsByHour || {};
@@ -90,7 +90,7 @@ export function parseBgImport(json) {
 }
 
 // Days in the file that already have bucket data — the keep/replace decision set.
-export async function bgDayConflicts(importByDay) {
+export async function backupDayConflicts(importByDay) {
   const { [SITES_DAY_KEY]: sitesByDay = {} } = await chrome.storage.local.get(SITES_DAY_KEY);
   return Object.keys(importByDay).filter(d => sitesByDay[d]).sort();
 }
@@ -122,7 +122,7 @@ function sameRuleSet(a, b) {
 // Domains where the file and current rules both have entries but differ in any way
 // (scope, limit, mode, period). These are the keep/replace decision set; a new
 // domain merges silently and an identical rule is a no-op.
-export function bgRuleConflicts(currentRules, importRules) {
+export function backupRuleConflicts(currentRules, importRules) {
   if (!importRules?.length) return [];
   const conflicts = new Set();
   for (const domain of new Set(importRules.map(ruleDomain).filter(Boolean))) {
@@ -136,7 +136,7 @@ export function bgRuleConflicts(currentRules, importRules) {
 
 // Settings keys whose stored value would be overwritten by a different file value.
 // A key the user hasn't set yet is not a conflict (it applies silently).
-export function bgPrefsConflicts(importPrefs, currentPrefs) {
+export function backupPrefsConflicts(importPrefs, currentPrefs) {
   if (!importPrefs) return [];
   return EXPORT_PREF_KEYS.filter(k =>
     importPrefs[k] !== undefined && currentPrefs[k] !== undefined && currentPrefs[k] !== importPrefs[k]);
@@ -148,7 +148,7 @@ export function bgPrefsConflicts(importPrefs, currentPrefs) {
 // rules are skipped.
 function mergeRules(currentRules, importRules, replaceDomains) {
   if (!importRules?.length) return currentRules;
-  const conflicts = new Set(bgRuleConflicts(currentRules, importRules));
+  const conflicts = new Set(backupRuleConflicts(currentRules, importRules));
   const out = currentRules.filter(c => {
     const d = ruleDomain(c);
     return !(d && conflicts.has(d) && replaceDomains.has(d));
@@ -168,7 +168,7 @@ function mergeRules(currentRules, importRules, replaceDomains) {
 // only replaced when their domain is in replaceRuleDomains). New prefs apply; a pref
 // that would overwrite a differing current value applies only when overwritePrefs.
 // Returns a summary for the notification.
-export async function applyBgImport(parsed, { daysToReplace = new Set(), replaceRuleDomains = new Set(), overwritePrefs = false } = {}) {
+export async function applyBackupImport(parsed, { daysToReplace = new Set(), replaceRuleDomains = new Set(), overwritePrefs = false } = {}) {
   const { importByDay, importByHour, importSubpagesByDay, importSubpagesByHour, importRules, importPrefs } = parsed;
 
   const {
