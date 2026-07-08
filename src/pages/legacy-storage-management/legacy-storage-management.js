@@ -13,7 +13,7 @@ import { BRAND_NAME } from '../../shared/brand.js';
 
 await initI18n();
 applyI18n();
-document.title = `${BRAND_NAME} — ${t('legacy_pageTitle')}`;
+document.title = `${t('legacy_pageTitle')} - ${BRAND_NAME}`;
 
 navButton(document.querySelector('#overview-back-btn'), '../storage-management/storage-management.html');
 

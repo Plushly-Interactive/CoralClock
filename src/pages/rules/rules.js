@@ -12,7 +12,7 @@ import { initI18n, applyI18n, t } from '../../shared/i18n.js';
 
 await initI18n();
 applyI18n();
-document.title = `${BRAND_NAME} — ${t('rules_pageTitle')}`;
+document.title = `${t('rules_pageTitle')} - ${BRAND_NAME}`;
 
 const formTarget          = document.querySelector('#form-target');
 const formTargetClearBtn  = document.querySelector('#form-target-clear');

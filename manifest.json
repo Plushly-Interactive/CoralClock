@@ -32,7 +32,7 @@
   "options_page": "src/pages/settings/settings.html",
 
   "web_accessible_resources": [{
-    "resources": ["src/pages/blocked/blocked.html"],
+    "resources": ["src/pages/blocked/blocked.html", "_locales/*/messages.json"],
     "matches": ["<all_urls>"]
   }]
 }

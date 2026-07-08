@@ -65,7 +65,7 @@ const faviconEl = document.querySelector('#site-favicon');
 faviconEl.src = faviconUrl(siteId);
 faviconEl.removeAttribute('hidden');
 faviconEl.addEventListener('error', () => { faviconEl.style.display = 'none'; });
-document.title = `${BRAND_NAME} — ${siteLabel} ${displayPath(path)}`;
+document.title = `${siteLabel} ${displayPath(path)} - ${BRAND_NAME}`;
 const crumbPath = document.querySelector('#path-crumb-path');
 const spacedPath = displayPath(path).replace(/\//g, ' / ').trimStart() + (prefix ? ' *' : '');
 crumbPath.textContent = spacedPath;

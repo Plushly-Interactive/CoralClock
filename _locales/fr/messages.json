@@ -282,7 +282,7 @@
   "blocked_visitsToday": { "message": "Visites aujourd'hui" },
   "blocked_unlocksIn": { "message": "Déblocage dans" },
   "blocked_viewSaved": { "message": "Voir sauvegardées ↗" },
-  "blocked_titlePrefix": { "message": "Bloqué : $1 – $2" },
+  "blocked_titlePrefix": { "message": "Bloqué : $1 - $2" },
   "blocked_now": { "message": "maintenant" },
   "blocked_limitPerPeriod": { "message": "$1 / $2" },
   "blocked_discoverLink": { "message": "(découvrir ↗)" },

@@ -318,7 +318,7 @@
   "blocked_visitsToday": { "message": "Visits today" },
   "blocked_unlocksIn": { "message": "Unlocks in" },
   "blocked_viewSaved": { "message": "View saved ↗" },
-  "blocked_titlePrefix": { "message": "Blocked: $1 – $2", "description": "$1 = blocked site/path, $2 = brand name" },
+  "blocked_titlePrefix": { "message": "Blocked: $1 - $2", "description": "$1 = blocked site/path, $2 = brand name" },
   "blocked_now": { "message": "now" },
   "blocked_limitPerPeriod": { "message": "$1 / $2", "description": "$1 = formatted duration, $2 = period label" },
   "blocked_discoverLink": { "message": "(discover ↗)" },

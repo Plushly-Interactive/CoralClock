@@ -5,7 +5,7 @@ import { BRAND_NAME } from '../../shared/brand.js';
 
 await initI18n();
 applyI18n();
-document.title = `${BRAND_NAME} — ${t('quotes_pageTitle')}`;
+document.title = `${t('quotes_pageTitle')} - ${BRAND_NAME}`;
 
 const { [PREF_FAVORITE_QUOTE_IDS]: favIds = [] } = await chrome.storage.local.get(PREF_FAVORITE_QUOTE_IDS);
 

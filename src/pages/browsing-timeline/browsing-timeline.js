@@ -12,7 +12,7 @@ import { initI18n, applyI18n, t as i18nT } from '../../shared/i18n.js';
 
 await initI18n();
 applyI18n();
-document.title = `${BRAND_NAME} — ${i18nT('tl_pageTitle')}`;
+document.title = `${i18nT('tl_pageTitle')} - ${BRAND_NAME}`;
 
 // Visualization only (not in the spec): a horizontal browsing timeline of the top
 // sites, navigated period-by-period (day / week / month) like the drill views. Each

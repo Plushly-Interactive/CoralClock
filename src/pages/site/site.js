@@ -142,7 +142,7 @@ function applyHeader() {
   else if (isAggregatedEtld1) secondary = effectiveSiteIds.join(', ');
   else secondary = siteId;
   document.querySelector('#site-id').textContent = secondary;
-  document.title = `${BRAND_NAME} — ${label}`;
+  document.title = `${label} - ${BRAND_NAME}`;
   const faviconEl = document.querySelector('#site-favicon');
   faviconEl.src = faviconUrl(primary);
   faviconEl.removeAttribute('hidden');
