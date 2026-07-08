@@ -80,6 +80,15 @@
   "tour_storage_back_title": { "message": "Back to the dashboard" },
   "tour_storage_back_body": { "message": "Click the $1 logo to return to the dashboard; the tour continues there.", "description": "$1 = brand name" },
 
+  "bg_notifyBlockedTitle": { "message": "Time limit reached" },
+  "bg_notifyBlockedMessage": { "message": "$1 is now blocked" },
+  "bg_notifyApproachingTitle": { "message": "Approaching time limit" },
+  "bg_notifyApproachingMessage": { "message": "$1: $2% of $3 $4 $5 limit used ($6 left)", "description": "$1 = site label, $2 = percent, $3 = limit number, $4 = unit (hours/days), $5 = period adjective (hourly/daily/weekly), $6 = time remaining" },
+  "bg_periodHourly": { "message": "hourly" },
+  "bg_periodDaily": { "message": "daily" },
+  "bg_periodWeekly": { "message": "weekly" },
+  "bg_aSite": { "message": "A site" },
+
   "theme_system": { "message": "System" },
   "theme_light": { "message": "Light" },
   "theme_dark": { "message": "Dark" },
@@ -553,6 +562,10 @@
   "legacy_atCurrentRate_one": { "message": "At current rate: ~$1 day to cap" },
   "legacy_atCurrentRate_other": { "message": "At current rate: ~$1 days to cap" },
 
+  "data_noDataToExport": { "message": "No data to export" },
+  "data_exportedTo": { "message": "Exported to \"$1\"", "description": "$1 = filename" },
+  "data_importedDays_one": { "message": "Imported $1 day" },
+  "data_importedDays_other": { "message": "Imported $1 days" },
   "confirm_defaultOk": { "message": "Confirm" },
   "datePicker_selectDate": { "message": "Select date" },
 

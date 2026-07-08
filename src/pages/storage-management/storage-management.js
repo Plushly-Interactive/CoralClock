@@ -19,6 +19,7 @@ import { initI18n, applyI18n, t } from '../../shared/i18n.js';
 
 await initI18n();
 applyI18n();
+document.title = `${BRAND_NAME} — ${t('storage_pageTitle')}`;
 
 const spanChip = document.querySelector('#span-chip');
 const spanTooltip = document.querySelector('#span-tooltip');

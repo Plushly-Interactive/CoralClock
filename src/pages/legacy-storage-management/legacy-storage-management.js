@@ -9,9 +9,11 @@ import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
 import { buildDatePicker, getDateValue } from '../../shared/datePicker.js';
 import { enhanceNumberInput } from '../../shared/numberInput.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 
 await initI18n();
 applyI18n();
+document.title = `${BRAND_NAME} — ${t('legacy_pageTitle')}`;
 
 navButton(document.querySelector('#overview-back-btn'), '../storage-management/storage-management.html');
 

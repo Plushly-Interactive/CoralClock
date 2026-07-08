@@ -1,9 +1,11 @@
 import { QUOTES } from '../../shared/quotes.data.js';
 import { PREF_FAVORITE_QUOTE_IDS } from '../../shared/prefKeys.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { BRAND_NAME } from '../../shared/brand.js';
 
 await initI18n();
 applyI18n();
+document.title = `${BRAND_NAME} — ${t('quotes_pageTitle')}`;
 
 const { [PREF_FAVORITE_QUOTE_IDS]: favIds = [] } = await chrome.storage.local.get(PREF_FAVORITE_QUOTE_IDS);
 

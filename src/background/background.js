@@ -7,6 +7,7 @@ import { computeOverage, publishOverage } from './enforcement.js';
 import { usageSince } from '../data/intervalAggregates.js';
 import { dbg, initDebug } from './trackingDebug.js';
 import { updateBadge } from './badge.js';
+import { initI18n, t } from '../shared/i18n.js';
 // The interval tracker is the sole live capturer. It self-registers its capture
 // listeners on import; background drives its periodic flush via flushNow() and a
 // lighter per-navigation drain via flushToStorage.
@@ -19,6 +20,10 @@ import { flushNow, flushToStorage as drainIntervals } from './intervalTracker.js
 // carries no URL/sensitive data — just a timestamp.
 console.log(`[BG-DBG ${new Date().toISOString()}] SERVICE WORKER STARTED`);
 
+// Service workers disallow top-level await, so kick this off and await it inside
+// the notification functions instead, right before they call t().
+const i18nReady = initI18n();
+
 function approachWindowKey(period, now) {
   if (period === 'hour') return localHourKey(now);
   if (period === 'week') {
@@ -30,7 +35,8 @@ function approachWindowKey(period, now) {
   return localDayKey(now);
 }
 
-const PERIOD_LABEL = { hour: 'hourly', day: 'daily', week: 'weekly' };
+const PERIOD_ADJ_KEY = { hour: 'bg_periodHourly', day: 'bg_periodDaily', week: 'bg_periodWeekly' };
+const UNIT_KEY = { minutes: 'unit_minutes', hours: 'unit_hours', days: 'unit_days' };
 
 function fmtMs(ms) {
   const m = Math.round(ms / 60000);
@@ -70,6 +76,7 @@ function persistNotifyState(state) {
 }
 
 async function notifyBlocked(overage, blockedSites) {
+  await i18nReady;
   const state = await getNotifyState();
   for (const ruleId of state.blocked) {
     if (!overage.has(ruleId)) state.blocked.delete(ruleId);
@@ -83,18 +90,19 @@ async function notifyBlocked(overage, blockedSites) {
     // always-block rule created) with no matching tab open is recorded for dedup
     // but shows no toast — nothing visible was blocked.
     if (!blockedSites.has(ruleId)) continue;
-    const label = blockedSites.get(ruleId) ?? entry.target ?? 'A site';
+    const label = blockedSites.get(ruleId) ?? entry.target ?? t('bg_aSite');
     chrome.notifications.create(`blocked-${ruleId}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('resources/icons/brand/icon128.png'),
-      title: 'Time limit reached',
-      message: `${label} is now blocked`,
+      title: t('bg_notifyBlockedTitle'),
+      message: t('bg_notifyBlockedMessage', [label]),
     });
   }
   if (changed) persistNotifyState(state);
 }
 
 async function notifyApproaching(approaching, now) {
+  await i18nReady;
   const state = await getNotifyState();
   let changed = false;
   for (const [ruleId, entry] of approaching) {
@@ -102,14 +110,16 @@ async function notifyApproaching(approaching, now) {
     if (state.approaching.get(ruleId) === windowKey) continue;
     state.approaching.set(ruleId, windowKey);
     changed = true;
-    const label = entry.target ?? entry.keyword ?? entry.pattern ?? 'A site';
+    const label = entry.target ?? entry.keyword ?? entry.pattern ?? t('bg_aSite');
     const pct = Math.round(entry.pct * 100);
     const left = fmtMs(entry.remainingMs);
+    const unit = t(UNIT_KEY[entry.limitUnit] ?? entry.limitUnit);
+    const periodAdj = t(PERIOD_ADJ_KEY[entry.period] ?? entry.period);
     chrome.notifications.create(`approach-${ruleId}`, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('resources/icons/brand/icon128.png'),
-      title: 'Approaching time limit',
-      message: `${label} — ${pct}% of ${entry.limit} ${entry.limitUnit} ${PERIOD_LABEL[entry.period] ?? entry.period} limit used (${left} left)`,
+      title: t('bg_notifyApproachingTitle'),
+      message: t('bg_notifyApproachingMessage', [label, pct, entry.limit, unit, periodAdj, left]),
     });
   }
   if (changed) persistNotifyState(state);

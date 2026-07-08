@@ -12,6 +12,7 @@ import { initI18n, applyI18n, t, DEFAULT_LANGUAGE } from '../../shared/i18n.js';
 
 await initI18n();
 applyI18n();
+document.title = `${BRAND_NAME} — ${t('settings_pageTitle')}`;
 document.querySelector('#idle-threshold-desc').textContent = t('settings_idleThresholdDesc', [BRAND_NAME]);
 
 const CLOCK_FORMATS = ['24h', '12h'];

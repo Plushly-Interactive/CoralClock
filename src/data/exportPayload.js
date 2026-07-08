@@ -1,6 +1,7 @@
 import { SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } from './bucketKeys.js';
 import { allIntervals } from './intervalLog.js';
 import { showNotification } from '../shared/utils.js';
+import { t } from '../shared/i18n.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../shared/prefKeys.js';
 
 // Pure export logic, no modal/DOM wiring, safe to import from any page. Both the
@@ -42,5 +43,5 @@ export async function downloadBiteGuardExport() {
   a.click();
   URL.revokeObjectURL(url);
   await chrome.storage.local.set({ [PREF_LAST_EXPORT_AT]: Date.now() });
-  showNotification(`Exported to "${filename}"`);
+  showNotification(t('data_exportedTo', [filename]));
 }

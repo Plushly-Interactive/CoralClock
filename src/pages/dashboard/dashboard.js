@@ -19,6 +19,7 @@ const PREF_SEARCH = 'siteSearch';
 
 await initI18n();
 applyI18n();
+document.title = `${BRAND_NAME} — ${t('popup_dashboardBtn')}`;
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());
 navButton(document.querySelector('#timeline-link'), '../browsing-timeline/browsing-timeline.html');
