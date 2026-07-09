@@ -8,7 +8,7 @@ import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockRules, mockBlocksByDay } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { enhanceNumberInput, enhanceNumberInputEl } from '../../shared/numberInput.js';
-import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { initI18n, applyI18n, t, getLocale } from '../../shared/i18n.js';
 
 await initI18n();
 applyI18n();
@@ -660,7 +660,7 @@ async function renderStats() {
     const dow = weekDow(d);
     return {
       label: DAY_LABELS[dow],
-      range: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      range: d.toLocaleDateString(getLocale(), { weekday: 'short', month: 'short', day: 'numeric' }),
       count: dailyCounts[i],
     };
   });

@@ -8,7 +8,7 @@ import { allIntervals, SESSION_GAP_MS } from '../../data/intervalLog.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervals } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
-import { initI18n, applyI18n, t as i18nT } from '../../shared/i18n.js';
+import { initI18n, applyI18n, t as i18nT, getLocale } from '../../shared/i18n.js';
 
 await initI18n();
 applyI18n();
@@ -36,7 +36,7 @@ const ROW_H = 30;         // one site row
 const AXIS_H = 22;
 const TOP_PAD = 8;
 
-const SHORT_DAY_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+const SHORT_DAY_FMT = new Intl.DateTimeFormat(getLocale(), { weekday: 'short' });
 
 let rows = [];                       // all interval rows
 const daysWithData = new Set();      // day-keys that have any row (for level-down seeking)
@@ -351,7 +351,7 @@ function showCursorTip(t, e) {
   }
   if (lines.length === 0) { tooltip.style.display = 'none'; return; }
   const time = formatTimeOfDay(t, clockFormat);
-  const date = new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  const date = new Date(t).toLocaleDateString(getLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
   const hint = periodLevel(currentPeriod) === 'day' ? '' : `<div class="tl-tip-hint text-meta">${i18nT('tl_clickToOpenDay')}</div>`;
   tooltip.innerHTML = `<div class="tl-tip-head">${date} ${time}</div>${lines.join('')}${hint}`;
   tooltip.style.display = 'block';

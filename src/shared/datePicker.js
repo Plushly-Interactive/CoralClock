@@ -1,9 +1,10 @@
 import { rotatedDayLabels, weekDow } from './weekStart.js';
 import { localDayKey } from './timeUtils.js';
-import { t } from './i18n.js';
+import { t, getLocale } from './i18n.js';
 
-const MONTH_FMT = new Intl.DateTimeFormat(undefined, { month: 'long' });
-function monthName(m) { return MONTH_FMT.format(new Date(2023, m, 1)); }
+function monthName(m) {
+  return new Intl.DateTimeFormat(getLocale(), { month: 'long' }).format(new Date(2023, m, 1));
+}
 const PREV_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg>';
 const NEXT_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg>';
 const YEAR_SPAN = 15;

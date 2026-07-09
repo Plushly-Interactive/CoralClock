@@ -3,7 +3,7 @@ import { weekKeyForDate, daysInWeek } from './weekStart.js';
 import { formatPeriodLabel, stepPeriod } from './period.js';
 import { formatWithSmallSub, statLabels, chartLegendHtml } from './utils.js';
 import { drawTimeChart, drawVisitsChart, drawHourlyChart, buildHourlyBuckets } from './overview.js';
-import { t } from './i18n.js';
+import { t, getLocale } from './i18n.js';
 
 let drillPeriod = null;
 let drillPrevPeriod = null;
@@ -232,8 +232,6 @@ function navigatePeriod(dir) {
   renderDrillChart();
 }
 
-const SHORT_DAY_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
-
 async function renderDrillChart() {
   const isMonthDrill = drillPeriod.length === 7;
   const isWeekDrill = drillPeriod.length === 11;
@@ -255,7 +253,8 @@ async function renderDrillChart() {
   } else if (isWeekDrill) {
     data = daysInWeek(drillPeriod).map(dayKey => {
       const [y, m, d] = dayKey.split('-').map(Number);
-      return { label: `${SHORT_DAY_FMT.format(new Date(y, m - 1, d))} ${d}`, range: dayKey, ...ctx.getDayEntry(dayKey) };
+      const shortDayFmt = new Intl.DateTimeFormat(getLocale(), { weekday: 'short' });
+      return { label: `${shortDayFmt.format(new Date(y, m - 1, d))} ${d}`, range: dayKey, ...ctx.getDayEntry(dayKey) };
     });
   } else {
     const hourData = await ctx.getHourEntriesForDay(drillPeriod);
