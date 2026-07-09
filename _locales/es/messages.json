@@ -1,5 +1,5 @@
 {
-  "extName": { "message": "Coral Clock - Control de tiempo y bloqueador de sitios" },
+  "extName": { "message": "CoralClock - Control de tiempo y bloqueador de sitios" },
   "extDescription": { "message": "Limita tu tiempo de pantalla. Controla el tiempo por sitio y bloquéalo al alcanzar tu límite por hora, día o semana." },
   "tour_closeTour": { "message": "Cerrar el recorrido" },
   "tour_previous": { "message": "Anterior" },

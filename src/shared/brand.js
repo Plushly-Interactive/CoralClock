@@ -1,1 +1,1 @@
-export const BRAND_NAME = 'Coral Clock';
+export const BRAND_NAME = 'CoralClock';
