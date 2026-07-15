@@ -27,13 +27,12 @@ header {
 }
 
 #popup-body {
-  display: flex;
+  position: relative;
   width: 100%;
 }
 
 #stats-panel {
-  flex: 1;
-  min-width: 0;
+  width: 50%;
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
@@ -59,8 +58,13 @@ header {
 }
 
 #rules-panel {
-  flex: 1;
-  min-width: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
 }
 
 .panel-title {
@@ -77,6 +81,7 @@ header {
   width: 100%;
   flex: 1;
   min-height: 50px;
+  max-height: 150px;
   margin-bottom: 28px;
 }
 
@@ -113,6 +118,13 @@ header {
   align-items: flex-start;
   justify-content: space-between;
   padding: 14px 16px 0;
+  margin-bottom: 14px;
+}
+
+#rules-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 #no-rules-message {
