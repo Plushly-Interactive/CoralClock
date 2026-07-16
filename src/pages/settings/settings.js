@@ -143,6 +143,15 @@ for (const { type, cssVar } of CHART_COLOR_TYPES) {
   chartColorPickers.push({ picker, type, cssVar });
 }
 
+const COLORBLIND_PALETTE = { time: '#d55e00', audio: '#0072b2', visits: '#cc79a7', hourly: '#767676', idle: '#009e73' };
+
+document.querySelector('#chart-colors-colorblind').addEventListener('click', async () => {
+  for (const { picker, type } of chartColorPickers) {
+    await setChartColorOverride(type, COLORBLIND_PALETTE[type]);
+    picker.setValue(COLORBLIND_PALETTE[type]);
+  }
+});
+
 document.querySelector('#chart-colors-reset').addEventListener('click', async () => {
   const ok = await confirmDialog({ message: t('settings_resetColorsConfirm') });
   if (!ok) return;

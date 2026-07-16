@@ -259,6 +259,7 @@
   "settings_chartColorsDesc": { "message": "Colores usados en los gráficos de todas las páginas. Elige un color o escribe un valor hexadecimal. «Predeterminado» restaura el color inicial." },
   "settings_resetColors": { "message": "Restablecer colores" },
   "settings_resetColorsConfirm": { "message": "¿Restablecer todos los colores de los gráficos a los valores iniciales?" },
+  "settings_colorblindPalette": { "message": "Aplicar paleta para daltonismo" },
   "settings_preview": { "message": "Vista previa" },
   "chartColor_active": { "message": "Tiempo activo" },
   "chartColor_audio": { "message": "Audio" },

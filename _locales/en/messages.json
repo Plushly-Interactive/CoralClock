@@ -290,6 +290,7 @@
   "settings_chartColorsDesc": { "message": "Colors used for the charts on all pages. Pick a color or type a hex value. Default restores the theme color.", "description": "Shown under the chart colors title on the settings page. 'Default' refers to the colorPicker_default button label." },
   "settings_resetColors": { "message": "Reset colors" },
   "settings_resetColorsConfirm": { "message": "Reset all chart colors to the theme defaults?" },
+  "settings_colorblindPalette": { "message": "Apply color-blind palette" },
   "settings_preview": { "message": "Preview" },
   "chartColor_active": { "message": "Active time" },
   "chartColor_audio": { "message": "Audio playback" },
