@@ -13,9 +13,11 @@ import { QUERY_SUBPAGES_BY_DAY, QUERY_SUBPAGES_BY_HOUR } from '../../shared/quer
 import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { applyChartColorOverrides } from '../../shared/chartColors.js';
 
 await initI18n();
 applyI18n();
+await applyChartColorOverrides();
 
 const drillParams = new URLSearchParams(location.search);
 if (!drillParams.has('ids') || !drillParams.has('path')) {

@@ -3,13 +3,13 @@ import { localDayKey, formatSpan, formatMs, formatHourLabel, DEFAULT_CLOCK_FORMA
 import { intervalStats, appendIntervals, allIntervals, deleteByIds, deleteByDomain, deleteRange, dropPathsBefore } from '../../data/intervalLog.js';
 import { invalidate, getSitesByDay, getSubpagesByDay, getSitesByHour, getSubpagesByHour } from '../../data/intervalAggregates.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
-import { downloadBackupExport } from '../../data/exportPayload.js';
+import { downloadBackupExport, EXPORT_PREF_KEYS } from '../../data/exportPayload.js';
 import { validateBackupFile, parseBackupImport, backupDayConflicts, backupRuleConflicts, backupPrefsConflicts, applyBackupImport } from '../../data/importBuckets.js';
 import { matchLabel, RULE_MULTIPLIERS } from '../../shared/rules.js';
 import { parseTtStats, applyTtImport, downloadTt, TT_VERSION } from '../../data/ttImport.js';
 import { downloadDailyCsv, downloadHourlyCsv, downloadIntervalsCsv } from '../../data/csvExport.js';
 import { SITES_DAY_KEY } from '../../data/bucketKeys.js';
-import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../../shared/prefKeys.js';
+import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START, PREF_CHART_COLORS } from '../../shared/prefKeys.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervalStats } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
@@ -134,6 +134,7 @@ function prefValueLabel(key, val) {
   if (val === undefined || val === null) return t('storage_unset');
   if (key === PREF_IDLE_THRESHOLD_SEC) return t('storage_minutesAbbrev', [Math.round(val / 60)]);
   if (key === PREF_WEEK_START) return t(`weekday_${val}`);
+  if (key === PREF_CHART_COLORS) return Object.entries(val).map(([type, hex]) => `${type} ${hex}`).join(', ') || t('storage_unset');
   return String(val);
 }
 
@@ -199,6 +200,7 @@ const PREF_LABELS = {
   [PREF_CLOCK_FORMAT]: 'storage_prefClockFormat',
   [PREF_IDLE_THRESHOLD_SEC]: 'storage_prefIdleThreshold',
   [PREF_WEEK_START]: 'storage_prefWeekStart',
+  [PREF_CHART_COLORS]: 'settings_chartColors',
 };
 
 // Backup file -> full restore. Each category (browsing days, rules, settings,
@@ -221,7 +223,7 @@ async function importBackup(json) {
     return;
   }
 
-  const stored = await chrome.storage.local.get(['rules', PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START]);
+  const stored = await chrome.storage.local.get(['rules', ...EXPORT_PREF_KEYS]);
   const currentRules = stored.rules ?? [];
   const dayConflicts = await backupDayConflicts(parsed.importByDay);
   const ruleConflicts = backupRuleConflicts(currentRules, parsed.importRules);

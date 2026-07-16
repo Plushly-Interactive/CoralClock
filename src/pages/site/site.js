@@ -18,9 +18,11 @@ import {
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { applyChartColorOverrides } from '../../shared/chartColors.js';
 
 await initI18n();
 applyI18n();
+await applyChartColorOverrides();
 
 const PREF_STRIP_PARAMS = 'subpagesStripParams';
 const PREF_SUBPAGE_SEARCH = 'subpageSearch';
