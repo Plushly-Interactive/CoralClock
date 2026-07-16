@@ -122,6 +122,7 @@ export function buildDatePicker(id, initDateStr, onChange) {
       const dayBtn = document.createElement('button');
       dayBtn.type = 'button';
       dayBtn.className = 'cal-day';
+      dayBtn.dataset.day = d;
       if (key === todayKey) { dayBtn.classList.add('today'); dayBtn.setAttribute('aria-current', 'date'); }
       if (key === selectedKey) { dayBtn.classList.add('is-selected'); dayBtn.setAttribute('aria-selected', 'true'); }
       dayBtn.textContent = d;
@@ -145,11 +146,42 @@ export function buildDatePicker(id, initDateStr, onChange) {
   }
   renderMonth();
 
+  function focusDay(day) {
+    daysGrid.querySelector(`[data-day="${day}"]`)?.focus();
+  }
+
+  // Arrow-key roving across the day grid, including crossing month boundaries —
+  // relies on the Date constructor normalizing out-of-range days (e.g. day 0 or
+  // day 32) into the adjacent month, rather than manual month-length math.
+  daysGrid.addEventListener('keydown', e => {
+    const deltas = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+    const isEdge = e.key === 'Home' || e.key === 'End';
+    if (!(e.key in deltas) && !isEdge) return;
+    const currentDay = Number(document.activeElement?.dataset.day);
+    if (!currentDay) return;
+    e.preventDefault();
+    const target = e.key === 'Home' ? new Date(viewYear, viewMonth, 1)
+      : e.key === 'End' ? new Date(viewYear, viewMonth + 1, 0)
+      : new Date(viewYear, viewMonth, currentDay + deltas[e.key]);
+    if (target.getFullYear() !== viewYear || target.getMonth() !== viewMonth) {
+      viewYear = target.getFullYear();
+      viewMonth = target.getMonth();
+      renderMonth();
+    }
+    focusDay(target.getDate());
+  });
+
   btn.addEventListener('click', e => {
     e.stopPropagation();
     const isOpen = popup.classList.contains('open');
     document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-    if (!isOpen) { renderMonth(); popup.classList.add('open'); }
+    if (!isOpen) {
+      renderMonth();
+      popup.classList.add('open');
+      // Move focus into the grid on open (selected day, else today, else the
+      // 1st) — otherwise focus stays on btn and arrow keys never reach daysGrid.
+      (daysGrid.querySelector('button.is-selected') ?? daysGrid.querySelector('button.today') ?? daysGrid.querySelector('button.cal-day'))?.focus();
+    }
   });
   popup.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;

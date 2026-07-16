@@ -268,6 +268,8 @@
   "colorPicker_default": { "message": "Par défaut" },
   "colorPicker_svLabel": { "message": "Saturation et luminosité. Ajustez avec les flèches, maintenez Maj pour des pas plus grands." },
   "colorPicker_hueLabel": { "message": "Teinte. Ajustez avec les flèches, maintenez Maj pour des pas plus grands." },
+  "colorPicker_svValue": { "message": "Saturation $1 %, luminosité $2 %" },
+  "colorPicker_hueValue": { "message": "$1 degrés" },
   "stat_today": { "message": "Aujourd'hui" },
   "stat_dailyAvg": { "message": "Moy. quotidienne" },
   "stat_peakDay": { "message": "Jour de pointe" },

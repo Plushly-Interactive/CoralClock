@@ -299,6 +299,8 @@
   "colorPicker_default": { "message": "Default" },
   "colorPicker_svLabel": { "message": "Saturation and brightness. Adjust with arrow keys, hold Shift for larger steps.", "description": "aria-label for the color picker's saturation/brightness area" },
   "colorPicker_hueLabel": { "message": "Hue. Adjust with arrow keys, hold Shift for larger steps.", "description": "aria-label for the color picker's hue bar" },
+  "colorPicker_svValue": { "message": "Saturation $1%, brightness $2%", "description": "$1 = saturation percent, $2 = brightness percent" },
+  "colorPicker_hueValue": { "message": "$1 degrees", "description": "$1 = hue degrees, 0-360" },
 
   "stat_today": { "message": "Today" },
   "stat_dailyAvg": { "message": "Daily avg" },

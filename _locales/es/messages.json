@@ -268,6 +268,8 @@
   "colorPicker_default": { "message": "Predeterminado" },
   "colorPicker_svLabel": { "message": "Saturación y brillo. Ajusta con las flechas, mantén Mayús para pasos más grandes." },
   "colorPicker_hueLabel": { "message": "Tono. Ajusta con las flechas, mantén Mayús para pasos más grandes." },
+  "colorPicker_svValue": { "message": "Saturación $1%, brillo $2%" },
+  "colorPicker_hueValue": { "message": "$1 grados" },
   "stat_today": { "message": "Hoy" },
   "stat_dailyAvg": { "message": "Media diaria" },
   "stat_peakDay": { "message": "Día pico" },
