@@ -25,6 +25,8 @@
 
   --color-accent-light: #c2493f;
   --color-secondary-light: #92b8e2;
+  --color-accent-text: var(--color-accent);
+  --color-accent-text-hover: var(--color-accent-light);
   --color-button-text: var(--color-bg);
 
   --overlay-bg: rgba(0, 0, 0, 0.5);
@@ -51,6 +53,8 @@ html.dark {
 
   --color-accent: #9c3b33;
   --color-secondary: #7a99bc;
+  --color-accent-text: #b85a50;
+  --color-accent-text-hover: #c6685d;
 
   --color-bg: #1c1c1c;
   --color-border: #383838;
@@ -108,7 +112,7 @@ body {
 }
 
 .brand-coral {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .brand-clock {
@@ -161,7 +165,7 @@ input[type="checkbox"] {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-size: var(--font-base);
   font-weight: 600;
   line-height: 1;
@@ -169,7 +173,7 @@ input[type="checkbox"] {
 }
 
 .link-btn:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 .nav-arrow-btn {
@@ -311,7 +315,7 @@ button:disabled {
 }
 
 .icon-btn:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 .callout {
@@ -371,7 +375,7 @@ button:disabled {
 .chart-heading {
   font-size: var(--font-base);
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -716,7 +720,7 @@ button:disabled {
   width: 28px;
   height: 28px;
   font-size: var(--font-lg);
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -726,7 +730,7 @@ button:disabled {
 
 .square-btn:hover {
   background-color: var(--color-hover-bg);
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 .square-btn .icon-mask {
@@ -772,11 +776,11 @@ button:disabled {
 }
 
 .data-table th:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 .data-table th.sorted {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .data-table td {
@@ -872,7 +876,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   text-decoration: none;
   flex: 0 0 auto;
   background: none;
@@ -882,7 +886,7 @@ header {
 }
 
 #back-btn:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 #header-left {

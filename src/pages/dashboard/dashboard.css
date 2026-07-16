@@ -46,7 +46,7 @@
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 #hide-brief-label {

@@ -39,7 +39,7 @@ body {
   justify-content: center;
   gap: 6px;
   font-size: var(--font-md);
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
   font-weight: 600;
   margin-bottom: 28px;
 }
@@ -106,7 +106,7 @@ body {
 }
 
 #fav-btn:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 #fav-btn.favorited #fav-icon path {
@@ -120,5 +120,5 @@ body {
 }
 
 #saved-quotes-link:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }

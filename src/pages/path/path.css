@@ -56,7 +56,7 @@ header { box-shadow: none; }
 }
 
 #path-crumb-site {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-size: var(--font-sm);
   font-weight: 600;
   text-decoration: none;
@@ -65,7 +65,7 @@ header { box-shadow: none; }
 }
 
 #path-crumb-site:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 #path-crumb-path {
@@ -116,10 +116,10 @@ header { box-shadow: none; }
 }
 
 .path-link-chip-domain {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   margin-right: 4px;
 }
 
 .path-link-chip:hover .path-link-chip-domain {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
