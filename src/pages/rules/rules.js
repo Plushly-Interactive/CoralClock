@@ -136,7 +136,10 @@ const tabBtns = { url: document.querySelector('#tab-url'), regex: document.query
 const tabForms = { url: urlForm, regex: regexForm, keyword: keywordForm };
 
 function selectTab(key) {
-  for (const [k, btn] of Object.entries(tabBtns)) btn.classList.toggle('active', k === key);
+  for (const [k, btn] of Object.entries(tabBtns)) {
+    btn.classList.toggle('active', k === key);
+    btn.setAttribute('aria-selected', k === key ? 'true' : 'false');
+  }
   for (const [k, form] of Object.entries(tabForms)) {
     if (k === key) form.removeAttribute('hidden');
     else form.setAttribute('hidden', '');
@@ -528,7 +531,7 @@ function openRowEditor(id) {
   li.querySelectorAll('.edit-btn, .toggle-btn, .delete-btn').forEach(b => b.remove());
   li.insertAdjacentHTML('beforeend', `
     <div class="form-row edit-controls">
-      <input class="edit-limit number-input" type="number" value="${rule.limit}" min="0" />
+      <input class="edit-limit number-input" type="number" value="${rule.limit}" min="0" aria-label="${t('rules_limitTo')}" />
       ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}

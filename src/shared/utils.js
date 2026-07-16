@@ -136,9 +136,13 @@ export function trapFocusWithin(container, e) {
 
 export function showNotification(message, durationMs = 3000) {
   const el = document.querySelector('#notification');
-  el.textContent = message;
+  // #notification is role="status" (aria-live). Un-hide before setting text (and
+  // clear text on hide) so the content change happens while the region is
+  // already in the accessibility tree — some screen readers won't announce a
+  // live-region update that happens in the same tick as un-hiding it.
   el.removeAttribute('hidden');
-  setTimeout(() => { el.setAttribute('hidden', ''); }, durationMs);
+  el.textContent = message;
+  setTimeout(() => { el.setAttribute('hidden', ''); el.textContent = ''; }, durationMs);
 }
 
 export function formatBytes(bytes) {

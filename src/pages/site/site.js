@@ -394,27 +394,35 @@ function buildDepthToggle(paths) {
   const actualMax = Math.max(...paths.map(p => p.split('/').filter(Boolean).length));
   const shownMax = Math.min(5, actualMax - 1);
   const toggle = document.querySelector('#depth-toggle');
+  toggle.setAttribute('role', 'radiogroup');
   toggle.innerHTML = '';
   for (let d = 1; d <= shownMax; d++) {
     const btn = document.createElement('button');
     btn.className = 'seg-btn depth-num-btn';
+    btn.setAttribute('role', 'radio');
     btn.textContent = String(d);
     btn.onclick = () => setDepth(d, btn);
-    if (currentDepth === d) btn.classList.add('active');
+    const isActive = currentDepth === d;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
     toggle.appendChild(btn);
   }
   const full = document.createElement('button');
   full.className = 'seg-btn';
+  full.setAttribute('role', 'radio');
   full.textContent = t('site_depthFull');
   full.onclick = () => setDepth(null, full);
-  if (currentDepth === null) full.classList.add('active');
+  const fullActive = currentDepth === null;
+  full.classList.toggle('active', fullActive);
+  full.setAttribute('aria-checked', fullActive ? 'true' : 'false');
   toggle.appendChild(full);
 }
 
 function setDepth(depth, btn) {
   currentDepth = depth;
-  document.querySelectorAll('#depth-toggle .seg-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#depth-toggle .seg-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-checked', 'false'); });
   btn.classList.add('active');
+  btn.setAttribute('aria-checked', 'true');
   renderSubpages(rangeSelect.dataset.value);
 }
 
@@ -426,7 +434,9 @@ sortVisitsBtn.onclick = () => setSort('visits');
 function setSort(sort) {
   currentSort = sort;
   sortTimeBtn.classList.toggle('active', sort === 'time');
+  sortTimeBtn.setAttribute('aria-checked', sort === 'time' ? 'true' : 'false');
   sortVisitsBtn.classList.toggle('active', sort === 'visits');
+  sortVisitsBtn.setAttribute('aria-checked', sort === 'visits' ? 'true' : 'false');
   renderSubpages(rangeSelect.dataset.value);
 }
 

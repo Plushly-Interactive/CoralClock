@@ -139,7 +139,7 @@ for (const { type, cssVar } of CHART_COLOR_TYPES) {
   const picker = buildColorPicker(`chart-color-${type}`, rootStyle.getPropertyValue(cssVar).trim(), async (color) => {
     await setChartColorOverride(type, color);
     if (!color) picker.setValue(rootStyle.getPropertyValue(cssVar).trim());
-  });
+  }, { labelledBy: `chart-color-${type}-label` });
   chartColorPickers.push({ picker, type, cssVar });
 }
 

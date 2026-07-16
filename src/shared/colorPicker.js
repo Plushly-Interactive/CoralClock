@@ -31,14 +31,20 @@ function normalizeHex(raw) {
   return null;
 }
 
-export function buildColorPicker(id, initColor, onChange) {
+export function buildColorPicker(id, initColor, onChange, { labelledBy } = {}) {
   const wrap = document.querySelector(`#${id}`);
 
   const btn = document.createElement('button');
   btn.type = 'button';
+  btn.id = `${id}-btn`;
   btn.className = 'dropdown-btn color-btn';
   btn.setAttribute('aria-haspopup', 'true');
   btn.setAttribute('aria-expanded', 'false');
+  // Combine the external row label (e.g. "Active time") with the button's own
+  // visible text (the hex value) rather than letting aria-labelledby replace it
+  // outright — referencing the button's own id contributes its text content at
+  // that position in the accessible-name concatenation.
+  if (labelledBy) btn.setAttribute('aria-labelledby', `${labelledBy} ${btn.id}`);
   btn.innerHTML = '<span class="color-swatch color-btn-swatch"></span><span class="color-btn-label"></span>';
   const btnSwatch = btn.querySelector('.color-btn-swatch');
   const btnLabel = btn.querySelector('.color-btn-label');

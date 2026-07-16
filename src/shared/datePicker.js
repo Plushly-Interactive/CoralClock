@@ -13,14 +13,18 @@ export function getDateValue(id) {
   return document.querySelector(`#${id} .dropdown-btn`).dataset.value || '';
 }
 
-export function buildDatePicker(id, initDateStr, onChange) {
+export function buildDatePicker(id, initDateStr, onChange, { labelledBy } = {}) {
   const wrap = document.querySelector(`#${id}`);
   wrap.dataset.direction = 'up';
 
   const btn = document.createElement('button');
   btn.type = 'button';
+  btn.id = `${id}-btn`;
   btn.className = 'dropdown-btn';
   btn.dataset.value = initDateStr || '';
+  // Combine the external row label (e.g. "From") with the button's own visible
+  // text (the picked date) — see buildColorPicker for the same pattern.
+  if (labelledBy) btn.setAttribute('aria-labelledby', `${labelledBy} ${btn.id}`);
   btn.innerHTML = `<span class="date-btn-label">${initDateStr || t('datePicker_selectDate')}</span><span class="icon-mask icon-calendar date-btn-icon"></span>`;
   btn.querySelector('.date-btn-label').title = initDateStr || t('datePicker_selectDate');
 
@@ -240,14 +244,16 @@ export function getHourValue(id) {
 // but built from scratch here since options are numeric hours generated on the
 // fly rather than static HTML — so it needs its own copy of the same keyboard
 // model (aria-haspopup/expanded, role=menu/menuitem, arrow-key roving, Escape).
-export function buildHourDropdown(id, initHour, clockFormat, onChange) {
+export function buildHourDropdown(id, initHour, clockFormat, onChange, { labelledBy } = {}) {
   const wrap = document.querySelector(`#${id}`);
   wrap.dataset.direction = 'up';
   const btn = document.createElement('button');
+  btn.id = `${id}-btn`;
   btn.className = 'dropdown-btn';
   btn.dataset.value = initHour;
   btn.setAttribute('aria-haspopup', 'menu');
   btn.setAttribute('aria-expanded', 'false');
+  if (labelledBy) btn.setAttribute('aria-labelledby', `${labelledBy} ${btn.id}`);
   btn.innerHTML = `${hourLabel(initHour, clockFormat)}<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span>`;
   const menu = document.createElement('div');
   menu.className = 'dropdown-menu';

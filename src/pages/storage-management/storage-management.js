@@ -378,14 +378,18 @@ document.querySelector('#mode-contiguous-btn').addEventListener('click', () => {
   contiguousForm.style.display = '';
   repeatForm.style.display = 'none';
   document.querySelector('#mode-contiguous-btn').classList.add('active');
+  document.querySelector('#mode-contiguous-btn').setAttribute('aria-selected', 'true');
   modeRepeatBtn.classList.remove('active');
+  modeRepeatBtn.setAttribute('aria-selected', 'false');
   syncDeleteRangeBtn();
 });
 modeRepeatBtn.addEventListener('click', () => {
   contiguousForm.style.display = 'none';
   repeatForm.style.display = '';
   modeRepeatBtn.classList.add('active');
+  modeRepeatBtn.setAttribute('aria-selected', 'true');
   document.querySelector('#mode-contiguous-btn').classList.remove('active');
+  document.querySelector('#mode-contiguous-btn').setAttribute('aria-selected', 'false');
   syncDeleteRangeBtn();
 });
 
@@ -473,14 +477,14 @@ document.querySelector('#delete-range-btn').addEventListener('click', async () =
 async function initHourDropdowns() {
   const stored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
   const clockFormat = stored[PREF_CLOCK_FORMAT] ?? DEFAULT_CLOCK_FORMAT;
-  buildHourDropdown('range-from-hour', 0, clockFormat, syncDeleteRangeBtn);
-  buildHourDropdown('range-to-hour', 24, clockFormat, syncDeleteRangeBtn);
-  buildHourDropdown('repeat-from-hour', 9, clockFormat, syncDeleteRangeBtn);
-  buildHourDropdown('repeat-to-hour', 17, clockFormat, syncDeleteRangeBtn);
-  buildDatePicker('range-from-date', '', syncDeleteRangeBtn);
-  buildDatePicker('range-to-date', '', syncDeleteRangeBtn);
-  buildDatePicker('repeat-from-date', '', syncDeleteRangeBtn);
-  buildDatePicker('repeat-to-date', '', syncDeleteRangeBtn);
+  buildHourDropdown('range-from-hour', 0, clockFormat, syncDeleteRangeBtn, { labelledBy: 'range-from-label' });
+  buildHourDropdown('range-to-hour', 24, clockFormat, syncDeleteRangeBtn, { labelledBy: 'range-to-label' });
+  buildHourDropdown('repeat-from-hour', 9, clockFormat, syncDeleteRangeBtn, { labelledBy: 'repeat-hours-label' });
+  buildHourDropdown('repeat-to-hour', 17, clockFormat, syncDeleteRangeBtn, { labelledBy: 'repeat-hours-label' });
+  buildDatePicker('range-from-date', '', syncDeleteRangeBtn, { labelledBy: 'range-from-label' });
+  buildDatePicker('range-to-date', '', syncDeleteRangeBtn, { labelledBy: 'range-to-label' });
+  buildDatePicker('repeat-from-date', '', syncDeleteRangeBtn, { labelledBy: 'repeat-dates-label' });
+  buildDatePicker('repeat-to-date', '', syncDeleteRangeBtn, { labelledBy: 'repeat-dates-label' });
   syncDeleteRangeBtn();
 }
 initHourDropdowns();

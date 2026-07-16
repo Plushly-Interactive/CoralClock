@@ -25,7 +25,7 @@
     <main id="settings-main">
       <section class="setting-card">
         <div class="form-row">
-          <span class="setting-label" data-i18n="settings_language">Language</span>
+          <label class="setting-label" for="language-btn" data-i18n="settings_language">Language</label>
           <div class="custom-dropdown" id="language-dropdown">
             <button class="dropdown-btn" id="language-btn" data-value="auto">
               Automatic<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span>
@@ -51,7 +51,7 @@
 
       <section class="setting-card">
         <div class="form-row">
-          <span class="setting-label" data-i18n="settings_hourFormat">Hour format</span>
+          <label class="setting-label" for="clock-format-btn" data-i18n="settings_hourFormat">Hour format</label>
           <div class="custom-dropdown" id="clock-format-dropdown">
             <button class="dropdown-btn" id="clock-format-btn" data-value="24h">
               24h<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span>
@@ -66,7 +66,7 @@
 
       <section class="setting-card">
         <div class="form-row">
-          <span class="setting-label" data-i18n="settings_weekStartsOn">Week starts on</span>
+          <label class="setting-label" for="week-start-btn" data-i18n="settings_weekStartsOn">Week starts on</label>
           <div class="custom-dropdown" id="week-start-dropdown">
             <button class="dropdown-btn" id="week-start-btn" data-value="monday"
                     data-i18n-confirm="settings_weekStartConfirm">
@@ -100,23 +100,23 @@
         </p>
         <div class="chart-color-grid">
           <div class="form-row chart-color-row">
-            <span data-i18n="chartColor_active">Active time</span>
+            <span id="chart-color-time-label" data-i18n="chartColor_active">Active time</span>
             <div class="custom-dropdown" id="chart-color-time"></div>
           </div>
           <div class="form-row chart-color-row">
-            <span data-i18n="chartColor_audio">Audio</span>
+            <span id="chart-color-audio-label" data-i18n="chartColor_audio">Audio</span>
             <div class="custom-dropdown" id="chart-color-audio"></div>
           </div>
           <div class="form-row chart-color-row">
-            <span data-i18n="chartColor_visits">Visits</span>
+            <span id="chart-color-visits-label" data-i18n="chartColor_visits">Visits</span>
             <div class="custom-dropdown" id="chart-color-visits"></div>
           </div>
           <div class="form-row chart-color-row">
-            <span data-i18n="chartColor_hourly">Hourly average</span>
+            <span id="chart-color-hourly-label" data-i18n="chartColor_hourly">Hourly average</span>
             <div class="custom-dropdown" id="chart-color-hourly"></div>
           </div>
           <div class="form-row chart-color-row">
-            <span data-i18n="chartColor_idle">Idle</span>
+            <span id="chart-color-idle-label" data-i18n="chartColor_idle">Idle</span>
             <div class="custom-dropdown" id="chart-color-idle"></div>
           </div>
         </div>

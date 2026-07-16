@@ -32,10 +32,10 @@ function drillInnerHtml() {
     <div id="drill-legend" class="time-legend text-meta" style="display: none;">${chartLegendHtml()}</div>
     <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn"> ${t('drill_enhanceReadability')}</label>
     <div id="drill-stats" class="text-meta"></div>
-    <div id="drill-toggle" class="seg-control">
-      <button id="drill-time-btn" class="drill-toggle-btn seg-btn active">${t('site_sortTime')}</button>
-      <button id="drill-visits-btn" class="drill-toggle-btn seg-btn">${t('site_sortVisits')}</button>
-      <button id="drill-hour-btn" class="drill-toggle-btn seg-btn">${t('drill_hourlyAvg')}</button>
+    <div id="drill-toggle" class="seg-control" role="radiogroup">
+      <button id="drill-time-btn" class="drill-toggle-btn seg-btn active" role="radio" aria-checked="true">${t('site_sortTime')}</button>
+      <button id="drill-visits-btn" class="drill-toggle-btn seg-btn" role="radio" aria-checked="false">${t('site_sortVisits')}</button>
+      <button id="drill-hour-btn" class="drill-toggle-btn seg-btn" role="radio" aria-checked="false">${t('drill_hourlyAvg')}</button>
     </div>
   </div>
   <div id="drill-chart-wrapper">
@@ -223,8 +223,11 @@ export function exitDrillCompletely() {
 
 function updateDrillButtons() {
   ctx.drillTimeBtn.classList.toggle('active', drillMetric === 'time');
+  ctx.drillTimeBtn.setAttribute('aria-checked', drillMetric === 'time' ? 'true' : 'false');
   ctx.drillVisitsBtn.classList.toggle('active', drillMetric === 'visits');
+  ctx.drillVisitsBtn.setAttribute('aria-checked', drillMetric === 'visits' ? 'true' : 'false');
   ctx.drillHourBtn.classList.toggle('active', drillMetric === 'hour');
+  ctx.drillHourBtn.setAttribute('aria-checked', drillMetric === 'hour' ? 'true' : 'false');
 }
 
 function navigatePeriod(dir) {
