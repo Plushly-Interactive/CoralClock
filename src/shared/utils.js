@@ -318,6 +318,10 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
       rect.setAttribute('role', 'button');
       rect.setAttribute('aria-label', rect.dataset.range);
       rect.addEventListener('click', () => onBarClick(rect.dataset.range));
+      // Prevent mouse clicks from focusing the bar — Chromium paints its default
+      // focus ring on click-focused SVG elements (its :focus-visible heuristic
+      // misfires on SVG). Keyboard focus (Tab) is unaffected and keeps the ring.
+      rect.addEventListener('mousedown', (e) => e.preventDefault());
       rect.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault();
