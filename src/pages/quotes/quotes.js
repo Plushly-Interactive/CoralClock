@@ -34,6 +34,7 @@ function renderCard(q, id) {
   if (q.source) {
     const link = document.createElement('a');
     link.className = 'link-btn';
+    link.tabIndex = 0;
     link.textContent = ' ↗';
     link.href = q.source;
     link.target = '_blank';
@@ -49,6 +50,7 @@ function renderCard(q, id) {
     if (q.philosophySource) {
       const link = document.createElement('a');
       link.className = 'link-btn';
+      link.tabIndex = 0;
       link.textContent = ' ' + t('quotes_discoverLink');
       link.href = q.philosophySource;
       link.target = '_blank';

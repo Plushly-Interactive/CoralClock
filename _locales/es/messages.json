@@ -309,6 +309,8 @@
   "blocked_visitsToday": { "message": "Visitas hoy" },
   "blocked_unlocksIn": { "message": "Se desbloquea en" },
   "blocked_viewSaved": { "message": "Ver guardado ↗" },
+  "blocked_favoriteQuote": { "message": "Guardar cita" },
+  "blocked_unfavoriteQuote": { "message": "Quitar cita de guardadas" },
   "blocked_titlePrefix": { "message": "Bloqueado: $1 - $2" },
   "blocked_now": { "message": "ahora" },
   "blocked_limitPerPeriod": { "message": "$1 / $2" },
