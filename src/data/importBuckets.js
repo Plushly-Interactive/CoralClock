@@ -135,11 +135,18 @@ export function backupRuleConflicts(currentRules, importRules) {
 }
 
 // Settings keys whose stored value would be overwritten by a different file value.
+// Object-valued prefs (chartColors) compare by content, scalars by value.
+function prefEquals(a, b) {
+  return typeof a === 'object' && a !== null && typeof b === 'object' && b !== null
+    ? JSON.stringify(a) === JSON.stringify(b)
+    : a === b;
+}
+
 // A key the user hasn't set yet is not a conflict (it applies silently).
 export function backupPrefsConflicts(importPrefs, currentPrefs) {
   if (!importPrefs) return [];
   return EXPORT_PREF_KEYS.filter(k =>
-    importPrefs[k] !== undefined && currentPrefs[k] !== undefined && currentPrefs[k] !== importPrefs[k]);
+    importPrefs[k] !== undefined && currentPrefs[k] !== undefined && !prefEquals(currentPrefs[k], importPrefs[k]));
 }
 
 // Merge file rules into current. A conflicting domain is taken from the file only
@@ -219,7 +226,7 @@ export async function applyBackupImport(parsed, { daysToReplace = new Set(), rep
     for (const k of EXPORT_PREF_KEYS) {
       if (importPrefs[k] === undefined) continue;
       const isNew = currentPrefs[k] === undefined;
-      const differs = !isNew && currentPrefs[k] !== importPrefs[k];
+      const differs = !isNew && !prefEquals(currentPrefs[k], importPrefs[k]);
       if (isNew || (differs && overwritePrefs)) { update[k] = importPrefs[k]; prefsApplied++; }
     }
   }

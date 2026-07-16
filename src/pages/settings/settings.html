@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -88,6 +88,63 @@
         <p class="setting-desc text-meta" data-i18n="settings_toolbarBadgeDesc">
           Show today's active time for the current domain on the extension icon.
         </p>
+      </section>
+
+      <section class="setting-card">
+        <div class="form-row">
+          <span class="setting-label" data-i18n="settings_chartColors">Chart colors</span>
+          <button id="chart-colors-reset" class="btn" data-i18n="settings_resetColors">Reset colors</button>
+        </div>
+        <p class="setting-desc text-meta" data-i18n="settings_chartColorsDesc">
+          Colors used for the charts on all pages. Pick a color or type a hex value. Default restores the theme color.
+        </p>
+        <div class="chart-color-grid">
+          <div class="form-row chart-color-row">
+            <span data-i18n="chartColor_active">Active time</span>
+            <div class="custom-dropdown" id="chart-color-time"></div>
+          </div>
+          <div class="form-row chart-color-row">
+            <span data-i18n="chartColor_audio">Audio</span>
+            <div class="custom-dropdown" id="chart-color-audio"></div>
+          </div>
+          <div class="form-row chart-color-row">
+            <span data-i18n="chartColor_visits">Visits</span>
+            <div class="custom-dropdown" id="chart-color-visits"></div>
+          </div>
+          <div class="form-row chart-color-row">
+            <span data-i18n="chartColor_hourly">Hourly average</span>
+            <div class="custom-dropdown" id="chart-color-hourly"></div>
+          </div>
+          <div class="form-row chart-color-row">
+            <span data-i18n="chartColor_idle">Idle</span>
+            <div class="custom-dropdown" id="chart-color-idle"></div>
+          </div>
+        </div>
+        <span class="setting-label" data-i18n="settings_preview">Preview</span>
+        <svg class="chart-colors-preview" viewBox="0 0 360 78" aria-hidden="true">
+          <line x1="4" y1="4" x2="4" y2="53" stroke="var(--color-border)"/>
+          <line x1="4" y1="53" x2="356" y2="53" stroke="var(--color-border)"/>
+          <text x="47" y="64" text-anchor="middle" font-size="8" fill="var(--color-text-secondary)" data-i18n="chartColor_active">Active time</text>
+          <text x="166" y="64" text-anchor="middle" font-size="8" fill="var(--color-text-secondary)" data-i18n="chartColor_visits">Visits</text>
+          <text x="283" y="64" text-anchor="middle" font-size="8" fill="var(--color-text-secondary)" data-i18n="chartColor_hourly">Hourly average</text>
+          <text x="324" y="75.5" font-size="8" fill="var(--color-text-secondary)" data-i18n="chartColor_idle">Idle</text>
+          <rect x="8"   y="12" width="10" height="40" rx="1.5" style="fill: var(--color-chart-time)"/>
+          <rect x="20"  y="28" width="10" height="24" rx="1.5" style="fill: var(--color-chart-audio)"/>
+          <rect x="36"  y="24" width="10" height="28" rx="1.5" style="fill: var(--color-chart-time)"/>
+          <rect x="48"  y="16" width="10" height="36" rx="1.5" style="fill: var(--color-chart-audio)"/>
+          <rect x="64"  y="8"  width="10" height="44" rx="1.5" style="fill: var(--color-chart-time)"/>
+          <rect x="76"  y="36" width="10" height="16" rx="1.5" style="fill: var(--color-chart-audio)"/>
+          <rect x="140" y="32" width="10" height="20" rx="1.5" style="fill: var(--color-chart-visits)"/>
+          <rect x="154" y="18" width="10" height="34" rx="1.5" style="fill: var(--color-chart-visits)"/>
+          <rect x="168" y="26" width="10" height="26" rx="1.5" style="fill: var(--color-chart-visits)"/>
+          <rect x="182" y="14" width="10" height="38" rx="1.5" style="fill: var(--color-chart-visits)"/>
+          <rect x="250" y="22" width="10" height="30" rx="1.5" style="fill: var(--color-chart-hourly)"/>
+          <rect x="264" y="10" width="10" height="42" rx="1.5" style="fill: var(--color-chart-hourly)"/>
+          <rect x="278" y="30" width="10" height="22" rx="1.5" style="fill: var(--color-chart-hourly)"/>
+          <rect x="292" y="16" width="10" height="36" rx="1.5" style="fill: var(--color-chart-hourly)"/>
+          <rect x="306" y="24" width="10" height="28" rx="1.5" style="fill: var(--color-chart-hourly)"/>
+          <rect x="8"   y="70" width="310" height="4" rx="2" style="fill: var(--color-chart-idle)"/>
+        </svg>
       </section>
 
     </main>

@@ -8,6 +8,8 @@ import { DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { DEFAULT_BADGE_ENABLED } from '../../background/badge.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { enhanceNumberInput } from '../../shared/numberInput.js';
+import { CHART_COLOR_TYPES, applyChartColorOverrides, setChartColorOverride } from '../../shared/chartColors.js';
+import { buildColorPicker } from '../../shared/colorPicker.js';
 import { initI18n, applyI18n, t, DEFAULT_LANGUAGE } from '../../shared/i18n.js';
 
 await initI18n();
@@ -127,6 +129,26 @@ async function onWeekStartPick(e) {
 
 rebuildWeekStartMenu();
 initCustomDropdowns(document);
+
+await applyChartColorOverrides();
+const rootStyle = getComputedStyle(document.documentElement);
+const chartColorPickers = [];
+for (const { type, cssVar } of CHART_COLOR_TYPES) {
+  const picker = buildColorPicker(`chart-color-${type}`, rootStyle.getPropertyValue(cssVar).trim(), async (color) => {
+    await setChartColorOverride(type, color);
+    if (!color) picker.setValue(rootStyle.getPropertyValue(cssVar).trim());
+  });
+  chartColorPickers.push({ picker, type, cssVar });
+}
+
+document.querySelector('#chart-colors-reset').addEventListener('click', async () => {
+  const ok = await confirmDialog({ message: t('settings_resetColorsConfirm') });
+  if (!ok) return;
+  for (const { picker, type, cssVar } of chartColorPickers) {
+    await setChartColorOverride(type, null);
+    picker.setValue(rootStyle.getPropertyValue(cssVar).trim());
+  }
+});
 
 badgeEnabledInput.addEventListener('change', () => {
   chrome.storage.local.set({ [PREF_BADGE_ENABLED]: badgeEnabledInput.checked });

@@ -13,12 +13,14 @@ import { QUERY_SITES_BY_DAY, QUERY_AVG_PER_CLOCK_HOUR } from '../../shared/query
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { applyChartColorOverrides } from '../../shared/chartColors.js';
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
 const PREF_SEARCH = 'siteSearch';
 
 await initI18n();
 applyI18n();
+await applyChartColorOverrides();
 document.title = `${t('popup_dashboardBtn')} - ${BRAND_NAME}`;
 
 document.querySelector('#header-center').appendChild(createRangeDropdown());

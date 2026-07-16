@@ -9,9 +9,11 @@ import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervals } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { initI18n, applyI18n, t as i18nT, getLocale } from '../../shared/i18n.js';
+import { applyChartColorOverrides } from '../../shared/chartColors.js';
 
 await initI18n();
 applyI18n();
+await applyChartColorOverrides();
 document.title = `${i18nT('tl_pageTitle')} - ${BRAND_NAME}`;
 
 // Visualization only (not in the spec): a horizontal browsing timeline of the top
