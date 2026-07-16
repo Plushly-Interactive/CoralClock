@@ -1,5 +1,5 @@
 import { formatMs } from './timeUtils.js';
-import { faviconUrl } from './utils.js';
+import { faviconUrl, escapeHtml } from './utils.js';
 import { t } from './i18n.js';
 
 export const RULE_MULTIPLIERS = { minutes: 60000, hours: 3600000, days: 86400000 };
@@ -199,8 +199,14 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
     const faviconHtml = rule.target
       ? `<img class="site-favicon" src="${faviconUrl(rule.target)}" alt="">`
       : '';
+    // Tabbing to the row announces the whole rule (site, scope, limit, status) up
+    // front — otherwise a screen reader reaches an unlabeled favicon/text run first,
+    // and every row's toggle/edit/delete buttons are worded identically with no
+    // per-row context of their own.
+    const statusStr = t(rule.enabled ? 'rules_statusEnabled' : 'rules_statusDisabled');
+    const rowSummary = escapeHtml(`${matchLabel(rule)} — ${t(SCOPE_KEYS[rule.matchType])} · ${limitStr} · ${t(MODE_KEYS[rule.mode])} · ${statusStr}`);
     return `
-    <li id="rule-${rule.id}" class="${rule.enabled ? '' : 'disabled'}">
+    <li id="rule-${rule.id}" class="${rule.enabled ? '' : 'disabled'}" tabindex="0" role="group" aria-label="${rowSummary}">
       ${faviconHtml}
       <div class="rule-info">
         <span class="site-label">${matchLabel(rule)}</span>

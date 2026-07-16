@@ -192,6 +192,8 @@
   "rules_deleteRule": { "message": "Eliminar regla" },
   "rules_saveEdit": { "message": "Guardar cambios" },
   "rules_cancelEdit": { "message": "Cancelar edición" },
+  "rules_statusEnabled": { "message": "Activada" },
+  "rules_statusDisabled": { "message": "Desactivada" },
   "rules_scopeHostOnly": { "message": "Solo host" },
   "rules_scopeNoSubdomains": { "message": "Sin subdominios" },
   "rules_scopeWholeSite": { "message": "Sitio completo" },

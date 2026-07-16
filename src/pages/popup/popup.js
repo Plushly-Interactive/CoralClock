@@ -155,19 +155,27 @@ function renderHourChart(hourMs, clockFormat) {
   const tooltip = document.querySelector('#stats-chart-tooltip');
   svg.querySelectorAll('rect[data-hour]').forEach(rect => {
     const h = Number(rect.dataset.hour);
-    rect.addEventListener('mouseenter', () => {
-      const ms = hourMs[h]?.ms ?? 0;
-      const from = `${String(h).padStart(2, '0')}:00`;
-      const to = `${String(h + 1).padStart(2, '0')}:00`;
-      const val = h > currentHour ? t('popup_tooltip_notYet') : (ms > 0 ? formatMs(ms) : t('popup_tooltip_noActivity'));
-      tooltip.textContent = `${from}–${to} · ${val}`;
-      tooltip.removeAttribute('hidden');
+    const ms = hourMs[h]?.ms ?? 0;
+    const from = `${String(h).padStart(2, '0')}:00`;
+    const to = `${String(h + 1).padStart(2, '0')}:00`;
+    const val = h > currentHour ? t('popup_tooltip_notYet') : (ms > 0 ? formatMs(ms) : t('popup_tooltip_noActivity'));
+    const label = `${from}–${to} · ${val}`;
+    rect.tabIndex = 0;
+    rect.setAttribute('aria-label', label);
+    const showTooltip = () => { tooltip.textContent = label; tooltip.removeAttribute('hidden'); };
+    rect.addEventListener('mouseenter', showTooltip);
+    rect.addEventListener('focus', () => {
+      showTooltip();
+      const box = rect.getBoundingClientRect();
+      tooltip.style.left = `${box.right + 12}px`;
+      tooltip.style.top = `${box.top - 22}px`;
     });
     rect.addEventListener('mousemove', e => {
       tooltip.style.left = `${e.clientX + 12}px`;
       tooltip.style.top = `${e.clientY - 32}px`;
     });
     rect.addEventListener('mouseleave', () => tooltip.setAttribute('hidden', ''));
+    rect.addEventListener('blur', () => tooltip.setAttribute('hidden', ''));
   });
 }
 

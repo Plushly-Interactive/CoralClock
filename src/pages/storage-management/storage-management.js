@@ -1,5 +1,5 @@
-import { formatBytes, showNotification, attachInputClear, escapeHtml, navButton, getQuotaUsage, QUOTA_WARN_PCT, keyActivate } from '../../shared/utils.js';
-import { localDayKey, formatSpan, formatMs, formatHourLabel, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
+import { formatBytes, showNotification, attachInputClear, escapeHtml, navButton, getQuotaUsage, QUOTA_WARN_PCT, keyActivate, trapFocusWithin } from '../../shared/utils.js';
+import { localDayKey, formatSpan, formatMs, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { intervalStats, appendIntervals, allIntervals, deleteByIds, deleteByDomain, deleteRange, dropPathsBefore } from '../../data/intervalLog.js';
 import { invalidate, getSitesByDay, getSubpagesByDay, getSitesByHour, getSubpagesByHour } from '../../data/intervalAggregates.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
@@ -13,7 +13,7 @@ import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_W
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervalStats } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
-import { buildDatePicker, getDateValue } from '../../shared/datePicker.js';
+import { buildDatePicker, getDateValue, buildHourDropdown, getHourValue } from '../../shared/datePicker.js';
 import { enhanceNumberInput } from '../../shared/numberInput.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
 
@@ -67,19 +67,6 @@ function openIo() {
   document.querySelector('#io-modal-close').focus();
 }
 function closeIo() { ioOverlay.style.display = 'none'; }
-
-// Tab/Shift+Tab wraps between a modal's first and last focusable element so
-// keyboard focus can't escape to the page behind the overlay while it's open.
-function trapFocusWithin(container, e) {
-  if (e.key !== 'Tab') return;
-  const focusable = [...container.querySelectorAll('button, input, [href], [tabindex]:not([tabindex="-1"])')]
-    .filter(el => !el.disabled && el.offsetParent !== null);
-  if (!focusable.length) return;
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-}
 
 document.querySelector('#io-open-btn').addEventListener('click', openIo);
 document.querySelector('#io-modal-close').addEventListener('click', closeIo);
@@ -376,43 +363,6 @@ document.querySelector('#io-conflict-replace').addEventListener('click', async (
 });
 
 // --- Targeted deletion (UI cloned from the bucket storage page; deletes interval rows) ---
-function delHourLabel(h, clockFormat) {
-  if (h === 24) return clockFormat === '12h' ? t('storage_midnightPlus1_12h') : t('storage_midnightPlus1_24h');
-  return formatHourLabel(h, clockFormat);
-}
-
-function buildHourDropdown(id, initHour, clockFormat, onChange) {
-  const wrap = document.querySelector(`#${id}`);
-  wrap.dataset.direction = 'up';
-  const btn = document.createElement('button');
-  btn.className = 'dropdown-btn';
-  btn.dataset.value = initHour;
-  btn.innerHTML = `${delHourLabel(initHour, clockFormat)}<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span>`;
-  const menu = document.createElement('div');
-  menu.className = 'dropdown-menu';
-  for (let h = 0; h <= 24; h++) {
-    const opt = document.createElement('button');
-    opt.value = h;
-    opt.textContent = delHourLabel(h, clockFormat);
-    menu.appendChild(opt);
-  }
-  wrap.append(btn, menu);
-  btn.addEventListener('click', e => {
-    e.stopPropagation();
-    const isOpen = menu.classList.contains('open');
-    document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-    if (!isOpen) menu.classList.add('open');
-  });
-  menu.querySelectorAll('button').forEach(opt => {
-    opt.addEventListener('click', e => {
-      e.stopPropagation();
-      btn.firstChild.textContent = opt.textContent;
-      btn.dataset.value = opt.value;
-      menu.classList.remove('open');
-      if (onChange) onChange();
-    });
-  });
-}
 
 document.addEventListener('click', () => {
   document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
@@ -447,10 +397,6 @@ if (delSiteParam) {
   siteInput.focus();
 }
 syncDeleteAllBtn();
-
-function getHourValue(id) {
-  return parseInt(document.querySelector(`#${id} .dropdown-btn`).dataset.value, 10);
-}
 
 function syncDeleteRangeBtn() {
   const btn = document.querySelector('#delete-range-btn');

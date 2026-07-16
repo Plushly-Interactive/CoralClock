@@ -1,12 +1,12 @@
 import { scanSiteBucket, scanSubpageBucket, applySiteDeletions, applySubpageDeletions } from '../../data/prune.js';
 import { applySiteHourlyRangeDeletion, applySiteDailyReductions, applySubpageHourlyRangeDeletion, applySubpageDailyReductions, applyDirectDailyRangeDeletion, applyDirectSubpageDailyRangeDeletion, deleteSiteAllTime } from '../../data/targetedDelete.js';
-import { formatMs, formatHourLabel, formatSpan, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { showNotification, formatBytes, escapeHtml, attachInputClear, navButton, keyActivate } from '../../shared/utils.js';
+import { formatMs, formatSpan, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
+import { showNotification, formatBytes, escapeHtml, attachInputClear, navButton, keyActivate, trapFocusWithin } from '../../shared/utils.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { downloadBackupExport } from '../../data/exportPayload.js';
 import { checkHealth, applyRepairs } from '../../data/healthCheck.js';
-import { buildDatePicker, getDateValue } from '../../shared/datePicker.js';
+import { buildDatePicker, getDateValue, buildHourDropdown, getHourValue } from '../../shared/datePicker.js';
 import { enhanceNumberInput } from '../../shared/numberInput.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
 import { BRAND_NAME } from '../../shared/brand.js';
@@ -29,44 +29,6 @@ const ISSUE_TYPE_LABELS = {
   'future-dated': 'legacy_issue_futureDated',
   'invalid':      'legacy_issue_invalid',
 };
-
-function hourLabel(h, clockFormat) {
-  if (h === 24) return clockFormat === '12h' ? t('storage_midnightPlus1_12h') : t('storage_midnightPlus1_24h');
-  return formatHourLabel(h, clockFormat);
-}
-
-function buildHourDropdown(id, initHour, clockFormat, onChange) {
-  const wrap = document.querySelector(`#${id}`);
-  wrap.dataset.direction = 'up';
-  const btn = document.createElement('button');
-  btn.className = 'dropdown-btn';
-  btn.dataset.value = initHour;
-  btn.innerHTML = `${hourLabel(initHour, clockFormat)}<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span>`;
-  const menu = document.createElement('div');
-  menu.className = 'dropdown-menu';
-  for (let h = 0; h <= 24; h++) {
-    const opt = document.createElement('button');
-    opt.value = h;
-    opt.textContent = hourLabel(h, clockFormat);
-    menu.appendChild(opt);
-  }
-  wrap.append(btn, menu);
-  btn.addEventListener('click', e => {
-    e.stopPropagation();
-    const isOpen = menu.classList.contains('open');
-    document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
-    if (!isOpen) menu.classList.add('open');
-  });
-  menu.querySelectorAll('button').forEach(opt => {
-    opt.addEventListener('click', e => {
-      e.stopPropagation();
-      btn.firstChild.textContent = opt.textContent;
-      btn.dataset.value = opt.value;
-      menu.classList.remove('open');
-      if (onChange) onChange();
-    });
-  });
-}
 
 async function initHourDropdowns() {
   const stored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
@@ -118,10 +80,6 @@ const deleteAllBtn = document.querySelector('#delete-all-site-btn');
 
 function syncDeleteAllBtn() { deleteAllBtn.disabled = !siteInput.value.trim(); }
 attachInputClear(siteInput, document.querySelector('#site-filter-clear'), syncDeleteAllBtn);
-
-function getHourValue(id) {
-  return parseInt(document.querySelector(`#${id} .dropdown-btn`).dataset.value, 10);
-}
 
 function syncDeleteRangeBtn() {
   const btn = document.querySelector('#delete-range-btn');
@@ -452,10 +410,15 @@ document.querySelector('#repair-btn').addEventListener('click', async () => {
   });
   buildRepairOverlay(cachedIssues);
   repairOverlay.style.display = '';
+  document.querySelector('#repair-overlay-close').focus();
 });
 document.querySelector('#repair-overlay-close').addEventListener('click', () => { repairOverlay.style.display = 'none'; });
 document.querySelector('#repair-overlay-cancel-btn').addEventListener('click', () => { repairOverlay.style.display = 'none'; });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && repairOverlay.style.display !== 'none') repairOverlay.style.display = 'none'; });
+document.addEventListener('keydown', e => {
+  if (repairOverlay.style.display === 'none') return;
+  if (e.key === 'Escape') repairOverlay.style.display = 'none';
+  trapFocusWithin(repairOverlay, e);
+});
 
 document.querySelector('#repair-all-btn').addEventListener('click', async () => {
   const data = await chrome.storage.local.get(['sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour']);
@@ -512,7 +475,11 @@ document.querySelector('#insig-scope-subpages').addEventListener('change', syncS
 const scanOverlay = document.querySelector('#scan-overlay');
 document.querySelector('#scan-btn').addEventListener('click', runScan);
 document.querySelector('#overlay-close').addEventListener('click', () => { scanOverlay.style.display = 'none'; });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && scanOverlay.style.display !== 'none') scanOverlay.style.display = 'none'; });
+document.addEventListener('keydown', e => {
+  if (scanOverlay.style.display === 'none') return;
+  if (e.key === 'Escape') scanOverlay.style.display = 'none';
+  trapFocusWithin(scanOverlay, e);
+});
 document.querySelector('#overlay-delete-btn').addEventListener('click', deleteSelected);
 
 async function runScan() {
@@ -551,6 +518,7 @@ async function runScan() {
   pruneState = { groups, stores: { sitesByDay, sitesByHour, subpagesByDay, subpagesByHour }, storeKeys: keys, thresholdMs };
   renderScanResults();
   scanOverlay.style.display = '';
+  document.querySelector('#overlay-close').focus();
 }
 
 function rowKey(r) {

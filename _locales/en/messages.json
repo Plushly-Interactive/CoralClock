@@ -221,6 +221,8 @@
   "rules_deleteRule": { "message": "Delete rule" },
   "rules_saveEdit": { "message": "Save changes" },
   "rules_cancelEdit": { "message": "Cancel edit" },
+  "rules_statusEnabled": { "message": "Enabled" },
+  "rules_statusDisabled": { "message": "Disabled" },
   "rules_scopeHostOnly": { "message": "Host only" },
   "rules_scopeNoSubdomains": { "message": "No subdomains" },
   "rules_scopeWholeSite": { "message": "Whole site" },

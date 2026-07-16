@@ -310,6 +310,7 @@ function updateSortArrows() {
     const isSorted = sort.key === key;
     btn.textContent = t(btn.dataset.label) + (isSorted ? (sort.dir === 1 ? ' ↑' : ' ↓') : '');
     btn.classList.toggle('sorted', isSorted);
+    btn.setAttribute('aria-sort', isSorted ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none');
   }
 }
 
@@ -322,6 +323,8 @@ function setSort(key) {
 
 sortSiteBtn.addEventListener('click', () => setSort('site'));
 sortStatusBtn.addEventListener('click', () => setSort('status'));
+keyActivate(sortSiteBtn);
+keyActivate(sortStatusBtn);
 
 // ── Render rules list ──
 
