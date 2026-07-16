@@ -127,7 +127,7 @@
 .date-dropdown .dropdown-btn:focus,
 .hour-dropdown .dropdown-btn:focus,
 .date-dropdown:has(.dropdown-menu.open) .dropdown-btn,
-.hour-dropdown:has(.dropdown-menu.open) .dropdown-btn { outline: none; border-color: var(--color-accent); }
+.hour-dropdown:has(.dropdown-menu.open) .dropdown-btn { outline: none; border-color: var(--color-accent-text); }
 .hour-dropdown .dropdown-menu { width: 100%; max-height: 280px; overflow-y: auto; }
 .hour-dropdown .dropdown-arrow { color: var(--color-text-secondary); }
 .date-dropdown .dropdown-btn { min-width: 120px; }
@@ -202,7 +202,7 @@
 .overlay-title {
   font-size: var(--font-base);
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -218,7 +218,7 @@
   padding: 0 4px;
 }
 
-.overlay-close:hover { color: var(--color-accent); }
+.overlay-close:hover { color: var(--color-accent-text); }
 
 .overlay-results {
   flex: 1;
@@ -244,7 +244,7 @@
 .result-group-title {
   font-size: var(--font-sm);
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 6px 0;

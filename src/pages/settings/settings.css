@@ -44,6 +44,10 @@
   align-self: center;
 }
 
+.preview-row > .setting-label {
+  align-self: center;
+}
+
 .chart-color-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

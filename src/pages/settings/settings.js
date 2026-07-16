@@ -11,11 +11,13 @@ import { enhanceNumberInput } from '../../shared/numberInput.js';
 import { CHART_COLOR_TYPES, applyChartColorOverrides, setChartColorOverride } from '../../shared/chartColors.js';
 import { buildColorPicker } from '../../shared/colorPicker.js';
 import { initI18n, applyI18n, t, DEFAULT_LANGUAGE } from '../../shared/i18n.js';
+import { keyActivate } from '../../shared/utils.js';
 
 await initI18n();
 applyI18n();
 document.title = `${t('settings_pageTitle')} - ${BRAND_NAME}`;
 document.querySelector('#idle-threshold-desc').textContent = t('settings_idleThresholdDesc', [BRAND_NAME]);
+keyActivate(document.querySelector('#back-btn'), [' ']);
 
 const CLOCK_FORMATS = ['24h', '12h'];
 const LANGUAGES = ['auto', 'en', 'fr', 'es'];
@@ -137,9 +139,18 @@ for (const { type, cssVar } of CHART_COLOR_TYPES) {
   const picker = buildColorPicker(`chart-color-${type}`, rootStyle.getPropertyValue(cssVar).trim(), async (color) => {
     await setChartColorOverride(type, color);
     if (!color) picker.setValue(rootStyle.getPropertyValue(cssVar).trim());
-  });
+  }, { labelledBy: `chart-color-${type}-label` });
   chartColorPickers.push({ picker, type, cssVar });
 }
+
+const COLORBLIND_PALETTE = { time: '#d55e00', audio: '#0072b2', visits: '#cc79a7', hourly: '#767676', idle: '#009e73' };
+
+document.querySelector('#chart-colors-colorblind').addEventListener('click', async () => {
+  for (const { picker, type } of chartColorPickers) {
+    await setChartColorOverride(type, COLORBLIND_PALETTE[type]);
+    picker.setValue(COLORBLIND_PALETTE[type]);
+  }
+});
 
 document.querySelector('#chart-colors-reset').addEventListener('click', async () => {
   const ok = await confirmDialog({ message: t('settings_resetColorsConfirm') });

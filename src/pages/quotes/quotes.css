@@ -68,5 +68,5 @@
 }
 
 .unfav-btn:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }

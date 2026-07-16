@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { drawBarChart, formatWithSmallSub, escapeHtml, navButton, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
+import { drawBarChart, formatWithSmallSub, escapeHtml, navButton, faviconUrl, loadFaviconCache, attachInputClear, keyActivate } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { seedTestData } from '../../data/seedTestData.js';
@@ -94,6 +94,7 @@ function updateHeaders() {
     const arrow = isSorted ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
     th.textContent = t(TH_LABEL_KEYS[col]) + arrow;
     th.classList.toggle('sorted', isSorted);
+    th.setAttribute('aria-sort', isSorted ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none');
   }
 }
 
@@ -109,6 +110,7 @@ function updateHeaders() {
     renderTopChart();
     renderTable(filteredRows());
   });
+  keyActivate(th);
 });
 
 function groupByEtld1(rows) {
@@ -216,7 +218,7 @@ function renderTable(rows) {
       href = `../site/site.html?ids=${encodeURIComponent([...row.hostnames].join(','))}`;
       subtitle = `${t('dashboard_sitesCount', [etld1Count])} · ${t('dashboard_subdomainsCount', [hostCount])}`;
     }
-    return `<tr class="clickable" data-href="${href}">
+    return `<tr class="clickable" tabindex="0" data-href="${href}">
       <td><div class="site-cell-content"><img class="site-favicon" src="${faviconUrl(faviconHost)}" alt=""><div class="site-text"><span class="site-label">${escapeHtml(siteLabel)}</span><span class="site-id text-meta">${escapeHtml(subtitle)}</span></div></div></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(activeMs))}</span></td>
       <td><span class="stat-value">${formatWithSmallSub(formatMs(audioMs))}</span></td>
@@ -228,6 +230,7 @@ function renderTable(rows) {
   });
   tbody.querySelectorAll('tr.clickable').forEach(row => {
     navButton(row, row.dataset.href);
+    keyActivate(row);
   });
   entriesCount.textContent = rows.length === 1 ? t('dashboard_entry_one', [rows.length]) : t('dashboard_entry_other', [rows.length]);
   updateHeaders();
@@ -432,11 +435,13 @@ function dashboardTourSteps() { return [
   },
   {
     selector: '#dashboard-table-col',
+    focusSelector: '#dashboard-body tr',
     title: t('tour_dash_table_title'),
     body: t('tour_dash_table_body'),
   },
   {
     selector: '#dashboard-table-col',
+    focusSelector: '#dashboard-body tr',
     title: t('tour_dash_drill_title'),
     body: t('tour_dash_drill_body'),
     handoff: { nextSurface: 'site', mode: 'inPage' },
@@ -452,6 +457,8 @@ function dashboardTourSteps() { return [
     tooltipPosition: 'top-right',
     arrow: 'up',
     handoff: { nextSurface: 'popup', mode: 'crossDocument' },
+    skippable: true,
+    skipTo: { nextSurface: 'rules', url: '../rules/rules.html' },
   },
   {
     selector: '#prune-btn',

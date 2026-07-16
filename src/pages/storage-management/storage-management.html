@@ -14,7 +14,7 @@
 <body>
   <header>
     <div id="header-left">
-      <a id="back-btn" href="../dashboard/dashboard.html">
+      <a id="back-btn" tabindex="0" href="../dashboard/dashboard.html">
         <img src="../../../resources/icons/brand/logo.svg" alt="CoralClock">
       </a>
     </div>
@@ -105,7 +105,7 @@
         <h2 class="chart-heading" data-i18n="storage_removeInsigRows">Remove insignificant rows</h2>
         <p class="card-desc" data-i18n="storage_removeInsigDesc">Brief visits and accidental clicks accumulate. Scan and remove sites or pages whose total tracked time falls below a threshold.</p>
         <div class="field-group">
-          <div class="setting-label" data-i18n="storage_threshold">Threshold</div>
+          <label class="setting-label" for="threshold-input" data-i18n="storage_threshold">Threshold</label>
           <div id="threshold-row">
             <input id="threshold-input" class="number-input" type="number" min="1" value="30" />
             <span data-i18n="storage_seconds">seconds</span>
@@ -125,10 +125,10 @@
         <h2 class="chart-heading" data-i18n="storage_targetedDeletion">Targeted deletion</h2>
         <p class="card-desc" data-i18n="storage_targetedDeletionDesc">Delete all data for a specific site, or remove records within an exact date and time window.</p>
         <div id="site-filter-row">
-          <span class="setting-label" data-i18n="storage_siteOptional">Site (optional)</span>
+          <label class="setting-label" for="site-filter-input" data-i18n="storage_siteOptional">Site (optional)</label>
           <div id="site-filter-wrap" class="input-wrap">
             <input type="text" id="site-filter-input" class="text-input" placeholder="e.g. google.com" />
-            <button id="site-filter-clear" class="icon-btn input-clear" hidden>&times;</button>
+            <button id="site-filter-clear" class="icon-btn input-clear" data-i18n-aria="storage_clearFilter" aria-label="Clear filter" hidden>&times;</button>
           </div>
         </div>
         <div id="delete-all-site-row">
@@ -136,22 +136,22 @@
         </div>
         <hr class="card-divider" />
         <div id="range-mode-row">
-          <div id="range-mode-toggle" class="seg-control">
-            <button id="mode-contiguous-btn" class="seg-btn active" data-i18n="storage_contiguous">Contiguous</button>
-            <button id="mode-repeat-btn" class="seg-btn" data-i18n="storage_repeatDaily">Repeat daily</button>
+          <div id="range-mode-toggle" class="seg-control" role="tablist">
+            <button id="mode-contiguous-btn" class="seg-btn active" role="tab" aria-selected="true" aria-controls="range-form-row" data-i18n="storage_contiguous">Contiguous</button>
+            <button id="mode-repeat-btn" class="seg-btn" role="tab" aria-selected="false" aria-controls="repeat-form" data-i18n="storage_repeatDaily">Repeat daily</button>
           </div>
         </div>
-        <div id="range-form-row">
+        <div id="range-form-row" role="tabpanel" aria-labelledby="mode-contiguous-btn">
           <div id="range-form-col">
             <div class="range-line">
-              <span class="setting-label" data-i18n="storage_from">From</span>
+              <span id="range-from-label" class="setting-label" data-i18n="storage_from">From</span>
               <div class="dt-group">
                 <div class="custom-dropdown date-dropdown" id="range-from-date"></div>
                 <div class="custom-dropdown hour-dropdown" id="range-from-hour"></div>
               </div>
             </div>
             <div class="range-line">
-              <span class="setting-label" data-i18n="storage_to">To</span>
+              <span id="range-to-label" class="setting-label" data-i18n="storage_to">To</span>
               <div class="dt-group">
                 <div class="custom-dropdown date-dropdown" id="range-to-date"></div>
                 <div class="custom-dropdown hour-dropdown" id="range-to-hour"></div>
@@ -159,15 +159,15 @@
             </div>
           </div>
         </div>
-        <div id="repeat-form" style="display:none">
+        <div id="repeat-form" role="tabpanel" aria-labelledby="mode-repeat-btn" style="display:none">
           <div class="repeat-row">
-            <span class="repeat-label setting-label" data-i18n="storage_dates">Dates</span>
+            <span id="repeat-dates-label" class="repeat-label setting-label" data-i18n="storage_dates">Dates</span>
             <div class="custom-dropdown date-dropdown" id="repeat-from-date"></div>
             <span class="text-meta">–</span>
             <div class="custom-dropdown date-dropdown" id="repeat-to-date"></div>
           </div>
           <div class="repeat-row">
-            <span class="repeat-label setting-label" data-i18n="storage_hours">Hours</span>
+            <span id="repeat-hours-label" class="repeat-label setting-label" data-i18n="storage_hours">Hours</span>
             <div class="custom-dropdown hour-dropdown" id="repeat-from-hour"></div>
             <span class="text-meta">–</span>
             <div class="custom-dropdown hour-dropdown" id="repeat-to-hour"></div>
@@ -182,7 +182,7 @@
         <h2 class="chart-heading" data-i18n="storage_dropSubpageDetail">Drop subpage detail</h2>
         <p class="card-desc" data-i18n="storage_dropSubpageDesc">Collapse old rows to site level by dropping their page path. Keeps site totals, sheds per-page detail to shrink the log.</p>
         <div id="drop-row">
-          <span class="setting-label" data-i18n="storage_collapseRowsOlderThan">Collapse rows older than</span>
+          <label class="setting-label" for="drop-days-input" data-i18n="storage_collapseRowsOlderThan">Collapse rows older than</label>
           <input id="drop-days-input" class="number-input" type="number" min="0" value="30" />
           <span data-i18n="storage_days">days</span>
         </div>
@@ -200,7 +200,7 @@
         </div>
         <hr class="card-divider" />
         <div id="favicon-stale-row" style="display:flex;align-items:center;gap:8px">
-          <span class="setting-label" data-i18n="storage_clearIconsNotVisitedIn">Clear icons not visited in</span>
+          <label class="setting-label" for="favicon-days-input" data-i18n="storage_clearIconsNotVisitedIn">Clear icons not visited in</label>
           <input id="favicon-days-input" class="number-input" type="number" min="1" value="30" />
           <span data-i18n="storage_days">days</span>
         </div>
@@ -296,11 +296,11 @@
   </div>
 
   <!-- Scan overlay (remove insignificant rows) -->
-  <div id="scan-overlay" style="display:none">
+  <div id="scan-overlay" style="display:none" role="dialog" aria-labelledby="overlay-title" aria-modal="true">
     <div class="overlay-header">
-      <span class="overlay-title" data-i18n="storage_scanResults">Scan results</span>
+      <span id="overlay-title" class="overlay-title" data-i18n="storage_scanResults">Scan results</span>
       <span id="overlay-params" class="text-meta"></span>
-      <button id="overlay-close" class="overlay-close">&times;</button>
+      <button id="overlay-close" class="overlay-close" data-i18n-aria="storage_close" aria-label="Close">&times;</button>
     </div>
     <div id="overlay-results" class="overlay-results"></div>
     <div class="overlay-footer">
@@ -309,7 +309,7 @@
     </div>
   </div>
 
-  <div id="notification" hidden></div>
+  <div id="notification" role="status" hidden></div>
 
   <script type="module" src="./storage-management.js"></script>
 </body>

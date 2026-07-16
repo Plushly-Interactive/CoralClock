@@ -5,6 +5,9 @@ export function confirmDialog({ message, confirmLabel = t('confirm_defaultOk'), 
     const dialog = document.createElement('div');
     dialog.id = 'confirm-dialog';
     dialog.className = 'modal-dialog';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-labelledby', 'confirm-dialog-body');
     dialog.innerHTML = `
       <div id="confirm-dialog-body"></div>
       <div id="confirm-dialog-actions">
@@ -27,9 +30,14 @@ export function confirmDialog({ message, confirmLabel = t('confirm_defaultOk'), 
       overlay.remove();
       resolve(result);
     }
+    // Only two focusable elements, so the trap is a direct wrap between them
+    // rather than a generic querySelectorAll-based scan.
     function onKey(e) {
-      if (e.key === 'Escape') close(false);
-      else if (e.key === 'Enter') close(true);
+      if (e.key === 'Escape') { close(false); return; }
+      if (e.key === 'Enter') { close(true); return; }
+      if (e.key !== 'Tab') return;
+      e.preventDefault();
+      (document.activeElement === okBtn ? cancelBtn : okBtn).focus();
     }
 
     overlay.addEventListener('click', () => close(false));

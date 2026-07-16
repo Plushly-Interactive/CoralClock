@@ -70,7 +70,7 @@ header {
 .panel-title {
   font-size: var(--font-base);
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }

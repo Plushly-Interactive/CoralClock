@@ -31,12 +31,20 @@ function normalizeHex(raw) {
   return null;
 }
 
-export function buildColorPicker(id, initColor, onChange) {
+export function buildColorPicker(id, initColor, onChange, { labelledBy } = {}) {
   const wrap = document.querySelector(`#${id}`);
 
   const btn = document.createElement('button');
   btn.type = 'button';
+  btn.id = `${id}-btn`;
   btn.className = 'dropdown-btn color-btn';
+  btn.setAttribute('aria-haspopup', 'true');
+  btn.setAttribute('aria-expanded', 'false');
+  // Combine the external row label (e.g. "Active time") with the button's own
+  // visible text (the hex value) rather than letting aria-labelledby replace it
+  // outright — referencing the button's own id contributes its text content at
+  // that position in the accessible-name concatenation.
+  if (labelledBy) btn.setAttribute('aria-labelledby', `${labelledBy} ${btn.id}`);
   btn.innerHTML = '<span class="color-swatch color-btn-swatch"></span><span class="color-btn-label"></span>';
   const btnSwatch = btn.querySelector('.color-btn-swatch');
   const btnLabel = btn.querySelector('.color-btn-label');
@@ -49,6 +57,7 @@ export function buildColorPicker(id, initColor, onChange) {
   const svBox = document.createElement('div');
   svBox.className = 'color-sv';
   svBox.tabIndex = 0;
+  svBox.setAttribute('role', 'slider');
   svBox.setAttribute('aria-label', t('colorPicker_svLabel'));
   const svMarker = document.createElement('div');
   svMarker.className = 'color-sv-marker';
@@ -56,6 +65,9 @@ export function buildColorPicker(id, initColor, onChange) {
   const hueBar = document.createElement('div');
   hueBar.className = 'color-hue';
   hueBar.tabIndex = 0;
+  hueBar.setAttribute('role', 'slider');
+  hueBar.setAttribute('aria-valuemin', '0');
+  hueBar.setAttribute('aria-valuemax', '360');
   hueBar.setAttribute('aria-label', t('colorPicker_hueLabel'));
   const hueThumb = document.createElement('div');
   hueThumb.className = 'color-hue-thumb';
@@ -85,6 +97,13 @@ export function buildColorPicker(id, initColor, onChange) {
     svMarker.style.left = `${hsv.s * 100}%`;
     svMarker.style.top = `${(1 - hsv.v) * 100}%`;
     hueThumb.style.top = `${(hsv.h / 360) * 100}%`;
+    // role="slider" is a compromise on svBox (it's genuinely 2D — saturation and
+    // brightness together — with no matching ARIA widget), but aria-valuetext
+    // still gives a screen reader something better than silence as it changes.
+    svBox.setAttribute('aria-valuetext', t('colorPicker_svValue', [Math.round(hsv.s * 100), Math.round(hsv.v * 100)]));
+    const hueDeg = Math.round(hsv.h);
+    hueBar.setAttribute('aria-valuenow', hueDeg);
+    hueBar.setAttribute('aria-valuetext', t('colorPicker_hueValue', [hueDeg]));
   }
 
   // preview keeps hsv authoritative: recomputing it from the hex would lose
@@ -172,6 +191,7 @@ export function buildColorPicker(id, initColor, onChange) {
     if (e.key !== 'Escape') return;
     e.stopPropagation();
     popup.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
     btn.focus();
   });
 
@@ -187,6 +207,7 @@ export function buildColorPicker(id, initColor, onChange) {
 
   defaultBtn.addEventListener('click', () => {
     popup.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
     onChange(null);
   });
 
@@ -197,8 +218,11 @@ export function buildColorPicker(id, initColor, onChange) {
     if (!isOpen) {
       delete wrap.dataset.direction;
       popup.classList.add('open');
+      btn.setAttribute('aria-expanded', 'true');
       if (popup.getBoundingClientRect().bottom > window.innerHeight) wrap.dataset.direction = 'up';
       svBox.focus();
+    } else {
+      btn.setAttribute('aria-expanded', 'false');
     }
   });
   popup.addEventListener('click', e => e.stopPropagation());

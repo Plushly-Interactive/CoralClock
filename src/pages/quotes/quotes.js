@@ -2,10 +2,12 @@ import { QUOTES } from '../../shared/quotes.data.js';
 import { PREF_FAVORITE_QUOTE_IDS } from '../../shared/prefKeys.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { keyActivate } from '../../shared/utils.js';
 
 await initI18n();
 applyI18n();
 document.title = `${t('quotes_pageTitle')} - ${BRAND_NAME}`;
+keyActivate(document.querySelector('#back-btn'), [' ']);
 
 const { [PREF_FAVORITE_QUOTE_IDS]: favIds = [] } = await chrome.storage.local.get(PREF_FAVORITE_QUOTE_IDS);
 
@@ -32,6 +34,7 @@ function renderCard(q, id) {
   if (q.source) {
     const link = document.createElement('a');
     link.className = 'link-btn';
+    link.tabIndex = 0;
     link.textContent = ' ↗';
     link.href = q.source;
     link.target = '_blank';
@@ -47,6 +50,7 @@ function renderCard(q, id) {
     if (q.philosophySource) {
       const link = document.createElement('a');
       link.className = 'link-btn';
+      link.tabIndex = 0;
       link.textContent = ' ' + t('quotes_discoverLink');
       link.href = q.philosophySource;
       link.target = '_blank';
