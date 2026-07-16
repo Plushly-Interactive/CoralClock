@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, formatTimeOfDay, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { faviconUrl, loadFaviconCache, escapeHtml } from '../../shared/utils.js';
+import { faviconUrl, loadFaviconCache, escapeHtml, keyActivate } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { displayPath } from '../../shared/paths.js';
 import { periodLevel, formatPeriodLabel, stepPeriod, periodBounds, levelUp, levelDown } from '../../shared/period.js';
@@ -22,6 +22,7 @@ document.title = `${i18nT('tl_pageTitle')} - ${BRAND_NAME}`;
 // thin base track — mirroring the dashboard time chart, laid along the time axis.
 
 document.querySelector('#back-btn').href = '../dashboard/dashboard.html';
+keyActivate(document.querySelector('#back-btn'), [' ']);
 const svg = document.querySelector('#timeline-chart');
 const axisSvg = document.querySelector('#timeline-axis');
 const scrollDiv = document.querySelector('#tl-scroll');

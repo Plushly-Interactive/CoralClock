@@ -3,7 +3,7 @@ import { initCustomDropdowns } from '../../shared/dropdown.js';
 import { getDomain } from '../../vendor/tldts.js';
 import { localDayKey } from '../../shared/timeUtils.js';
 import { weekDow, rotatedDayLabels } from '../../shared/weekStart.js';
-import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear } from '../../shared/utils.js';
+import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear, keyActivate } from '../../shared/utils.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockRules, mockBlocksByDay } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
@@ -13,6 +13,7 @@ import { initI18n, applyI18n, t, getLocale } from '../../shared/i18n.js';
 await initI18n();
 applyI18n();
 document.title = `${t('rules_pageTitle')} - ${BRAND_NAME}`;
+keyActivate(document.querySelector('#back-btn'), [' ']);
 
 const formTarget          = document.querySelector('#form-target');
 const formTargetClearBtn  = document.querySelector('#form-target-clear');
@@ -263,7 +264,7 @@ function refreshPreview() {
   saveBtn.disabled = false;
 }
 
-cards.forEach(card => card.addEventListener('click', () => selectScope(card.dataset.scope)));
+cards.forEach(card => { card.addEventListener('click', () => selectScope(card.dataset.scope)); keyActivate(card); });
 const syncTargetClear = attachInputClear(formTarget, formTargetClearBtn, refreshPreview, { escStopPropagation: true });
 
 previewText.addEventListener('click', (e) => {
@@ -544,11 +545,28 @@ function openRowEditor(id) {
   li.querySelector('.edit-limit').focus();
 }
 
+// render() fully replaces #rules-list's innerHTML, which drops whatever had
+// focus (e.g. the toggle button just activated). Refocus the equivalent
+// control on the same rule after render — falling back to the rule's edit
+// button (e.g. after save/cancel, which revert to the normal row), or to the
+// list itself if the rule no longer exists (e.g. after delete).
+function focusRuleRow(ruleId, selector) {
+  const target = document.querySelector(`#rule-${ruleId} ${selector}`)
+    ?? document.querySelector(`#rule-${ruleId} .edit-btn`)
+    ?? rulesList;
+  target.focus();
+}
+
 rulesList.addEventListener('click', async (e) => {
   const btn = e.target.closest('button');
   if (!btn) return;
 
-  if (btn.classList.contains('cancel-edit-btn')) { render(); return; }
+  if (btn.classList.contains('cancel-edit-btn')) {
+    const ruleId = btn.closest('li')?.id.replace('rule-', '');
+    await render();
+    if (ruleId) focusRuleRow(ruleId, '.edit-btn');
+    return;
+  }
   if (btn.classList.contains('save-edit-btn')) {
     const id = btn.dataset.id;
     const limit = parseInt(rulesList.querySelector('.edit-limit').value);
@@ -558,7 +576,8 @@ rulesList.addEventListener('click', async (e) => {
       limitUnit: rulesList.querySelector('.edit-unit-btn').dataset.value,
       period: rulesList.querySelector('.edit-period-btn').dataset.value,
     });
-    render();
+    await render();
+    focusRuleRow(id, '.edit-btn');
     return;
   }
 
@@ -571,7 +590,8 @@ rulesList.addEventListener('click', async (e) => {
     await deleteRule(id);
     if (deleted) await releasePermissionFor(deleted, currentRules.filter(r => r.id !== id));
   }
-  render();
+  await render();
+  focusRuleRow(id, '.toggle-btn');
 });
 
 // ── Stats + sparkline ──

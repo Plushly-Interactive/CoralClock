@@ -110,6 +110,17 @@ export function navButton(btnEl, url) {
   });
 }
 
+// Forwards Enter/Space to an element's existing click handler, so non-native
+// clickable elements (tr, th, div) become keyboard-operable without duplicating
+// their click logic.
+export function keyActivate(el, keys = ['Enter', ' ']) {
+  el.addEventListener('keydown', (e) => {
+    if (!keys.includes(e.key)) return;
+    e.preventDefault();
+    el.click();
+  });
+}
+
 export function showNotification(message, durationMs = 3000) {
   const el = document.querySelector('#notification');
   el.textContent = message;
@@ -286,7 +297,20 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
   svgEl.querySelectorAll('rect[data-range]').forEach(rect => {
     if (onBarClick) {
       rect.style.cursor = 'pointer';
+      rect.tabIndex = 0;
+      rect.setAttribute('role', 'button');
+      rect.setAttribute('aria-label', rect.dataset.range);
       rect.addEventListener('click', () => onBarClick(rect.dataset.range));
+      rect.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        // Dispatch a real click rather than calling onBarClick directly, so it
+        // bubbles like a mouse click would — anything listening for a click on
+        // an ancestor (e.g. the tour's advanceOn: 'click' steps) still fires.
+        // SVGElement has no native .click() (that's HTMLElement-only), so this
+        // has to be a manual event dispatch rather than rect.click().
+        rect.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
     }
     rect.addEventListener('mouseenter', () => {
       let html;

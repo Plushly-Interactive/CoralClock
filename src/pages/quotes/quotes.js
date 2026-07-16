@@ -2,10 +2,12 @@ import { QUOTES } from '../../shared/quotes.data.js';
 import { PREF_FAVORITE_QUOTE_IDS } from '../../shared/prefKeys.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
 import { BRAND_NAME } from '../../shared/brand.js';
+import { keyActivate } from '../../shared/utils.js';
 
 await initI18n();
 applyI18n();
 document.title = `${t('quotes_pageTitle')} - ${BRAND_NAME}`;
+keyActivate(document.querySelector('#back-btn'), [' ']);
 
 const { [PREF_FAVORITE_QUOTE_IDS]: favIds = [] } = await chrome.storage.local.get(PREF_FAVORITE_QUOTE_IDS);
 

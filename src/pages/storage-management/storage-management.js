@@ -1,4 +1,4 @@
-import { formatBytes, showNotification, attachInputClear, escapeHtml, navButton, getQuotaUsage, QUOTA_WARN_PCT } from '../../shared/utils.js';
+import { formatBytes, showNotification, attachInputClear, escapeHtml, navButton, getQuotaUsage, QUOTA_WARN_PCT, keyActivate } from '../../shared/utils.js';
 import { localDayKey, formatSpan, formatMs, formatHourLabel, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
 import { intervalStats, appendIntervals, allIntervals, deleteByIds, deleteByDomain, deleteRange, dropPathsBefore } from '../../data/intervalLog.js';
 import { invalidate, getSitesByDay, getSubpagesByDay, getSitesByHour, getSubpagesByHour } from '../../data/intervalAggregates.js';
@@ -20,6 +20,7 @@ import { initI18n, applyI18n, t } from '../../shared/i18n.js';
 await initI18n();
 applyI18n();
 document.title = `${t('storage_pageTitle')} - ${BRAND_NAME}`;
+keyActivate(document.querySelector('#back-btn'), [' ']);
 
 const spanChip = document.querySelector('#span-chip');
 const spanTooltip = document.querySelector('#span-tooltip');
@@ -58,13 +59,35 @@ let pendingImport = null;  // bg: {kind,parsed,intervals,intervalCtx,dayConflict
 
 function showIoError(msg) { ioError.textContent = msg; ioError.removeAttribute('hidden'); ioError.style.display = ''; }
 function hideConflicts() { conflictView.style.display = 'none'; ioColumns.style.display = ''; pendingImport = null; }
-function openIo() { ioError.style.display = 'none'; hideConflicts(); ioOverlay.removeAttribute('hidden'); ioOverlay.style.display = ''; }
+function openIo() {
+  ioError.style.display = 'none';
+  hideConflicts();
+  ioOverlay.removeAttribute('hidden');
+  ioOverlay.style.display = '';
+  document.querySelector('#io-modal-close').focus();
+}
 function closeIo() { ioOverlay.style.display = 'none'; }
+
+// Tab/Shift+Tab wraps between a modal's first and last focusable element so
+// keyboard focus can't escape to the page behind the overlay while it's open.
+function trapFocusWithin(container, e) {
+  if (e.key !== 'Tab') return;
+  const focusable = [...container.querySelectorAll('button, input, [href], [tabindex]:not([tabindex="-1"])')]
+    .filter(el => !el.disabled && el.offsetParent !== null);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
 
 document.querySelector('#io-open-btn').addEventListener('click', openIo);
 document.querySelector('#io-modal-close').addEventListener('click', closeIo);
 ioOverlay.addEventListener('click', (e) => { if (e.target === ioOverlay) closeIo(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ioOverlay.style.display !== 'none') closeIo(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && ioOverlay.style.display !== 'none') closeIo();
+  if (ioOverlay.style.display !== 'none') trapFocusWithin(document.querySelector('#io-modal'), e);
+});
 
 document.querySelector('#io-bg-export-btn').addEventListener('click', exportAll);
 document.querySelector('#io-bg-import-btn').addEventListener('click', () => ioInput.click());
@@ -540,7 +563,11 @@ document.querySelector('#insig-scope-sites').addEventListener('change', syncScan
 document.querySelector('#insig-scope-subpages').addEventListener('change', syncScanBtn);
 document.querySelector('#scan-btn').addEventListener('click', runScan);
 document.querySelector('#overlay-close').addEventListener('click', () => { scanOverlay.style.display = 'none'; });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && scanOverlay.style.display !== 'none') scanOverlay.style.display = 'none'; });
+document.addEventListener('keydown', e => {
+  if (scanOverlay.style.display === 'none') return;
+  if (e.key === 'Escape') scanOverlay.style.display = 'none';
+  trapFocusWithin(scanOverlay, e);
+});
 overlayDeleteBtn.addEventListener('click', deleteSelectedInsignificant);
 
 function rowKey(r) { return `${r.isSub ? 'p' : 's'}\n${r.siteId}\n${r.path ?? ''}`; }
@@ -579,6 +606,7 @@ async function runScan() {
   scanState = { groups, thresholdMs };
   renderScanResults();
   scanOverlay.style.display = '';
+  document.querySelector('#overlay-close').focus();
 }
 
 function renderScanResults() {

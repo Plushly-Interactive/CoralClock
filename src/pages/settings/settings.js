@@ -11,11 +11,13 @@ import { enhanceNumberInput } from '../../shared/numberInput.js';
 import { CHART_COLOR_TYPES, applyChartColorOverrides, setChartColorOverride } from '../../shared/chartColors.js';
 import { buildColorPicker } from '../../shared/colorPicker.js';
 import { initI18n, applyI18n, t, DEFAULT_LANGUAGE } from '../../shared/i18n.js';
+import { keyActivate } from '../../shared/utils.js';
 
 await initI18n();
 applyI18n();
 document.title = `${t('settings_pageTitle')} - ${BRAND_NAME}`;
 document.querySelector('#idle-threshold-desc').textContent = t('settings_idleThresholdDesc', [BRAND_NAME]);
+keyActivate(document.querySelector('#back-btn'), [' ']);
 
 const CLOCK_FORMATS = ['24h', '12h'];
 const LANGUAGES = ['auto', 'en', 'fr', 'es'];

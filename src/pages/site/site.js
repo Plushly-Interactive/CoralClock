@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { statLabels, escapeHtml, chartLegendHtml, navButton, timeChartHtml, visitsChartHtml, hourlyChartHtml, faviconUrl, loadFaviconCache, attachInputClear } from '../../shared/utils.js';
+import { statLabels, escapeHtml, chartLegendHtml, navButton, timeChartHtml, visitsChartHtml, hourlyChartHtml, faviconUrl, loadFaviconCache, attachInputClear, keyActivate } from '../../shared/utils.js';
 import { eTLDPlus1 } from '../../background/siteResolution.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { initDrill, isInDrillMode, enterDrill, exitDrillCompletely } from '../../shared/drill.js';
@@ -189,6 +189,7 @@ hideBriefSubpagesToggle.addEventListener('change', () => {
 
 const drillView = document.querySelector('#drill-view');
 const backBtn = document.querySelector('#back-btn');
+keyActivate(backBtn, [' ']);
 
 const hourlyChart = document.querySelector('#hourly-chart');
 const hourlyTooltip = document.querySelector('#hourly-tooltip');
@@ -492,6 +493,7 @@ function renderSubpages(range) {
     li.title = decoded + (row.truncated ? '*' : '');
     const drill = document.createElement('div');
     drill.className = 'subpage-drill';
+    drill.tabIndex = 0;
     drill.innerHTML = `<span class="subpage-path">${display}${star}</span><span class="subpage-num">${num}</span>`;
     const params = new URLSearchParams();
     params.set('ids', effectiveSiteIds.join(','));
@@ -500,6 +502,7 @@ function renderSubpages(range) {
     if (stripParams) params.set('stripParams', '1');
     const pathHref = `../path/path.html?${params}`;
     navButton(drill, pathHref);
+    keyActivate(drill);
     let openPath = row.path;
     if (row.truncated) {
       const prefix = row.path + '/';
@@ -572,6 +575,7 @@ function siteTourSteps() { return [
   },
   {
     selector: '#subpages-container',
+    focusSelector: '#subpages-list .subpage-drill',
     title: t('tour_site_pageActivity_title'),
     body: t('tour_site_pageActivity_body'),
     handoff: { nextSurface: 'path', mode: 'inPage' },

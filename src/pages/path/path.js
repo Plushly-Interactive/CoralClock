@@ -1,5 +1,5 @@
 import { localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { statLabels, chartLegendHtml, timeChartHtml, visitsChartHtml, hourlyChartHtml, faviconUrl, loadFaviconCache, navButton } from '../../shared/utils.js';
+import { statLabels, chartLegendHtml, timeChartHtml, visitsChartHtml, hourlyChartHtml, faviconUrl, loadFaviconCache, navButton, keyActivate } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
@@ -57,6 +57,7 @@ const visitsTooltip = document.querySelector('#visits-tooltip');
 const visitsNoData = document.querySelector('#visits-no-data');
 const statsList = document.querySelector('#stats-list');
 const backBtn = document.querySelector('#back-btn');
+keyActivate(backBtn, [' ']);
 const crumbSite = document.querySelector('#path-crumb-site');
 
 await loadFaviconCache();

@@ -1,7 +1,7 @@
 import { scanSiteBucket, scanSubpageBucket, applySiteDeletions, applySubpageDeletions } from '../../data/prune.js';
 import { applySiteHourlyRangeDeletion, applySiteDailyReductions, applySubpageHourlyRangeDeletion, applySubpageDailyReductions, applyDirectDailyRangeDeletion, applyDirectSubpageDailyRangeDeletion, deleteSiteAllTime } from '../../data/targetedDelete.js';
 import { formatMs, formatHourLabel, formatSpan, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { showNotification, formatBytes, escapeHtml, attachInputClear, navButton } from '../../shared/utils.js';
+import { showNotification, formatBytes, escapeHtml, attachInputClear, navButton, keyActivate } from '../../shared/utils.js';
 import { confirmDialog } from '../../shared/confirmDialog.js';
 import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { downloadBackupExport } from '../../data/exportPayload.js';
@@ -16,6 +16,7 @@ applyI18n();
 document.title = `${t('legacy_pageTitle')} - ${BRAND_NAME}`;
 
 navButton(document.querySelector('#overview-back-btn'), '../storage-management/storage-management.html');
+keyActivate(document.querySelector('#back-btn'), [' ']);
 
 let _cbId = 0;
 let cachedStores = { sitesByDay: {}, sitesByHour: {}, subpagesByDay: {}, subpagesByHour: {} };
