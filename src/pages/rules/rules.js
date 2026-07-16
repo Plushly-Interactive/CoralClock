@@ -148,9 +148,21 @@ function selectTab(key) {
   }
 }
 
-tabBtns.url.addEventListener('click', () => selectTab('url'));
-tabBtns.regex.addEventListener('click', () => selectTab('regex'));
-tabBtns.keyword.addEventListener('click', () => selectTab('keyword'));
+// Reactivating the already-open tab closes the form instead of no-op'ing —
+// gives the tab buttons (already real, keyboard-operable <button>s) double duty
+// as a toggle, rather than needing a separate always-focusable header wrapper.
+function toggleOrSelectTab(key) {
+  if (tabBtns[key].classList.contains('active') && addCard.classList.contains('open')) {
+    addCard.classList.remove('open');
+    addCardBody.setAttribute('hidden', '');
+    return;
+  }
+  selectTab(key);
+}
+
+tabBtns.url.addEventListener('click', () => toggleOrSelectTab('url'));
+tabBtns.regex.addEventListener('click', () => toggleOrSelectTab('regex'));
+tabBtns.keyword.addEventListener('click', () => toggleOrSelectTab('keyword'));
 
 // ── URL form logic (carried over from previous rules.js) ──
 
@@ -517,10 +529,10 @@ function openRowEditor(id) {
       ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
-      <button class="save-edit-btn square-btn" data-id="${id}">
+      <button class="save-edit-btn square-btn" data-id="${id}" aria-label="${t('rules_saveEdit')}">
         <span class="icon-mask icon-check"></span>
       </button>
-      <button class="cancel-edit-btn square-btn">
+      <button class="cancel-edit-btn square-btn" aria-label="${t('rules_cancelEdit')}">
         <span class="icon-mask icon-undo"></span>
       </button>
     </div>`);

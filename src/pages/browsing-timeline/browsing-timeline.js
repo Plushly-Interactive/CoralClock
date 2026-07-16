@@ -89,6 +89,7 @@ keysBtn.addEventListener('click', () => {
   keysOpen = !keysOpen;
   keysPopup.style.display = keysOpen ? 'flex' : 'none';
   keysBtn.innerHTML = keysOpen ? '&times;' : '?';
+  keysBtn.setAttribute('aria-label', i18nT(keysOpen ? 'common_hideShortcuts' : 'common_showShortcuts'));
 });
 
 window.addEventListener('keydown', (e) => {

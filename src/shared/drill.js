@@ -39,7 +39,7 @@ function drillInnerHtml() {
     </div>
   </div>
   <div id="drill-chart-wrapper">
-    <button id="drill-keys-btn" class="square-btn">&times;</button>
+    <button id="drill-keys-btn" class="square-btn" aria-label="${t('common_hideShortcuts')}">&times;</button>
     <div id="drill-keys-popup" class="tooltip text-meta">
       <div id="drill-keys-title">${t('drill_keyboardShortcuts')}</div>
       <div><kbd>&larr;</kbd><kbd>&rarr;</kbd> ${t('drill_navigatePeriod')}</div>
@@ -106,6 +106,7 @@ export function initDrill(context) {
     const visible = ctx.drillKeysPopup.style.display !== 'none';
     ctx.drillKeysPopup.style.display = visible ? 'none' : 'flex';
     ctx.drillKeysBtn.innerHTML = visible ? '?' : '&times;';
+    ctx.drillKeysBtn.setAttribute('aria-label', t(visible ? 'common_showShortcuts' : 'common_hideShortcuts'));
   });
 
   window.addEventListener('keydown', (e) => {

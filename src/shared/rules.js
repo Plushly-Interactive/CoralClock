@@ -188,12 +188,12 @@ export function renderRuleList(listEl, rules, { readonly = false } = {}) {
     const limitMs = rule.limit * (RULE_MULTIPLIERS[rule.limitUnit] ?? 60000);
     const limitStr = limitMs === 0 ? t('rules_limit_never') : t('rules_limit_str', [formatMs(limitMs), t(`period_${rule.period}`)]);
     const toggleHtml = readonly ? '' : `
-      <button class="toggle-btn rule-toggle${rule.enabled ? ' on' : ''}" data-id="${rule.id}" aria-label="${rule.enabled ? 'Disable rule' : 'Enable rule'}"></button>`;
+      <button class="toggle-btn rule-toggle${rule.enabled ? ' on' : ''}" data-id="${rule.id}" aria-label="${t(rule.enabled ? 'rules_disableRule' : 'rules_enableRule')}"></button>`;
     const actions = readonly ? '' : `
-      <button class="edit-btn square-btn rule-action-btn" data-id="${rule.id}">
+      <button class="edit-btn square-btn rule-action-btn" data-id="${rule.id}" aria-label="${t('rules_editRule')}">
         <span class="icon-mask icon-pencil"></span>
       </button>
-      <button class="delete-btn square-btn rule-action-btn" data-id="${rule.id}">
+      <button class="delete-btn square-btn rule-action-btn" data-id="${rule.id}" aria-label="${t('rules_deleteRule')}">
         <span class="icon-mask icon-trash"></span>
       </button>`;
     const faviconHtml = rule.target

@@ -182,6 +182,7 @@ function renderPathLinks(entries) {
   for (const { domain, fullPath } of entries) {
     const chip = document.createElement('a');
     chip.className = 'path-link-chip';
+    chip.tabIndex = 0;
     chip.href = `https://${domain}${fullPath}`;
     chip.title = `https://${domain}${displayPath(fullPath)}`;
     chip.addEventListener('click', (e) => {
