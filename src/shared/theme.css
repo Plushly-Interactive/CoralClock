@@ -180,6 +180,16 @@ input[type="checkbox"] {
   color: var(--color-accent-text-hover);
 }
 
+.link-muted {
+  font-size: var(--font-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.link-muted:hover {
+  color: var(--color-accent-text-hover);
+}
+
 .nav-arrow-btn {
   display: inline-flex;
   align-items: center;

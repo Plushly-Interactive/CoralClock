@@ -4,6 +4,8 @@ import { formatMs, localDayKey } from '../../shared/timeUtils.js';
 import { weekDow } from '../../shared/weekStart.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
+import { QUERY_SITES_BY_DAY, QUERY_SUBPAGES_BY_DAY } from '../../shared/queryTypes.js';
 
 await initI18n();
 applyI18n();
@@ -66,10 +68,13 @@ function formatCountdown(ms) {
   if (!ruleId) return;
   await loadFaviconCache();
 
-  const stores = await chrome.storage.local.get([
-    'rules', 'sitesByDay', 'sitesByHour', 'subpagesByDay', 'subpagesByHour',
+  const [{ rules = [] }, sitesByDay, subpagesByDay] = await Promise.all([
+    chrome.storage.local.get('rules'),
+    loadMergedTrackingData({ type: QUERY_SITES_BY_DAY }),
+    loadMergedTrackingData({ type: QUERY_SUBPAGES_BY_DAY }),
   ]);
-  const rule = (stores.rules ?? []).find(r => r.id === ruleId);
+  const stores = { sitesByDay, subpagesByDay };
+  const rule = rules.find(r => r.id === ruleId);
   if (!rule) return;
 
   const targetEl = document.querySelector('#target');

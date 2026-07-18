@@ -19,6 +19,10 @@ document.title = `${t('settings_pageTitle')} - ${BRAND_NAME}`;
 document.querySelector('#idle-threshold-desc').textContent = t('settings_idleThresholdDesc', [BRAND_NAME]);
 keyActivate(document.querySelector('#back-btn'), [' ']);
 
+const appVersion = chrome.runtime.getManifest().version;
+document.querySelector('#version-number').textContent = `${BRAND_NAME} v${appVersion}`;
+document.querySelector('#version-changes-link').href = `https://github.com/Plushly-Interactive/CoralClock/releases/tag/v${appVersion}`;
+
 const CLOCK_FORMATS = ['24h', '12h'];
 const LANGUAGES = ['auto', 'en', 'fr', 'es'];
 const LANGUAGE_NAMES = { en: 'English', fr: 'Français', es: 'Español' };

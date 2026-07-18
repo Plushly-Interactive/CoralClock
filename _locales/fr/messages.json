@@ -261,6 +261,7 @@
   "settings_resetColorsConfirm": { "message": "Réinitialiser toutes les couleurs des graphiques ?" },
   "settings_colorblindPalette": { "message": "Palette pour daltoniens" },
   "settings_preview": { "message": "Aperçu" },
+  "settings_changelog": { "message": "(notes de mise à jour ↗)" },
   "chartColor_active": { "message": "Temps actif" },
   "chartColor_audio": { "message": "Audio" },
   "chartColor_visits": { "message": "Visites" },
