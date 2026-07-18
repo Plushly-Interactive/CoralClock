@@ -29,6 +29,18 @@ export function getLocale() {
   return currentLocale;
 }
 
+const SUPPORTED_LANGS = ['en', 'es', 'fr'];
+
+// For data that carries its own inline translations instead of going through
+// messages.json (see shared/changelogEntries.js) — resolves 'auto' against
+// the browser's UI language rather than leaving callers to special-case it.
+export async function resolveLanguage() {
+  const stored = (await chrome.storage.local.get(PREF_LANGUAGE))[PREF_LANGUAGE];
+  if (stored && stored !== DEFAULT_LANGUAGE) return stored;
+  const ui = chrome.i18n.getUILanguage().split('-')[0];
+  return SUPPORTED_LANGS.includes(ui) ? ui : 'en';
+}
+
 export function t(key, subs) {
   const entry = overrideMessages?.[key];
   if (!entry) return chrome.i18n.getMessage(key, subs);

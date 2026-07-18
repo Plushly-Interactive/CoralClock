@@ -45,6 +45,7 @@
 - The active language is `PREF_LANGUAGE` in `chrome.storage.local`, set via the Settings page language picker. Changing it reloads the page — there's no live re-render.
 - Locale-culture-dependent strings (weekday/month names) use `Intl.DateTimeFormat`, never hardcoded arrays.
 - Pluralization uses `_one`/`_other` key suffixes with manual dispatch — no ICU MessageFormat.
+- Exception: changelog bullet content (`src/shared/changelogEntries.js`) does NOT go through `messages.json`. Per-release release-note prose would otherwise accumulate there forever, one-off and unreused. Each item instead carries its own `{ en, es, fr }` text inline, resolved at render time via `resolveLanguage()` in `i18n.js`. Static changelog UI chrome (Dismiss, Close, category labels, etc.) still follows the normal `messages.json` rule above — only the per-release bullet text is exempt.
 
 ## Page layout
 - Each full-page view lives in `src/pages/<name>/` as a `<name>.{html,css,js}` triplet.

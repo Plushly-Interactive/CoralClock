@@ -8,6 +8,7 @@ import { dbg, initDebug } from './trackingDebug.js';
 import { updateBadge } from './badge.js';
 import { initI18n, t } from '../shared/i18n.js';
 import { getQuotaUsage, QUOTA_WARN_PCT } from '../shared/utils.js';
+import { seedChangelogOnInstall } from '../shared/changelog.js';
 // The interval tracker is the sole live capturer. It self-registers its capture
 // listeners on import; background drives its periodic flush via flushNow() and a
 // lighter per-navigation drain via flushToStorage.
@@ -166,6 +167,7 @@ bootstrapDone.then(() => { updateBadge(); checkQuota(Date.now()); });
 
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason !== 'install') return;
+  seedChangelogOnInstall();
   chrome.tabs.create({
     url: chrome.runtime.getURL('src/pages/dashboard/dashboard.html?tour=1'),
   });
