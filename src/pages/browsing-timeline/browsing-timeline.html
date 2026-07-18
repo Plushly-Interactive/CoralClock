@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="../../../resources/icons/brand/icon16.png" />
-    <title>Timeline - Coral Clock</title>
+    <title>Timeline - CoralClock</title>
     <script src="../../shared/theme.js"></script>
     <link rel="stylesheet" href="../../shared/theme.css" />
     <link rel="stylesheet" href="../../shared/tour.css" />
@@ -12,8 +12,8 @@
   <body>
     <header>
       <div id="header-left">
-        <a id="back-btn" href="#">
-          <img src="../../../resources/icons/brand/logo.svg" alt="Coral Clock">
+        <a id="back-btn" tabindex="0" href="#">
+          <img src="../../../resources/icons/brand/logo.svg" alt="CoralClock">
         </a>
       </div>
       <div id="header-center"><h1 class="page-title" data-i18n="tl_pageTitle">Browsing timeline</h1></div>
@@ -38,7 +38,7 @@
         </span>
       </div>
       <div id="tl-chart-wrapper">
-        <button id="tl-keys-btn" class="square-btn">&times;</button>
+        <button id="tl-keys-btn" class="square-btn" data-i18n-aria="common_hideShortcuts" aria-label="Hide keyboard shortcuts">&times;</button>
         <div id="tl-keys-popup" class="tooltip text-meta">
           <div id="tl-keys-title" data-i18n="drill_keyboardShortcuts">Keyboard shortcuts</div>
           <div><kbd>←</kbd><kbd>→</kbd> <span data-i18n="drill_navigatePeriod">Navigate period</span></div>

@@ -4,6 +4,11 @@
   padding: 0;
 }
 
+:focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 2px;
+}
+
 :root {
   --font-sm:   12px;
   --font-base: 13px;
@@ -20,7 +25,9 @@
 
   --color-accent-light: #c2493f;
   --color-secondary-light: #92b8e2;
-  --color-button-text: var(--color-bg);
+  --color-accent-text: var(--color-accent);
+  --color-accent-text-hover: var(--color-accent-light);
+  --color-button-text: #ffffff;
 
   --overlay-bg: rgba(0, 0, 0, 0.5);
   --shadow-modal: 0 10px 40px rgba(0, 0, 0, 0.25);
@@ -28,15 +35,16 @@
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.08);
 
   --color-chart-time: var(--color-accent-light);
-  --color-chart-audio: var(--color-secondary-light);
+  --color-chart-audio: #5a8bc4;
   --color-chart-visits: var(--color-accent);
   --color-chart-hourly: var(--color-secondary);
-  --color-chart-idle: #c79a3a;
+  --color-chart-idle: #ba8c10;
 
   --color-bg: #ffffff;
   --color-border: #d0d0d0;
   --color-text: #1a1a1a;
-  --color-text-secondary: #888;
+  --color-text-secondary: #717171;
+  --color-seg-label: #595959;
 
   --color-hover-bg: color-mix(in srgb, var(--color-border) 20%, transparent);
 }
@@ -46,11 +54,16 @@ html.dark {
 
   --color-accent: #9c3b33;
   --color-secondary: #7a99bc;
+  --color-accent-text: #b85a50;
+  --color-accent-text-hover: #c6685d;
 
   --color-bg: #1c1c1c;
   --color-border: #383838;
   --color-text: #e8e8e8;
-  --color-button-text: var(--color-text);
+  --color-text-secondary: #898989;
+  --color-seg-label: #a1a1a1;
+  --color-chart-audio: var(--color-secondary-light);
+  --color-chart-idle: #c79a3a;
 }
 
 body {
@@ -103,7 +116,7 @@ body {
 }
 
 .brand-coral {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .brand-clock {
@@ -130,7 +143,7 @@ select:hover {
 }
 
 input[type="checkbox"] {
-  accent-color: var(--color-accent);
+  accent-color: var(--color-accent-text);
 }
 
 .btn {
@@ -156,7 +169,7 @@ input[type="checkbox"] {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-size: var(--font-base);
   font-weight: 600;
   line-height: 1;
@@ -164,7 +177,7 @@ input[type="checkbox"] {
 }
 
 .link-btn:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 .nav-arrow-btn {
@@ -208,7 +221,7 @@ button:disabled {
   font-size: var(--font-base);
 }
 
-.text-input:focus { outline: none; border-color: var(--color-accent); }
+.text-input:focus { outline: none; border-color: var(--color-accent-text); }
 
 .text-hint {
   font-style: italic;
@@ -235,7 +248,7 @@ button:disabled {
 
 .number-input:focus {
   outline: none;
-  border-color: var(--color-accent);
+  border-color: var(--color-accent-text);
 }
 
 .number-input-wrap {
@@ -306,7 +319,7 @@ button:disabled {
 }
 
 .icon-btn:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 .callout {
@@ -366,7 +379,7 @@ button:disabled {
 .chart-heading {
   font-size: var(--font-base);
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -429,7 +442,7 @@ button:disabled {
   background: color-mix(in srgb, var(--color-bg) 80%, transparent);
   backdrop-filter: blur(8px);
   border: 1px solid var(--color-border);
-  color: var(--color-tooltip-text);
+  color: var(--color-text);
   padding: 4px 8px;
   border-radius: 4px;
   pointer-events: none;
@@ -505,7 +518,7 @@ button:disabled {
   display: flex;
 }
 
-.dropdown-menu:not(.calendar-popup) button {
+.dropdown-menu:not(.calendar-popup):not(.color-popup) button {
   padding: 8px 12px;
   border: none;
   background: none;
@@ -515,21 +528,21 @@ button:disabled {
   font-size: var(--font-base);
 }
 
-.dropdown-menu:not(.calendar-popup) button:hover {
+.dropdown-menu:not(.calendar-popup):not(.color-popup) button:hover {
   background: var(--color-hover-bg);
 }
 
-.dropdown-menu:not(.calendar-popup) button:disabled {
+.dropdown-menu:not(.calendar-popup):not(.color-popup) button:disabled {
   color: var(--color-text-secondary);
   cursor: default;
   pointer-events: none;
 }
 
-.dropdown-menu:not(.calendar-popup) button:first-child {
+.dropdown-menu:not(.calendar-popup):not(.color-popup) button:first-child {
   border-radius: 4px 4px 0 0;
 }
 
-.dropdown-menu:not(.calendar-popup) button:last-child {
+.dropdown-menu:not(.calendar-popup):not(.color-popup) button:last-child {
   border-radius: 0 0 4px 4px;
 }
 
@@ -600,7 +613,7 @@ button:disabled {
 }
 
 .cal-day.today {
-  box-shadow: inset 0 0 0 1px var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent-text);
 }
 
 .calendar-days .cal-day.is-selected,
@@ -614,6 +627,96 @@ button:disabled {
   visibility: hidden;
 }
 
+.color-popup {
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+.color-swatch {
+  width: var(--icon-size-inline);
+  height: var(--icon-size-inline);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.color-picker-area {
+  display: flex;
+  gap: 8px;
+}
+
+.color-sv {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  border-radius: 4px;
+  background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.color-sv-marker {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.color-hue {
+  position: relative;
+  width: 16px;
+  height: 160px;
+  border-radius: 4px;
+  background: linear-gradient(to bottom, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.color-sv:focus-visible,
+.color-hue:focus-visible {
+  outline: 2px solid var(--color-accent-text);
+  outline-offset: 1px;
+}
+
+.color-hue-thumb {
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  height: 6px;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.color-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-btn .color-btn-label {
+  min-width: 60px;
+  text-align: left;
+}
+
+.color-hex-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-hex-input {
+  width: 90px;
+  padding: 6px 8px;
+}
+
 .square-btn {
   background: var(--color-bg);
   border: 1px solid var(--color-border);
@@ -621,7 +724,7 @@ button:disabled {
   width: 28px;
   height: 28px;
   font-size: var(--font-lg);
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -631,7 +734,7 @@ button:disabled {
 
 .square-btn:hover {
   background-color: var(--color-hover-bg);
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 .square-btn .icon-mask {
@@ -677,11 +780,11 @@ button:disabled {
 }
 
 .data-table th:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 .data-table th.sorted {
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .data-table td {
@@ -730,7 +833,7 @@ button:disabled {
   left: 50%;
   transform: translateX(-50%);
   background: var(--color-accent);
-  color: white;
+  color: var(--color-button-text);
   border-radius: 6px;
   padding: 14px 20px;
   box-shadow: var(--shadow-notification);
@@ -777,7 +880,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   text-decoration: none;
   flex: 0 0 auto;
   background: none;
@@ -787,7 +890,7 @@ header {
 }
 
 #back-btn:hover {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
 }
 
 #header-left {
@@ -894,7 +997,7 @@ header {
   padding: 4px 8px;
   border-radius: 4px;
   font-size: var(--font-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-seg-label);
   white-space: nowrap;
   display: flex;
   align-items: center;

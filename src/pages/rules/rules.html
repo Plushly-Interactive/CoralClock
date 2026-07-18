@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="../../../resources/icons/brand/icon16.png" />
-    <title>Rules - Coral Clock</title>
+    <title>Rules - CoralClock</title>
     <script src="../../shared/theme.js"></script>
     <link rel="stylesheet" href="../../shared/theme.css" />
     <link rel="stylesheet" href="../../shared/tour.css" />
@@ -13,8 +13,8 @@
   <body>
     <header>
       <div id="header-left">
-        <a id="back-btn" href="../dashboard/dashboard.html">
-          <img src="../../../resources/icons/brand/logo.svg" alt="Coral Clock">
+        <a id="back-btn" tabindex="0" href="../dashboard/dashboard.html">
+          <img src="../../../resources/icons/brand/logo.svg" alt="CoralClock">
         </a>
       </div>
       <div id="header-center"><h1 class="page-title" data-i18n="rules_pageTitle">Rules</h1></div>
@@ -78,14 +78,14 @@
               <h2 class="chart-heading" data-i18n="rules_addRule">Add a rule</h2>
             </div>
             <div id="add-toggle-right">
-              <div id="type-toggle" class="seg-control">
-                <button id="tab-url" class="seg-btn active">
+              <div id="type-toggle" class="seg-control" role="tablist">
+                <button id="tab-url" class="seg-btn active" role="tab" aria-selected="true" aria-controls="url-form">
                   <span class="seg-icon"><span class="icon-mask icon-link"></span></span> <span data-i18n="rules_tabUrl">URL / host</span>
                 </button>
-                <button id="tab-keyword" class="seg-btn">
+                <button id="tab-keyword" class="seg-btn" role="tab" aria-selected="false" aria-controls="keyword-form">
                   <span class="seg-icon"><span class="icon-mask icon-search"></span></span> <span data-i18n="rules_tabKeyword">Keyword</span>
                 </button>
-                <button id="tab-regex" class="seg-btn">
+                <button id="tab-regex" class="seg-btn" role="tab" aria-selected="false" aria-controls="regex-form">
                   <span class="seg-icon"><span class="icon-mask icon-regex"></span></span> <span data-i18n="rules_tabRegex">Regex</span>
                 </button>
               </div>
@@ -96,30 +96,30 @@
           <div id="add-card-body" hidden>
 
             <!-- URL / host form -->
-            <div id="url-form">
+            <div id="url-form" role="tabpanel" aria-labelledby="tab-url">
               <div id="form-target-wrap" class="input-wrap">
                 <input id="form-target" class="text-input" type="text" placeholder="reddit.com" />
                 <button id="form-target-clear" class="icon-btn input-clear" data-i18n-aria="rules_clear" aria-label="Clear" hidden>&times;</button>
               </div>
               <div class="scope-cards">
-                <div class="scope-card" id="scope-host" data-scope="host">
+                <div class="scope-card" id="scope-host" data-scope="host" tabindex="0" role="button">
                   <h3 data-i18n="rules_scopeHostOnly">Host only</h3>
                   <span class="ex" id="ex-host">reddit.com</span>
                   <span class="text-meta" data-i18n="rules_scopeNoSubdomains">No subdomains</span>
                 </div>
-                <div class="scope-card active" id="scope-subdomain" data-scope="subdomain">
+                <div class="scope-card active" id="scope-subdomain" data-scope="subdomain" tabindex="0" role="button">
                   <h3 data-i18n="rules_scopeWholeSite">Whole site</h3>
                   <span class="ex" id="ex-subdomain">*.reddit.com</span>
                   <span class="text-meta" data-i18n="rules_scopeInclSubdomains">Incl. subdomains</span>
                 </div>
-                <div class="scope-card" id="scope-page" data-scope="pathPrefix">
+                <div class="scope-card" id="scope-page" data-scope="pathPrefix" tabindex="0" role="button">
                   <h3 data-i18n="rules_scopePathPrefix">Path prefix</h3>
                   <span class="ex" id="ex-page">reddit.com/r/…</span>
                   <span class="text-meta" data-i18n="rules_scopePathChildren">Path + children</span>
                 </div>
               </div>
               <div class="form-row" id="limit-row">
-                <span data-i18n="rules_limitTo">Limit to</span>
+                <label for="form-limit" data-i18n="rules_limitTo">Limit to</label>
                 <input id="form-limit" class="form-limit number-input" type="number" value="10" min="0" />
                 <div class="custom-dropdown">
                   <button type="button" class="dropdown-btn form-unit-btn" id="form-unit-btn" data-value="minutes" data-i18n-firstchild="unit_minutes">min<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
@@ -167,13 +167,13 @@
             </div>
 
             <!-- Regex form -->
-            <div id="regex-form" hidden>
+            <div id="regex-form" role="tabpanel" aria-labelledby="tab-regex" hidden>
               <div id="regex-target-wrap" class="input-wrap">
                 <input id="regex-pattern" class="text-input" type="text" placeholder="news[./]|[./]news([./?]|$)" />
                 <button id="regex-pattern-clear" class="icon-btn input-clear" data-i18n-aria="rules_clear" aria-label="Clear" hidden>&times;</button>
               </div>
               <div class="form-row" id="regex-limit-row">
-                <span data-i18n="rules_limitTo">Limit to</span>
+                <label for="regex-limit" data-i18n="rules_limitTo">Limit to</label>
                 <input id="regex-limit" class="regex-limit number-input" type="number" value="10" min="0" />
                 <div class="custom-dropdown">
                   <button type="button" class="dropdown-btn regex-unit-btn" id="regex-unit-btn" data-value="minutes" data-i18n-firstchild="unit_minutes">min<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
@@ -213,13 +213,13 @@
             </div>
 
             <!-- Keyword form -->
-            <div id="keyword-form" hidden>
+            <div id="keyword-form" role="tabpanel" aria-labelledby="tab-keyword" hidden>
               <div id="keyword-target-wrap" class="input-wrap">
                 <input id="keyword-input" class="text-input" type="text" placeholder="news" />
                 <button id="keyword-input-clear" class="icon-btn input-clear" data-i18n-aria="rules_clear" aria-label="Clear" hidden>&times;</button>
               </div>
               <div class="form-row" id="keyword-limit-row">
-                <span data-i18n="rules_limitTo">Limit to</span>
+                <label for="keyword-limit" data-i18n="rules_limitTo">Limit to</label>
                 <input id="keyword-limit" class="kw-limit number-input" type="number" value="10" min="0" />
                 <div class="custom-dropdown">
                   <button type="button" class="dropdown-btn kw-unit-btn" id="kw-unit-btn" data-value="minutes" data-i18n-firstchild="unit_minutes">min<span class="dropdown-arrow"><svg width="12" height="12" viewBox="0 0 24 24"><polygon points="6,9 18,9 12,17" fill="currentColor" stroke="currentColor" stroke-width="3.5" stroke-linejoin="round"/></svg></span></button>
@@ -268,13 +268,13 @@
           <table id="sort-bar" class="data-table">
             <thead>
               <tr>
-                <th id="sort-site" data-label="rules_col_site">Site</th>
-                <th id="sort-status" data-label="rules_col_status">Status</th>
+                <th id="sort-site" tabindex="0" role="button" data-label="rules_col_site">Site</th>
+                <th id="sort-status" tabindex="0" role="button" data-label="rules_col_status">Status</th>
               </tr>
             </thead>
           </table>
           <p id="no-rules-message" class="empty-msg text-meta" hidden data-i18n="rules_noRulesYet">No rules yet. Add one above to get started.</p>
-          <ul id="rules-list" class="rules-list"></ul>
+          <ul id="rules-list" class="rules-list" tabindex="-1"></ul>
         </div>
 
       </div><!-- /right-col -->

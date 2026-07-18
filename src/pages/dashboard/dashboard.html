@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="../../../resources/icons/brand/icon16.png" />
-    <title>Dashboard - Coral Clock</title>
+    <title>Dashboard - CoralClock</title>
     <script src="../../shared/theme.js"></script>
     <link rel="stylesheet" href="../../shared/theme.css" />
     <link rel="stylesheet" href="../../shared/tour.css" />
@@ -14,7 +14,7 @@
       <div id="header-left">
         <div id="brand">
           <span class="brand-word brand-coral">Coral</span>
-          <img id="brand-logo" src="../../../resources/icons/brand/logo.svg" alt="Coral Clock" />
+          <img id="brand-logo" src="../../../resources/icons/brand/logo.svg" alt="CoralClock" />
           <span class="brand-word brand-clock">Clock</span>
         </div>
         <button id="tour-btn" class="square-btn" data-i18n-title="dashboard_tourBtn" title="Take the tour">?</button>
@@ -64,10 +64,10 @@
         <table id="dashboard-table" class="data-table data-table--scroll">
           <thead>
             <tr>
-              <th id="th-name" data-i18n="dashboard_col_name">Site</th>
-              <th id="th-time" data-i18n="dashboard_col_time">Active time</th>
-              <th id="th-audio" data-i18n="dashboard_col_audio">Audio playback</th>
-              <th id="th-visits" data-i18n="dashboard_col_visits">Visits</th>
+              <th id="th-name" tabindex="0" role="button" data-i18n="dashboard_col_name">Site</th>
+              <th id="th-time" tabindex="0" role="button" data-i18n="dashboard_col_time">Active time</th>
+              <th id="th-audio" tabindex="0" role="button" data-i18n="dashboard_col_audio">Audio playback</th>
+              <th id="th-visits" tabindex="0" role="button" data-i18n="dashboard_col_visits">Visits</th>
             </tr>
           </thead>
           <tbody id="dashboard-body"></tbody>
@@ -83,7 +83,7 @@
       </div>
     </div>
 
-    <div id="notification" hidden></div>
+    <div id="notification" role="status" hidden></div>
 
     <script type="module" src="./dashboard.js"></script>
   </body>

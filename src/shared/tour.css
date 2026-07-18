@@ -24,7 +24,7 @@ body.tour-modal-step .io-section:not(.tour-target) {
   z-index: 3001;
   border-radius: 6px;
   pointer-events: none;
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-accent-text);
   transition: top 0.15s, left 0.15s, width 0.15s, height 0.15s;
 }
 
@@ -74,7 +74,7 @@ body.tour-modal-step .io-section:not(.tour-target) {
   font-weight: 600;
   margin-bottom: 6px;
   padding-right: 18px;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 #tour-tooltip-body {

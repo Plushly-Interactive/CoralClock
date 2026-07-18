@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" href="../../../resources/icons/brand/icon16.png" />
-  <title>Storage management - Coral Clock</title>
+  <title>Storage management - CoralClock</title>
   <script src="../../shared/theme.js"></script>
   <link rel="stylesheet" href="../../shared/theme.css" />
   <link rel="stylesheet" href="../../shared/tour.css" />
@@ -13,8 +13,8 @@
 <body>
   <header>
     <div id="header-left">
-      <a id="back-btn" href="../dashboard/dashboard.html">
-        <img src="../../../resources/icons/brand/logo.svg" alt="Coral Clock">
+      <a id="back-btn" tabindex="0" href="../dashboard/dashboard.html">
+        <img src="../../../resources/icons/brand/logo.svg" alt="CoralClock">
       </a>
     </div>
     <div id="header-center"><h1 class="page-title" data-i18n="legacy_pageTitle">Legacy storage management</h1></div>
@@ -62,7 +62,7 @@
               <div id="bar-site-day" style="width:0%;background:var(--color-accent)"></div>
               <div id="bar-site-hour" style="width:0%;background:var(--color-accent-light)"></div>
               <div id="bar-sub-day" style="width:0%;background:var(--color-secondary)"></div>
-              <div id="bar-sub-hour" style="width:0%;background:var(--color-secondary-light)"></div>
+              <div id="bar-sub-hour" style="width:0%;background:var(--color-chart-audio)"></div>
               <div id="bar-other" style="width:0%;background:var(--color-border)"></div>
             </div>
             <span id="store-total-text" class="text-meta"></span>
@@ -72,7 +72,7 @@
               <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent)"></span><span id="legend-site-day" data-i18n="legacy_sitesDaily">Sites daily</span></div>
               <div class="legend-row"><span class="legend-dot" style="background:var(--color-accent-light)"></span><span id="legend-site-hour" data-i18n="legacy_sitesHourly">Sites hourly</span></div>
               <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary)"></span><span id="legend-sub-day" data-i18n="legacy_subpagesDaily">Subpages daily</span></div>
-              <div class="legend-row"><span class="legend-dot" style="background:var(--color-secondary-light)"></span><span id="legend-sub-hour" data-i18n="legacy_subpagesHourly">Subpages hourly</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--color-chart-audio)"></span><span id="legend-sub-hour" data-i18n="legacy_subpagesHourly">Subpages hourly</span></div>
             </div>
             <div id="legend-other" class="legend-row" hidden><span class="legend-dot" style="background:var(--color-border)"></span><span id="legend-other-text" data-i18n="legacy_other">Other</span></div>
           </div>
@@ -107,7 +107,7 @@
         <h2 class="chart-heading" data-i18n="legacy_removeInsigRecords">Remove insignificant records</h2>
         <p class="card-desc" data-i18n="legacy_removeInsigDesc">Over time, brief visits and accidental clicks accumulate noise. Scan and remove entries whose total tracked time falls below a threshold.</p>
         <div class="field-group">
-          <div class="setting-label" data-i18n="storage_threshold">Threshold</div>
+          <label class="setting-label" for="threshold-input" data-i18n="storage_threshold">Threshold</label>
           <div id="threshold-row">
             <input id="threshold-input" class="number-input" type="number" value="30" />
             <span data-i18n="storage_seconds">seconds</span>
@@ -127,10 +127,10 @@
         <h2 class="chart-heading" data-i18n="storage_targetedDeletion">Targeted deletion</h2>
         <p class="card-desc" data-i18n="storage_targetedDeletionDesc">Delete all data for a specific site, or remove records within an exact date and time window.</p>
         <div id="site-filter-row">
-          <span class="setting-label" data-i18n="storage_siteOptional">Site (optional)</span>
+          <label class="setting-label" for="site-filter-input" data-i18n="storage_siteOptional">Site (optional)</label>
           <div id="site-filter-wrap" class="input-wrap">
             <input type="text" id="site-filter-input" class="text-input" placeholder="e.g. google.com" />
-            <button id="site-filter-clear" class="icon-btn input-clear" hidden>&times;</button>
+            <button id="site-filter-clear" class="icon-btn input-clear" data-i18n-aria="storage_clearFilter" aria-label="Clear filter" hidden>&times;</button>
           </div>
         </div>
         <div id="delete-all-site-row">
@@ -138,22 +138,22 @@
         </div>
         <hr class="card-divider" />
         <div id="range-mode-row">
-          <div id="range-mode-toggle" class="seg-control">
-            <button id="mode-contiguous-btn" class="seg-btn active" data-i18n="storage_contiguous">Contiguous</button>
-            <button id="mode-repeat-btn" class="seg-btn" data-i18n="storage_repeatDaily">Repeat daily</button>
+          <div id="range-mode-toggle" class="seg-control" role="tablist">
+            <button id="mode-contiguous-btn" class="seg-btn active" role="tab" aria-selected="true" aria-controls="range-form-row" data-i18n="storage_contiguous">Contiguous</button>
+            <button id="mode-repeat-btn" class="seg-btn" role="tab" aria-selected="false" aria-controls="repeat-form" data-i18n="storage_repeatDaily">Repeat daily</button>
           </div>
         </div>
-        <div id="range-form-row">
+        <div id="range-form-row" role="tabpanel" aria-labelledby="mode-contiguous-btn">
           <div id="range-form-col">
             <div class="range-line">
-              <span class="setting-label" data-i18n="storage_from">From</span>
+              <span id="range-from-label" class="setting-label" data-i18n="storage_from">From</span>
               <div class="dt-group">
                 <div class="custom-dropdown date-dropdown" id="range-from-date"></div>
                 <div class="custom-dropdown hour-dropdown" id="range-from-hour"></div>
               </div>
             </div>
             <div class="range-line">
-              <span class="setting-label" data-i18n="storage_to">To</span>
+              <span id="range-to-label" class="setting-label" data-i18n="storage_to">To</span>
               <div class="dt-group">
                 <div class="custom-dropdown date-dropdown" id="range-to-date"></div>
                 <div class="custom-dropdown hour-dropdown" id="range-to-hour"></div>
@@ -161,15 +161,15 @@
             </div>
           </div>
         </div>
-        <div id="repeat-form" style="display:none">
+        <div id="repeat-form" role="tabpanel" aria-labelledby="mode-repeat-btn" style="display:none">
           <div class="repeat-row">
-            <span class="repeat-label setting-label" data-i18n="storage_dates">Dates</span>
+            <span id="repeat-dates-label" class="repeat-label setting-label" data-i18n="storage_dates">Dates</span>
             <div class="custom-dropdown date-dropdown" id="repeat-from-date"></div>
             <span class="text-meta">–</span>
             <div class="custom-dropdown date-dropdown" id="repeat-to-date"></div>
           </div>
           <div class="repeat-row">
-            <span class="repeat-label setting-label" data-i18n="storage_hours">Hours</span>
+            <span id="repeat-hours-label" class="repeat-label setting-label" data-i18n="storage_hours">Hours</span>
             <div class="custom-dropdown hour-dropdown" id="repeat-from-hour"></div>
             <span class="text-meta">–</span>
             <div class="custom-dropdown hour-dropdown" id="repeat-to-hour"></div>
@@ -196,7 +196,7 @@
           </div>
         </div>
         <div id="drop-row">
-          <span class="setting-label" data-i18n="legacy_dropDataOlderThan">Drop data older than</span>
+          <label class="setting-label" for="drop-days-input" data-i18n="legacy_dropDataOlderThan">Drop data older than</label>
           <input id="drop-days-input" class="number-input" type="number" value="30" />
           <span data-i18n="storage_days">days</span>
           <span id="drop-estimate" class="text-meta">~280 KB</span>
@@ -224,7 +224,7 @@
     <div class="overlay-header">
       <span class="overlay-title" data-i18n="storage_scanResults">Scan results</span>
       <span id="overlay-params" class="text-meta">30s · Sites + Subpages</span>
-      <button id="overlay-close" class="overlay-close">&times;</button>
+      <button id="overlay-close" class="overlay-close" data-i18n-aria="storage_close" aria-label="Close">&times;</button>
     </div>
     <div id="overlay-results" class="overlay-results"></div>
     <div class="overlay-footer">
@@ -238,7 +238,7 @@
     <div class="overlay-header">
       <span class="overlay-title" data-i18n="legacy_healthIssues">Health issues</span>
       <span id="repair-count" class="text-meta"></span>
-      <button id="repair-overlay-close" class="overlay-close">&times;</button>
+      <button id="repair-overlay-close" class="overlay-close" data-i18n-aria="storage_close" aria-label="Close">&times;</button>
     </div>
     <div id="repair-results" class="overlay-results"></div>
     <div class="overlay-footer">
@@ -250,7 +250,7 @@
     </div>
   </div>
 
-  <div id="notification" hidden></div>
+  <div id="notification" role="status" hidden></div>
 
   <script type="module" src="./legacy-storage-management.js"></script>
 </body>

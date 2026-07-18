@@ -45,6 +45,8 @@ const VIEWPORT_MARGIN = 8;
 export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButton = true }) {
   if (!steps || steps.length === 0) return { stop: () => {} };
 
+  const previouslyFocused = document.activeElement;
+
   const overlay = document.createElement('div');
   overlay.id = 'tour-overlay';
 
@@ -237,8 +239,14 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
 
     const isHandoff = !!step.handoff;
     const advanceOnClick = step.advanceOn === 'click';
-    nextBtn.style.display = isHandoff || advanceOnClick ? 'none' : '';
-    nextBtn.textContent = index === steps.length - 1 ? t('tour_finish') : t('tour_next');
+    // A handoff/click-driven step normally hides Next since the user is meant to
+    // act on the page itself to advance — but if that action depends on
+    // something outside our control (e.g. clicking a browser toolbar icon),
+    // `skippable` lets the step offer an explicit way past it instead of
+    // stranding a user for whom that action isn't working.
+    const skippable = step.skippable === true && (isHandoff || advanceOnClick);
+    nextBtn.style.display = (isHandoff || advanceOnClick) && !skippable ? 'none' : '';
+    nextBtn.textContent = skippable ? t('tour_skip') : (index === steps.length - 1 ? t('tour_finish') : t('tour_next'));
 
     tooltip.classList.toggle('has-arrow-up', step.arrow === 'up');
     const wasModalStep = document.body.classList.contains('tour-modal-step');
@@ -294,6 +302,49 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
       handoffTarget = null;
       await setTourProgress(surface, index);
     }
+
+    focusTourStep(step);
+  }
+
+  // What's reachable inside the spotlighted target: either the target itself
+  // (if it's directly focusable, e.g. a click-driven step's own button), or —
+  // when the step declares `focusSelector` — only elements matching that
+  // narrower selector (e.g. just a table's rows, excluding other controls
+  // that happen to share the highlighted container), or else every focusable
+  // descendant of the target (e.g. a highlighted section with several
+  // controls) — so a keyboard user can reach and operate the same things a
+  // mouse user can click through the overlay's cutout.
+  function getTargetFocusables() {
+    if (!currentStep?.selector) return [];
+    const target = document.querySelector(currentStep.selector);
+    if (!target) return [];
+    if (currentStep.focusSelector) {
+      return [...target.querySelectorAll(currentStep.focusSelector)]
+        .filter(el => !el.disabled && el.offsetParent !== null);
+    }
+    if (target.tabIndex >= 0 || ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName)) {
+      return [target];
+    }
+    return [...target.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+      .filter(el => !el.disabled && el.offsetParent !== null);
+  }
+
+  // Tab stops for the current step: the tooltip's own visible/enabled buttons
+  // plus whatever's reachable inside the spotlighted target.
+  function getTourFocusables() {
+    const list = [prevBtn, nextBtn, closeBtn].filter(el => el.style.display !== 'none' && !el.disabled);
+    list.push(...getTargetFocusables());
+    return list;
+  }
+
+  function focusTourStep(step) {
+    if (isStepClickThrough(step)) {
+      const targetFocusables = getTargetFocusables();
+      if (targetFocusables.length) { targetFocusables[0].focus(); return; }
+    }
+    const focusables = getTourFocusables();
+    if (!focusables.length) return;
+    (focusables.includes(nextBtn) ? nextBtn : focusables[0]).focus();
   }
 
   async function finish(skipped) {
@@ -319,6 +370,7 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     tooltip.remove();
     closeBtn.remove();
     confirm.remove();
+    if (previouslyFocused && document.contains(previouslyFocused)) previouslyFocused.focus();
     if (skipped || !handoffEngaged) {
       await markTourCompleted();
     }
@@ -329,6 +381,18 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     const tag = e.target?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (!currentStep) return;
+    const confirmOpen = confirm.style.display !== 'none';
+    if (confirmOpen && e.key === 'Escape') { e.preventDefault(); confirmNo.click(); return; }
+    if (e.key === 'Tab') {
+      const focusables = confirmOpen ? [confirmNo, confirmYes] : getTourFocusables();
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      return;
+    }
+    if (confirmOpen) return; // Enter activates the focused confirm button natively; don't also advance the tour underneath.
     const advanceOnClick = currentStep.advanceOn === 'click';
     const isHandoff = !!currentStep.handoff;
     if (e.key === 'ArrowRight' || e.key === 'Enter') {
@@ -378,13 +442,37 @@ export function runTour({ surface, steps, startIndex = 0, onClose, showCloseButt
     tooltip.remove();
     closeBtn.remove();
     confirm.remove();
+    if (previouslyFocused && document.contains(previouslyFocused)) previouslyFocused.focus();
     if (onClose) onClose({ skipped: false, quiet: true });
   }
 
+  // Skipping a handoff step whose completion depends on something outside our
+  // control (see `skippable`) shouldn't just advance to this surface's own next
+  // step — that would silently drop any steps reachable only via the handoff
+  // (e.g. rules.js's steps, only reachable via the popup). `skipTo` lets a step
+  // redirect straight to the surface/step that a successful handoff chain would
+  // have eventually reached, so nothing downstream becomes unreachable.
+  // Mirrors how a normal inPage handoff works: set the pending progress, then
+  // actually navigate there ourselves (skipTo.url) rather than tearing the tour
+  // down with nothing to pick it back up — a real navigation unloads this page
+  // (and its tour instance) naturally, and the destination page's own
+  // autoStartIfMatches resumes the tour on load, same as clicking a nav button.
+  async function skipCurrentStep(step) {
+    if (!step.skipTo) { showStep(currentIndex + 1); return; }
+    await setTourProgress(step.skipTo.nextSurface, step.skipTo.nextStepIndex ?? 0);
+    if (step.skipTo.url) window.location.href = step.skipTo.url;
+    else finish(false);
+  }
+
   prevBtn.addEventListener('click', () => showStep(currentIndex - 1));
-  nextBtn.addEventListener('click', () => showStep(currentIndex + 1));
-  closeBtn.addEventListener('click', () => { confirm.style.display = ''; });
-  confirmNo.addEventListener('click', () => { confirm.style.display = 'none'; });
+  nextBtn.addEventListener('click', () => {
+    const step = currentStep;
+    const skippable = step?.skippable === true && (!!step?.handoff || step?.advanceOn === 'click');
+    if (skippable) skipCurrentStep(step);
+    else showStep(currentIndex + 1);
+  });
+  closeBtn.addEventListener('click', () => { confirm.style.display = ''; confirmNo.focus(); });
+  confirmNo.addEventListener('click', () => { confirm.style.display = 'none'; closeBtn.focus(); });
   confirmYes.addEventListener('click', () => finish(true));
   window.addEventListener('scroll', reposition, true);
   window.addEventListener('resize', reposition);

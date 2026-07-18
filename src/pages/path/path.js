@@ -1,5 +1,5 @@
 import { localDayKey, dayKeysForRange, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { statLabels, chartLegendHtml, timeChartHtml, visitsChartHtml, hourlyChartHtml, faviconUrl, loadFaviconCache, navButton } from '../../shared/utils.js';
+import { statLabels, chartLegendHtml, timeChartHtml, visitsChartHtml, hourlyChartHtml, faviconUrl, loadFaviconCache, navButton, keyActivate } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { createRangeDropdown, initRangeSelect } from '../../shared/rangeSelect.js';
 import { displayPath, stripQuery } from '../../shared/paths.js';
@@ -13,9 +13,11 @@ import { QUERY_SUBPAGES_BY_DAY, QUERY_SUBPAGES_BY_HOUR } from '../../shared/quer
 import { PREF_CLOCK_FORMAT } from '../../shared/prefKeys.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { applyChartColorOverrides } from '../../shared/chartColors.js';
 
 await initI18n();
 applyI18n();
+await applyChartColorOverrides();
 
 const drillParams = new URLSearchParams(location.search);
 if (!drillParams.has('ids') || !drillParams.has('path')) {
@@ -55,6 +57,7 @@ const visitsTooltip = document.querySelector('#visits-tooltip');
 const visitsNoData = document.querySelector('#visits-no-data');
 const statsList = document.querySelector('#stats-list');
 const backBtn = document.querySelector('#back-btn');
+keyActivate(backBtn, [' ']);
 const crumbSite = document.querySelector('#path-crumb-site');
 
 await loadFaviconCache();
@@ -179,6 +182,7 @@ function renderPathLinks(entries) {
   for (const { domain, fullPath } of entries) {
     const chip = document.createElement('a');
     chip.className = 'path-link-chip';
+    chip.tabIndex = 0;
     chip.href = `https://${domain}${fullPath}`;
     chip.title = `https://${domain}${displayPath(fullPath)}`;
     chip.addEventListener('click', (e) => {

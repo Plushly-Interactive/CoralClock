@@ -2,13 +2,13 @@ import { SITES_DAY_KEY, SITES_HOUR_KEY, SUBPAGES_DAY_KEY, SUBPAGES_HOUR_KEY } fr
 import { allIntervals } from './intervalLog.js';
 import { showNotification } from '../shared/utils.js';
 import { t } from '../shared/i18n.js';
-import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START } from '../shared/prefKeys.js';
+import { PREF_LAST_EXPORT_AT, PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START, PREF_CHART_COLORS } from '../shared/prefKeys.js';
 import { BRAND_NAME } from '../shared/brand.js';
 
 // Pure export logic, no modal/DOM wiring, safe to import from any page. Both the
 // bucket storage page and the interval storage page build the same complete backup
 // file here.
-export const EXPORT_PREF_KEYS = [PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START];
+export const EXPORT_PREF_KEYS = [PREF_CLOCK_FORMAT, PREF_IDLE_THRESHOLD_SEC, PREF_WEEK_START, PREF_CHART_COLORS];
 
 export async function buildBackupPayload() {
   const stored = await chrome.storage.local.get([

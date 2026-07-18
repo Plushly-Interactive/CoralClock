@@ -3,16 +3,17 @@ import { initCustomDropdowns } from '../../shared/dropdown.js';
 import { getDomain } from '../../vendor/tldts.js';
 import { localDayKey } from '../../shared/timeUtils.js';
 import { weekDow, rotatedDayLabels } from '../../shared/weekStart.js';
-import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear } from '../../shared/utils.js';
+import { drawBarChart, loadFaviconCache, faviconUrl, attachInputClear, keyActivate } from '../../shared/utils.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockRules, mockBlocksByDay } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
 import { enhanceNumberInput, enhanceNumberInputEl } from '../../shared/numberInput.js';
-import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { initI18n, applyI18n, t, getLocale } from '../../shared/i18n.js';
 
 await initI18n();
 applyI18n();
 document.title = `${t('rules_pageTitle')} - ${BRAND_NAME}`;
+keyActivate(document.querySelector('#back-btn'), [' ']);
 
 const formTarget          = document.querySelector('#form-target');
 const formTargetClearBtn  = document.querySelector('#form-target-clear');
@@ -135,7 +136,10 @@ const tabBtns = { url: document.querySelector('#tab-url'), regex: document.query
 const tabForms = { url: urlForm, regex: regexForm, keyword: keywordForm };
 
 function selectTab(key) {
-  for (const [k, btn] of Object.entries(tabBtns)) btn.classList.toggle('active', k === key);
+  for (const [k, btn] of Object.entries(tabBtns)) {
+    btn.classList.toggle('active', k === key);
+    btn.setAttribute('aria-selected', k === key ? 'true' : 'false');
+  }
   for (const [k, form] of Object.entries(tabForms)) {
     if (k === key) form.removeAttribute('hidden');
     else form.setAttribute('hidden', '');
@@ -147,9 +151,21 @@ function selectTab(key) {
   }
 }
 
-tabBtns.url.addEventListener('click', () => selectTab('url'));
-tabBtns.regex.addEventListener('click', () => selectTab('regex'));
-tabBtns.keyword.addEventListener('click', () => selectTab('keyword'));
+// Reactivating the already-open tab closes the form instead of no-op'ing —
+// gives the tab buttons (already real, keyboard-operable <button>s) double duty
+// as a toggle, rather than needing a separate always-focusable header wrapper.
+function toggleOrSelectTab(key) {
+  if (tabBtns[key].classList.contains('active') && addCard.classList.contains('open')) {
+    addCard.classList.remove('open');
+    addCardBody.setAttribute('hidden', '');
+    return;
+  }
+  selectTab(key);
+}
+
+tabBtns.url.addEventListener('click', () => toggleOrSelectTab('url'));
+tabBtns.regex.addEventListener('click', () => toggleOrSelectTab('regex'));
+tabBtns.keyword.addEventListener('click', () => toggleOrSelectTab('keyword'));
 
 // ── URL form logic (carried over from previous rules.js) ──
 
@@ -263,7 +279,7 @@ function refreshPreview() {
   saveBtn.disabled = false;
 }
 
-cards.forEach(card => card.addEventListener('click', () => selectScope(card.dataset.scope)));
+cards.forEach(card => { card.addEventListener('click', () => selectScope(card.dataset.scope)); keyActivate(card); });
 const syncTargetClear = attachInputClear(formTarget, formTargetClearBtn, refreshPreview, { escStopPropagation: true });
 
 previewText.addEventListener('click', (e) => {
@@ -297,6 +313,7 @@ function updateSortArrows() {
     const isSorted = sort.key === key;
     btn.textContent = t(btn.dataset.label) + (isSorted ? (sort.dir === 1 ? ' ↑' : ' ↓') : '');
     btn.classList.toggle('sorted', isSorted);
+    btn.setAttribute('aria-sort', isSorted ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none');
   }
 }
 
@@ -309,6 +326,8 @@ function setSort(key) {
 
 sortSiteBtn.addEventListener('click', () => setSort('site'));
 sortStatusBtn.addEventListener('click', () => setSort('status'));
+keyActivate(sortSiteBtn);
+keyActivate(sortStatusBtn);
 
 // ── Render rules list ──
 
@@ -512,14 +531,14 @@ function openRowEditor(id) {
   li.querySelectorAll('.edit-btn, .toggle-btn, .delete-btn').forEach(b => b.remove());
   li.insertAdjacentHTML('beforeend', `
     <div class="form-row edit-controls">
-      <input class="edit-limit number-input" type="number" value="${rule.limit}" min="0" />
+      <input class="edit-limit number-input" type="number" value="${rule.limit}" min="0" aria-label="${t('rules_limitTo')}" />
       ${editDropdown('edit-unit', UNIT_OPTIONS, rule.limitUnit)}
       <span>per</span>
       ${editDropdown('edit-period', PERIOD_OPTIONS, rule.period)}
-      <button class="save-edit-btn square-btn" data-id="${id}">
+      <button class="save-edit-btn square-btn" data-id="${id}" aria-label="${t('rules_saveEdit')}">
         <span class="icon-mask icon-check"></span>
       </button>
-      <button class="cancel-edit-btn square-btn">
+      <button class="cancel-edit-btn square-btn" aria-label="${t('rules_cancelEdit')}">
         <span class="icon-mask icon-undo"></span>
       </button>
     </div>`);
@@ -544,11 +563,28 @@ function openRowEditor(id) {
   li.querySelector('.edit-limit').focus();
 }
 
+// render() fully replaces #rules-list's innerHTML, which drops whatever had
+// focus (e.g. the toggle button just activated). Refocus the equivalent
+// control on the same rule after render — falling back to the rule's edit
+// button (e.g. after save/cancel, which revert to the normal row), or to the
+// list itself if the rule no longer exists (e.g. after delete).
+function focusRuleRow(ruleId, selector) {
+  const target = document.querySelector(`#rule-${ruleId} ${selector}`)
+    ?? document.querySelector(`#rule-${ruleId} .edit-btn`)
+    ?? rulesList;
+  target.focus();
+}
+
 rulesList.addEventListener('click', async (e) => {
   const btn = e.target.closest('button');
   if (!btn) return;
 
-  if (btn.classList.contains('cancel-edit-btn')) { render(); return; }
+  if (btn.classList.contains('cancel-edit-btn')) {
+    const ruleId = btn.closest('li')?.id.replace('rule-', '');
+    await render();
+    if (ruleId) focusRuleRow(ruleId, '.edit-btn');
+    return;
+  }
   if (btn.classList.contains('save-edit-btn')) {
     const id = btn.dataset.id;
     const limit = parseInt(rulesList.querySelector('.edit-limit').value);
@@ -558,7 +594,8 @@ rulesList.addEventListener('click', async (e) => {
       limitUnit: rulesList.querySelector('.edit-unit-btn').dataset.value,
       period: rulesList.querySelector('.edit-period-btn').dataset.value,
     });
-    render();
+    await render();
+    focusRuleRow(id, '.edit-btn');
     return;
   }
 
@@ -571,7 +608,8 @@ rulesList.addEventListener('click', async (e) => {
     await deleteRule(id);
     if (deleted) await releasePermissionFor(deleted, currentRules.filter(r => r.id !== id));
   }
-  render();
+  await render();
+  focusRuleRow(id, '.toggle-btn');
 });
 
 // ── Stats + sparkline ──
@@ -660,7 +698,7 @@ async function renderStats() {
     const dow = weekDow(d);
     return {
       label: DAY_LABELS[dow],
-      range: d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }),
+      range: d.toLocaleDateString(getLocale(), { weekday: 'short', month: 'short', day: 'numeric' }),
       count: dailyCounts[i],
     };
   });

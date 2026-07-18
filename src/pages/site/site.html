@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="../../../resources/icons/brand/icon16.png" />
-    <title>Site - Coral Clock</title>
+    <title>Site - CoralClock</title>
     <script src="../../shared/theme.js"></script>
     <link rel="stylesheet" href="../../shared/theme.css" />
     <link rel="stylesheet" href="../../shared/tour.css" />
@@ -12,8 +12,8 @@
   <body>
     <header>
       <div id="header-left">
-        <a id="back-btn" href="../dashboard/dashboard.html">
-          <img src="../../../resources/icons/brand/logo.svg" alt="Coral Clock">
+        <a id="back-btn" tabindex="0" href="../dashboard/dashboard.html">
+          <img src="../../../resources/icons/brand/logo.svg" alt="CoralClock">
         </a>
       </div>
       <div id="header-center">
@@ -51,9 +51,9 @@
         <div id="subpages-controls">
           <span class="text-meta" data-i18n="site_depth">Depth</span>
           <div id="depth-toggle" class="seg-control"></div>
-          <div id="sort-toggle" class="seg-control">
-            <button id="sort-time-btn" class="seg-btn active" data-i18n="site_sortTime">Time</button>
-            <button id="sort-visits-btn" class="seg-btn" data-i18n="site_sortVisits">Visits</button>
+          <div id="sort-toggle" class="seg-control" role="radiogroup">
+            <button id="sort-time-btn" class="seg-btn active" role="radio" aria-checked="true" data-i18n="site_sortTime">Time</button>
+            <button id="sort-visits-btn" class="seg-btn" role="radio" aria-checked="false" data-i18n="site_sortVisits">Visits</button>
           </div>
         </div>
         <ol id="subpages-list"></ol>

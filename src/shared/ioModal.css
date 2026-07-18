@@ -90,7 +90,7 @@
   content: "✓";
   position: absolute;
   left: 0;
-  color: var(--color-accent);
+  color: var(--color-accent-text);
   font-weight: 600;
 }
 
@@ -139,7 +139,7 @@
 }
 
 #io-conflict-warning-symbol {
-  color: var(--color-accent-light);
+  color: var(--color-accent-text-hover);
   margin-right: 6px;
 }
 

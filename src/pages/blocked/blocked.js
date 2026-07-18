@@ -125,6 +125,7 @@ import { PREF_FAVORITE_QUOTE_IDS, PREF_QUOTES_ENABLED } from '../../shared/prefK
   if (q.source) {
     const sourceLink = document.createElement('a');
     sourceLink.className = 'link-btn';
+    sourceLink.tabIndex = 0;
     sourceLink.textContent = ' ↗';
     sourceLink.href = q.source;
     sourceLink.target = '_blank';
@@ -142,6 +143,7 @@ import { PREF_FAVORITE_QUOTE_IDS, PREF_QUOTES_ENABLED } from '../../shared/prefK
     if (q.philosophySource) {
       const discoverLink = document.createElement('a');
       discoverLink.className = 'link-btn';
+      discoverLink.tabIndex = 0;
       discoverLink.textContent = ' ' + t('blocked_discoverLink');
       discoverLink.href = q.philosophySource;
       discoverLink.target = '_blank';
@@ -156,6 +158,7 @@ import { PREF_FAVORITE_QUOTE_IDS, PREF_QUOTES_ENABLED } from '../../shared/prefK
   const favBtn = document.querySelector('#fav-btn');
   const { [PREF_FAVORITE_QUOTE_IDS]: favIds = [] } = await chrome.storage.local.get(PREF_FAVORITE_QUOTE_IDS);
   if (favIds.includes(q.id)) favBtn.classList.add('favorited');
+  favBtn.setAttribute('aria-label', t(favBtn.classList.contains('favorited') ? 'blocked_unfavoriteQuote' : 'blocked_favoriteQuote'));
   actionsEl.removeAttribute('hidden');
 
   favBtn.addEventListener('click', async () => {
@@ -164,5 +167,6 @@ import { PREF_FAVORITE_QUOTE_IDS, PREF_QUOTES_ENABLED } from '../../shared/prefK
     const updated = isFav ? current.filter(id => id !== q.id) : [...current, q.id];
     await chrome.storage.local.set({ [PREF_FAVORITE_QUOTE_IDS]: updated });
     favBtn.classList.toggle('favorited', !isFav);
+    favBtn.setAttribute('aria-label', t(isFav ? 'blocked_favoriteQuote' : 'blocked_unfavoriteQuote'));
   });
 })();

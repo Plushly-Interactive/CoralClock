@@ -1,5 +1,5 @@
 import { formatMs, localDayKey, formatTimeOfDay, DEFAULT_CLOCK_FORMAT } from '../../shared/timeUtils.js';
-import { faviconUrl, loadFaviconCache, escapeHtml } from '../../shared/utils.js';
+import { faviconUrl, loadFaviconCache, escapeHtml, keyActivate } from '../../shared/utils.js';
 import { formatHostnameLabel } from '../../shared/labels.js';
 import { displayPath } from '../../shared/paths.js';
 import { periodLevel, formatPeriodLabel, stepPeriod, periodBounds, levelUp, levelDown } from '../../shared/period.js';
@@ -8,10 +8,12 @@ import { allIntervals, SESSION_GAP_MS } from '../../data/intervalLog.js';
 import { autoStartIfMatches } from '../../shared/tour.js';
 import { isMockMode, mockIntervals } from '../../shared/tourMockData.js';
 import { BRAND_NAME } from '../../shared/brand.js';
-import { initI18n, applyI18n, t as i18nT } from '../../shared/i18n.js';
+import { initI18n, applyI18n, t as i18nT, getLocale } from '../../shared/i18n.js';
+import { applyChartColorOverrides } from '../../shared/chartColors.js';
 
 await initI18n();
 applyI18n();
+await applyChartColorOverrides();
 document.title = `${i18nT('tl_pageTitle')} - ${BRAND_NAME}`;
 
 // Visualization only (not in the spec): a horizontal browsing timeline of the top
@@ -20,6 +22,7 @@ document.title = `${i18nT('tl_pageTitle')} - ${BRAND_NAME}`;
 // thin base track — mirroring the dashboard time chart, laid along the time axis.
 
 document.querySelector('#back-btn').href = '../dashboard/dashboard.html';
+keyActivate(document.querySelector('#back-btn'), [' ']);
 const svg = document.querySelector('#timeline-chart');
 const axisSvg = document.querySelector('#timeline-axis');
 const scrollDiv = document.querySelector('#tl-scroll');
@@ -36,7 +39,7 @@ const ROW_H = 30;         // one site row
 const AXIS_H = 22;
 const TOP_PAD = 8;
 
-const SHORT_DAY_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+const SHORT_DAY_FMT = new Intl.DateTimeFormat(getLocale(), { weekday: 'short' });
 
 let rows = [];                       // all interval rows
 const daysWithData = new Set();      // day-keys that have any row (for level-down seeking)
@@ -86,6 +89,7 @@ keysBtn.addEventListener('click', () => {
   keysOpen = !keysOpen;
   keysPopup.style.display = keysOpen ? 'flex' : 'none';
   keysBtn.innerHTML = keysOpen ? '&times;' : '?';
+  keysBtn.setAttribute('aria-label', i18nT(keysOpen ? 'common_hideShortcuts' : 'common_showShortcuts'));
 });
 
 window.addEventListener('keydown', (e) => {
@@ -351,7 +355,7 @@ function showCursorTip(t, e) {
   }
   if (lines.length === 0) { tooltip.style.display = 'none'; return; }
   const time = formatTimeOfDay(t, clockFormat);
-  const date = new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  const date = new Date(t).toLocaleDateString(getLocale(), { weekday: 'short', day: 'numeric', month: 'short' });
   const hint = periodLevel(currentPeriod) === 'day' ? '' : `<div class="tl-tip-hint text-meta">${i18nT('tl_clickToOpenDay')}</div>`;
   tooltip.innerHTML = `<div class="tl-tip-head">${date} ${time}</div>${lines.join('')}${hint}`;
   tooltip.style.display = 'block';

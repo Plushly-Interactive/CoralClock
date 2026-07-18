@@ -3,7 +3,7 @@ import { weekKeyForDate, daysInWeek } from './weekStart.js';
 import { formatPeriodLabel, stepPeriod } from './period.js';
 import { formatWithSmallSub, statLabels, chartLegendHtml } from './utils.js';
 import { drawTimeChart, drawVisitsChart, drawHourlyChart, buildHourlyBuckets } from './overview.js';
-import { t } from './i18n.js';
+import { t, getLocale } from './i18n.js';
 
 let drillPeriod = null;
 let drillPrevPeriod = null;
@@ -32,14 +32,14 @@ function drillInnerHtml() {
     <div id="drill-legend" class="time-legend text-meta" style="display: none;">${chartLegendHtml()}</div>
     <label id="drill-scale-label" class="text-meta"><input type="checkbox" id="drill-scale-btn"> ${t('drill_enhanceReadability')}</label>
     <div id="drill-stats" class="text-meta"></div>
-    <div id="drill-toggle" class="seg-control">
-      <button id="drill-time-btn" class="drill-toggle-btn seg-btn active">${t('site_sortTime')}</button>
-      <button id="drill-visits-btn" class="drill-toggle-btn seg-btn">${t('site_sortVisits')}</button>
-      <button id="drill-hour-btn" class="drill-toggle-btn seg-btn">${t('drill_hourlyAvg')}</button>
+    <div id="drill-toggle" class="seg-control" role="radiogroup">
+      <button id="drill-time-btn" class="drill-toggle-btn seg-btn active" role="radio" aria-checked="true">${t('site_sortTime')}</button>
+      <button id="drill-visits-btn" class="drill-toggle-btn seg-btn" role="radio" aria-checked="false">${t('site_sortVisits')}</button>
+      <button id="drill-hour-btn" class="drill-toggle-btn seg-btn" role="radio" aria-checked="false">${t('drill_hourlyAvg')}</button>
     </div>
   </div>
   <div id="drill-chart-wrapper">
-    <button id="drill-keys-btn" class="square-btn">&times;</button>
+    <button id="drill-keys-btn" class="square-btn" aria-label="${t('common_hideShortcuts')}">&times;</button>
     <div id="drill-keys-popup" class="tooltip text-meta">
       <div id="drill-keys-title">${t('drill_keyboardShortcuts')}</div>
       <div><kbd>&larr;</kbd><kbd>&rarr;</kbd> ${t('drill_navigatePeriod')}</div>
@@ -106,6 +106,7 @@ export function initDrill(context) {
     const visible = ctx.drillKeysPopup.style.display !== 'none';
     ctx.drillKeysPopup.style.display = visible ? 'none' : 'flex';
     ctx.drillKeysBtn.innerHTML = visible ? '?' : '&times;';
+    ctx.drillKeysBtn.setAttribute('aria-label', t(visible ? 'common_showShortcuts' : 'common_hideShortcuts'));
   });
 
   window.addEventListener('keydown', (e) => {
@@ -222,8 +223,11 @@ export function exitDrillCompletely() {
 
 function updateDrillButtons() {
   ctx.drillTimeBtn.classList.toggle('active', drillMetric === 'time');
+  ctx.drillTimeBtn.setAttribute('aria-checked', drillMetric === 'time' ? 'true' : 'false');
   ctx.drillVisitsBtn.classList.toggle('active', drillMetric === 'visits');
+  ctx.drillVisitsBtn.setAttribute('aria-checked', drillMetric === 'visits' ? 'true' : 'false');
   ctx.drillHourBtn.classList.toggle('active', drillMetric === 'hour');
+  ctx.drillHourBtn.setAttribute('aria-checked', drillMetric === 'hour' ? 'true' : 'false');
 }
 
 function navigatePeriod(dir) {
@@ -231,8 +235,6 @@ function navigatePeriod(dir) {
   ctx.navLabel.textContent = formatPeriodLabel(drillPeriod);
   renderDrillChart();
 }
-
-const SHORT_DAY_FMT = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 
 async function renderDrillChart() {
   const isMonthDrill = drillPeriod.length === 7;
@@ -255,7 +257,8 @@ async function renderDrillChart() {
   } else if (isWeekDrill) {
     data = daysInWeek(drillPeriod).map(dayKey => {
       const [y, m, d] = dayKey.split('-').map(Number);
-      return { label: `${SHORT_DAY_FMT.format(new Date(y, m - 1, d))} ${d}`, range: dayKey, ...ctx.getDayEntry(dayKey) };
+      const shortDayFmt = new Intl.DateTimeFormat(getLocale(), { weekday: 'short' });
+      return { label: `${shortDayFmt.format(new Date(y, m - 1, d))} ${d}`, range: dayKey, ...ctx.getDayEntry(dayKey) };
     });
   } else {
     const hourData = await ctx.getHourEntriesForDay(drillPeriod);

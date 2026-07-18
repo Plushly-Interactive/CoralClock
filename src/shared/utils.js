@@ -110,11 +110,39 @@ export function navButton(btnEl, url) {
   });
 }
 
+// Forwards Enter/Space to an element's existing click handler, so non-native
+// clickable elements (tr, th, div) become keyboard-operable without duplicating
+// their click logic.
+export function keyActivate(el, keys = ['Enter', ' ']) {
+  el.addEventListener('keydown', (e) => {
+    if (!keys.includes(e.key)) return;
+    e.preventDefault();
+    el.click();
+  });
+}
+
+// Tab/Shift+Tab wraps between a modal/overlay's first and last focusable element
+// so keyboard focus can't escape to the page behind it while it's open.
+export function trapFocusWithin(container, e) {
+  if (e.key !== 'Tab') return;
+  const focusable = [...container.querySelectorAll('button, input, [href], [tabindex]:not([tabindex="-1"])')]
+    .filter(el => !el.disabled && el.offsetParent !== null);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
 export function showNotification(message, durationMs = 3000) {
   const el = document.querySelector('#notification');
-  el.textContent = message;
+  // #notification is role="status" (aria-live). Un-hide before setting text (and
+  // clear text on hide) so the content change happens while the region is
+  // already in the accessibility tree — some screen readers won't announce a
+  // live-region update that happens in the same tick as un-hiding it.
   el.removeAttribute('hidden');
-  setTimeout(() => { el.setAttribute('hidden', ''); }, durationMs);
+  el.textContent = message;
+  setTimeout(() => { el.setAttribute('hidden', ''); el.textContent = ''; }, durationMs);
 }
 
 export function formatBytes(bytes) {
@@ -286,7 +314,24 @@ function _drawBarChart({ svgEl, tooltipEl, data, maxVal, getValue, formatVal, fo
   svgEl.querySelectorAll('rect[data-range]').forEach(rect => {
     if (onBarClick) {
       rect.style.cursor = 'pointer';
+      rect.tabIndex = 0;
+      rect.setAttribute('role', 'button');
+      rect.setAttribute('aria-label', rect.dataset.range);
       rect.addEventListener('click', () => onBarClick(rect.dataset.range));
+      // Prevent mouse clicks from focusing the bar — Chromium paints its default
+      // focus ring on click-focused SVG elements (its :focus-visible heuristic
+      // misfires on SVG). Keyboard focus (Tab) is unaffected and keeps the ring.
+      rect.addEventListener('mousedown', (e) => e.preventDefault());
+      rect.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        // Dispatch a real click rather than calling onBarClick directly, so it
+        // bubbles like a mouse click would — anything listening for a click on
+        // an ancestor (e.g. the tour's advanceOn: 'click' steps) still fires.
+        // SVGElement has no native .click() (that's HTMLElement-only), so this
+        // has to be a manual event dispatch rather than rect.click().
+        rect.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
     }
     rect.addEventListener('mouseenter', () => {
       let html;
