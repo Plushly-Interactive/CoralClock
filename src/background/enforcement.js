@@ -148,12 +148,12 @@ function blockedUrl(ruleId, entry, originalUrl, quoteId) {
   return chrome.runtime.getURL(`src/pages/blocked/blocked.html?${params}`);
 }
 
-function buildRule(ruleId, entry, id) {
+function buildRule(ruleId, entry, id, quoteId) {
   const { kind, value } = describeRule(entry);
   return {
     id,
     priority: 1,
-    action: { type: 'redirect', redirect: { url: blockedUrl(ruleId, entry) } },
+    action: { type: 'redirect', redirect: { url: blockedUrl(ruleId, entry, undefined, quoteId) } },
     condition: { [kind]: value, resourceTypes: ['main_frame'] },
   };
 }
@@ -259,8 +259,16 @@ export async function publishOverage(overage) {
   const newRuleIds = new Set();
   for (const [ruleId, entry] of overage) {
     const id = liveMap.get(ruleId) ?? freshId();
-    desired.set(id, buildRule(ruleId, entry, id));
-    if (!liveMap.has(ruleId)) newRuleIds.add(ruleId);
+    const isNew = !liveMap.has(ruleId);
+    // Pick the quote once, when the DNR rule is first published, so it's baked
+    // into the redirect URL — every fresh nav and reload under this rule then
+    // shows the same quote, until the rule is torn down and republished (limit
+    // reset, disable/enable). Skipped for already-live rules: their rebuilt URL
+    // here is discarded below (not in addRules), so picking one would just burn
+    // a "seen" slot in quotes storage for nothing.
+    const quote = isNew ? await pickQuote(entry.target ?? '') : null;
+    desired.set(id, buildRule(ruleId, entry, id, quote?.id ?? null));
+    if (isNew) newRuleIds.add(ruleId);
   }
 
   const existingIds = new Set(existing.map(r => r.id));
