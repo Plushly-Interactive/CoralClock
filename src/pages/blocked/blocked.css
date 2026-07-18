@@ -113,12 +113,3 @@ body {
   fill: currentColor;
 }
 
-#saved-quotes-link {
-  font-size: var(--font-sm);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-}
-
-#saved-quotes-link:hover {
-  color: var(--color-accent-text-hover);
-}

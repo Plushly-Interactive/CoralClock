@@ -292,6 +292,7 @@
   "settings_resetColorsConfirm": { "message": "Reset all chart colors to the theme defaults?" },
   "settings_colorblindPalette": { "message": "Apply color-blind palette" },
   "settings_preview": { "message": "Preview" },
+  "settings_changelog": { "message": "(changelog ↗)" },
   "chartColor_active": { "message": "Active time" },
   "chartColor_audio": { "message": "Audio playback" },
   "chartColor_visits": { "message": "Visits" },
