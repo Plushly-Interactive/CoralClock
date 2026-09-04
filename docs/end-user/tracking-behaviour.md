@@ -1,6 +1,6 @@
 # Tracking behaviour
 
-How this app counts time and visits across browser windows and tabs.
+TL;DR: how this app counts time and visits across browser windows and tabs.
 
 ## What gets tracked
 

@@ -15,3 +15,8 @@ dist/
 
 # wrangler local state
 .wrangler/
+
+# agent-os
+logs/
+shots/
+scripts/os/.dev.pid

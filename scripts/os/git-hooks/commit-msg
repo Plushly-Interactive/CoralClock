@@ -1,0 +1,51 @@
+#!/bin/sh
+# agent-os commit-msg: reject AI attribution trailers (Working Rule 9). Managed by agent-os; edit there.
+# The user owns authorship of every commit. Every coding-agent harness stamps
+# its own key (Co-Authored-By, Assisted-By, Generated-By, Prompted-By, ...) so
+# rather than enumerate keys ourselves, this asks git's own trailer parser
+# what the message's trailer block says, then checks values/footers for a
+# known AI tool, bot account, or generated-by style phrasing.
+msg="$1"
+body="$(cat "$msg")"
+trailers="$(git interpret-trailers --parse "$msg" 2>/dev/null)"
+
+AI_NAMES='claude|anthropic|chatgpt|gpt-?[0-9]|openai|codex|copilot|aider|cursor|devin|windsurf|gemini|bard|tabnine|sourcegraph|cody|replit|amazon ?q|codewhisperer|jules|cognition|\[bot\]'
+
+# 1) Any git trailer — whatever key it uses (Co-Authored-By, Assisted-By,
+#    Generated-By, Prompted-By, Model, Tool, ...) — whose value names a known
+#    AI tool or bot account. A human "Co-authored-by: Jane Doe <jane@x.com>"
+#    passes untouched.
+if [ -n "$trailers" ]; then
+  hit="$(printf '%s\n' "$trailers" | grep -iE ":.*($AI_NAMES)" | head -1)"
+  if [ -n "$hit" ]; then
+    echo "commit-msg: AI trailer found ($hit). Remove it and commit again." >&2
+    exit 1
+  fi
+fi
+
+# 2) Known AI/bot no-reply addresses, even without a name keyword above,
+#    wherever they appear (trailer or not).
+if printf '%s\n' "$body" | grep -iE 'noreply@(anthropic|openai|x-ai|perplexity|cognition)\.com|[0-9]+\+[a-z0-9-]+\[bot\]@users\.noreply\.github\.com' >/dev/null; then
+  echo "commit-msg: AI bot address found. Remove it and commit again." >&2
+  exit 1
+fi
+
+# 3) "Generated with/by" style footer lines (Claude Code's own wording and
+#    the phrasing most other harnesses copied from it), or an explicit
+#    "written by AI" / "AI-generated" claim — anchored to the start of a
+#    line, since every real footer is its own line by convention. Unanchored
+#    would also trip on prose *describing* this hook (e.g. a commit message
+#    that mentions "AI-generated" while explaining what the hook detects).
+if printf '%s\n' "$body" | grep -iE "^(Generated (with|by|using)|This commit was (generated|written)|Written by (an )?($AI_NAMES)|Co-authored by (an )?ai|AI-(generated|assisted)|🤖)" >/dev/null; then
+  echo "commit-msg: AI-generated footer found. Remove it and commit again." >&2
+  exit 1
+fi
+
+# 4) A known tool's own URL, wherever it appears — specific enough that it
+#    rarely shows up except as the real footer link.
+if printf '%s\n' "$body" | grep -iE "claude\.com/claude-code|github\.com/features/copilot|aider\.chat|cognition\.ai" >/dev/null; then
+  echo "commit-msg: AI-generated footer found. Remove it and commit again." >&2
+  exit 1
+fi
+
+exit 0

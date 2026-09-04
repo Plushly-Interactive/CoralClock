@@ -1,0 +1,6 @@
+#!/bin/sh
+# agent-os pre-commit: doc budgets (Writing Contract). Managed by agent-os; edit there.
+# Quiet on success (stdout only carries the "clean" confirmation) so a later
+# hook's failure — e.g. commit-msg — isn't buried under this one's own success
+# noise in whatever's showing the combined hook output to the user.
+node "$(git rev-parse --show-toplevel)/scripts/os/doc-lint.mjs" --changed >/dev/null || exit 1

@@ -1,0 +1,65 @@
+#changelog-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 32px;
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  flex-shrink: 0;
+}
+
+#changelog-subheader[hidden] {
+  display: none;
+}
+
+#changelog-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  z-index: 3002;
+}
+
+#changelog-modal {
+  max-width: 420px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+#changelog-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+#changelog-modal-title {
+  margin: 0 28px 12px 0;
+}
+
+.changelog-version-group {
+  margin-bottom: 14px;
+}
+
+.changelog-version-group:last-child {
+  margin-bottom: 0;
+}
+
+.changelog-version-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.changelog-category-label {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 8px 0 4px;
+}
+
+.changelog-items {
+  margin: 0 0 4px;
+  padding-left: 18px;
+}
+
+.changelog-items li {
+  margin-bottom: 4px;
+}

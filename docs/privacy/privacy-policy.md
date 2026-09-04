@@ -1,5 +1,7 @@
 # Privacy Policy — CoralClock: Screen Time & Website Blocker
 
+TL;DR: CoralClock stores your browsing activity on your own device to provide screen-time tracking and blocking. Nothing is sent to any server.
+
 **Effective date:** 2026-07-08
 
 ## What data CoralClock collects

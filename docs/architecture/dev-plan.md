@@ -1,7 +1,6 @@
 # Dev plan
 
-> Order of work. The **what and why** live in [multiplatform.md](multiplatform.md) and
-> [decisions.md](decisions.md).
+> TL;DR: order of work in seven phases, from the shared Rust core to store compliance. The **what and why** live in [multiplatform.md](multiplatform.md) and [decisions.md](../appendix/roadmap-decisions.md).
 
 ```mermaid
 flowchart TD
@@ -72,7 +71,7 @@ Surface is specified in [core-crate.md](core-crate.md) — not repeated here.
 Combined cross-platform limits need rules + aliases consistent on every device.
 Cloud-sync v1 syncs only the interval log. This **inherits the full E2E crypto
 contract** — not plain settings sync. See
-[entity-model dependencies](../features/entity-model/entity-model.md#dependencies).
+[entity-model dependencies](../features/entity-model.md#dependencies).
 
 ## 7 · Testing & compliance
 
@@ -84,10 +83,13 @@ contract** — not plain settings sync. See
 
 ## Prerequisite (shipped product)
 
-Cloud-sync assumes the extension is **interval-first**: the bucket→interval migration
-must finish first — tracking cutover, every dashboard/drilldown, all user data actions
-(export/import, CSV, prune, targeted delete, storage health), and enforcement reading
-interval usage. Spec:
-[bucket-to-interval-tracking-migration.md](../features/bucket-to-interval-tracking-migration.md).
+Cloud-sync assumes the extension is **interval-first**. The bucket→interval migration must finish first:
+
+- tracking cutover
+- every dashboard and drilldown
+- all user data actions — export/import, CSV, prune, targeted delete, storage health
+- enforcement reading interval usage
+
+Spec: [bucket→interval migration](../appendix/tracking-bucket-to-interval-migration.md).
 
 <sub>Path-level aggregation in <code>intervalAggregates.js</code> — once listed as the first task — <strong>already landed</strong> (verified 2026-08-02). Re-check the rest of that list before assuming anything else is still open.</sub>
