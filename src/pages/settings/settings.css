@@ -78,3 +78,16 @@
 }
 
 .setting-card .dropdown-arrow { color: var(--color-text-secondary); }
+
+#version-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 24px;
+  border-top: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  flex-shrink: 0;
+}
+
