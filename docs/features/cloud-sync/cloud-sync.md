@@ -1,317 +1,451 @@
-# Cloud sync — accounts + cross-device interval data
+# Cloud sync
 
-Turn this app into an account-backed service whose **interval data** follows the
-user across devices. The server is a **dumb, end-to-end-encrypted store**: it
-holds ciphertext rows, hands them between a user's devices, and **never reads
-browsing history**. Every device keeps a full local copy of the intervals in
-IndexedDB, computes all stats locally (the existing `intervalAggregates` engine),
-and enforces limits locally — so **everything works offline**; sync is just
-eventual reconciliation.
+> Cross-device sync of the interval log. **No identity collected** — no email, no phone,
+> no name. Server is a blind ciphertext relay. Every client computes and enforces
+> locally, so everything works offline.
 
-The **scalar buckets stay local and frozen** (legacy pre-interval history). This
-feature **promotes the interval log** from the "removable experiment" of
-[interval-storage.md](../interval-storage.md) to the **authoritative, synced
-store** that dashboards and combined enforcement read going forward.
+**Params:** [crypto-contract.md](crypto-contract.md) · **Why:** [decisions.md](../../architecture/decisions.md) · **Client surface:** [core-crate.md](../../architecture/core-crate.md)
 
-## Why this shape
+```mermaid
+flowchart LR
+  subgraph A[Device A]
+    a[plaintext log, encrypt row]
+  end
+  subgraph SV[Server: blind relay]
+    s[(ciphertext only, no compute)]
+  end
+  subgraph B[Device B]
+    b[decrypt, compute, enforce]
+  end
+  a -->|push ciphertext| s
+  s -->|pull ciphertext| b
+```
 
-Three user constraints forced the architecture; it is not a free choice:
+Three constraints forced this shape; it was not a free choice:
 
-- **Offline must work** (stats *and* enforcement) → all compute is local.
-- **End-to-end encryption is kept** → the server can't read rows → the server
-  *can't* compute anyway → it can only be a sync relay.
-- **Combined cross-device limits** → enforcement reads the merged interval log,
-  not the local buckets.
+```mermaid
+flowchart TD
+  o[offline must work] --> l[all compute is local]
+  e[E2E is kept] --> c[server cannot read rows]
+  c --> r[so it can only relay]
+  x[combined cross-device limits] --> m[enforcement reads the merged log]
+```
 
-A thin-client / server-authoritative model (server computes views, answers "block
-this?") was considered and **rejected**: it would break offline, kill E2E, and
-put a network round-trip on the navigation hot path.
+## Decisions
 
-## Resolved decisions
-
-| Decision | Choice | Why |
-|---|---|---|
-| Backend | Cloudflare Worker + D1 | Hand-rolled auth, fewest third parties, matches existing tooling |
-| Auth | Magic-link (6-digit email code → long-lived token) | No passwords, no third-party OAuth |
-| Sync model | Full replication, alarm-driven push/pull deltas | Offline-first; server is a dumb relay |
-| Server role | Encrypted blob store, no compute | E2E + offline both rule out server-side logic |
-| Encryption | Wrapped-key E2E; `domain`/`path`/`from`/`to`/`kind` all encrypted per-row | Server learns nothing, not even *when* you browse |
-| Encryption key | Random DEK, wrapped by `KEK = KDF(passphrase)`, wrapped DEK stored server-side; recovery phrase as backup | Passphrase UX + high-entropy key; magic-link stays identity-only |
-| Enforcement | Combined across devices (per-device mode is post-v1) | Limit applies to total usage everywhere |
-| Interval log status | Authoritative + synced; buckets frozen legacy | Single source of truth going forward |
-| Logged-out capture | Capture always, claim rows on login | Never lose data; matches today's always-on tracker |
-| Retention | Client-driven tombstone prune (server is blind) | Server can't prune by age it can't read |
-| Token | Long-lived, manual revoke ("sign out everywhere") | Token lives in extension storage, not page JS; refresh-rotation is over-built here |
-| Privacy posture | E2E within v1 | v1a E2E-ready (opaque rows) → v1b real encryption, both ship as v1 |
-
-## User stories
-
-- As a user, I sign in with an email code (no password) and my interval data is
-  available on every device I sign into.
-- As a user, my browsing history is end-to-end encrypted — the operator cannot
-  read what sites I visit, even server-side.
-- As a user, a limit like "twitch.tv 1h/day" applies to my **total** usage across
-  all my devices, not per device.
-- As a user, I can see **which device** each chunk of browsing happened on.
-- As a user, I can name and manage my devices, and sign out one or all of them.
-- As a user (GDPR), I can export all my data and permanently delete my account.
-- As an existing user, my pre-interval scalar history stays intact locally and is
-  never affected by sync.
-
-## Acceptance criteria
-
-- [ ] A new device that signs in converges to the same combined interval view as
-      the user's other devices (within one sync interval), and works fully offline
-      against its local copy.
-- [ ] The server stores only ciphertext for `domain`/`path`/`from`/`to`/`kind`;
-      no endpoint returns or computes over plaintext browsing data.
-- [ ] The merged interval log exposes **combined cross-device usage** (last-synced
-      others' usage + this device's live usage), available offline, in the shape
-      the enforcement rebuild needs. *Actual blocking is owned by
-      [enforcement.md](../enforcement/enforcement.md), not this spec — cloud-sync
-      provides the input, enforcement consumes it.*
-- [ ] Each interval row is attributable to the device that captured it; the UI can
-      group/filter by device.
-- [ ] Deleting the account removes all server rows, tokens, wrapped keys, and
-      device records. Forgetting a site / pruning propagates a tombstone that
-      removes the rows on every device and the server.
-- [ ] Losing a device, reinstalling, or signing into a different account never
-      leaks one account's data into another's view and never loses data captured
-      while logged out.
-- [ ] The scalar buckets, the main dashboard, export/import, prune, "forget this
-      site" over buckets, and `onInstalled` are unaffected by sync.
-
-## Scope
-
-### Surfaces involved
-
-| Surface | Role |
+| | |
 |---|---|
-| **server** (Worker + D1) | Auth (request/verify code, tokens), per-user encrypted interval store, push/pull deltas, device registry, wrapped-key storage, account deletion. No compute over browsing data. |
-| **background** (extension) | Sync engine on its own `intervalSync` alarm: encrypt + push dirty rows, pull + decrypt + upsert mirror rows, drive cursors, claim logged-out rows on login, run client-side retention prune. Adds `dbg()` at every decision point. |
-| **enforcement** (extension) | *Out of this spec's build* — owned by [enforcement.md](../enforcement/enforcement.md). Cloud-sync only **provides** combined cross-device usage from the merged log and an opportunistic near-limit sync hook; the block decision lives in the enforcement rebuild. |
-| **settings / account UI** | Sign-in (email → code), passphrase set/unlock + recovery phrase, device management, sign out / sign out everywhere, export, delete account, sync status. |
-| **dashboards** | Read the (now authoritative) interval log; optional group/filter by device. |
+| Backend | Cloudflare Worker + D1 |
+| Identity | **none** — pseudonymous `account_id` = HKDF(recovery phrase) |
+| Auth | Ed25519 challenge-response |
+| Sync | Full replication, alarm-driven push/pull deltas |
+| Encryption | Per-row wrapped-key E2E, **all fields incl. timestamps** |
+| Recovery | Recovery phrase only. **No email backstop** |
+| Email | **None, ever** — a mailed recap can't be E2E |
+| Retention | **Never auto-prune.** User-initiated delete only |
+| Enforcement | Combined across devices (per-device is post-v1) |
+| Logged-out capture | Capture always, claim rows on login |
+| Interval log | Authoritative + synced; scalar buckets frozen legacy |
 
-### Client storage changes
+## Server storage (D1)
 
-**IndexedDB (`browsing-intervals`)** — additive, engine untouched:
-
-| Field | On which rows | Purpose |
-|---|---|---|
-| `deviceId` | all | Stamped from `_deviceId`; global identity is `(deviceId, localId)` where `localId` = the existing `++id`. |
-| `dirty` | own | `1` on `appendInterval`/`touch`, cleared on push-ack. Push cursor — no fragile seq to corrupt. Open rows re-dirty ~1×/min until the session closes (cheap). |
-| `origin` `{deviceId, localId}` | mirror | Pulled rows' source identity; **indexed** for idempotent upsert on re-pull. Own rows don't need it (`= self, id`). |
-| `cipher`, `iv` (v1b) | all synced | Per-row ciphertext of `{domain, path, from, to, kind}` + nonce. Plaintext fields kept locally for compute; only ciphertext is pushed. |
-
-Keep local `++id`. `touch` updates by PK, `openRows` holds `{rowId}`, the snapshot
-carries it — **none of `intervalTrackingUtils` changes** beyond stamping
-`deviceId`. (Verified path: `touch` → flush → snapshot cycle is unaffected.)
-
-**`chrome.storage.local`** (the 10MB tier — tiny additions; interval *data* lives
-in IndexedDB, GB-class, not here):
-
-| Key | Purpose |
-|---|---|
-| `_deviceId` | One UUID per install. |
-| `account` | `{ email, token }` — the session. |
-| `lastPulledSeq` | Pull cursor (highest server `seq` seen). |
-| `deviceRegistry` | Cached `{deviceId → name}` for attribution UI. |
-| `wrappedKeyCache` (v1b) | The unwrapped DEK is held in SW memory after unlock; only the wrapped form is persisted (server is source of truth). |
-
-### Server storage (D1)
+```mermaid
+erDiagram
+  users ||--o{ devices : "registers, one token each"
+  users ||--|| keys : "one current key"
+  users ||--o{ intervals : owns
+  devices ||--o{ intervals : "captured on"
+  users {
+    string id PK "opaque, random, stable forever"
+    string account_id UK "HKDF of recovery phrase, rotatable"
+    blob signing_pubkey "Ed25519, verifies auth"
+    number seq_counter "monotonic push counter"
+    blob row_digest "running XOR of row_tag"
+  }
+  devices {
+    string user_id FK
+    string device_id PK
+    blob name_cipher "encrypted device name"
+    blob name_iv
+    number key_epoch
+    string token_hash UK "nullable; null = signed out"
+  }
+  keys {
+    string user_id FK
+    number key_epoch
+    blob wrapped_dek "ciphertext"
+    string kdf_params
+    blob recovery_wrapped_dek "ciphertext"
+  }
+  intervals {
+    string user_id PK
+    string device_id PK
+    number local_id PK
+    blob interval_cipher "encrypted payload"
+    blob interval_iv
+    blob row_tag "client-computed"
+    number key_epoch
+    number seq
+  }
+```
 
 ```
-users(id, email, created_at)
-auth_codes(email, code_hash, expires_at, attempts)          -- pending magic codes
-tokens(token_hash, user_id, created_at, last_used)
-devices(user_id, device_id, name, created_at, last_seen)
-keys(user_id, key_epoch, wrapped_dek, kdf_params, recovery_wrapped_dek) -- ciphertext only
-intervals(
-  user_id, device_id, local_id,
-  cipher BLOB, iv BLOB,            -- encrypted {domain,path,from,to,kind}
-  seq, deleted,
-  PRIMARY KEY (user_id, device_id, local_id)
-)
 INDEX intervals(user_id, seq)
-user_seq(user_id, value)          -- per-user monotonic counter
+INDEX intervals(user_id, device_id, local_id)   -- reconciliation order
 ```
 
-The server **cannot** read `cipher`. `seq` is bumped (in a D1 transaction) on
-every insert *and* update, so a row's `to`-extension resurfaces to other devices'
-pulls.
+Everything named `_cipher` or `_dek` is opaque to the server. `device_id` stays plaintext
+— an opaque UUID with no semantic content, needed as the routing key. `seq` bumps on
+insert *and* update, so a row's `to`-extension resurfaces to other devices.
 
-### Auth (magic-link)
+## Worker vs client
 
-1. `POST /auth/request {email}` (behind **Turnstile**, rate-limited per email+IP):
-   generate a 6-digit code, store `code_hash` + expiry (~10 min) + attempt count,
-   email it via Cloudflare Email Sending. **Always** respond `"code sent"` — never
-   reveal whether the email exists (anti-enumeration).
-2. `POST /auth/verify {email, code}`: check hash, expiry, attempt cap; create the
-   user if new; issue a long-lived token (store `token_hash`); return it.
-3. Extension stores `{email, token}`; every sync request sends
-   `Authorization: Bearer <token>`.
-4. Sign out = delete token locally. Sign out everywhere = `DELETE /tokens` for the
-   user.
+The Worker's list is short — that is what "dumb relay" means.
 
-Magic-link is **identity only** — it proves control of the email, nothing the
-server sees can be the encryption key. The encryption secret is the **separate
-passphrase** (below).
+| Worker does | Client does (shared Rust core) |
+|---|---|
+| `/auth/challenge` — issue + store a nonce | **All** crypto: Argon2id, HKDF, Ed25519, AES-GCM |
+| `/auth/verify` — check signature, issue token | Retention policy + mechanism |
+| `/account/register` — store pubkey + wrapped keys | Aggregation and the block decision |
+| `/sync/push` — upsert by PK, bump `seq`, XOR `row_tag` into `row_digest`; **or** `DELETE` if flagged | The full local mirror — the only place plaintext exists |
+| `/sync/pull` — rows where `seq > cursor AND device_id != me`, paginated; carries `row_digest` | Sync orchestration: batches, pages, cursors |
+| `/sync/ids` — identities only, ordered by `(device_id, local_id)` | All UI |
+| Device management, account deletion, rate limits | |
 
-### Sync engine
+No encryption, no key derivation, no retention decisions, no aggregation over row
+contents. Every operation is a lookup, an insert/update, a signature check, a counter
+bump, or an XOR of a **client-supplied opaque tag**.
 
-`intervalSync` alarm (separate from the 1-min `intervalFlush`). Each fire, if
-signed in and unlocked:
+## Auth
 
-- **Push:** read `dirty` rows, encrypt each to `{cipher, iv}`, `POST /sync/push`
-  (batched). Server upserts by `(user_id, device_id, local_id)` — idempotent, so a
-  crash mid-push just re-pushes. On ack, clear `dirty` per row.
-- **Pull:** `GET /sync/pull?since=<lastPulledSeq>` → rows with
-  `seq > lastPulledSeq AND device_id != me`, **paginated** (cap per page, loop on
-  `nextSeq`). Decrypt, upsert mirror rows by the `origin` index, advance
-  `lastPulledSeq`, invalidate `intervalAggregates`.
+Authentication ≠ identity. The server only needs "same account as before", which a
+keypair proves.
 
-Resumable by construction: dirty-flag + idempotent upsert + persisted cursor mean
-SW death mid-sync is safe (re-push is a no-op, pull resumes from the cursor).
-`dbg()` at push / pull / merge / claim / prune.
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant S as Server
+  C->>S: POST /auth/challenge {account_id}
+  S-->>C: random nonce (60s expiry)
+  C->>C: sign "coralclock/auth/v1" + nonce
+  C->>S: POST /auth/verify {account_id, signature}
+  S->>S: verify against stored signing_pubkey
+  S-->>C: long-lived token
+```
 
-**Claim on login:** rows captured while logged out have `deviceId` = this install
-but were never pushed (no account). On sign-in, the "upload your existing
-history?" prompt (per the backfill decision) marks them `dirty` so they sync up
-under the now-active account.
+Replay protection is normative — see [crypto-contract MUST 7](crypto-contract.md#normative-musts).
 
-### Encryption (v1b — wrapped key)
+**Anti-enumeration:** `/auth/challenge` returns a well-formed nonce for *any*
+`account_id`, existing or not; `/auth/verify` does **constant work** for unknown accounts
+(verify against a dummy key) and returns an identical error body. Rate-limit both per IP.
+([OWASP](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/03-Identity_Management_Testing/04-Testing_for_Account_Enumeration_and_Guessable_User_Account))
 
-- One random **DEK** per account encrypts every row's
-  `{domain, path, from, to, kind}` (AES-GCM, per-row `iv`).
-- User sets a **passphrase**; `KEK = KDF(passphrase)`; the DEK is **wrapped by
-  KEK** and the wrapped form is stored server-side. The server holds only the
-  wrapped DEK → still blind. **The passphrase is the entire security boundary
-  against a malicious/compromised operator** (who can attempt an offline
-  brute-force of the wrapped DEK), so the KDF **must** be memory-hard with strong
-  parameters — Argon2id at a deliberately high cost. This is a hard requirement,
-  not a default.
-- **First-ever login (no account key yet):** setup is **mandatory before any
-  sync** — set passphrase → generate DEK → show recovery phrase → only then does
-  data flow. No grace period, no v1a-style opaque interim: every synced row is
-  E2E-encrypted from the first one.
-- **New device (key exists):** magic-link login → download wrapped DEK → enter
-  passphrase → unwrap locally → hold DEK in SW memory. **No phrase to copy between
-  devices.**
-- **Recovery phrase** = the raw DEK rendered as words (BIP39-style), shown once, as
-  a backup if the passphrase is forgotten. Stored by the user out-of-band.
-- **Change passphrase** = re-wrap the DEK with a new KEK; no data re-encryption.
-- **v1a** ships first: same wire shape but `cipher` carries opaque-but-unencrypted
-  JSON, server stores it without parsing (E2E-*ready*). **v1b** swaps in real
-  encryption with no server migration. Both are v1.
+**Unlock chain** — the recovery phrase is needed **once per device**:
 
-Per-row encryption (not one big blob) keeps the upsert + seq-delta model intact.
+```
+first link:  recovery phrase -> account_id + signing key -> authenticate
+every later: passphrase --Argon2id--> KEK --unwraps--> DEK --unwraps--> signing key
+```
 
-### Enforcement (combined) — input only
+The signing key is stored **wrapped under the DEK**, so a browser restart never
+re-prompts for the phrase. The passphrase never reaches the server in any form.
 
-Enforcement itself is **not built here**; it is owned by the rebuild in
-[enforcement.md](../enforcement/enforcement.md). What cloud-sync **provides** to
-it:
+### Recovery-phrase UX
 
-- **Combined usage** = own live usage + last-synced mirror usage, read from the
-  merged local interval log. Available offline, no per-navigation network call.
-- An **opportunistic `intervalSync`** the enforcement checker can trigger when a
-  site is near its limit, to tighten accuracy before deciding.
+Total lockout is possible by design, so setup must earn the backup rather than assume it.
 
-**Known gap to hand to enforcement:** a device offline for hours under-counts
-combined usage and may overshoot — best-effort by design. Per-device enforcement
-mode is post-v1 (rows already carry `deviceId`, so it drops in later).
+```mermaid
+flowchart TD
+  g[generate R] --> s[show 24 words + printable sheet]
+  s --> c{confirm by re-entering<br/>3 random words}
+  c -->|wrong| s
+  c -->|correct| a[account active, backup confirmed]
+  a --> v[view phrase again anytime while unlocked]
+```
 
-### GDPR
+| Rule | Why |
+|---|---|
+| **Forced confirmation** — re-enter 3 random words before the account activates | The standard wallet-seed pattern. Catches "I'll write it down later" |
+| **Store R wrapped under the DEK** (`wrappedRecovery`), like `wrappedSigningKey` | Otherwise the phrase is unviewable after setup and a user who *did* lose their copy has no path back while still logged in. Near-neutral on security: anyone with an unlocked DEK already owns the account |
+| **No periodic nagging** once confirmed | It is re-viewable on demand, so reminders add annoyance without adding safety |
+| Printable / downloadable sheet | Offline backup, no third party |
 
-- **Export** is **client-side**: the server only holds ciphertext, so export =
-  client decrypts the local log and dumps JSON.
-- **Erasure** is server-side: `DELETE /account` wipes the user's rows, tokens,
-  wrapped keys, and device records; the client clears its local synced data.
-- **Device management:** registry lists devices (name, last seen); forget-device
-  drops it from the registry and revokes its token (its rows become orphaned, not
-  deleted — see edge cases).
-- Signup requires accepting a **privacy policy + ToS** (Public SaaS, EU controller
-  of sensitive data).
+<sub>The wrapped copy does <strong>not</strong> weaken the lockout guarantee: it is encrypted under the DEK, so losing both the passphrase and the phrase still loses the account. It only helps a user who is currently unlocked.</sub>
 
-### Retention (client-driven)
+## Sync tick
 
-Because the server is blind to timestamps, it **cannot** prune by age. Retention
-is a **client** decision: the client tombstones rows older than the policy
-(`deleted = 1`), which propagates on push; the server drops tombstoned rows. Until
-some client prunes, the server grows unbounded — see open questions on cost.
+```mermaid
+sequenceDiagram
+  participant C as Client (Rust core)
+  participant S as Server (D1)
+  Note over C: intervalSync alarm, if unlocked
+  C->>C: read dirty rows, encrypt
+  C->>S: POST /sync/push
+  S->>S: upsert by (user, device, local_id), bump seq
+  S-->>C: ack + row_digest
+  C->>C: clear dirty per row
+  C->>S: GET /sync/pull?since=cursor
+  S-->>C: newer rows from other devices, paginated
+  C->>C: decrypt, upsert mirror, advance cursor
+```
+
+Resumable by construction: dirty flag + idempotent upsert + persisted cursor mean
+service-worker death mid-sync is safe. `dbg()` at push / pull / merge / claim /
+reconcile.
+
+**Claim on first link:** rows captured before the device had an account are marked
+`dirty` on link, so they sync up under the now-active account.
+
+## Retention
+
+**Nothing is ever pruned by age.** Deletion is user-initiated only ("forget this site",
+targeted delete, account deletion) and is a genuine `DELETE` — no tombstone, because the
+row not existing *is* the signal.
+
+The row set therefore grows without bound by design. Sizing baseline: **~600
+rows/day/device** (measured — 29,314 rows over 7 weeks), so three devices over five
+years is ~3.3M rows. Everything below is built for that.
+
+Deletes ride the next push. The Worker's only retention logic is one branch: delete
+request in → `DELETE` instead of upsert. Idempotent.
+
+Propagation is separate, and reuses the daily alarm:
+
+```mermaid
+flowchart TD
+  a[intervalSync alarm] --> b{lastReconciledAt over 24h ago?}
+  b -->|no| c[normal push and pull only]
+  b -->|yes| d{row_digest matches local?}
+  d -->|yes| e[nothing deleted anywhere - skip]
+  d -->|no| f[walk /sync/ids, ordered]
+  f --> g[merge-join against local origin index]
+  g --> h[present locally, absent remotely -> delete locally]
+  e --> i[update lastReconciledAt]
+  h --> i
+```
+
+| Property | How |
+|---|---|
+| Constant memory | both sides ordered by `(device_id, local_id)` ⇒ streaming merge-join, one page per side |
+| Usually free | `row_digest` rides every pull; deletions are rare, so the walk is normally skipped |
+| No propagation cliff | a device offline for a year converges on **one** pass — the check is "absent from *current* state", never a signal it could have missed |
+| Safe failure | digest mismatch ⇒ an unnecessary walk (harmless); missing a divergence needs a 128-bit hash collision |
+
+## Client storage
+
+**IndexedDB** (`browsing-intervals`) — additive, engine untouched:
+
+| Field | Rows | Purpose |
+|---|---|---|
+| `deviceId` | all | Global identity is `(deviceId, localId)`; `localId` = existing `++id` |
+| `dirty` | own | Push cursor. Set on append/touch, cleared on ack |
+| `origin` `{deviceId, localId}` | mirror | **Indexed** — idempotent upsert, and reconciliation order |
+| `interval_cipher`, `interval_iv`, `row_tag` | synced | Only ciphertext is pushed |
+
+**`chrome.storage.local`** (tiny — interval data lives in IndexedDB):
+`_deviceId` · `account` `{accountId, token}` · `wrappedSigningKey` · `wrappedRecovery` ·
+`lastPulledSeq` · `lastReconciledAt` · `deviceRegistry` · `wrappedKeyCache`.
+
+The **unwrapped** DEK never goes here — see [DEK at rest](crypto-contract.md#dek-at-rest).
+
+## Threat model
+
+| Operator can see | Why | Mitigation |
+|---|---|---|
+| **IP address** | Inherent to networking. Personal data under CJEU *Breyer* | v1: no logging, no persistence, VPN/Tor documented. Structural fix: **OHTTP**, opt-in, post-v1 (below) |
+| **Sync timing** | Request timing isn't encrypted even though row timestamps are | Jittered interval |
+| **Volume** | Needed to store and paginate | Batch padding, partial. Accepted |
+| **Linkability** | Sync must know which rows belong together | Inherent |
+| **Payment identity** (if ever paid) | A processor collects name/card/billing | Separately-keyed billing id, no stored mapping to `users.id` — see [decisions](../../architecture/decisions.md) |
+
+**Provably cannot see:** browsing content (domains, paths, times, kinds, sources), device
+names, or any key.
+
+### OHTTP — decided: opt-in, post-v1, no preparation needed
+
+```mermaid
+flowchart LR
+  c[client core - HPKE-encrypts a full BHTTP request to the gateway key] --> r[relay - third party: sees IP, opaque blob only]
+  r --> g[gateway - ours: decrypts, sees relay IP only]
+  g --> s[sync API]
+```
+
+| Decision | |
+|---|---|
+| **Ship it?** | Post-v1, and **opt-in per user** — never the mandatory transport |
+| **Where does it live?** | **The core.** HPKE encapsulation is crypto, and all crypto is core-side |
+| **Does the `Http` trait change?** | **No** — the host still just posts bytes to a URL |
+| **Rework needed to stay ready?** | **None.** See below |
+| **Trigger to build** | A relay run by a **genuinely separate legal entity** on stable terms — not Privacy Gateway specifically |
+
+**Why no preparation is needed.** OHTTP encapsulates a **complete** Binary HTTP request —
+method, target, headers, body ([RFC 9292](https://www.rfc-editor.org/rfc/rfc9292.html),
+`message/bhttp`). `Http::send(req: Request)` already receives exactly that, because the
+core builds the whole request. Adopting OHTTP is then: encapsulate before returning the
+`Request`, and point it at the relay. The trait, the hosts and the Worker are untouched.
+
+<sub>That property is accidental — <code>Http</code> was made transport-only to keep token and endpoint handling in the core, not for OHTTP. It happens to be the exact shape OHTTP needs.</sub>
+
+**Why opt-in rather than mandatory.** A relay is a hard availability dependency: if it is
+down, sync is down. Mandatory OHTTP hands a third party the power to break sync for every
+user. Opt-in confines that to people who chose the tradeoff and keeps the default path
+dependency-free.
+
+<sub>Cost of opt-in: the gateway can see that a given account always arrives via relay. A weak signal, and not the IP — which is the entire point.</sub>
+
+**Key configuration.** [RFC 9458](https://www.rfc-editor.org/rfc/rfc9458.html)
+deliberately does not define key acquisition, so we must: fetch `application/ohttp-keys`
+from our own gateway over authenticated HTTPS. The config **MUST** be integrity-protected
+and attributable to the gateway, or a client can be steered onto an attacker's key.
+
+**What it buys, precisely.** The linkage, not the content — the payload is already E2E.
+Today the server observes `(IP, account_id)` on every sync and could build a location
+profile per account; under OHTTP the gateway sees `account_id` and ciphertext, never the
+IP.
+
+**What we will never claim: unlinkability.** RFC 9458 names *"identity information and
+authentication credentials"* as correlation vectors and requires clients to avoid linkable
+auth across requests. Ours carries a stable token by necessity — sync must know whose rows
+these are. The claim earned is *"the server never learns your IP"*, full stop.
+
+**Non-collusion is an assumption, not a guarantee.** Relay and gateway must be different
+entities; same operator and the property collapses.
+
+**v1 ships the honest free tier meanwhile:** no IP logging, no IP persistence in D1,
+Cloudflare disclosed as sub-processor, VPN/Tor documented.
+
+## GDPR
+
+| Right | How |
+|---|---|
+| Export | **Client-side** — server holds only ciphertext |
+| Erasure | `DELETE /account` wipes rows, keys, devices (which revokes every session) |
+| Device management | Registry lists devices, names decrypted client-side |
+
+**GDPR applies in full despite collecting no email** — Recital 26: pseudonymised data is
+still personal data. `account_id`, `device_id`, IPs and ciphertext rows are all personal
+data. Dropping email reduces blast-radius, not obligations: DPA with Cloudflare, privacy
+policy, erasure/export, sub-processor disclosure all still required.
 
 ## Milestones
 
-- **v1a — E2E-ready, no encryption yet.** Worker + D1, magic-link auth, device
-  registry, push/pull deltas, claim-on-login, combined-usage exposure, GDPR
-  endpoints, Turnstile + rate limits. Rows carried as opaque JSON the server never
-  parses. Shippable and testable.
-  - **v1a writes plaintext to the server.** Those rows stay plaintext after v1b
-    unless re-encrypted — onboarding a real user on v1a would retroactively
-    falsify the E2E guarantee for their early data. Therefore **v1a is
-    pre-launch / testing only (no real users)**, *and* v1b includes a one-time
-    **client-side re-encryption pass** over any pre-v1b rows before launch.
-- **v1b — real E2E.** Wrapped-key (DEK/KEK), passphrase + recovery-phrase UI,
-  per-row encryption swapped into push/pull. No server migration.
+| | |
+|---|---|
+| **v1a** | Worker + D1, auth, device registry, push/pull, claim-on-login, GDPR endpoints, rate limits. Rows are opaque JSON. **Pre-launch only — no real users**, since v1a writes plaintext |
+| **v1b** | Real E2E: wrapped-key, passphrase + recovery UI, per-row encryption. No server migration. Includes a one-time re-encryption pass over any pre-v1b rows |
 
-Both are **v1**. Suggested build order inside each: server + auth → sync engine →
-account UI → hardening (rate-limit, retry/backoff, retention prune).
+Build order within each: server + auth → sync engine → account UI → hardening.
 
 ## Edge cases
 
-- **`deviceId` reset** (storage cleared / reinstall): new id; old rows still pull
-  down as mirrors (history intact), but the old device's server rows are orphaned
-  (no re-claim). Cleaned via forget-device or account deletion.
-- **Cloned profile** (browser profile sync copying `chrome.storage.local`): two
-  machines could share a `deviceId` and fight over the same open row's `to`.
-  Mitigate by generating `deviceId` lazily on first sync with a collision check.
-- **Account switch on one device — `deviceId` must be regenerated.** On switching
-  accounts, reset the local synced store **and mint a fresh `deviceId`**. Without
-  this, the pull filter `device_id != me` would permanently exclude this device's
-  own previously-pushed rows once the local copy is gone — stranding them on the
-  server, invisible everywhere. Regenerating `deviceId` makes a switch behave
-  exactly like the reinstall case: own rows return as mirror rows under a new id,
-  and the `device_id != me` filter stays valid. (Keeping the old `deviceId` and
-  *retaining* its rows instead would leak account A's data into account B's view —
-  so neither "just reset the view" nor "keep the rows" works; the id reset is the
-  fix.) `deviceId` is therefore **bound to the local store's lifecycle**: cleared
-  store ⇒ new id.
-- **Cross-device same-site use:** `intervalAggregates` unions rows across devices,
-  so simultaneous twitch on two devices collapses to one via `unionLen`. Intended.
-- **Clock skew:** timestamps are client-authoritative and encrypted — the server
-  can't validate them. A wrong clock smears that device's data; acceptable for a
-  personal tracker.
-- **Forgotten passphrase, no recovery phrase:** data is unrecoverable by design
-  (true E2E). The account/login still works; the user must reset encryption
-  (start a fresh DEK), abandoning old ciphertext. **A DEK reset must propagate:**
-  other devices still hold the *old* DEK in memory and would push rows the others
-  can't decrypt (split-brain). The reset bumps a key epoch; devices on a stale
-  epoch must re-unlock (download the new wrapped DEK, re-enter passphrase) before
-  they sync again, and old-epoch ciphertext is dropped.
-- **IndexedDB quota / sync offline:** capture and local compute continue; sync
-  retries next alarm. Nothing blocks on the network.
+| Case | Behaviour |
+|---|---|
+| `deviceId` reset (reinstall) | New id; old rows pull down as mirrors. Old server rows orphaned until forget-device |
+| Cloned profile | Two machines could share a `deviceId` and fight over one row's `to`. Generate `deviceId` lazily on first sync with a collision check |
+| **Account switch** | **Must regenerate `deviceId`**, or the `device_id != me` pull filter permanently hides this device's own pushed rows. Keeping the id *and* its rows would leak account A into account B |
+| Cross-device same-site use | `unionLen` collapses simultaneous use to one. Intended |
+| Clock skew | Timestamps are client-authoritative and encrypted; server can't validate. A wrong clock smears that device's data |
+| Forgot passphrase | Unlock via recovery phrase, set a new one. No data loss, no epoch bump |
+| **Forgot both** | **Total lockout** — the account itself is lost, not just the data. Only escape: a still-authenticated device. The direct cost of zero PII |
+| Quota / offline | Capture and local compute continue; sync retries next alarm |
 
 ## Out of scope (v1)
 
-- Per-device enforcement mode (combined only in v1).
-- Server-side compute of any kind (views, search, analytics) — precluded by E2E.
-- Real-time / WebSocket convergence — periodic alarm sync only.
-- A web dashboard — extension is the only client.
-- Syncing the scalar buckets — they stay local, frozen, legacy.
-- Multi-account-per-device simultaneously — one active account at a time.
-- Server-side retention — impossible while timestamps are encrypted.
+Per-device enforcement mode · server-side compute of any kind · real-time/WebSocket
+convergence · a hosted web dashboard · syncing scalar buckets · multi-account-per-device.
+
+## Derived aggregates
+
+`intervalAggregates` loads the whole log via `toArray()`. Under never-prune that does not
+survive: 3 devices × 5 years ≈ 3.3M rows ≈ **hundreds of MB** of JS objects in a service
+worker.
+
+**A closed day's aggregates are immutable.** Compute once, persist, never recompute —
+only *today* is live.
+
+```mermaid
+flowchart TD
+  f[flush or sync] --> t[recompute TODAY only]
+  t --> c[(aggregate cache: one record per day and hour bucket)]
+  d[delete touches day D] --> inv[invalidate day D]
+  inv --> c
+  r[dashboard read] --> c
+  c -->|miss| bd[build that day from its rows, then cache]
+```
+
+Same structure as the legacy
+[aggregates-indexeddb](../storage-management/aggregates-indexeddb.md) design (one record
+per time bucket), applied to interval-derived cells:
+
+| | |
+|---|---|
+| Peak memory | **one day of rows** (~1,800 at 3 devices), not the whole log |
+| Invalidation | per-day, and only deletion invalidates a closed day |
+| Backfill | a pulled mirror row invalidates the day it lands in |
+| Source of truth | still the interval log — this is a cache, rebuildable at any time |
+
+Dashboard aggregation stays client-side JS (per
+[core-crate](../../architecture/core-crate.md#not-in-the-core)); only its *storage* changes.
+
+## Sync cadence vs enforcement accuracy
+
+A device that hasn't synced under-counts combined usage and can overshoot a limit.
+
+> **Overshoot ≤ `S × (N−1)`** — where `S` is the sync gap and `N` the active device
+> count. It does **not** depend on the remaining budget: others can consume at
+> `(N−1)×` realtime the whole time you're unsynced.
+
+A fixed cadence is therefore wrong — it ignores how tight the limit is. At `S` = 5 min,
+`N` = 2, a **10 min/hour** limit overshoots by 5 min: **50% over**. The same 5 min against
+a 4 h/day limit is 2%, and fine.
+
+**So the cadence scales with the tightest active limit:**
+
+```
+S = clamp( L_tightest / (10 × max(1, N−1)),  1 min,  5 min )
+```
+
+| Tightest active limit | 2 devices | 3 devices |
+|---|---|---|
+| 10 min / hour | **1 min** | 1 min |
+| 1 h / day | 5 min (clamped) | 3 min |
+| 4 h / day | 5 min (clamped) | 5 min (clamped) |
+
+That holds worst-case overshoot to **~10% of the tightest limit**, whatever its size.
+
+Two escalations sit on top, both reusing machinery that already exists:
+
+| Trigger | Behaviour |
+|---|---|
+| Any rule ≥ **80%** of its limit (the shipped `APPROACHING_THRESHOLD`) | drop to the 1 min floor |
+| Navigation to a site matching a near-limit rule | sync **before** deciding — bounded by navigation, not by a clock |
+| **Single device** | no opportunistic sync at all — nothing else can consume |
+
+The floor is 1 min because sub-minute syncing costs battery and quota for no real
+accuracy gain, and `chrome.alarms` has its own floor besides.
+
+<sub>Why not scale by <em>remaining</em> budget: the lag is in what you know about <em>other</em> devices, so a device sitting at 0% can still be 10 minutes stale about a peer that burned the whole budget. Proximity to the limit is the escalation trigger; the tightest limit sets the baseline.</sub>
+
+## Operational defaults
+
+Tunable, not load-bearing — stated so implementation isn't guessing:
+
+| Knob | Default | Note |
+|---|---|---|
+| `intervalSync` alarm | **adaptive, 1–5 min** | `clamp(L_tightest / (10 × max(1, N−1)), 1, 5)` — see [cadence](#sync-cadence-vs-enforcement-accuracy). Not a fixed number |
+| Push batch | **500 rows** | |
+| Pull page | **500 rows** | loop on `nextSeq` until drained |
+| Reconcile gate | **24 h** | the `lastReconciledAt` guard |
+| Token lifetime | **no expiry** | manual revoke only — refresh-rotation is over-built here |
+| Auth rate limit | **10/min per IP** | on `/auth/challenge` and `/auth/verify` |
+| Opportunistic sync floor | **1 min** | never sync more often, whatever the budget says |
 
 ## Open questions
 
-- **Server storage cost / growth.** With encrypted timestamps the server can't
-  prune; growth is bounded only by client-driven retention. What default retention
-  window, and how to bound per-user (and total) D1 size for a public service?
-- ~~**Passphrase onboarding friction.**~~ **Resolved: E2E from the start** —
-  passphrase setup is mandatory at first login, before any sync; no grace period.
-- **Aggregation memory ceiling.** `intervalAggregates` loads the whole log via
-  `toArray()`; full replication across devices and years will make this heavy.
-  Mitigations (incremental local aggregates, paged reads, a hot/cold window) are
-  deferrable and schema-neutral — but a public service will hit this.
-- **Sync cadence vs enforcement accuracy.** How aggressive should the opportunistic
-  near-limit sync be, balancing battery/quota against overshoot?
+**None blocking.** Two standing items, both settled architecturally and waiting only on
+outside events:
+
+| Item | State |
+|---|---|
+| **OHTTP** | **Decided** — opt-in, post-v1, [no preparation needed](#ohttp--decided-opt-in-post-v1-no-preparation-needed). Waiting on a relay run by a genuinely separate legal entity. Latency stays unmeasured until one exists; it cannot block anything, since the default path never uses a relay |
+| **Paid tiers** | **Architecture decided** — billing gets a separately-keyed id with no stored mapping to `users.id`; the `users.id` / `account_id` split is the seam. Whether to charge at all is a business call that blocks nothing |
