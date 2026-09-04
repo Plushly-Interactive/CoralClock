@@ -12,8 +12,10 @@ import { loadMergedTrackingData } from '../../data/mergeDataSources.js';
 import { QUERY_SITES_BY_DAY, QUERY_AVG_PER_CLOCK_HOUR } from '../../shared/queryTypes.js';
 import { PREF_CLOCK_FORMAT, PREF_HIDE_BRIEF } from '../../shared/prefKeys.js';
 import { BRAND_NAME } from '../../shared/brand.js';
-import { initI18n, applyI18n, t } from '../../shared/i18n.js';
+import { initI18n, applyI18n, t, resolveLanguage } from '../../shared/i18n.js';
 import { applyChartColorOverrides } from '../../shared/chartColors.js';
+import { getUnseenChangelogEntries, markChangelogSeen } from '../../shared/changelog.js';
+import { CHANGELOG_CATEGORIES } from '../../shared/changelogEntries.js';
 const PREF_MERGE_MODE = 'mergeMode';
 const PREF_GROUP_MODE = 'groupMode';
 const PREF_SEARCH = 'siteSearch';
@@ -48,6 +50,9 @@ const mergeToggle = document.querySelector('#merge-toggle');
 const hideBriefToggle = document.querySelector('#hide-brief-toggle');
 const siteSearchInput = document.querySelector('#site-search');
 const siteSearchClearBtn = document.querySelector('#site-search-clear');
+const changelogSubheader = document.querySelector('#changelog-subheader');
+const changelogVersionBtn = document.querySelector('#changelog-version-btn');
+const changelogDismissBtn = document.querySelector('#changelog-dismiss-btn');
 
 await loadFaviconCache();
 const clockFormatStored = await chrome.storage.local.get(PREF_CLOCK_FORMAT);
@@ -563,4 +568,90 @@ chrome.storage.onChanged.addListener((changes, area) => {
     const handoffIdx = dashboardTourSteps().findIndex(s => s.handoff?.nextSurface === pendingSurface);
     if (handoffIdx >= 0) startDashboardTour(handoffIdx, dashboardTourSteps(), state);
   }
+})();
+
+function dismissChangelogBanner() {
+  changelogSubheader.style.display = 'none';
+  markChangelogSeen();
+}
+
+function mdBoldToHtml(text) {
+  return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+async function showChangelogModal(entries) {
+  const lang = await resolveLanguage();
+  const previouslyFocused = document.activeElement;
+  const overlay = document.createElement('div');
+  overlay.id = 'changelog-modal-overlay';
+
+  const modal = document.createElement('div');
+  modal.id = 'changelog-modal';
+  modal.className = 'modal-dialog';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'changelog-modal-title');
+  modal.innerHTML = `
+    <button id="changelog-modal-close" class="icon-btn">&times;</button>
+    <h3 id="changelog-modal-title"></h3>
+    <div id="changelog-modal-body"></div>
+  `;
+  modal.querySelector('#changelog-modal-title').textContent = t('changelog_modalTitle');
+  const closeBtn = modal.querySelector('#changelog-modal-close');
+  const closeBtnLabel = t('changelog_closeModal');
+  closeBtn.title = closeBtnLabel;
+  closeBtn.setAttribute('aria-label', closeBtnLabel);
+  const body = modal.querySelector('#changelog-modal-body');
+  for (const entry of entries) {
+    const group = document.createElement('div');
+    group.className = 'changelog-version-group';
+    const label = document.createElement('div');
+    label.className = 'changelog-version-label';
+    label.textContent = entry.version;
+    group.appendChild(label);
+    for (const section of entry.sections) {
+      const categoryLabel = document.createElement('div');
+      categoryLabel.className = 'changelog-category-label';
+      categoryLabel.textContent = t(CHANGELOG_CATEGORIES[section.category]);
+      const list = document.createElement('ul');
+      list.className = 'changelog-items';
+      for (const item of section.items) {
+        const li = document.createElement('li');
+        li.innerHTML = mdBoldToHtml(item[lang] ?? item.en);
+        list.appendChild(li);
+      }
+      group.append(categoryLabel, list);
+    }
+    body.appendChild(group);
+  }
+
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    modal.remove();
+    overlay.remove();
+    dismissChangelogBanner();
+    if (previouslyFocused && document.contains(previouslyFocused)) previouslyFocused.focus();
+  }
+  // Only one focusable element in the modal, so the trap just keeps focus pinned to it.
+  function onKey(e) {
+    if (e.key === 'Escape') { close(); return; }
+    if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+  }
+
+  overlay.addEventListener('click', close);
+  closeBtn.addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+
+  document.body.append(overlay, modal);
+  closeBtn.focus();
+}
+
+(async () => {
+  const unseen = await getUnseenChangelogEntries();
+  if (!unseen.length) return;
+  const latestVersion = unseen[unseen.length - 1].version;
+  changelogVersionBtn.textContent = t('changelog_whatsNew', latestVersion);
+  changelogSubheader.removeAttribute('hidden');
+  changelogDismissBtn.addEventListener('click', dismissChangelogBanner);
+  changelogVersionBtn.addEventListener('click', () => showChangelogModal(unseen));
 })();

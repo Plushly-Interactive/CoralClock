@@ -188,6 +188,14 @@
   "dashboard_topSub_audio": { "message": "(audio playback)" },
   "dashboard_topSub_visits": { "message": "(visits)" },
 
+  "changelog_whatsNew": { "message": "What's new: $1", "description": "$1 = version number" },
+  "changelog_closeBanner": { "message": "Dismiss" },
+  "changelog_modalTitle": { "message": "What's new" },
+  "changelog_closeModal": { "message": "Close" },
+  "changelog_categoryNewFeatures": { "message": "New features" },
+  "changelog_categoryBugFixes": { "message": "Bug fixes" },
+  "changelog_categoryImprovements": { "message": "Improvements" },
+
   "unit_minutes": { "message": "min" },
   "unit_hours": { "message": "hours" },
   "unit_days": { "message": "days" },

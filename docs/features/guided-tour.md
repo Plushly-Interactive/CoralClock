@@ -194,14 +194,14 @@ open following a fresh `onInstalled` event.
 The tour has **no update-on-version mechanism**. An earlier system
 re-walked newly added steps when the extension updated, gated by a
 `TOUR_VERSION` constant and per-step `newInVersion` markers; it was
-removed. On `update` the background does nothing; on first install it
+removed. On `update` the background starts no tour; on first install it
 opens the full tour once (`?tour=1`). Steps added to a surface are
 simply picked up the next time the full tour runs (the `?` replay
 button, or a fresh install).
 
-Communicating changes to returning users is deferred to a planned
-**changelog popup on update** (see `docs/_backlog.md`), which will
-replace the update tour with a lightweight "what's new" surface.
+Communicating changes to returning users is not the tour's job. That
+need is met by the separate [changelog popup](changelog-popup.md),
+which shows release notes on update.
 
 ## Open questions
 
@@ -219,9 +219,8 @@ rough edges flagged in an internal audit:
   - "Back to overview" wording is action-oriented while
   surrounding drill steps ("Daily detail", "Navigate and switch
   metric") are descriptive nouns; consistency could be improved.
-- `**onInstalled` trigger scope**: the listener fires on
-`'install'` AND `'update'`, which means returning users see a
-new tab every time the extension reloads (useful during
-development, possibly annoying in production). Decide whether
-to narrow to `'install'` only before shipping.
+
+Resolved — **`onInstalled` trigger scope**: the listener returns early
+unless `details.reason === 'install'`, so the tour tab opens on first
+install only, not on every update or reload.
 
