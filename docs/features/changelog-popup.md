@@ -106,7 +106,10 @@ per bullet, not per entry.
 - **Untrusted text**: bullet text is escaped before `**bold**` is applied,
 so authored prose cannot inject markup.
 
-## Open questions
+## Versioning
 
-- **Version-bump convention** is still unwritten — which changes earn a
-minor bump versus a patch, and when an entry is worth authoring at all.
+An entry's version must equal the `manifest.json` version of the release
+that ships it, and both are bumped in the same commit. Entries are
+append-only: nothing is ever inserted below the newest one, because the
+seen-version comparison assumes older entries never appear. The full
+semver rules live in `CLAUDE.md` under Versioning and releases.

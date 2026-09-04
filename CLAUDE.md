@@ -22,7 +22,7 @@
 - Use classes for CSS styling (shared styles across elements). Use ids for JS selection. An element can have both.
 - Never duplicate CSS code, use existing shared classes as much as possible.
 - Always prefix unused parameters with _.
-- SVG <title> tooltips are unreliable in Chromium, never use them.
+- SVG `<title>` tooltips are unreliable in Chromium, never use them.
 - Never use a native `<select>` or `<input type="date">` — use the custom-dropdown pattern (`shared/dropdown.js`) and `shared/datePicker.js` respectively. Native `<input type="number">` is fine but must be paired with `enhanceNumberInput()` from `shared/numberInput.js` to replace the native spinner with the custom stepper.
 - For a close/clear "×" glyph, always use the `&times;` HTML entity, never the literal `×` character or the numeric `&#215;` entity. This works even when set via JS, as long as it's assigned through `innerHTML` (entities parse there); `textContent` never parses entities, so if a toggle needs to swap the glyph, use `innerHTML` for that assignment too.
 - Never duplicate JS code, use existing functions as much as possible, extract functions that get new use cases in a separate shared file when relevant.
@@ -52,6 +52,13 @@
 - Every full-page view reuses the shared header in `theme.css` (75px height, three-column grid). Don't redefine `header` per page. Exception: the popup has its own fixed-width header layout and is exempt.
 - For "back to dashboard" navigation, use the icon-back pattern: an `<a id="back-btn">` wrapping the brand logo image (`BRAND_NAME` in `src/shared/brand.js`), placed in `#header-left`. Never add a text "Back to dashboard" button.
 - `legacy-storage-management` has no own `.css` file; it intentionally reuses `storage-management.css` since the two pages share layout. Only break the triplet convention this way when a page is a near-duplicate of an existing one.
+
+## Versioning and releases
+- Semver on `manifest.json`. PATCH for bug fixes and internal work only. MINOR for any user-visible new capability or changed behaviour. MAJOR only for a breaking change to stored data or the removal of a feature users rely on.
+- Every release gets a git tag `vX.Y.Z` on `main` and a matching GitHub release. Never reuse or re-cut a published tag; roll forward with a new version instead.
+- Author a changelog entry in `src/shared/changelogEntries.js` for any release a user would notice. Skip the entry for pure-internal patches.
+- An entry's `version` must equal the `manifest.json` version of the release that ships it. Bump both in the same commit so they cannot drift.
+- Entries are append-only and ordered oldest to newest. Never insert an entry below the newest one — the seen-version comparison assumes nothing older is ever added.
 
 ## Communication
 - Explain each step as if I'm learning, not just following along.
