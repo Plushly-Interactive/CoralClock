@@ -117,4 +117,19 @@ export const CHANGELOG_ENTRIES = [
       },
     ],
   },
+  {
+    version: '1.2.2',
+    sections: [
+      {
+        category: 'bugFixes',
+        items: [
+          {
+            en: 'A blank strip appeared under the dashboard header even when there was nothing new to announce.',
+            es: 'Aparecía una franja vacía debajo del encabezado del panel aunque no hubiera novedades que anunciar.',
+            fr: 'Une bande vide apparaissait sous l’en-tête du tableau de bord même lorsqu’il n’y avait rien de nouveau à annoncer.',
+          },
+        ],
+      },
+    ],
+  },
 ];
