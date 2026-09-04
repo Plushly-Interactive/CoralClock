@@ -2,6 +2,11 @@
 
 TL;DR: consequential choices, newest first, ≤5 lines each. Format: Date · Decision · Why · Rejected · Consequence.
 
+2026-09-05 · Cloud sync is developed outside this repo; this repo is the extension only
+Why: the server, the shared Rust core and their docs are one product with their own toolchain and Cloudflare account; the extension is one client and must stay loadable unpacked with no build step.
+Rejected: keeping the core in this repo (build step, Rust toolchain on every clone); a JS sync client built first and replaced by the core later (throwaway work).
+Consequence: this repo will vendor the built WASM core under src/vendor/; roadmap, crypto contract and core spec live outside this repo; docs/features/cloud-sync.md is a pointer.
+
 2026-09-04 · The app is renamed CoralClock → Reeflect before cloud sync starts
 Why: the name must be final before the crypto domain strings (`reeflect/…/v1`) and the server are built; renaming later would mean a key migration.
 Rejected: keeping `coralclock/` in the crypto contract under the new name (confusing forever, no benefit); a partial rename leaving docs or the privacy policy on the old name.

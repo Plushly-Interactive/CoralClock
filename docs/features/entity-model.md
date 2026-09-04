@@ -21,7 +21,7 @@ structurally unable to block a native app.
 
 ## The row
 
-Per the [crypto contract](../appendix/crypto-contract.md#wire-payload-version-tolerant),
+Per the crypto contract, maintained outside this repo,
 the wire payload is version-tolerant. What matters here:
 
 | Field | Meaning |
