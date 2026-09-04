@@ -55,9 +55,10 @@
 
 ## Versioning and releases
 - Semver on `manifest.json`. PATCH for bug fixes and internal work only. MINOR for any user-visible new capability or changed behaviour. MAJOR only for a breaking change to stored data or the removal of a feature users rely on.
-- Every release gets a git tag `vX.Y.Z` on `main` and a matching GitHub release. Never reuse or re-cut a published tag; roll forward with a new version instead.
+- A version number is spent the moment it lands in `manifest.json`. Never reopen it to add work, even if it was never tagged or released — roll forward with a new PATCH instead.
+- Every release gets a git tag `vX.Y.Z` on `main` and a matching GitHub release. Never reuse or re-cut a published tag.
 - Author a changelog entry in `src/shared/changelogEntries.js` for any release a user would notice. Skip the entry for pure-internal patches.
-- An entry's `version` must equal the `manifest.json` version of the release that ships it. Bump both in the same commit so they cannot drift.
+- An entry's `version` must equal the `manifest.json` version it ships with. Bump both in the same commit so they cannot drift.
 - Entries are append-only and ordered oldest to newest. Never insert an entry below the newest one — the seen-version comparison assumes nothing older is ever added.
 
 ## Communication

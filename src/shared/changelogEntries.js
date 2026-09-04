@@ -102,4 +102,19 @@ export const CHANGELOG_ENTRIES = [
       },
     ],
   },
+  {
+    version: '1.2.1',
+    sections: [
+      {
+        category: 'bugFixes',
+        items: [
+          {
+            en: 'The extension popup did not open in recent Vivaldi versions.',
+            es: 'El popup de la extensión no se abría en las versiones recientes de Vivaldi.',
+            fr: 'Le popup de l’extension ne s’ouvrait pas dans les versions récentes de Vivaldi.',
+          },
+        ],
+      },
+    ],
+  },
 ];

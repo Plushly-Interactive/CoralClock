@@ -1,5 +1,6 @@
 body {
   width: 640px;
+  height: auto;
   font-size: var(--font-md);
 }
 
