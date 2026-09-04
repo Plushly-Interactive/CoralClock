@@ -38,12 +38,12 @@ flowchart TD
 | Passphrase → KEK | Argon2id (RFC 9106, v `0x13`) | m = 65536 KiB (64 MiB), t = 3, p = 1, 32-byte output, 16-byte salt. Params + salt in `keys.kdf_params`. |
 | Wrap DEK by KEK | AES-256-GCM | `wrapped_dek = iv(12)‖ct‖tag`, fresh 12-byte IV. |
 | Recovery secret R | 256-bit random | BIP39 English 24 words (`from_entropy`/`to_entropy` only, never the PBKDF2 seed path). |
-| R → KEK_recovery | HKDF-SHA256 | `salt` empty, `info` = `"coralclock/recovery-kek/v1"`, `L` = 32. |
-| R → `account_id` | HKDF-SHA256 | `salt` empty, `info` = `"coralclock/account-id/v1"`, `L` = 32. |
-| R → signing key | HKDF-SHA256 → Ed25519 | `salt` empty, `info` = `"coralclock/signing-key/v1"`, `L` = 32, used as the Ed25519 seed. |
+| R → KEK_recovery | HKDF-SHA256 | `salt` empty, `info` = `"reeflect/recovery-kek/v1"`, `L` = 32. |
+| R → `account_id` | HKDF-SHA256 | `salt` empty, `info` = `"reeflect/account-id/v1"`, `L` = 32. |
+| R → signing key | HKDF-SHA256 → Ed25519 | `salt` empty, `info` = `"reeflect/signing-key/v1"`, `L` = 32, used as the Ed25519 seed. |
 | Recovery-wrap DEK | AES-256-GCM under KEK_recovery | `recovery_wrapped_dek = iv(12)‖ct‖tag`. |
-| Auth signature | Ed25519 | signs `"coralclock/auth/v1" ‖ nonce`, never the bare nonce. |
-| `row_tag` | SHA-256, first 16 bytes | over `"coralclock/row-tag/v1" ‖ device_id ‖ 0x00 ‖ local_id_le`. Client-computed. |
+| Auth signature | Ed25519 | signs `"reeflect/auth/v1" ‖ nonce`, never the bare nonce. |
+| `row_tag` | SHA-256, first 16 bytes | over `"reeflect/row-tag/v1" ‖ device_id ‖ 0x00 ‖ local_id_le`. Client-computed. |
 | `key_epoch` | integer | Current epoch in `keys.key_epoch`; every `intervals` row carries the epoch that encrypted it. |
 
 `kdf_params`: `{"alg":"argon2id","v":19,"m":65536,"t":3,"p":1,"salt":"<base64>"}` (per-account, upgradable).

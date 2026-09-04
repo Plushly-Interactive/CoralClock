@@ -4,7 +4,7 @@ export default {
   extensionPath: ".",        // manifest.json lives at the repo root (unpacked, no build step)
   logFile: "logs/dev.log",
   defaultView: "dashboard",
-  profileDir: "agent-os-ext-profile-coralclock",
+  profileDir: "agent-os-ext-profile-reeflect",
   // No dev server: the extension is loaded unpacked, so `start` is intentionally unset and
   // scripts/os/dev.mjs is not used here. capture.mjs launches its own Chromium each run.
   prepare: [

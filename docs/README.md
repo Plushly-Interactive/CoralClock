@@ -1,4 +1,4 @@
-# Coral Clock docs
+# Reeflect docs
 
 TL;DR: two tracks — what is **shipped** in the extension today, and the **roadmap** to a multiplatform suite. Diagrams and tables carry the content; rationale lives in the [decision log](appendix/roadmap-decisions.md).
 

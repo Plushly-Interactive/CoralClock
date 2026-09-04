@@ -1,6 +1,6 @@
 {
   "extName": {
-    "message": "CoralClock - Screen Time & Website Blocker",
+    "message": "Reeflect - Screen Time & Website Blocker",
     "description": "Extension name shown in Chrome Web Store and browser UI"
   },
   "extDescription": {
@@ -36,7 +36,7 @@
   "tour_dash_timeline_body": { "message": "Click View timeline to see exactly when you were on each site, plotted across the day, week or month." },
   "tour_dash_popup_title": { "message": "Open the popup" },
   "tour_dash_popup_body": { "message": "Click the $1 icon in your browser toolbar — or press Alt+Shift+C.", "description": "$1 = brand name" },
-  "command_openPopup": { "message": "Open the CoralClock popup" },
+  "command_openPopup": { "message": "Open the Reeflect popup" },
   "tour_dash_storage_title": { "message": "Manage storage" },
   "tour_dash_storage_body": { "message": "Open Manage storage to view and manage stored data, delete data by range, or manage the cache." },
   "tour_dash_settings_title": { "message": "Settings" },

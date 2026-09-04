@@ -1,5 +1,5 @@
 {
-  "extName": { "message": "CoralClock - Suivi du temps et bloqueur de sites" },
+  "extName": { "message": "Reeflect - Suivi du temps et bloqueur de sites" },
   "extDescription": { "message": "Limitez votre temps d'écran. Suivez le temps sur chaque site et bloquez-le selon votre limite horaire, quotidienne ou hebdomadaire." },
   "tour_closeTour": { "message": "Fermer la visite guidée" },
   "tour_previous": { "message": "Précédent" },
@@ -29,7 +29,7 @@
   "tour_dash_timeline_body": { "message": "Cliquez sur Voir la chronologie pour voir exactement quand vous étiez sur chaque site, réparti sur le jour, la semaine ou le mois." },
   "tour_dash_popup_title": { "message": "Ouvrir le popup" },
   "tour_dash_popup_body": { "message": "Cliquez sur l'icône $1 dans la barre d'outils de votre navigateur, ou appuyez sur Alt+Shift+C." },
-  "command_openPopup": { "message": "Ouvrir le popup de CoralClock" },
+  "command_openPopup": { "message": "Ouvrir le popup de Reeflect" },
   "tour_dash_storage_title": { "message": "Gérer le stockage" },
   "tour_dash_storage_body": { "message": "Ouvrez Gérer le stockage pour voir et gérer les données stockées, supprimer des données par plage ou gérer le cache." },
   "tour_dash_settings_title": { "message": "Paramètres" },

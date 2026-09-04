@@ -21,7 +21,7 @@ keyActivate(document.querySelector('#back-btn'), [' ']);
 
 const appVersion = chrome.runtime.getManifest().version;
 document.querySelector('#version-number').textContent = `${BRAND_NAME} v${appVersion}`;
-document.querySelector('#version-changes-link').href = `https://github.com/Plushly-Interactive/CoralClock/releases/tag/v${appVersion}`;
+document.querySelector('#version-changes-link').href = `https://github.com/Plushly-Interactive/Reeflect/releases/tag/v${appVersion}`;
 
 const CLOCK_FORMATS = ['24h', '12h'];
 const LANGUAGES = ['auto', 'en', 'fr', 'es'];

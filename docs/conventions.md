@@ -1,6 +1,6 @@
 # Conventions
 
-TL;DR: how to write code in CoralClock. Every rule here is binding. The reasoning behind the longer ones is in `docs/appendix/coding-conventions.md`.
+TL;DR: how to write code in Reeflect. Every rule here is binding. The reasoning behind the longer ones is in `docs/appendix/coding-conventions.md`.
 
 ## Project context
 - Browser extension for Vivaldi (Chromium, Manifest V3).

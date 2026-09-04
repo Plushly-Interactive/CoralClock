@@ -132,4 +132,19 @@ export const CHANGELOG_ENTRIES = [
       },
     ],
   },
+  {
+    version: '1.3.0',
+    sections: [
+      {
+        category: 'improvements',
+        items: [
+          {
+            en: 'CoralClock is now called Reeflect. Nothing else changes: your data, rules and settings stay exactly as they were.',
+            es: 'CoralClock ahora se llama Reeflect. Nada más cambia: tus datos, reglas y ajustes se mantienen exactamente igual.',
+            fr: 'CoralClock s’appelle désormais Reeflect. Rien d’autre ne change : vos données, règles et réglages restent exactement les mêmes.',
+          },
+        ],
+      },
+    ],
+  },
 ];

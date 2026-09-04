@@ -1,12 +1,12 @@
-# Privacy Policy — CoralClock: Screen Time & Website Blocker
+# Privacy Policy — Reeflect: Screen Time & Website Blocker
 
-TL;DR: CoralClock stores your browsing activity on your own device to provide screen-time tracking and blocking. Nothing is sent to any server.
+TL;DR: Reeflect stores your browsing activity on your own device to provide screen-time tracking and blocking. Nothing is sent to any server.
 
 **Effective date:** 2026-07-08
 
-## What data CoralClock collects
+## What data Reeflect collects
 
-CoralClock collects the following information about your browsing activity, solely to provide its screen-time tracking and website-blocking features:
+Reeflect collects the following information about your browsing activity, solely to provide its screen-time tracking and website-blocking features:
 
 - **Domain names and URLs** of pages you visit
 - **Time spent** on each site, broken down into active (keyboard/mouse input), audio-playing, and idle sessions
@@ -21,11 +21,11 @@ All data is stored **locally on your device only**, using the browser's built-in
 
 ## Data sharing
 
-CoralClock does not share, sell, rent, or transmit your data to anyone. There are no analytics services, advertising networks, or third-party SDKs included in the extension.
+Reeflect does not share, sell, rent, or transmit your data to anyone. There are no analytics services, advertising networks, or third-party SDKs included in the extension.
 
 ## Permissions used
 
-CoralClock requests the following browser permissions:
+Reeflect requests the following browser permissions:
 
 | Permission | Reason |
 |---|---|
@@ -37,15 +37,15 @@ CoralClock requests the following browser permissions:
 | `idle` | Detect when you step away from the computer to pause active-time tracking |
 | `favicon` | Display site icons in the dashboard |
 | `notifications` | Alert you when a time limit is reached or being approached |
-| `<all_urls>` (optional host permission) | Requested only for the specific site(s) you set a rule on, so CoralClock can redirect that site once its limit is reached; a rule for a keyword or regex pattern requests it for all sites since no single site can be named in advance. Not held for sites you haven't set a rule for. |
+| `<all_urls>` (optional host permission) | Requested only for the specific site(s) you set a rule on, so Reeflect can redirect that site once its limit is reached; a rule for a keyword or regex pattern requests it for all sites since no single site can be named in advance. Not held for sites you haven't set a rule for. |
 
 ## Your control over your data
 
-You can view, prune, and permanently delete your browsing data at any time using the **Manage Storage** page within CoralClock. Uninstalling the extension removes all data.
+You can view, prune, and permanently delete your browsing data at any time using the **Manage Storage** page within Reeflect. Uninstalling the extension removes all data.
 
 ## Data export
 
-CoralClock allows you to export your data as a JSON file for backup or personal analysis. This file stays on your device and is never uploaded anywhere by the extension.
+Reeflect allows you to export your data as a JSON file for backup or personal analysis. This file stays on your device and is never uploaded anywhere by the extension.
 
 ## Changes to this policy
 

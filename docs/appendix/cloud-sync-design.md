@@ -127,7 +127,7 @@ sequenceDiagram
   participant S as Server
   C->>S: POST /auth/challenge {account_id}
   S-->>C: random nonce (60s expiry)
-  C->>C: sign "coralclock/auth/v1" + nonce
+  C->>C: sign "reeflect/auth/v1" + nonce
   C->>S: POST /auth/verify {account_id, signature}
   S->>S: verify against stored signing_pubkey
   S-->>C: long-lived token

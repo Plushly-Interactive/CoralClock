@@ -1,1 +1,1 @@
-export const BRAND_NAME = 'CoralClock';
+export const BRAND_NAME = 'Reeflect';

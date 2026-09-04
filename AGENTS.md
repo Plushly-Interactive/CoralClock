@@ -1,4 +1,4 @@
-# CoralClock
+# Reeflect
 
 TL;DR: Vivaldi/Chromium MV3 extension that tracks per-site browsing time and blocks sites past a limit. Read STATE.md for where work stands, and follow the global agent-os rules.
 
@@ -20,7 +20,7 @@ The reasoning behind the longer rules is in `docs/appendix/coding-conventions.md
   - Views: dashboard, site, path, timeline, rules, settings, popup, blocked, quotes, storage, legacy.
   - Launches its own Chromium with the unpacked extension; screenshots land in `shots/`.
   - `--seed` fills the profile with fake browsing data, so data-driven pages are not empty.
-  - The profile persists in the OS temp dir; reset it by deleting `agent-os-ext-profile-coralclock` there.
+  - The profile persists in the OS temp dir; reset it by deleting `agent-os-ext-profile-reeflect` there.
 - lint (i18n key coverage): `npm run lint:i18n` — the checker lives in the gitignored `.local/`, so it only runs on a machine that has it.
 - doc budgets: `node scripts/os/doc-lint.mjs --changed`
 - test: none — no test suite exists yet.

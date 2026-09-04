@@ -1,5 +1,5 @@
 {
-  "name": "coralclock",
+  "name": "reeflect",
   "private": true,
   "description": "Tooling only — the extension itself is unpacked and has no build step.",
   "scripts": {

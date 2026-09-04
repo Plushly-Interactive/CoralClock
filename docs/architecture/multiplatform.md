@@ -1,6 +1,6 @@
 # Multiplatform
 
-> TL;DR: extend Coral Clock to Android / iOS / Windows / Linux / macOS plus the extension, all sharing one end-to-end-encrypted data set. Shared **Rust core**, **Tauri** UI, native code only for per-platform tracking and enforcement.
+> TL;DR: extend Reeflect to Android / iOS / Windows / Linux / macOS plus the extension, all sharing one end-to-end-encrypted data set. Shared **Rust core**, **Tauri** UI, native code only for per-platform tracking and enforcement.
 
 **Why Rust / why Tauri:** [decisions.md](../appendix/roadmap-decisions.md) · **Order of work:** [dev-plan.md](dev-plan.md) · **Core surface:** [core-crate.md](core-crate.md)
 
