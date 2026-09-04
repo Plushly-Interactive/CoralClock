@@ -67,4 +67,39 @@ export const CHANGELOG_ENTRIES = [
       },
     ],
   },
+  {
+    version: '1.2.0',
+    sections: [
+      {
+        category: 'newFeatures',
+        items: [
+          {
+            en: '**What\'s new popup**: after an update, the dashboard shows a dismissable banner listing what changed in the new version.',
+            es: '**Ventana de novedades**: tras una actualización, el panel muestra un aviso descartable con los cambios de la nueva versión.',
+            fr: '**Fenêtre des nouveautés** : après une mise à jour, le tableau de bord affiche une bannière fermable listant les changements de la nouvelle version.',
+          },
+          {
+            en: '**Version in settings**: the settings page now shows the installed version, with a link to its release notes.',
+            es: '**Versión en la configuración**: la página de configuración ahora muestra la versión instalada, con un enlace a sus notas de la versión.',
+            fr: '**Version dans les paramètres** : la page des paramètres affiche désormais la version installée, avec un lien vers ses notes de version.',
+          },
+        ],
+      },
+      {
+        category: 'bugFixes',
+        items: [
+          {
+            en: 'The blocked page showed 0 for time spent and visits instead of the real numbers.',
+            es: 'La página de bloqueo mostraba 0 en tiempo empleado y visitas en lugar de los valores reales.',
+            fr: 'La page de blocage affichait 0 pour le temps passé et les visites au lieu des valeurs réelles.',
+          },
+          {
+            en: 'The quote on the blocked page changed on every reload instead of staying the same.',
+            es: 'La cita de la página de bloqueo cambiaba en cada recarga en lugar de mantenerse igual.',
+            fr: 'La citation de la page de blocage changeait à chaque rechargement au lieu de rester la même.',
+          },
+        ],
+      },
+    ],
+  },
 ];

@@ -11,10 +11,18 @@ async function writeLastShownVersion(version) {
   await chrome.storage.local.set({ [CHANGELOG_KEY]: version });
 }
 
-// Stored value lives in entries-space (the newest authored entry), not the
-// manifest version — a patch release with no changelog-worthy entry would
-// otherwise never match an entry.version and getUnseenChangelogEntries()
-// would fall into its idx===-1 branch on every future open.
+// Manifest versions are dot-separated integers with no pre-release suffixes,
+// so comparing part by part is enough.
+function compareVersions(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
 function newestEntryVersion() {
   return CHANGELOG_ENTRIES.at(-1)?.version ?? chrome.runtime.getManifest().version;
 }
@@ -23,18 +31,29 @@ export async function seedChangelogOnInstall() {
   await writeLastShownVersion(newestEntryVersion());
 }
 
-// Existing installs never had CHANGELOG_KEY set before this feature shipped —
-// seed silently on first check so they don't see the entire past history at once.
+// On update Chrome reports the version the user came from. Seeding with it lets
+// getUnseenChangelogEntries() surface every release since, including the one
+// they just moved to. An already-stored value is left alone so entries the user
+// has dismissed are not shown again.
+export async function seedChangelogOnUpdate(previousVersion) {
+  if (!previousVersion) return;
+  const lastShown = await readLastShownVersion();
+  if (lastShown !== undefined) return;
+  await writeLastShownVersion(previousVersion);
+}
+
 export async function getUnseenChangelogEntries() {
   const lastShown = await readLastShownVersion();
+  // No stored value and no update event to learn from: treat as caught up
+  // rather than showing past releases to what may be a fresh install.
   if (lastShown === undefined) {
     await seedChangelogOnInstall();
     return [];
   }
-  const idx = CHANGELOG_ENTRIES.findIndex(e => e.version === lastShown);
-  // A lastShown value with no matching entry (e.g. seeded before any entries
-  // existed) is treated as caught-up rather than dumping the whole history.
-  return idx === -1 ? [] : CHANGELOG_ENTRIES.slice(idx + 1);
+  // Compared by version rather than matched by identity, so a stored value with
+  // no authored entry of its own (a release with nothing worth announcing)
+  // still resolves to the right set.
+  return CHANGELOG_ENTRIES.filter(e => compareVersions(e.version, lastShown) > 0);
 }
 
 export async function markChangelogSeen() {
