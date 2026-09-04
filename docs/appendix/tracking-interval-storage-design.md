@@ -5,7 +5,7 @@
 > tracker. The scalar capture stack has been removed and its buckets frozen as
 > read-only legacy. The "removable experiment" framing, the revert steps, and the
 > separate interval-dashboard described below are historical. See
-> [bucket-to-interval-tracking-migration.md](bucket-to-interval-tracking-migration.md)
+> [bucket-to-interval-tracking-migration.md](tracking-bucket-to-interval-migration.md)
 > for the current architecture.
 
 Store raw browsing **presence intervals** (`{domain, path, kind, from, to}`) in
@@ -24,7 +24,7 @@ Ditching it later is deleting the copied files and reverting those two hooks (se
 [How to remove](#how-to-remove)).
 
 This feature is **independent of**
-[Migrate tracking aggregates to IndexedDB](storage-management/aggregates-indexeddb.md):
+[Migrate tracking aggregates to IndexedDB](../features/storage-management/aggregates-indexeddb.md):
 it does not migrate, read, or touch the scalar aggregates; it stands up a
 separate database alongside them.
 

@@ -1,10 +1,8 @@
 # Targeted deletion
 
-This app's pruning today is global — it removes records by insignificance across
-all sites at once. This feature adds a date-range deletion section on the
-storage-pruning page that removes every record within an arbitrary datetime window,
-optionally scoped to a single site. A navigation button on `site.html` links there
-with the site pre-filled.
+TL;DR: a date-range deletion section on the storage page that removes every record inside an arbitrary datetime window, optionally scoped to one site.
+
+Pruning until now was global — it removed records by insignificance across all sites at once. A navigation button on `site.html` links here with the site pre-filled.
 
 ## User stories
 
@@ -67,62 +65,12 @@ with the site pre-filled.
 | `prune.js` | Unchanged |
 | `targetedDelete.js` (new) | Six exports: four range helpers + `deleteSiteAllTime`, `deleteSubpageSiteAllTime` |
 
-### Files likely to change
+### Files and helpers
 
-| File | Change |
-|---|---|
-| `src/pages/site/site.html` | Add `#delete-data-btn` to `#header-right` |
-| `src/pages/site/site.js` | Wire `#delete-data-btn` via `navButton` to storage-pruning |
-| `src/pages/site/site.css` | Style `#delete-data-btn` alongside `#limit-btn` |
-| `src/pages/storage-pruning/storage-pruning.html` | Add `#range-delete` section; import `confirmDialog.css` |
-| `src/pages/storage-pruning/storage-pruning.js` | Range delete wiring; import from `targetedDelete.js` and `confirmDialog.js` |
-| `src/data/targetedDelete.js` (new file) | Six exports: the four range helpers plus `deleteSiteAllTime` and `deleteSubpageSiteAllTime` |
-
-### Storage / tracking
-
-No new keys. The delete path mutates the four existing stores and calls
-`MSG_INVALIDATE_SITES_CACHE` after writing.
-
-### New helpers (`src/data/targetedDelete.js`)
-
-The site and subpage stores have different nesting shapes, mirroring the existing
-`applySiteDeletions` / `applySubpageDeletions` split in `prune.js`. Two pairs are
-needed:
-
-**Site stores** (`sitesByDay` / `sitesByHour`) — flat shape: `dateKey → siteId → record`
-
-`applySiteHourlyRangeDeletion(hourlyStore, fromKey, toKey, siteId?)` — deletes
-matching hourly entries and returns a reductions map
-`{ [dayKey]: { [siteId]: { activeMs, audioMs, overlapMs, idleMs } } }`.
-`fromKey`/`toKey` are `YYYY-MM-DD` or `YYYY-MM-DDTHH`; day-only inputs are padded
-to `T00`/`T23`. If `siteId` is provided, only that site's entries are removed.
-
-`applySiteDailyReductions(dailyStore, reductions)` — subtracts `activeMs`,
-`audioMs`, `overlapMs`, and `idleMs` from each matching daily entry; values are
-clamped to 0. `visits` is not touched. Removes a site entry if all four time
-fields reach zero; removes the day bucket if it becomes empty.
-
-**Subpage stores** (`subpagesByDay` / `subpagesByHour`) — nested shape: `dateKey → siteId → path → record`
-
-`applySubpageHourlyRangeDeletion(hourlyStore, fromKey, toKey, siteId?)` — same
-range logic as the site variant, but deletes at the `siteId` level within each
-hour bucket (removing all paths for that site in that hour). Returns a reductions
-map `{ [dayKey]: { [siteId]: { [path]: { activeMs, audioMs, overlapMs, idleMs } } } }`.
-
-`applySubpageDailyReductions(dailyStore, reductions)` — subtracts `activeMs`,
-`audioMs`, `overlapMs`, and `idleMs` from each matching `siteId → path` entry;
-values are clamped to 0. `visits` is not touched. Removes a path entry if all
-four time fields reach zero; removes the siteId and day bucket levels when they
-become empty.
-
-**All-time site deletion**
-
-`deleteSiteAllTime(store, siteId)` — iterates every dateKey in a site store,
-deletes the siteId entry, prunes empty day buckets. Used by "Delete all data for
-site" across `sitesByDay` and `sitesByHour`.
-
-`deleteSubpageSiteAllTime(store, siteId)` — same for subpage stores: deletes
-`store[dateKey][siteId]` for every dateKey, prunes empty buckets.
+- `src/data/targetedDelete.js` holds the range-deletion helpers. Site and subpage stores nest differently, so each has its own pair: one that deletes matching hourly entries and returns a reductions map, and one that subtracts those reductions from the daily store.
+- Reductions subtract `activeMs`, `audioMs`, `overlapMs` and `idleMs`, clamped at zero. `visits` is never touched. An entry is removed once all four time fields reach zero, and empty parent buckets are pruned.
+- `deleteSiteAllTime` and `deleteSubpageSiteAllTime` back "delete all data for site" across both store pairs.
+- Full signatures, per-file changes and the storage matrix: [appendix](../../appendix/storage-targeted-deletion-implementation.md).
 
 ## Edge cases
 

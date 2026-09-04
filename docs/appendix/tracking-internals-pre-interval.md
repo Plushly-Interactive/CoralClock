@@ -1,6 +1,6 @@
-# Tracking internals
+# Tracking internals (pre-interval tracker)
 
-Implementation reference for the time/visit tracking system. For the user-visible semantics, see [tracking-behaviour.md](tracking-behaviour.md).
+TL;DR: **stale.** This describes the scalar tracker in `src/tracking.js`, a file that no longer exists — the interval log replaced it. Kept because its caveats and visit semantics still explain why the current engine behaves as it does. Current design: `docs/architecture/architecture.md`. User-visible semantics: `docs/end-user/tracking-behaviour.md`.
 
 ## State
 
@@ -115,7 +115,7 @@ The `flush` alarm fires every minute. The handler in [background.js](../backgrou
 
 ## Multi-window concurrency
 
-`activeWindowIds` is a `Set`; `recordElapsed` pushes one range regardless of how many windows are in the set. Two windows on the same site → one stream of active time. Two windows on different sites → two independent streams. There is no `windows.onFocusChanged` listener — the system intentionally does not collapse to "OS-focused window only" so that multi-monitor / multi-window workflows track correctly. See the rationale in [tracking-behaviour.md](tracking-behaviour.md).
+`activeWindowIds` is a `Set`; `recordElapsed` pushes one range regardless of how many windows are in the set. Two windows on the same site → one stream of active time. Two windows on different sites → two independent streams. There is no `windows.onFocusChanged` listener — the system intentionally does not collapse to "OS-focused window only" so that multi-monitor / multi-window workflows track correctly. See the rationale in [tracking-behaviour.md](../end-user/tracking-behaviour.md).
 
 ## Known caveats
 

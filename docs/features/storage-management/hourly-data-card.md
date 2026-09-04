@@ -1,6 +1,6 @@
 # Hourly data card
 
-The hourly data card on the storage management page shows how much space each hourly store occupies and lets the user drop hourly buckets older than N days, scoped to sites, subpages, or both. Daily aggregates cover the same history at coarser granularity, so dropping old hourly data reclaims space without losing meaningful history.
+TL;DR: the hourly data card on the storage management page shows how much space each hourly store occupies and lets the user drop hourly buckets older than N days, scoped to sites, subpages, or both. Daily aggregates cover the same history at coarser granularity, so dropping old hourly data reclaims space without losing meaningful history.
 
 ## User stories
 

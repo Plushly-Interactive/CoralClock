@@ -1,6 +1,6 @@
 # Migrate tracking aggregates to IndexedDB
 
-The four large tracking aggregates (`sitesByDay`, `sitesByHour`, `subpagesByDay`, `subpagesByHour`) live in `chrome.storage.local` as monolithic objects. The cost is the flush pattern: `flushToStorage` reads the *entire* day+hour blob, mutates a few cells, and writes the *whole blob back* every minute — a cost that grows with total history. Moving the aggregates to IndexedDB (one record per time bucket) makes a flush touch only the buckets it changed, and removes the ~10 MB `storage.local` ceiling.
+TL;DR: the four large tracking aggregates (`sitesByDay`, `sitesByHour`, `subpagesByDay`, `subpagesByHour`) live in `chrome.storage.local` as monolithic objects. The cost is the flush pattern: `flushToStorage` reads the *entire* day+hour blob, mutates a few cells, and writes the *whole blob back* every minute — a cost that grows with total history. Moving the aggregates to IndexedDB (one record per time bucket) makes a flush touch only the buckets it changed, and removes the ~10 MB `storage.local` ceiling.
 
 ## User stories
 

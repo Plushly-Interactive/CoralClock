@@ -1,6 +1,6 @@
 # Prune insignificant records
 
-A manual pruning tool that lets the user find and delete tracked identities (domains and subpages) whose total time across all records falls below a configurable threshold. Targets the noise that accumulates from brief visits and accidental clicks (e.g. a page opened for 3 seconds), without touching genuine history.
+TL;DR: a manual pruning tool that lets the user find and delete tracked identities (domains and subpages) whose total time across all records falls below a configurable threshold. Targets the noise that accumulates from brief visits and accidental clicks (e.g. a page opened for 3 seconds), without touching genuine history.
 
 ## User stories
 
@@ -41,36 +41,9 @@ A manual pruning tool that lets the user find and delete tracked identities (dom
 | background                 | Receives `invalidateSitesCache` after each successful prune (existing handler) |
 
 
-### Files likely to change
+### Files and storage
 
-
-| File                                             | Change                                                                                                                                        |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/pages/storage-pruning/storage-pruning.html` | New: page markup (header with storage bar, intro, controls, results section)                                                                  |
-| `src/pages/storage-pruning/storage-pruning.css`  | New: page-specific styles                                                                                                                     |
-| `src/pages/storage-pruning/storage-pruning.js`   | New: scan / sort / select / delete UI logic; direct `chrome.storage.local` reads/writes                                                       |
-| `src/data/prune.js`                              | New: pure aggregation functions (`scanSiteBucket`, `scanSubpageBucket`) and deletion appliers (`applySiteDeletions`, `applySubpageDeletions`) |
-| `src/pages/dashboard/dashboard.html`             | Add `#prune-btn` button linking to the storage-pruning page                                                                                   |
-| `src/pages/dashboard/dashboard.js`               | Wire `#prune-btn` to navigate to the storage-pruning page                                                                                     |
-| `src/shared/theme.css`                           | Hoist `.data-table` / `.data-table--scroll` / `.page-title` / `#back-btn` (used by this page and shared with dashboard)                       |
-| `src/shared/utils.js`                            | Extract `showNotification` (shared with `importData.js`)                                                                                      |
-
-
-### Storage / tracking
-
-
-| Key               | Shape                                    | Read by              | Written by           | Notes                                                                                 |
-| ----------------- | ---------------------------------------- | -------------------- | -------------------- | ------------------------------------------------------------------------------------- |
-| `sitesByDay`  | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
-| `sitesByHour` | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId`)                                                      |
-| `subpagesByDay`   | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId + path`)                                               |
-| `subpagesByHour`  | existing                                 | storage-pruning page | storage-pruning page | filtered per identity (`siteId + path`)                                               |
-| `settings`        | `{ pruneThresholdSeconds: number, ... }` | storage-pruning page | storage-pruning page | new key, bag of user preferences (extensible). `pruneThresholdSeconds` defaults to 30 |
-
-
-An **identity** is `siteId` for domain stores and `siteId + path` for subpage stores. An identity is **insignificant** in a given store when, summed across every record stored for it in that store, both `totalActiveMs < threshold` AND `totalAudioMs < threshold`. Insignificance is evaluated per store independently — pruning the hourly entries does not touch the daily ones.
-
-After any prune, the page sends `{ type: 'invalidateSitesCache' }` to background so tracking data caches (`cachedByDay` / `cachedByHour` / `cachedSubpagesByDay` / `cachedSubpagesByHour`) are dropped.
+Per-file changes and the storage read/write matrix: [appendix](../../appendix/storage-prune-insignificant-implementation.md).
 
 ## Edge cases
 

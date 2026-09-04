@@ -10,7 +10,7 @@ eventual reconciliation.
 
 The **scalar buckets stay local and frozen** (legacy pre-interval history). This
 feature **promotes the interval log** from the "removable experiment" of
-[interval-storage.md](../interval-storage.md) to the **authoritative, synced
+[interval-storage.md](tracking-interval-storage-design.md) to the **authoritative, synced
 store** that dashboards and combined enforcement read going forward.
 
 ## Why this shape
@@ -68,7 +68,7 @@ put a network round-trip on the navigation hot path.
 - [ ] The merged interval log exposes **combined cross-device usage** (last-synced
       others' usage + this device's live usage), available offline, in the shape
       the enforcement rebuild needs. *Actual blocking is owned by
-      [enforcement.md](../enforcement/enforcement.md), not this spec — cloud-sync
+      [enforcement.md](../features/enforcement/enforcement.md), not this spec — cloud-sync
       provides the input, enforcement consumes it.*
 - [ ] Each interval row is attributable to the device that captured it; the UI can
       group/filter by device.
@@ -89,7 +89,7 @@ put a network round-trip on the navigation hot path.
 |---|---|
 | **server** (Worker + D1) | Auth (request/verify code, tokens), per-user encrypted interval store, push/pull deltas, device registry, wrapped-key storage, account deletion. No compute over browsing data. |
 | **background** (extension) | Sync engine on its own `intervalSync` alarm: encrypt + push dirty rows, pull + decrypt + upsert mirror rows, drive cursors, claim logged-out rows on login, run client-side retention prune. Adds `dbg()` at every decision point. |
-| **enforcement** (extension) | *Out of this spec's build* — owned by [enforcement.md](../enforcement/enforcement.md). Cloud-sync only **provides** combined cross-device usage from the merged log and an opportunistic near-limit sync hook; the block decision lives in the enforcement rebuild. |
+| **enforcement** (extension) | *Out of this spec's build* — owned by [enforcement.md](../features/enforcement/enforcement.md). Cloud-sync only **provides** combined cross-device usage from the merged log and an opportunistic near-limit sync hook; the block decision lives in the enforcement rebuild. |
 | **settings / account UI** | Sign-in (email → code), passphrase set/unlock + recovery phrase, device management, sign out / sign out everywhere, export, delete account, sync status. |
 | **dashboards** | Read the (now authoritative) interval log; optional group/filter by device. |
 
@@ -210,7 +210,7 @@ Per-row encryption (not one big blob) keeps the upsert + seq-delta model intact.
 ### Enforcement (combined) — input only
 
 Enforcement itself is **not built here**; it is owned by the rebuild in
-[enforcement.md](../enforcement/enforcement.md). What cloud-sync **provides** to
+[enforcement.md](../features/enforcement/enforcement.md). What cloud-sync **provides** to
 it:
 
 - **Combined usage** = own live usage + last-synced mirror usage, read from the

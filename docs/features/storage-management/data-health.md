@@ -1,11 +1,8 @@
 # Data health
 
-The data health card on the storage management page checks the four
-tracking stores for internal consistency issues that accumulate silently
-over time — primarily drift between hourly and daily aggregates caused
-by targeted deletion, plus orphaned records, future-dated keys, and
-invalid field values. A repair overlay lets the user review all issues
-before a single confirm action reconciles them.
+TL;DR: the data health card on the storage management page checks the four tracking stores for consistency problems that build up silently, and a repair overlay reconciles them in one confirmed action.
+
+It looks for drift between hourly and daily aggregates (mostly caused by targeted deletion), orphaned records, future-dated keys, and invalid field values.
 
 ## User stories
 
@@ -87,21 +84,11 @@ before a single confirm action reconciles them.
 | Storage management page | Hosts the health card; opens repair overlay on button click |
 | `background.js` | Receives `invalidateSitesCache` after repair |
 
-### Files likely to change
+### Files and stores
 
-| File | Change |
-|---|---|
-| `src/data/healthCheck.js` (new) | `checkHealth(stores)` → `{ issues }` ; `applyRepairs(stores, issues)` → mutated stores |
-| `src/pages/storage-management/storage-management.js` | Page-load check wiring; repair overlay; post-repair notification |
-
-### Storage / tracking
-
-| Key | Read by | Written by | Notes |
-|---|---|---|---|
-| `sitesByDay` | `healthCheck.js` | `healthCheck.js` | daily values overwritten during drift/orphan repair |
-| `sitesByHour` | `healthCheck.js` | — | source of truth for repair; never written |
-| `subpagesByDay` | `healthCheck.js` | `healthCheck.js` | same as sites daily |
-| `subpagesByHour` | `healthCheck.js` | — | source of truth; never written |
+- `src/data/healthCheck.js` holds `checkHealth(stores)` and `applyRepairs(stores, issues)`; the storage management page wires the check, the repair overlay and the post-repair notification.
+- The hourly stores are the source of truth and are never written. Repair overwrites the daily stores only.
+- Per-file and per-store detail: [appendix](../../appendix/storage-data-health-implementation.md).
 
 ## Edge cases
 

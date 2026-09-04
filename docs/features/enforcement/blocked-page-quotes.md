@@ -1,6 +1,6 @@
 # Blocked page quotes
 
-A quote is displayed at the bottom of the blocked page card. Every quote belongs to a time-of-day bucket (morning / afternoon / evening / night) and may optionally be site-specific or marked as a signature quote. The system favors quotes the user hasn't seen yet, cycling through the full pool before repeating.
+TL;DR: a quote is displayed at the bottom of the blocked page card. Every quote belongs to a time-of-day bucket (morning / afternoon / evening / night) and may optionally be site-specific or marked as a signature quote. The system favors quotes the user hasn't seen yet, cycling through the full pool before repeating.
 
 ## User stories
 

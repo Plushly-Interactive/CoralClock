@@ -10,7 +10,7 @@ pre-interval history isn't lost), and makes the existing dashboards read interva
 — stitching old bucket history underneath transparently.
 
 This retires the "removable experiment" framing of
-[interval-storage.md](interval-storage.md): the interval log stops being a
+[interval-storage.md](tracking-interval-storage-design.md): the interval log stops being a
 side-experiment and becomes *the* tracker. **Scope is the whole app, not just
 capture** — now that interval tracking is proven, this makes intervals first-class
 everywhere: tracking, every dashboard/drilldown, **all user data actions**
@@ -18,7 +18,7 @@ everywhere: tracking, every dashboard/drilldown, **all user data actions**
 Whatever the buckets back today, intervals must back tomorrow.
 
 **This migration is a prerequisite for
-[cloud sync](cloud-sync/cloud-sync.md)** — sync replicates the interval log, which
+[cloud sync](../features/cloud-sync.md)** — sync replicates the interval log, which
 only makes sense once intervals are the real data, not an experiment running
 beside the real one.
 
@@ -30,7 +30,7 @@ beside the real one.
   that runs *beside* the live system is the wrong foundation.
 - Parity is validated: across 15 days of testing the interval log reproduces the
   scalar active/audio/visit numbers within a seconds-to-a-minute gap — exactly the
-  "≤ one flush interval" skew [interval-storage.md](interval-storage.md) predicts
+  "≤ one flush interval" skew [interval-storage.md](tracking-interval-storage-design.md) predicts
   from two independent 1-min flush clocks. After cutover there is only one tracker,
   so even that skew disappears going forward.
 
@@ -164,12 +164,12 @@ Flip intervals to authoritative, remove the parallelism.
 2. **Remove scalar capture** from `background.js`; freeze buckets read-only.
 3. **Fold + remove the interval-dashboard** (the main dashboard now shows
    intervals); retire the "removable experiment" framing in
-   [interval-storage.md](interval-storage.md).
+   [interval-storage.md](tracking-interval-storage-design.md).
 
 ## Data-management parity
 
 Making intervals authoritative means **every user action that operates on buckets
-today must operate on the interval log.** [interval-storage.md](interval-storage.md)
+today must operate on the interval log.** [interval-storage.md](tracking-interval-storage-design.md)
 deliberately deferred *all* of this ("export/import, settings, a clear control,
 and 'forget this site' all leave the interval log alone"); finishing the
 interval-based app is where that debt is paid. Two tiers now coexist — **interval

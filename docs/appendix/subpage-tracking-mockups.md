@@ -3,11 +3,11 @@
 Four directions for surfacing per-path data already being collected in `subpagesByDay` / `subpagesByHour`. Mockups are illustrative HTML snippets, not finished markup.
 
 **Previewable mockups** (open in a browser):
-- [Index](mockups/index.html) — links to all four
-- [A — List below grid](mockups/direction-a.html)
-- [B — Tile inside grid](mockups/direction-b.html)
-- [C — Site ⇄ Pages toggle](mockups/direction-c.html)
-- [D — Dedicated path page](mockups/direction-d.html)
+- [Index](../features/subpage-tracking/mockups/index.html) — links to all four
+- [A — List below grid](../features/subpage-tracking/mockups/direction-a.html)
+- [B — Tile inside grid](../features/subpage-tracking/mockups/direction-b.html)
+- [C — Site ⇄ Pages toggle](../features/subpage-tracking/mockups/direction-c.html)
+- [D — Dedicated path page](../features/subpage-tracking/mockups/direction-d.html)
 
 ---
 

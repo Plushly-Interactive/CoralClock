@@ -11,3 +11,8 @@ Consequence: adds a package.json and a ~115 MB Chromium download; every capture 
 Why: suppressing first-run overlays and seeding data are project facts; keeping the backend generic lets agent-os sync it.
 Rejected: a CoralClock-only backend (drifts from the shared one, never gets fixes).
 Consequence: the backend file must stay identical to the agent-os copy; project setup goes in the config's prepare list.
+
+2026-09-04 · Finished and rejected specs move to docs/appendix/ whole, live specs keep only their reference half
+Why: 24 of 30 docs were over budget; most of the weight was build-order logs and per-file change tables nobody reads twice.
+Rejected: raising the budgets (hides the cost); deleting the history (loses the reasoning).
+Consequence: 58.8k tokens of docs became 23.4k outside the appendix, nothing deleted. docs/architecture/tracking-internals.md was found stale — it describes a deleted src/tracking.js — and is now marked as such in the appendix.
