@@ -2,6 +2,11 @@
 
 TL;DR: consequential choices, newest first, ≤5 lines each. Format: Date · Decision · Why · Rejected · Consequence.
 
+2026-09-05 · Sync fields live on the interval rows themselves; mirror rows share the table; deletes queue on every delete path
+Why: one transaction per change keeps row and sync state consistent; readers count all devices with no change; a delete that skips the queue would be resurrected by reconciliation.
+Rejected: a separate sync database; editing another device's row in place (only its device may push it — a truncated mirror becomes delete + own row); routing account operations through the service worker (pages can run the engine themselves).
+Consequence: Dexie v2 upgrade backfills every row once; `clearAll` is local-only (the server copy stays); the server address is a hidden `_syncBaseUrl` override over a fixed default; `manifest.json` gains `wasm-unsafe-eval`, the only CSP change.
+
 2026-09-05 · Cloud sync is developed outside this repo; this repo is the extension only
 Why: the server, the shared Rust core and their docs are one product with their own toolchain and Cloudflare account; the extension is one client and must stay loadable unpacked with no build step.
 Rejected: keeping the core in this repo (build step, Rust toolchain on every clone); a JS sync client built first and replaced by the core later (throwaway work).

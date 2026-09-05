@@ -8,6 +8,7 @@ TL;DR: Vivaldi/Chromium MV3 extension that tracks per-site browsing time and blo
 - `src/data/` — storage layer. `intervalLog.js` (IndexedDB rows), `intervalAggregates.js` (read-time totals), import/export/prune.
 - `src/pages/<name>/` — one `<name>.{html,css,js}` triplet per full-page view.
 - `src/shared/` — cross-page UI and helpers (`theme.css`, `dropdown.js`, `i18n.js`, `prefKeys.js`).
+- `src/background/sync.js` + `src/data/syncStorage.js` — cloud-sync host: loads the vendored WASM core (`src/vendor/reeflect-core/`), runs one engine per `sync` alarm; the log module owns the v2 schema (deviceId, localId, dirty, mirror, deletes, meta).
 - `_locales/{en,es,fr}/messages.json` — every user-facing string; en is the source of truth.
 - `docs/architecture/architecture.md` — how tracking and enforcement fit together.
 
@@ -23,7 +24,7 @@ The reasoning behind the longer rules is in `docs/appendix/coding-conventions.md
   - The profile persists in the OS temp dir; reset it by deleting `agent-os-ext-profile-reeflect` there.
 - lint (i18n key coverage): `npm run lint:i18n` — the checker lives in the gitignored `.local/`, so it only runs on a machine that has it.
 - doc budgets: `node scripts/os/doc-lint.mjs --changed`
-- test: none — no test suite exists yet.
+- test: `node scripts/os/sync-smoke.mjs` — two Chromium profiles sync through a local Worker (needs `wrangler dev` in `../reeflect-sync/server`); the only automated test.
 - dev server: none — `scripts/os/dev.mjs` is unused here, the extension has no build or serve step.
 - deploy: manual — zip the repo root and upload to the Chrome Web Store listing.
 
@@ -31,3 +32,4 @@ The reasoning behind the longer rules is in `docs/appendix/coding-conventions.md
 - `src/background/intervalTracker.js` and `intervalTrackingUtils.js` — presence and range logic; overcounting bugs start here.
 - `src/data/intervalLog.js` and `intervalAggregates.js` — the stored row shape and every derived total.
 - `src/background/enforcement.js` — limit maths and the blocking rules it publishes.
+- `src/data/syncStorage.js` and the sync fields in `intervalLog.js` — a wrong dirty flag or missed delete queue is silent divergence between devices.

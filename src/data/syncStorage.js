@@ -1,0 +1,71 @@
+import { db, deviceId } from './intervalLog.js';
+
+// The sync engine's Storage host object over the interval log. Method names, JSON
+// shapes and ordering follow the wasm host contract in reeflect-sync
+// (docs/appendix/core-crate-surface.md); scripts/engine-harness.mjs there is the twin.
+const originKey = (o) => [o.deviceId, o.localId];
+const wireRow = (r) => ({ v: 1, domain: r.domain, from: r.from, to: r.to, path: r.path, kind: r.kind, source: 'web' });
+
+async function originsFrom(collection, afterJson, limit) {
+  const a = afterJson ? JSON.parse(afterJson) : null;
+  const keys = await (a ? collection.above(originKey(a)) : collection.aboveOrEqual(['', 0])).limit(limit).keys();
+  return keys.map(([deviceId, localId]) => ({ deviceId, localId }));
+}
+
+export const syncStorage = {
+  async dirtyRows(limit) {
+    const out = (await db.deletes.limit(limit).toArray()).map((o) => ({ delete: { deviceId: o.deviceId, localId: o.localId } }));
+    if (out.length < limit) {
+      const rows = await db.intervals.where('dirty').equals(1).limit(limit - out.length).toArray();
+      for (const r of rows) out.push({ upsert: { localId: r.localId, row: wireRow(r) } });
+    }
+    return JSON.stringify(out);
+  },
+  async markDirty(idsJson) {
+    const ids = JSON.parse(idsJson);
+    await db.intervals.bulkUpdate(ids.map((id) => ({ key: id, changes: { dirty: 1 } })));
+  },
+  async clearDirty(originsJson) {
+    const me = await deviceId();
+    const origins = JSON.parse(originsJson);
+    await db.transaction('rw', db.intervals, db.deletes, async () => {
+      await db.deletes.bulkDelete(origins.map(originKey));
+      const own = origins.filter((o) => o.deviceId === me);
+      await db.intervals.bulkUpdate(own.map((o) => ({ key: o.localId, changes: { dirty: 0 } })));
+    });
+  },
+  async upsertMirror(rowsJson) {
+    const rows = JSON.parse(rowsJson);
+    await db.transaction('rw', db.intervals, async () => {
+      for (const m of rows) {
+        const existing = await db.intervals.where('[deviceId+localId]').equals(originKey(m.origin)).first();
+        const row = { ...m.row, deviceId: m.origin.deviceId, localId: m.origin.localId, dirty: 0, mirror: 1, keyEpoch: m.keyEpoch };
+        delete row.v; delete row.source;
+        if (existing) await db.intervals.put({ ...row, id: existing.id });
+        else await db.intervals.add(row);
+      }
+    });
+  },
+  async deleteLocal(originsJson) {
+    const origins = JSON.parse(originsJson);
+    await db.intervals.where('[deviceId+localId]').anyOf(origins.map(originKey)).delete();
+  },
+  async originsPage(afterJson, limit) {
+    return JSON.stringify(await originsFrom(db.intervals.where('[deviceId+localId]'), afterJson, limit));
+  },
+  async epochPage(below, afterJson, limit) {
+    const a = afterJson ? JSON.parse(afterJson) : null;
+    const coll = a ? db.intervals.where('[deviceId+localId]').above(originKey(a)) : db.intervals.orderBy('[deviceId+localId]');
+    const rows = await coll.filter((r) => r.mirror === 1 && r.keyEpoch < below).limit(limit).toArray();
+    return JSON.stringify(rows.map((r) => ({ deviceId: r.deviceId, localId: r.localId })));
+  },
+  async rowsSince(fromMs) {
+    return JSON.stringify((await db.intervals.filter((r) => r.to >= fromMs).toArray()).map(wireRow));
+  },
+  async metaGet(key) {
+    return (await db.meta.get(key))?.value ?? null;
+  },
+  async metaSet(key, val) {
+    await db.meta.put({ key, value: new Uint8Array(val) });
+  },
+};

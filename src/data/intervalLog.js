@@ -1,17 +1,49 @@
 import Dexie from '../vendor/dexie.min.mjs';
 
-// Storage for the interval-tracking experiment: one store, one row per closed
-// presence range — { domain, path, kind, from, to }, kind ∈ active|audio|idle.
-// overlap is NOT stored (= active ∩ audio, derivable). Nothing else is stored:
-// time aggregates AND visit counts are derived from these ranges at read time.
-// No secondary index — the only reader (intervalAggregates) scans the whole
-// store, so an index would be dead weight.
+// The interval log: one row per closed presence range — { domain, path, kind, from, to },
+// kind ∈ active|audio|idle. overlap is NOT stored (= active ∩ audio, derivable); time
+// aggregates and visit counts are derived from these ranges at read time.
+//
+// v2 adds the cloud-sync fields on every row: deviceId + localId (the row's global identity,
+// localId = id for rows captured here), dirty (1 = not yet pushed), mirror (1 = pulled from
+// another device), keyEpoch. Mirror rows live in the same table, so every reader counts all
+// devices without change. `deletes` queues origins the next push must remove; `meta` holds
+// the sync engine's scalars as bytes.
 const db = new Dexie('browsing-intervals');
 db.version(1).stores({
   intervals: '++id',
 });
+db.version(2).stores({
+  intervals: '++id, [deviceId+localId], dirty',
+  deletes: '[deviceId+localId]',
+  meta: 'key',
+}).upgrade(async (tx) => {
+  const me = await ensureDeviceIdIn(tx.table('meta'));
+  await tx.table('intervals').toCollection().modify((r) => {
+    r.deviceId = me; r.localId = r.id; r.dirty = 1; r.mirror = 0; r.keyEpoch = 0;
+  });
+});
 
 if (navigator.storage?.persist) navigator.storage.persist();
+
+const enc = new TextEncoder(), dec = new TextDecoder();
+let cachedDeviceId = null;
+
+async function ensureDeviceIdIn(meta) {
+  const existing = await meta.get('deviceId');
+  if (existing) return dec.decode(existing.value);
+  const id = crypto.randomUUID();
+  await meta.put({ key: 'deviceId', value: enc.encode(id) });
+  return id;
+}
+
+// This device's id, generated once and kept in `meta` under the key the sync engine reads.
+export async function deviceId() {
+  cachedDeviceId ??= await ensureDeviceIdIn(db.meta);
+  return cachedDeviceId;
+}
+
+export { db };
 
 // One definition of "still the same continuous session" used in two places:
 // the live-row flush extends a row across gaps this small (stitching flush/SW
@@ -19,18 +51,29 @@ if (navigator.storage?.persist) navigator.storage.persist();
 // shared means a row boundary and a visit boundary mean the same thing.
 export const SESSION_GAP_MS = 1000;
 
-export function appendIntervals(rows) {
-  return db.intervals.bulkAdd(rows);
+function ownRow(r, me) {
+  return { domain: r.domain, path: r.path, kind: r.kind, from: r.from, to: r.to, deviceId: me, dirty: 1, mirror: 0, keyEpoch: 0 };
+}
+
+// Insert rows captured here; each gets its own id as localId. Resolves to the ids.
+export async function appendIntervals(rows) {
+  const me = await deviceId();
+  return db.transaction('rw', db.intervals, async () => {
+    const ids = await db.intervals.bulkAdd(rows.map((r) => ownRow(r, me)), { allKeys: true });
+    await db.intervals.bulkUpdate(ids.map((id) => ({ key: id, changes: { localId: id } })));
+    return ids;
+  });
 }
 
 // Insert one row, resolving to its id (for live-row coalescing).
-export function appendInterval(row) {
-  return db.intervals.add(row);
+export async function appendInterval(row) {
+  const [id] = await appendIntervals([row]);
+  return id;
 }
 
-// Extend an open live row's end in place.
+// Extend an open live row's end in place; it is ours, so it goes dirty again.
 export function touch(id, to) {
-  return db.intervals.update(id, { to });
+  return db.intervals.update(id, { to, dirty: 1 });
 }
 
 export function allIntervals() {
@@ -45,24 +88,42 @@ export function intervalsSince(fromTs) {
   return db.intervals.filter(r => r.to >= fromTs).toArray();
 }
 
+// Local wipe only: the account's copy on the server stays. Pending deletes go too,
+// since there is nothing left locally to reconcile against.
 export function clearAll() {
-  return db.intervals.clear();
+  return db.transaction('rw', db.intervals, db.deletes, async () => {
+    await db.intervals.clear();
+    await db.deletes.clear();
+  });
+}
+
+// Every delete goes through here: drop the rows and queue their origins for the next
+// push, so the deletion reaches the server and, through it, every other device.
+async function removeRows(rows) {
+  if (rows.length === 0) return 0;
+  await db.transaction('rw', db.intervals, db.deletes, async () => {
+    await db.intervals.bulkDelete(rows.map((r) => r.id));
+    await db.deletes.bulkPut(rows.filter((r) => r.deviceId != null).map((r) => ({ deviceId: r.deviceId, localId: r.localId })));
+  });
+  return rows.length;
 }
 
 // Delete rows by id (for import conflict resolution).
-export function deleteByIds(ids) {
-  return db.intervals.bulkDelete(ids);
+export async function deleteByIds(ids) {
+  return removeRows(await db.intervals.bulkGet(ids).then((rs) => rs.filter(Boolean)));
 }
 
 // Delete every row for a domain. Resolves to the number deleted.
-export function deleteByDomain(domain) {
-  return db.intervals.filter(r => r.domain === domain).delete();
+export async function deleteByDomain(domain) {
+  return removeRows(await db.intervals.filter(r => r.domain === domain).toArray());
 }
 
 // Clear the time window [fromTs, toTs) from every overlapping row (optionally only
 // for `domain`): rows fully inside are deleted, rows crossing an edge are truncated,
 // rows spanning the whole window are split in two. So a row that started before the
 // window but runs into it loses exactly its in-window part. Resolves to rows touched.
+// A truncated row from another device cannot be edited in place (only its device may
+// push it), so it is deleted and its kept part re-added as a row of ours.
 export async function deleteRange(fromTs, toTs, domain = null) {
   if (fromTs >= toTs) return 0;  // empty/inverted window
   const affected = await db.intervals
@@ -74,28 +135,28 @@ export async function deleteRange(fromTs, toTs, domain = null) {
   for (const r of affected) {
     const keepLeft = r.from < fromTs;   // part before the window survives
     const keepRight = r.to > toTs;      // part after the window survives
-    if (keepLeft && keepRight) {
-      toUpdate.push([r.id, { to: fromTs }]);
-      toAdd.push({ domain: r.domain, path: r.path, kind: r.kind, from: toTs, to: r.to });
-    } else if (keepLeft) {
-      toUpdate.push([r.id, { to: fromTs }]);
-    } else if (keepRight) {
-      toUpdate.push([r.id, { from: toTs }]);
+    const kept = [];
+    if (keepLeft) kept.push({ from: r.from, to: fromTs });
+    if (keepRight) kept.push({ from: toTs, to: r.to });
+    if (kept.length === 0 || r.mirror) {
+      toDelete.push(r);
+      for (const k of kept) toAdd.push({ domain: r.domain, path: r.path, kind: r.kind, ...k });
     } else {
-      toDelete.push(r.id);
+      toUpdate.push([r.id, { ...kept[0], dirty: 1 }]);
+      if (kept[1]) toAdd.push({ domain: r.domain, path: r.path, kind: r.kind, ...kept[1] });
     }
   }
-  await db.transaction('rw', db.intervals, async () => {
-    if (toDelete.length) await db.intervals.bulkDelete(toDelete);
+  await db.transaction('rw', db.intervals, db.deletes, db.meta, async () => {
+    await removeRows(toDelete);
     for (const [id, changes] of toUpdate) await db.intervals.update(id, changes);
-    if (toAdd.length) await db.intervals.bulkAdd(toAdd);
+    if (toAdd.length) await appendIntervals(toAdd);
   });
   return affected.length;
 }
 
 // Delete every row for one domain+path. Resolves to the number deleted.
-export function deletePath(domain, path) {
-  return db.intervals.filter(r => r.domain === domain && r.path === path).delete();
+export async function deletePath(domain, path) {
+  return removeRows(await db.intervals.filter(r => r.domain === domain && r.path === path).toArray());
 }
 
 // Collapse rows that START before `beforeTs` to site level: drop the path and
@@ -127,9 +188,9 @@ export async function dropPathsBefore(beforeTs) {
     merged.push({ domain, path: '/', kind, from: cs, to: ce });
   }
 
-  await db.transaction('rw', db.intervals, async () => {
-    await db.intervals.bulkDelete(old.map(r => r.id));
-    await db.intervals.bulkAdd(merged);
+  await db.transaction('rw', db.intervals, db.deletes, db.meta, async () => {
+    await removeRows(old);
+    await appendIntervals(merged);
   });
   return old.length - merged.length;
 }
