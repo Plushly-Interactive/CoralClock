@@ -46,6 +46,11 @@
   font-size: var(--font-base);
 }
 
+/* display: grid above beats the browser's [hidden] rule, so the empty list stayed visible. */
+.phrase-words[hidden] {
+  display: none;
+}
+
 .phrase-words li {
   color: var(--color-text);
 }
@@ -69,19 +74,15 @@
 
 .confirm-field input {
   width: 140px;
+  padding-right: 8px;
   font-family: monospace;
 }
 
+/* Styling comes from .text-input; only the textarea-specific bits live here. */
 #link-input {
-  width: 100%;
   box-sizing: border-box;
+  padding-right: 8px;
   font-family: monospace;
-  font-size: var(--font-base);
-  padding: 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-hover-bg);
-  color: var(--color-text);
   resize: vertical;
 }
 

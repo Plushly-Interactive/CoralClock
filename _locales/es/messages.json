@@ -609,6 +609,7 @@
   "sync_syncNowBtn": { "message": "Sincronizar ahora" },
   "sync_statusNever": { "message": "Aún no se ha sincronizado." },
   "sync_statusOk": { "message": "Última sincronización: $1. Enviados $2, recibidos $3." },
+  "sync_statusPaused": { "message": "La sincronización está en pausa hasta las $1. Tus datos están seguros en este dispositivo y se subirán automáticamente.", "description": "$1 = hora local de reanudación" },
   "sync_statusError": { "message": "La última sincronización falló: $1" },
   "sync_devicesTitle": { "message": "Dispositivos" },
   "sync_devicesLoading": { "message": "Cargando…" },
@@ -632,5 +633,6 @@
   "sync_stopDesc": { "message": "Detiene la sincronización en todos los dispositivos y elimina permanentemente todo lo guardado en el servidor. Los datos de navegación que ya están en cada dispositivo se mantienen." },
   "sync_stopBtn": { "message": "Detener la sincronización en todas partes" },
   "sync_stopConfirm": { "message": "¿Detener la sincronización en todos los dispositivos y eliminar todo lo guardado en el servidor? Los datos de navegación de cada dispositivo se mantienen. Esto no se puede deshacer." },
+  "sync_progressUploading": { "message": "Subiendo tu historial… $1 de $2 entradas enviadas.", "description": "$1 = entradas enviadas, $2 = total de entradas" },
   "sync_signedOutStartDesc": { "message": "Volver a empezar crea una cuenta nueva con una frase de recuperación nueva y sube a ella los datos de este dispositivo. Úsalo cuando la cuenta anterior ya no exista." }
 }

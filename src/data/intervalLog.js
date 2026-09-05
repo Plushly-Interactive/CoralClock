@@ -200,6 +200,12 @@ export function count() {
   return db.intervals.count();
 }
 
+// Rows still waiting to be pushed. The sync page polls this to show upload progress, because a
+// first sync of a long history runs for minutes and the engine only reports once it finishes.
+export function dirtyCount() {
+  return db.intervals.where('dirty').equals(1).count();
+}
+
 // Rows, distinct domains/subpages, and date span in one streaming pass (each()
 // does not build a full array, so this stays low-memory as the log grows).
 // earliest/latest are ms timestamps, null when empty.

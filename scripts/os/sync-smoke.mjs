@@ -27,8 +27,14 @@ async function launch(name) {
   if (!sw) sw = await ctx.waitForEvent("serviceworker", { timeout: 15000 });
   const errors = [];
   sw.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errors.push(`sw ${m.type()}: ${m.text()}`); });
-  await sw.evaluate(() => new Promise((r) => setTimeout(r, 1500)));
+  // Wait for the seam rather than sleeping a fixed time, then read the base URL back. The default
+  // is production, so a storage write that has not landed sends the whole run at the live server.
+  await sw.evaluate(() => new Promise(function poll(r) {
+    return globalThis.reeflectSync ? r() : setTimeout(() => poll(r), 50);
+  }));
   await sw.evaluate((base) => chrome.storage.local.set({ _syncBaseUrl: base, _debug: true }), BASE);
+  const seen = await sw.evaluate(async () => (await chrome.storage.local.get('_syncBaseUrl'))._syncBaseUrl);
+  if (seen !== BASE) throw new Error(`base url did not stick: wanted ${BASE}, got ${seen}`);
   const id = new URL(sw.url()).host;
   const call = (fn, ...args) => sw.evaluate(([fn, args]) => globalThis.reeflectSync[fn](...args).then((v) => ({ ok: v }), (e) => ({ err: String(e?.message ?? e) })), [fn, args]);
   const page = await ctx.newPage();
@@ -41,6 +47,12 @@ async function launch(name) {
   return { ctx, sw, page, call, errors, openSync };
 }
 const visible = (page, sel) => page.$eval(sel, (el) => el.style.display !== "none");
+// The "on" card now appears as soon as the sync starts, so it shows live upload progress instead
+// of a frozen page. Completion is aria-busy clearing, not the card becoming visible.
+const syncedOn = (page, timeout = 60000) => page.waitForFunction(
+  () => document.querySelector("#card-on")?.style.display === ""
+    && !document.querySelector("#sync-main")?.hasAttribute("aria-busy"),
+  null, { timeout });
 const row = (domain, from) => ({ domain, path: "/", kind: "active", from, to: from + 60_000 });
 const t0 = Date.now() - 3 * 3_600_000;
 
@@ -51,7 +63,27 @@ await a.call("appendIntervals", [row("a1.example", t0), row("a2.example", t0 + 1
 await a.openSync();
 check("sync page opens in the off state", await visible(a.page, "#card-off"));
 await a.page.click("#start-btn");
-await a.page.waitForSelector("#phrase-words li", { timeout: 30000 });
+// The phrase is generated locally and normally appears in well under a second. When it does not,
+// the reason is on screen or in the console, so say what it was instead of a bare timeout.
+try {
+  await a.page.waitForSelector("#phrase-words li", { timeout: 30000 });
+} catch (e) {
+  const note = await a.page.$eval("#notification", (el) => `${el.hidden ? "(hidden)" : "(shown)"} ${el.textContent}`).catch(() => "none");
+  const card = await a.page.evaluate(() => Object.fromEntries(
+    [...document.querySelectorAll("section.card")].map((el) => [el.id, el.style.display || "(unset)"])));
+  const errors = a.errors.join(" ~ ") || "none";
+  if (errors.includes("429")) {
+    // One run spends about 8 of the 10 auth requests the Worker allows per minute per IP, and the
+    // local simulator does enforce that binding. Two runs inside a minute exhaust it.
+    console.log("");
+    console.log("STOPPED: the auth rate limit is exhausted. Wait 60 seconds and run it again.");
+    process.exit(2);
+  }
+  console.log(`DIAGNOSTIC notification=${note}`);
+  console.log(`DIAGNOSTIC cards=${JSON.stringify(card)}`);
+  console.log(`DIAGNOSTIC errors=${errors}`);
+  throw e;
+}
 const words = await a.page.$$eval("#phrase-words li", (els) => els.map((e) => e.textContent));
 check("start syncing shows 24 words (WASM ran in the page)", words.length === 24, words.slice(0, 3).join(" ") + " …");
 
@@ -67,7 +99,7 @@ for (const id of fieldIds) {
   await a.page.fill(`#${id}`, words[index]);
 }
 await a.page.click("#confirm-submit");
-await a.page.waitForFunction(() => document.querySelector("#card-on")?.style.display === "", null, { timeout: 30000 });
+await syncedOn(a.page);
 check("correct words switch the page to the on state", await visible(a.page, "#card-on"));
 check("A's rows pushed on the first sync", (await a.page.textContent("#sync-status")).includes("Sent 3"), await a.page.textContent("#sync-status"));
 
@@ -87,7 +119,7 @@ await b.page.click("#link-submit");
 check("a phrase that is not 24 words is refused", await b.page.$eval("#link-error", (el) => !el.hasAttribute("hidden")));
 await b.page.fill("#link-input", phrase);
 await b.page.click("#link-submit");
-await b.page.waitForFunction(() => document.querySelector("#card-on")?.style.display === "", null, { timeout: 60000 });
+await syncedOn(b.page);
 check("B links with the phrase and syncs", (await b.page.textContent("#sync-status")).includes("received 3"), await b.page.textContent("#sync-status"));
 check("B's log holds all 4 rows", (await b.call("count")).ok === 4);
 await b.page.waitForSelector(".device-row:nth-child(2)");
@@ -138,7 +170,7 @@ for (const el of await b.page.$$("#confirm-fields input")) {
   await el.fill(newWords[idx]);
 }
 await b.page.click("#confirm-submit");
-await b.page.waitForFunction(() => document.querySelector("#card-on")?.style.display === "", null, { timeout: 60000 });
+await syncedOn(b.page);
 // Only B's own row uploads. The two it mirrored from A belong to the old account, so they stay
 // local rather than leaking into the new one, which is what the design asks for.
 check("its own row uploads to the new account, mirrors do not", (await b.page.textContent("#sync-status")).includes("Sent 1"), await b.page.textContent("#sync-status"));

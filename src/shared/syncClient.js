@@ -82,6 +82,10 @@ async function handleError(e, eng) {
 
 export async function runSync(now = Date.now()) {
   if ((await syncState()) !== 'on') return { skipped: 'not syncing' };
+  const previous = await syncStatus();
+  // The server can tell a device to hold off, and every attempt before that time fails the same
+  // way. Honouring it keeps a paused device quiet instead of retrying on every alarm for hours.
+  if (previous?.retryAfter > now) return { ...previous, skipped: 'paused' };
   const eng = await engine();
   const status = { lastRunAt: now };
   try {
@@ -90,6 +94,11 @@ export async function runSync(now = Date.now()) {
     status.lastReport = report;
   } catch (e) {
     status.lastError = await handleError(e, eng);
+    const paused = /^Paused: (\d+)$/.exec(status.lastError);
+    if (paused) {
+      status.lastError = 'Paused';
+      status.retryAfter = now + Number(paused[1]) * 1000;
+    }
   }
   await chrome.storage.local.set({ [SYNC_STATUS_KEY]: status });
   return status;

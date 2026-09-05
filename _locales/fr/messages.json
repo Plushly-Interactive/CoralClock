@@ -609,6 +609,7 @@
   "sync_syncNowBtn": { "message": "Synchroniser maintenant" },
   "sync_statusNever": { "message": "Pas encore synchronisé." },
   "sync_statusOk": { "message": "Dernière synchronisation : $1. Envoyés $2, reçus $3." },
+  "sync_statusPaused": { "message": "La synchronisation est en pause jusqu'à $1. Vos données sont en sécurité sur cet appareil et seront envoyées automatiquement.", "description": "$1 = heure locale de reprise" },
   "sync_statusError": { "message": "La dernière synchronisation a échoué : $1" },
   "sync_devicesTitle": { "message": "Appareils" },
   "sync_devicesLoading": { "message": "Chargement…" },
@@ -632,5 +633,6 @@
   "sync_stopDesc": { "message": "Arrête la synchronisation sur tous les appareils et supprime définitivement tout ce qui est stocké sur le serveur. Les données de navigation déjà présentes sur chaque appareil restent en place." },
   "sync_stopBtn": { "message": "Arrêter la synchronisation partout" },
   "sync_stopConfirm": { "message": "Arrêter la synchronisation sur tous les appareils et supprimer tout ce qui est stocké sur le serveur ? Les données de navigation de chaque appareil sont conservées. Cette action est irréversible." },
+  "sync_progressUploading": { "message": "Envoi de votre historique… $1 sur $2 entrées envoyées.", "description": "$1 = entrées envoyées, $2 = total des entrées" },
   "sync_signedOutStartDesc": { "message": "Recommencer crée un nouveau compte avec une nouvelle phrase de récupération et y envoie les données de cet appareil. À utiliser quand l'ancien compte n'existe plus." }
 }

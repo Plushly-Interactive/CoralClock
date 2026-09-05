@@ -6,6 +6,7 @@ import {
   syncState, syncStatus, runSync, startSyncing, linkDevice, recoveryPhrase,
   devices, renameDevice, signOutDevice, forgetDevice, stopSyncingEverywhere,
 } from '../../shared/syncClient.js';
+import { dirtyCount } from '../../data/intervalLog.js';
 
 await initI18n();
 applyI18n();
@@ -28,6 +29,45 @@ function show(...names) {
   for (const [name, el] of Object.entries(cards)) el.style.display = names.includes(name) ? '' : 'none';
 }
 
+// A first sync of a long history runs for minutes and the engine reports only when it finishes,
+// so without this the page sits unchanged and looks broken. The dirty-row count is the honest
+// measure of what is left: the engine clears the flag as each batch is acknowledged.
+async function withProgress(run, finish) {
+  const el = document.querySelector('#sync-status');
+  const main = document.querySelector('#sync-main');
+  const nowBtn = document.querySelector('#sync-now-btn');
+  // Set before the first await. Anything watching for "busy" must never see the gap between the
+  // card appearing and the run starting, or it reads the page as idle before any work has begun.
+  main.setAttribute('aria-busy', 'true');
+  nowBtn.disabled = true;
+  const total = await dirtyCount();
+  let timer = null;
+  // The interval callback is async, so one can still be in flight when the run ends. This flag
+  // stops it painting stale progress over the result.
+  let live = true;
+  if (total > 0) {
+    const paint = (left) => {
+      if (live) el.textContent = t('sync_progressUploading', [String(total - left), String(total)]);
+    };
+    paint(total);
+    timer = setInterval(async () => paint(await dirtyCount()), 500);
+  }
+  try {
+    return await run();
+  } finally {
+    // Order matters: stop painting, show the result, and only then drop the busy marker, so the
+    // page never reports itself idle while it still shows progress text.
+    live = false;
+    if (timer !== null) clearInterval(timer);
+    try {
+      await finish();
+    } finally {
+      main.removeAttribute('aria-busy');
+      nowBtn.disabled = false;
+    }
+  }
+}
+
 let pendingPhrase = null;   // held only between "start syncing" and the confirmation
 let confirmIndexes = [];
 
@@ -48,6 +88,12 @@ async function renderStatus() {
   const status = await syncStatus();
   const el = document.querySelector('#sync-status');
   if (!status) { el.textContent = t('sync_statusNever'); return; }
+  // A pause is a wait, not a failure: say when it resumes and leave the cause out of it.
+  if (status.lastError === 'Paused') {
+    const when = new Date(status.retryAfter ?? Date.now()).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    el.textContent = t('sync_statusPaused', [when]);
+    return;
+  }
   if (status.lastError) { el.textContent = t('sync_statusError', [status.lastError]); return; }
   const when = new Date(status.lastRunAt).toLocaleString();
   const r = status.lastReport;
@@ -170,6 +216,7 @@ function renderConfirmFields() {
     label.htmlFor = `confirm-word-${i}`;
     const input = document.createElement('input');
     input.type = 'text';
+    input.className = 'text-input';
     input.id = `confirm-word-${i}`;
     input.autocomplete = 'off';
     input.spellcheck = false;
@@ -213,8 +260,10 @@ document.querySelector('#confirm-submit').addEventListener('click', async () => 
     return;
   }
   pendingPhrase = null;
-  await runSync();
-  await render();
+  // Switch to the "on" card before syncing, so the backfill reports progress instead of leaving
+  // the confirmation card on screen for the whole upload. render() adds the rest once it is done.
+  show('on');
+  await withProgress(runSync, render);
   showNotification(t('sync_started'));
 });
 
@@ -249,8 +298,8 @@ document.querySelector('#link-submit').addEventListener('click', async () => {
   errEl.setAttribute('hidden', '');
   try {
     await linkDevice(phrase);
-    await runSync();
-    await render();
+    show('on');
+    await withProgress(runSync, render);
     showNotification(t('sync_linked'));
   } catch (e) {
     const msg = String(e.message ?? e);
@@ -262,11 +311,7 @@ document.querySelector('#link-submit').addEventListener('click', async () => {
 });
 
 document.querySelector('#sync-now-btn').addEventListener('click', async () => {
-  const btn = document.querySelector('#sync-now-btn');
-  btn.disabled = true;
-  await runSync();
-  btn.disabled = false;
-  await render();
+  await withProgress(runSync, render);
 });
 
 document.querySelector('#show-phrase-btn').addEventListener('click', async () => {
