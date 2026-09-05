@@ -400,6 +400,32 @@ button:disabled {
   gap: 6px;
 }
 
+/* Card-stack page layout: a scrolling column of cards. Settings and sync share it;
+   keep any page-specific tweak in that page's own stylesheet, not here. */
+.page-column {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.card {
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--shadow-card);
+}
+
 .setting-label {
   font-weight: 600;
 }

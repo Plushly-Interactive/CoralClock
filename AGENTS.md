@@ -8,7 +8,7 @@ TL;DR: Vivaldi/Chromium MV3 extension that tracks per-site browsing time and blo
 - `src/data/` — storage layer. `intervalLog.js` (IndexedDB rows), `intervalAggregates.js` (read-time totals), import/export/prune.
 - `src/pages/<name>/` — one `<name>.{html,css,js}` triplet per full-page view.
 - `src/shared/` — cross-page UI and helpers (`theme.css`, `dropdown.js`, `i18n.js`, `prefKeys.js`).
-- `src/background/sync.js` + `src/data/syncStorage.js` — cloud-sync host: loads the vendored WASM core (`src/vendor/reeflect-core/`), runs one engine per `sync` alarm; the log module owns the v2 schema (deviceId, localId, dirty, mirror, deletes, meta).
+- Cloud sync: `src/shared/syncClient.js` owns the vendored WASM core (`src/vendor/reeflect-core/`) and every account action; `src/background/sync.js` is only the alarm; `src/data/syncStorage.js` is the storage host; `intervalLog.js` owns the v2 schema (deviceId, localId, dirty, mirror, deletes, meta); `src/pages/sync/` is the UI.
 - `_locales/{en,es,fr}/messages.json` — every user-facing string; en is the source of truth.
 - `docs/architecture/architecture.md` — how tracking and enforcement fit together.
 
@@ -18,7 +18,7 @@ The reasoning behind the longer rules is in `docs/appendix/coding-conventions.md
 
 ## Commands
 - capture: `node scripts/os/capture.mjs --view <name> [--seed] [--width N] [--measure "sel"] [--console]`
-  - Views: dashboard, site, path, timeline, rules, settings, popup, blocked, quotes, storage, legacy.
+  - Views: dashboard, site, path, timeline, rules, settings, sync, popup, blocked, quotes, storage, legacy.
   - Launches its own Chromium with the unpacked extension; screenshots land in `shots/`.
   - `--seed` fills the profile with fake browsing data, so data-driven pages are not empty.
   - The profile persists in the OS temp dir; reset it by deleting `agent-os-ext-profile-reeflect` there.

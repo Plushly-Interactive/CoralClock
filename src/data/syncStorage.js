@@ -68,4 +68,7 @@ export const syncStorage = {
   async metaSet(key, val) {
     await db.meta.put({ key, value: new Uint8Array(val) });
   },
+  async metaDelete(key) {
+    await db.meta.delete(key);
+  },
 };

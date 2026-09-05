@@ -1,46 +1,22 @@
-#settings-main {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.setting-card {
-  max-width: 720px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 14px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-bg);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-shadow: var(--shadow-card);
-}
-
 .setting-desc {
   margin: 0;
 }
 
-.setting-card .form-row {
+.card .form-row {
   align-items: flex-start;
 }
 
-.setting-card .form-row > input,
-.setting-card .form-row > select,
-.setting-card .form-row > .number-input-wrap,
-.setting-card .form-row > .custom-dropdown,
-.setting-card .form-row > .btn {
+.card .form-row > input,
+.card .form-row > select,
+.card .form-row > .number-input-wrap,
+.card .form-row > .custom-dropdown,
+.card .form-row > .btn {
   margin-left: auto;
 }
 
-.setting-card .form-row > input[type="checkbox"],
-.setting-card .form-row > .text-meta,
-.setting-card .form-row > span:not(.setting-label) {
+.card .form-row > input[type="checkbox"],
+.card .form-row > .text-meta,
+.card .form-row > span:not(.setting-label) {
   align-self: center;
 }
 
@@ -58,7 +34,7 @@
   margin-left: auto;
 }
 
-.setting-card .chart-color-row > .custom-dropdown {
+.card .chart-color-row > .custom-dropdown {
   margin-left: 0;
 }
 
@@ -68,7 +44,7 @@
   height: 78px;
 }
 
-.setting-card .dropdown-btn {
+.card .dropdown-btn {
   background: var(--color-bg);
   color: var(--color-text);
   border: 1px solid var(--color-border);
@@ -77,7 +53,7 @@
   padding: 6px 8px;
 }
 
-.setting-card .dropdown-arrow { color: var(--color-text-secondary); }
+.card .dropdown-arrow { color: var(--color-text-secondary); }
 
 #version-footer {
   display: flex;

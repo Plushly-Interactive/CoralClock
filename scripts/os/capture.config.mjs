@@ -31,6 +31,7 @@ export default {
     popup:      { page: "src/pages/popup/popup.html" },
     blocked:    { page: "src/pages/blocked/blocked.html" },
     quotes:     { page: "src/pages/quotes/quotes.html" },
+    sync:       { page: "src/pages/sync/sync.html" },
     storage:    { page: "src/pages/storage-management/storage-management.html" },
     legacy:     { page: "src/pages/legacy-storage-management/legacy-storage-management.html" },
   },

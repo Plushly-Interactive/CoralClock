@@ -11,7 +11,8 @@ import { enhanceNumberInput } from '../../shared/numberInput.js';
 import { CHART_COLOR_TYPES, applyChartColorOverrides, setChartColorOverride } from '../../shared/chartColors.js';
 import { buildColorPicker } from '../../shared/colorPicker.js';
 import { initI18n, applyI18n, t, DEFAULT_LANGUAGE } from '../../shared/i18n.js';
-import { keyActivate } from '../../shared/utils.js';
+import { keyActivate, navButton } from '../../shared/utils.js';
+import { syncState } from '../../shared/syncClient.js';
 
 await initI18n();
 applyI18n();
@@ -188,3 +189,8 @@ autoStartIfMatches('settings', [
     body: t('tour_settings_back_body', [BRAND_NAME]),
     handoff: { nextSurface: 'dashboard', nextStepIndex: 10, mode: 'inPage' },  },
 ]);
+
+// Sync card: a state line plus the way into the sync page, which owns every action.
+navButton(document.querySelector('#sync-manage-btn'), '../sync/sync.html');
+const SYNC_STATE_KEYS = { off: 'settings_syncOff', on: 'settings_syncOn', signedOut: 'settings_syncSignedOut' };
+document.querySelector('#sync-state-desc').textContent = t(SYNC_STATE_KEYS[await syncState()]);

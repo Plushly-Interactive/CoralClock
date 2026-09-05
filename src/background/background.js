@@ -13,7 +13,7 @@ import { seedChangelogOnInstall, seedChangelogOnUpdate } from '../shared/changel
 // listeners on import; background drives its periodic flush via flushNow() and a
 // lighter per-navigation drain via flushToStorage.
 import { flushNow, flushToStorage as drainIntervals } from './intervalTracker.js';
-import { runSync, ensureSyncAlarm, SYNC_ALARM } from './sync.js';
+import { tick as syncTick, ensureSyncAlarm, SYNC_ALARM } from './sync.js';
 
 // Logged on every service-worker (re)start. A burst of these is the signal that
 // the worker is churning (MV3 idle-suspend, crash-on-load, or dev reload), which
@@ -240,7 +240,7 @@ chrome.windows.onFocusChanged.addListener(async (_windowId) => {
 // reads its freshly-written rows, then the badge — in sequence, so enforcement
 // never reads pre-flush usage.
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name === SYNC_ALARM) { await bootstrapDone; await flushNow(); await runSync(); return; }
+  if (alarm.name === SYNC_ALARM) { await bootstrapDone; await flushNow(); await syncTick(); return; }
   if (alarm.name !== 'flush') return;
   await bootstrapDone;
   const now = Date.now();

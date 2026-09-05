@@ -22,8 +22,8 @@
       <div id="header-right"></div>
     </header>
 
-    <main id="settings-main">
-      <section class="setting-card">
+    <main id="settings-main" class="page-column">
+      <section class="card">
         <div class="form-row">
           <label class="setting-label" for="language-btn" data-i18n="settings_language">Language</label>
           <div class="custom-dropdown" id="language-dropdown">
@@ -38,7 +38,7 @@
         </p>
       </section>
 
-      <section class="setting-card">
+      <section class="card">
         <div class="form-row">
           <label class="setting-label" for="idle-threshold-input" data-i18n="settings_idleThreshold">Idle threshold</label>
           <input id="idle-threshold-input" class="number-input" type="number" min="1" step="1" value="1" />
@@ -49,7 +49,7 @@
         </p>
       </section>
 
-      <section class="setting-card">
+      <section class="card">
         <div class="form-row">
           <label class="setting-label" for="clock-format-btn" data-i18n="settings_hourFormat">Hour format</label>
           <div class="custom-dropdown" id="clock-format-dropdown">
@@ -64,7 +64,7 @@
         </p>
       </section>
 
-      <section class="setting-card">
+      <section class="card">
         <div class="form-row">
           <label class="setting-label" for="week-start-btn" data-i18n="settings_weekStartsOn">Week starts on</label>
           <div class="custom-dropdown" id="week-start-dropdown">
@@ -80,7 +80,17 @@
         </p>
       </section>
 
-      <section class="setting-card">
+      <section class="card">
+        <div class="form-row">
+          <label class="setting-label" for="sync-manage-btn" data-i18n="settings_sync">Sync across devices</label>
+          <button id="sync-manage-btn" class="btn" data-i18n="settings_syncManage">Manage</button>
+        </div>
+        <p class="setting-desc text-meta" id="sync-state-desc" data-i18n="settings_syncOff">
+          Off. Your browsing data stays on this device.
+        </p>
+      </section>
+
+      <section class="card">
         <div class="form-row">
           <label class="setting-label" for="badge-enabled-input" data-i18n="settings_toolbarBadge">Toolbar badge</label>
           <input id="badge-enabled-input" type="checkbox" />
@@ -90,7 +100,7 @@
         </p>
       </section>
 
-      <section class="setting-card">
+      <section class="card">
         <div class="form-row">
           <span class="setting-label" data-i18n="settings_chartColors">Chart colors</span>
           <button id="chart-colors-reset" class="btn" data-i18n="settings_resetColors">Reset colors</button>

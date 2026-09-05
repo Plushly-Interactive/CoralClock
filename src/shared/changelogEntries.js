@@ -147,4 +147,19 @@ export const CHANGELOG_ENTRIES = [
       },
     ],
   },
+  {
+    version: '1.4.0',
+    sections: [
+      {
+        category: 'newFeatures',
+        items: [
+          {
+            en: 'Sync across devices: see the same browsing data everywhere and apply limits to your total time. No email or name is ever asked for, and your data is encrypted on your device before it is sent. Settings > Sync across devices.',
+            es: 'Sincronización entre dispositivos: consulta los mismos datos de navegación en todas partes y aplica los límites a tu tiempo total. Nunca se pide correo ni nombre, y tus datos se cifran en tu dispositivo antes de enviarse. Ajustes > Sincronización entre dispositivos.',
+            fr: 'Synchronisation entre appareils : consultez les mêmes données de navigation partout et appliquez les limites à votre temps total. Aucun e-mail ni nom n’est demandé, et vos données sont chiffrées sur votre appareil avant l’envoi. Réglages > Synchronisation entre appareils.',
+          },
+        ],
+      },
+    ],
+  },
 ];

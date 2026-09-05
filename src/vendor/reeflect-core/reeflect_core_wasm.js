@@ -19,6 +19,31 @@ export class Engine {
         return ret;
     }
     /**
+     * JSON array of {deviceId, name, signedIn, createdAt, me}.
+     * @returns {Promise<string>}
+     */
+    devices() {
+        const ret = wasm.engine_devices(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {string} device_id
+     * @returns {Promise<void>}
+     */
+    forgetDevice(device_id) {
+        const ptr0 = passStringToWasm0(device_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_forgetDevice(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * @returns {Promise<void>}
+     */
+    forgetSession() {
+        const ret = wasm.engine_forgetSession(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * @param {string} phrase
      * @returns {Promise<void>}
      */
@@ -46,14 +71,35 @@ export class Engine {
         return this;
     }
     /**
-     * Creates the account; returns the 24-word recovery phrase, shown once.
-     * @param {string} passphrase
+     * @returns {Promise<string>}
+     */
+    recoveryPhrase() {
+        const ret = wasm.engine_recoveryPhrase(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * Creates the account; returns the 24-word recovery phrase, shown once. Pass a passphrase only for
+     * clients that keep no key at rest; the extension passes nothing.
+     * @param {string | null} [passphrase]
      * @returns {Promise<string>}
      */
     register(passphrase) {
-        const ptr0 = passStringToWasm0(passphrase, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        const len0 = WASM_VECTOR_LEN;
+        var ptr0 = isLikeNone(passphrase) ? 0 : passStringToWasm0(passphrase, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len0 = WASM_VECTOR_LEN;
         const ret = wasm.engine_register(this.__wbg_ptr, ptr0, len0);
+        return ret;
+    }
+    /**
+     * @param {string} device_id
+     * @param {string} name
+     * @returns {Promise<void>}
+     */
+    renameDevice(device_id, name) {
+        const ptr0 = passStringToWasm0(device_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_renameDevice(this.__wbg_ptr, ptr0, len0, ptr1, len1);
         return ret;
     }
     /**
@@ -61,6 +107,16 @@ export class Engine {
      */
     requestDelete() {
         const ret = wasm.engine_requestDelete(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @param {string} device_id
+     * @returns {Promise<void>}
+     */
+    signOutDevice(device_id) {
+        const ptr0 = passStringToWasm0(device_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.engine_signOutDevice(this.__wbg_ptr, ptr0, len0);
         return ret;
     }
     /**
@@ -408,6 +464,10 @@ function __wbg_get_imports() {
             } finally {
                 wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
             }
+        }, arguments); },
+        __wbg_metaDelete_2aba64930d80574e: function() { return handleError(function (arg0, arg1, arg2) {
+            const ret = arg0.metaDelete(getStringFromWasm0(arg1, arg2));
+            return ret;
         }, arguments); },
         __wbg_metaGet_59daa99330b42e85: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = arg0.metaGet(getStringFromWasm0(arg1, arg2));

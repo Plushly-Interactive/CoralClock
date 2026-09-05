@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="../../../resources/icons/brand/icon16.png" />
+    <title>Sync - Reeflect</title>
+    <script src="../../shared/theme.js"></script>
+    <link rel="stylesheet" href="../../shared/theme.css" />
+    <link rel="stylesheet" href="../../shared/confirmDialog.css" />
+    <link rel="stylesheet" href="./sync.css" />
+  </head>
+  <body>
+    <header>
+      <div id="header-left">
+        <a id="back-btn" tabindex="0" href="../dashboard/dashboard.html">
+          <img src="../../../resources/icons/brand/logo.svg" alt="Reeflect">
+        </a>
+      </div>
+      <div id="header-center"><h1 class="page-title" data-i18n="sync_pageTitle">Sync across devices</h1></div>
+      <div id="header-right"></div>
+    </header>
+
+    <main id="sync-main" class="page-column">
+      <!-- state: off -->
+      <section class="card" id="card-off" hidden>
+        <h2 class="sync-heading" data-i18n="sync_offTitle">Sync is off</h2>
+        <p class="text-meta" data-i18n="sync_offDesc">Your browsing data stays on this device. Turn sync on to see the same data on every device you use, and to apply limits to your total time across all of them.</p>
+        <p class="text-meta" data-i18n="sync_offPrivacy">No email, no phone number, no name. Your data is encrypted on this device before it is sent, and the server can never read it.</p>
+        <div class="sync-actions">
+          <button id="start-btn" class="btn" data-i18n="sync_startBtn">Start syncing</button>
+          <button id="link-open-btn" class="btn" data-i18n="sync_linkOpenBtn">Link this device</button>
+        </div>
+      </section>
+
+      <!-- state: signed out -->
+      <section class="card" id="card-signed-out" hidden>
+        <h2 class="sync-heading" data-i18n="sync_signedOutTitle">This device was signed out</h2>
+        <p class="text-meta" data-i18n="sync_signedOutDesc">Sync is paused here. Your browsing data on this device is untouched. Enter your recovery phrase to sync again.</p>
+        <div class="sync-actions">
+          <button id="relink-btn" class="btn" data-i18n="sync_linkOpenBtn">Link this device</button>
+        </div>
+      </section>
+
+      <!-- state: link (phrase entry) -->
+      <section class="card" id="card-link" hidden>
+        <h2 class="sync-heading" data-i18n="sync_linkTitle">Link this device</h2>
+        <p class="text-meta" data-i18n="sync_linkDesc">Type the 24-word recovery phrase from a device that is already syncing.</p>
+        <textarea id="link-input" rows="4" spellcheck="false" data-i18n-placeholder="sync_linkPlaceholder" placeholder="word word word …"></textarea>
+        <p id="link-error" class="sync-error" hidden></p>
+        <div class="sync-actions">
+          <button id="link-submit" class="btn" data-i18n="sync_linkSubmit">Link</button>
+          <button id="link-cancel" class="btn" data-i18n="sync_cancel">Cancel</button>
+        </div>
+      </section>
+
+      <!-- state: phrase shown after start -->
+      <section class="card" id="card-phrase" hidden>
+        <h2 class="sync-heading" data-i18n="sync_phraseTitle">Write down your recovery phrase</h2>
+        <p class="text-meta" data-i18n="sync_phraseDesc">These 24 words are the only way to add another device, and the only way back in if you lose this one. Anyone who has them can read your data. Keep them somewhere safe and offline.</p>
+        <ol id="phrase-words" class="phrase-words"></ol>
+        <div class="sync-actions">
+          <button id="phrase-print" class="btn" data-i18n="sync_printBtn">Print</button>
+          <button id="phrase-copy" class="btn" data-i18n="sync_copyBtn">Copy</button>
+          <button id="phrase-next" class="btn" data-i18n="sync_phraseNext">I wrote it down</button>
+        </div>
+      </section>
+
+      <!-- state: confirm 3 words -->
+      <section class="card" id="card-confirm" hidden>
+        <h2 class="sync-heading" data-i18n="sync_confirmTitle">Check your copy</h2>
+        <p class="text-meta" data-i18n="sync_confirmDesc">Type three of the words to confirm you wrote them down correctly.</p>
+        <div id="confirm-fields" class="confirm-fields"></div>
+        <p id="confirm-error" class="sync-error" hidden data-i18n="sync_confirmWrong">That does not match. Check your copy and try again.</p>
+        <div class="sync-actions">
+          <button id="confirm-submit" class="btn" data-i18n="sync_confirmSubmit">Confirm</button>
+          <button id="confirm-back" class="btn" data-i18n="sync_confirmBack">Show the words again</button>
+        </div>
+      </section>
+
+      <!-- state: on -->
+      <section class="card" id="card-on" hidden>
+        <div class="sync-row">
+          <h2 class="sync-heading" data-i18n="sync_onTitle">Sync is on</h2>
+          <button id="sync-now-btn" class="btn" data-i18n="sync_syncNowBtn">Sync now</button>
+        </div>
+        <p id="sync-status" class="text-meta"></p>
+      </section>
+
+      <section class="card" id="card-devices" hidden>
+        <h2 class="sync-heading" data-i18n="sync_devicesTitle">Devices</h2>
+        <div id="devices-list"></div>
+      </section>
+
+      <section class="card" id="card-danger" hidden>
+        <h2 class="sync-heading" data-i18n="sync_phraseAgainTitle">Recovery phrase</h2>
+        <p class="text-meta" data-i18n="sync_phraseAgainDesc">Show the 24 words again, for example to add another device.</p>
+        <ol id="phrase-again-words" class="phrase-words" hidden></ol>
+        <div class="sync-actions">
+          <button id="show-phrase-btn" class="btn" data-i18n="sync_showPhraseBtn">Show recovery phrase</button>
+        </div>
+        <hr class="sync-sep" />
+        <p class="text-meta" data-i18n="sync_stopDesc">Stops sync on every device and permanently deletes everything stored on the server. The browsing data already on each device stays there.</p>
+        <div class="sync-actions">
+          <button id="stop-btn" class="btn" data-i18n="sync_stopBtn">Stop syncing everywhere</button>
+        </div>
+      </section>
+    </main>
+
+    <div id="notification" role="status" aria-live="polite" hidden></div>
+    <script type="module" src="./sync.js"></script>
+  </body>
+</html>
