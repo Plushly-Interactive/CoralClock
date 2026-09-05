@@ -179,8 +179,9 @@ function renderConfirmFields() {
   document.querySelector('#confirm-error').setAttribute('hidden', '');
 }
 
-document.querySelector('#start-btn').addEventListener('click', async () => {
-  const btn = document.querySelector('#start-btn');
+// Offered from "off" and from "signed out": a device whose old account is gone (deleted, or the
+// server moved) can only get back by starting a new one, so both states reach the same flow.
+async function start(btn) {
   btn.disabled = true;
   try {
     pendingPhrase = await startSyncing();
@@ -191,7 +192,11 @@ document.querySelector('#start-btn').addEventListener('click', async () => {
   } finally {
     btn.disabled = false;
   }
-});
+}
+
+for (const id of ['#start-btn', '#restart-btn']) {
+  document.querySelector(id).addEventListener('click', (e) => start(e.currentTarget));
+}
 
 document.querySelector('#phrase-next').addEventListener('click', () => {
   renderConfirmFields();

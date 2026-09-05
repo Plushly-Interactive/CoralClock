@@ -11,7 +11,7 @@ import { DEFAULT_WEEK_START } from './weekStart.js';
 //
 // Where the extension syncs to: one server for everyone. `_syncBaseUrl` in storage.local is a
 // hidden developer override, never shown on the settings page.
-export const SYNC_BASE_URL_DEFAULT = 'http://127.0.0.1:8787';
+export const SYNC_BASE_URL_DEFAULT = 'https://sync.coralclock.com';
 export const SYNC_STATUS_KEY = 'syncStatus';
 const DEK_KEY = '_dek';
 const DAY = 86_400_000;

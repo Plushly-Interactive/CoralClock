@@ -126,6 +126,24 @@ await b.openSync();
 check("B's page shows the signed-out state", await visible(b.page, "#card-signed-out"));
 check("B kept its rows after the sign-out", (await b.call("count")).ok === 3);
 
+// A signed-out device whose old account is gone can only recover by starting a new one, so that
+// path must be reachable from the signed-out card, not just from a never-synced device.
+await b.page.click("#restart-btn");
+await b.page.waitForSelector("#phrase-words li", { timeout: 30000 });
+const newWords = await b.page.$$eval("#phrase-words li", (els) => els.map((e) => e.textContent));
+check("signed-out device can start a fresh account", newWords.length === 24);
+await b.page.click("#phrase-next");
+for (const el of await b.page.$$("#confirm-fields input")) {
+  const idx = Number((await el.getAttribute("id")).replace("confirm-word-", ""));
+  await el.fill(newWords[idx]);
+}
+await b.page.click("#confirm-submit");
+await b.page.waitForFunction(() => document.querySelector("#card-on")?.style.display === "", null, { timeout: 60000 });
+// Only B's own row uploads. The two it mirrored from A belong to the old account, so they stay
+// local rather than leaking into the new one, which is what the design asks for.
+check("its own row uploads to the new account, mirrors do not", (await b.page.textContent("#sync-status")).includes("Sent 1"), await b.page.textContent("#sync-status"));
+check("the mirrored rows are still on the device", (await b.call("count")).ok === 3);
+
 // ---------- alarm and errors ----------
 
 const alarm = await a.sw.evaluate(async () => (await chrome.alarms.get("sync"))?.periodInMinutes ?? null);
