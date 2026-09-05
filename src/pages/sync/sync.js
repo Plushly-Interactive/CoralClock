@@ -84,6 +84,15 @@ async function render() {
   }
 }
 
+// The server can refuse a write and say how long to wait. Every path that shows an error asks
+// this first, so none of them prints the raw code or the reason the server gave.
+function pausedText(e) {
+  const m = /^Paused: (\d+)$/.exec(String(e?.message ?? e));
+  if (!m) return null;
+  const when = new Date(Date.now() + Number(m[1]) * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return t('sync_statusPaused', [when]);
+}
+
 async function renderStatus() {
   const status = await syncStatus();
   const el = document.querySelector('#sync-status');
@@ -107,7 +116,7 @@ async function renderDevices() {
   try {
     rows = await devices();
   } catch (e) {
-    list.textContent = t('sync_devicesError', [String(e.message ?? e)]);
+    list.textContent = pausedText(e) ?? t('sync_devicesError', [String(e.message ?? e)]);
     if (String(e.message ?? e) === 'NeedsReauth') await render();
     return;
   }
@@ -181,7 +190,7 @@ async function forget(d) {
   try {
     await forgetDevice(d.deviceId);
   } catch (e) {
-    showNotification(String(e.message ?? e).includes('device_has_rows') ? t('sync_forgetHasRows') : String(e.message ?? e));
+    showNotification(pausedText(e) ?? (String(e.message ?? e).includes('device_has_rows') ? t('sync_forgetHasRows') : String(e.message ?? e)));
     return;
   }
   await renderDevices();
@@ -235,7 +244,7 @@ async function start(btn) {
     renderPhrase(document.querySelector('#phrase-words'), pendingPhrase);
     show('phrase');
   } catch (e) {
-    showNotification(t('sync_startFailed', [String(e.message ?? e)]));
+    showNotification(pausedText(e) ?? t('sync_startFailed', [String(e.message ?? e)]));
   } finally {
     btn.disabled = false;
   }
@@ -303,7 +312,7 @@ document.querySelector('#link-submit').addEventListener('click', async () => {
     showNotification(t('sync_linked'));
   } catch (e) {
     const msg = String(e.message ?? e);
-    errEl.textContent = msg === 'NeedsReauth' ? t('sync_linkWrongPhrase') : t('sync_linkFailed', [msg]);
+    errEl.textContent = pausedText(e) ?? (msg === 'NeedsReauth' ? t('sync_linkWrongPhrase') : t('sync_linkFailed', [msg]));
     errEl.removeAttribute('hidden');
   } finally {
     btn.disabled = false;
@@ -321,7 +330,7 @@ document.querySelector('#show-phrase-btn').addEventListener('click', async () =>
     listEl.removeAttribute('hidden');
     document.querySelector('#show-phrase-btn').style.display = 'none';
   } catch (e) {
-    showNotification(String(e.message ?? e));
+    showNotification(pausedText(e) ?? String(e.message ?? e));
   }
 });
 
@@ -331,7 +340,7 @@ document.querySelector('#stop-btn').addEventListener('click', async () => {
   try {
     await stopSyncingEverywhere();
   } catch (e) {
-    showNotification(String(e.message ?? e));
+    showNotification(pausedText(e) ?? String(e.message ?? e));
   }
   await render();
 });

@@ -20,8 +20,21 @@ const id = new URL(sw.url()).host;
 const page = await ctx.newPage();
 await page.goto(`chrome-extension://${id}/src/pages/sync/sync.html`, { waitUntil: "domcontentloaded" });
 await page.waitForFunction(() => document.querySelector("#card-off")?.style.display !== undefined);
+const errs = [];
+page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
 await page.click("#start-btn");
-await page.waitForSelector("#phrase-words li", { timeout: 30000 });
+try {
+  await page.waitForSelector("#phrase-words li", { timeout: 30000 });
+} catch (e) {
+  // One run spends most of the 10 auth requests the Worker allows per minute per IP, and the
+  // local simulator does enforce that binding.
+  if (errs.join(" ").includes("429")) {
+    console.log("STOPPED: the auth rate limit is exhausted. Wait 60 seconds and run it again.");
+    process.exit(2);
+  }
+  console.log(`DIAGNOSTIC errors=${errs.join(" ~ ") || "none"}`);
+  throw e;
+}
 const words = await page.$$eval("#phrase-words li", (e) => e.map((x) => x.textContent));
 await page.click("#phrase-next");
 for (const el of await page.$$("#confirm-fields input")) {
@@ -52,6 +65,21 @@ const before = pushes;
 const again = await sw.evaluate(() => globalThis.reeflectSync.runSync());
 check("a further tick holds off instead of retrying", pushes === before && again.skipped === "paused", `pushes ${pushes}, skipped ${again.skipped}`);
 if (OUT) await page.screenshot({ path: `${OUT}/4-paused.png` });
+
+// A push is not the only write. Renaming a device hits the store too, and that path must show the
+// same neutral wait rather than the raw code the server sent.
+await page.unroute("**/sync/push");
+await page.route("**/devices*", (route) => route.fulfill({ status: 503, contentType: "application/json",
+  headers: { "access-control-allow-origin": "*" },
+  body: JSON.stringify({ error: "write_quota_exceeded", retryAfterSecs: 5400 }) }));
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForFunction(() => {
+  const t = document.querySelector("#devices-list")?.textContent ?? "";
+  return t.length > 0 && !/^Loading/.test(t);
+}, null, { timeout: 30000 });
+const devText = await page.textContent("#devices-list");
+check("a refused device call reads as a pause too", /paused until/i.test(devText), JSON.stringify(devText.slice(0, 90)));
+check("and still never names the reason", !/quota|limit|D1|503|Protocol/i.test(devText), JSON.stringify(devText.slice(0, 90)));
 await ctx.close();
 console.log(failures ? `\n${failures} FAILED` : "\nall passed");
 process.exit(failures ? 1 : 0);
